@@ -1,2 +1,0 @@
-export interface AuditEntry{action:string;actorId?:string;timestamp:string;metadata?:Record<string,unknown>}
-export function audit(action:string,actorId?:string,metadata?:Record<string,unknown>):AuditEntry{return{action,actorId,timestamp:new Date().toISOString(),metadata}}

@@ -1,1 +1,0 @@
-import type {Command} from "./types.js"; export const coreCommands:Command[]=[{id:"conversation.start",name:"conversation.start",description:"Inicia uma conversa com o Morok"},{id:"system.status",name:"system.status",description:"Consulta o estado do Morok"},{id:"task.create",name:"task.create",description:"Cria uma tarefa"}]

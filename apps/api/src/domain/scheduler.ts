@@ -1,5 +1,0 @@
-import type { Db } from "mongodb";
-import { AutomationService } from "./automation.js";
-import { OrganizerService } from "./organizer.js";
-import { TaskService } from "./tasks.js";
-export class AutomationScheduler { private timer:NodeJS.Timeout|undefined; private running=false; constructor(private readonly db:Db){} start(intervalMs=15000){if(this.timer)return;this.timer=setInterval(()=>void this.tick(),intervalMs);void this.tick();} stop(){if(this.timer){clearInterval(this.timer);this.timer=undefined;}} async tick(){if(this.running)return;this.running=true;try{await new AutomationService(this.db).runDue(async a=>{const input={...a.action.input};if(a.action.type==="notification.create"){await new OrganizerService(this.db).notify(a.userId,String(input.content??"Automação executada"));return;}if(a.action.type==="task.create"){await new TaskService(this.db).create(a.userId,String(input.title??a.name),String(input.description??""),typeof input.dueAt==="string"?input.dueAt:undefined);return;}throw new Error("automation_action_unsupported");});}finally{this.running=false;}} }

@@ -1,1 +1,0 @@
-export const MOROK_IDENTITY={name:"Morok",role:"assistente pessoal inteligente",version:"0.1.0"} as const;
