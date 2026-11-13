@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
-> **Estado:** especificação documental da G1 e da arquitetura de sistema inicializada. Implementação, compilação, treinamento e validação experimental continuam pendentes.
+> **Estado:** infraestrutura C++20 e tipos compartilhados básicos implementados. A validação contínua de compilação/testes está em andamento; modelo, treinamento e avaliação experimental ainda não foram implementados.
 
 ## Objetivo
 
@@ -51,19 +51,21 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 23. [Build, testes e distribuição](docs/23-build-testes-e-distribuicao.md)
 24. [Estrutura completa do repositório — G1 a G30](docs/24-estrutura-completa-repositorio.md)
 25. [Etapa 1 — Infraestrutura inicial](docs/25-etapa-1-infraestrutura.md)
+26. [Etapa 2 — Tipos compartilhados](docs/26-etapa-2-tipos-compartilhados.md)
 
 ## Estado atual
 
-A G1 está especificada documentalmente em nível suficiente para iniciar a implementação. A arquitetura de sistema possui contratos e responsabilidades iniciais para os sete subsistemas. Ainda não há implementação, compilação, treinamento ou benchmark que comprove estabilidade, velocidade ou qualidade.
+- Etapa 1: infraestrutura CMake/C++20, presets, sanitizers, teste de fumaça e CI adicionados.
+- Etapa 2: tipos comuns, validação UTF-8, IDs fortes, erros tipados e testes adicionados; aguardando confirmação do CI do commit atual.
+- G1: arquitetura matemática especificada; implementação do modelo e treinamento ainda pendentes.
 
 ## Próximas etapas
 
-1. Implementar testes matemáticos e inventário automático.
-2. Implementar o núcleo e a cabeça de predição.
-3. Implementar treinamento e checkpoints.
-4. Implementar segmentação reversível.
-5. Implementar persistência, orquestração e contratos dos subsistemas.
-6. Executar testes de aceitação, benchmarks e ablações.
+1. Implementar primitivas matemáticas e testes de estabilidade numérica.
+2. Implementar o inventário e a inicialização determinística dos 1.000 parâmetros.
+3. Implementar estados fast/slow e cabeça de predição.
+4. Implementar treinamento, checkpoints e avaliação.
+5. Implementar segmentação reversível e integrar os subsistemas gradualmente.
 
 ## Princípio de engenharia
 
