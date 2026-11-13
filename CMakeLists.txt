@@ -27,6 +27,7 @@ add_library(morok_core STATIC
     src/model/learn/g1_training.cpp
     src/model/learn/g1_checkpoint.cpp
     src/model/learn/g1_benchmark.cpp
+    src/model/learn/g1_evaluation.cpp
     src/model/learn/g1_generation.cpp
 )
 add_library(Morok::Core ALIAS morok_core)
