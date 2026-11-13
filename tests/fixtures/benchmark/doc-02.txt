@@ -1,0 +1,1 @@
+Modelos recorrentes processam bytes em sequencia. O treinamento deve medir memoria e velocidade.\n
