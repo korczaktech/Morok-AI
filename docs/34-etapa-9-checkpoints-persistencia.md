@@ -33,7 +33,8 @@ O fluxo é destinado ao ambiente Linux inicial do projeto. O processo pressupõe
 
 ## Integração com o treinador
 
-- O treinador aceita `checkpoint_path` e `resume_from_checkpoint`.
+- O treinador aceita `checkpoint_path`, `resume_from_checkpoint`, `metrics_log_path` e `best_model_path`.
+- Ao finalizar, pode exportar o melhor modelo selecionado pela validação como checkpoint de inferência (somente os 1.000 parâmetros, sem estado do otimizador).
 - Um checkpoint é salvo automaticamente ao final de cada época concluída.
 - O checkpoint contém os parâmetros correntes, estado AdamW/SGD, RNG xoshiro256**, época, contador de atualizações, ordem de documentos de treino e posição final do cursor.
 - Metadados armazenam hash do corpus, assinatura da configuração, melhor BPB de validação, melhor época, contador de paciência, contadores de segurança para sequências de gradientes extremos/zero e snapshot dos melhores 1.000 parâmetros.
@@ -57,13 +58,14 @@ Retomar e continuar gravando no mesmo arquivo:
 
 O diretório de destino do checkpoint e do log precisa existir. O corpus precisa ter pelo menos três documentos `.txt` UTF-8 únicos e cada documento tem limite configurável. O arquivo JSONL é aberto em modo append e sincronizado em disco após cada evento.
 
-## Logs JSONL persistentes\n\nA opção `--log caminho.jsonl` grava eventos `start`, `resume`, `epoch`, `checkpoint_saved` e `finished`. Cada linha é um objeto JSON independente, contendo métricas BPB, quantidade de alvos, atualizações, norma de gradiente, época e hash do corpus. O arquivo é append-only; cada evento é flushado e sincronizado com `fsync`. Em retomadas, os eventos novos são acrescentados ao mesmo arquivo.\n\nExemplo:\n\n```sh\n./build/morok_train ./data/corpus 10 42 --checkpoint ./artifacts/g1.ckpt --log ./artifacts/treinamento.jsonl\n./build/morok_train ./data/corpus 20 42 --resume ./artifacts/g1.ckpt --log ./artifacts/treinamento.jsonl\n```\n\n## Testes automatizados
+## Logs JSONL persistentes\n\nA opção `--log caminho.jsonl` grava eventos `start`, `resume`, `epoch`, `checkpoint_saved` e `finished`. Cada linha é um objeto JSON independente, contendo métricas BPB, quantidade de alvos, atualizações, norma de gradiente, época e hash do corpus. O arquivo é append-only; cada evento é flushado e sincronizado com `fsync`. Em retomadas, os eventos novos são acrescentados ao mesmo arquivo.\n\nExemplo:\n\n```sh\n./build/morok_train ./data/corpus 10 42 --checkpoint ./artifacts/g1.ckpt --log ./artifacts/treinamento.jsonl --export-best ./artifacts/g1-best.ckpt\n./build/morok_train ./data/corpus 20 42 --resume ./artifacts/g1.ckpt --log ./artifacts/treinamento.jsonl --export-best ./artifacts/g1-best.ckpt\n```\n\n## Testes automatizados
 
 - Round-trip de parâmetros, AdamW, SGD, RNG, cursor e metadados.
 - Checkpoint de inferência sem estado de treinamento.
 - Corrupção de payload detectada pelo CRC.
 - Validação de metadados UTF-8 e valores FP32 finitos.
-- Treinamento contínuo de quatro épocas comparado com duas épocas + encerramento + retomada até quatro.\n- Igualdade exata do vetor de parâmetros e da melhor época após retomada.\n- Logs JSONL append-only com eventos de início, retomada, época, checkpoint e finalização.
+- Treinamento contínuo de quatro épocas comparado com duas épocas + encerramento + retomada até quatro.\n- Igualdade exata do vetor de parâmetros e da melhor época após retomada.
+- Exportação do checkpoint de inferência com os melhores parâmetros, sem estado do otimizador.\n- Logs JSONL append-only com eventos de início, retomada, época, checkpoint e finalização.
 - Comparação exata do vetor final de parâmetros e melhor época entre os dois caminhos.
 - Testes de treinamento existentes continuam cobrindo split, deduplicação, UTF-8, continuidade de estado e BPB.
 
