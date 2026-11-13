@@ -16,8 +16,7 @@ void require(bool condition, const char* message) {
 }
 
 double loss_only(const morok::model::G1Parameters& p,
-                 const std::vector<std::uint8_t>& bytes,
-                 std::size_t block) {
+                 const std::vector<std::uint8_t>& bytes) {
     return morok::model::compute_g1_bptt_gradients(p, bytes, bytes.size()).mean_loss_nats;
 }
 
@@ -35,7 +34,7 @@ void finite_difference_check(const morok::model::G1Parameters& original,
     require(p_plus.assign(plus), "plus parameter assignment failed");
     require(p_minus.assign(minus), "minus parameter assignment failed");
     const double numeric =
-        (loss_only(p_plus, bytes, 2) - loss_only(p_minus, bytes, 2)) /
+        (loss_only(p_plus, bytes) - loss_only(p_minus, bytes)) /
         (2.0 * static_cast<double>(epsilon));
     const double expected = analytic.values[index];
     const double tolerance = 2.5e-2 + 8.0e-2 * std::abs(numeric);

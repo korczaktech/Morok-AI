@@ -125,7 +125,6 @@ double step_loss_and_head_backward(const G1Parameters& p, const StepCache& step,
                                    std::array<double, D>& d_fast,
                                    std::array<double, D>& d_slow) {
     const auto combined = join(step.fast, step.slow);
-    std::array<double, B> d_base{};
     double loss = 0.0;
 
     for (std::size_t bit = 0; bit < B; ++bit) {
@@ -135,8 +134,6 @@ double step_loss_and_head_backward(const G1Parameters& p, const StepCache& step,
             const bool one = (step.target & static_cast<std::uint8_t>(1U << (7U - previous))) != 0;
             const double signed_bit = one ? 1.0 : -1.0;
             logit += static_cast<double>(p.A[a_ix]) * signed_bit;
-            grad.values[O_TRIANGULAR + a_ix] +=
-                0.0; // filled below from the corresponding conditional derivative
         }
         const bool target_one =
             (step.target & static_cast<std::uint8_t>(1U << (7U - bit))) != 0;
@@ -144,7 +141,6 @@ double step_loss_and_head_backward(const G1Parameters& p, const StepCache& step,
         const double probability = math::sigmoid(logit);
         const double dz = probability - y;
         loss += math::binary_cross_entropy_with_logits(logit, y);
-        d_base[bit] = dz;
 
         grad.values[O_HEAD_BIAS + bit] += dz;
         for (std::size_t col = 0; col < C; ++col) {
@@ -273,8 +269,8 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
         }
 
         result.final_state = state;
-        std::array<double, D> d_fast_next{};
-        std::array<double, D> d_slow_next{};
+        std::array<double, D> d_fast_future{};
+        std::array<double, D> d_slow_future{};
         for (std::size_t reverse = tape.size(); reverse-- > 0;) {
             const auto& step = tape[reverse];
             std::array<double, D> d_fast_head{};
@@ -282,18 +278,22 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
             result.mean_loss_nats +=
                 step_loss_and_head_backward(parameters, step, result.gradients,
                                             d_fast_head, d_slow_head);
+            // Add the adjoint arriving from the next time step before reversing
+            // this step's recurrent transition.
+            for (std::size_t i = 0; i < D; ++i) {
+                d_fast_head[i] += d_fast_future[i];
+                d_slow_head[i] += d_slow_future[i];
+            }
             std::array<double, D> d_fast_previous{};
             std::array<double, D> d_slow_previous{};
             backward_recurrent_step(parameters, step, result.gradients,
                                     d_fast_head, d_slow_head,
                                     d_fast_previous, d_slow_previous);
-            for (std::size_t i = 0; i < D; ++i) {
-                d_fast_next[i] = d_fast_previous[i];
-                d_slow_next[i] = d_slow_previous[i];
-            }
+            d_fast_future = d_fast_previous;
+            d_slow_future = d_slow_previous;
         }
-        // d_fast_next/d_slow_next are intentionally discarded here: truncated
-        // BPTT detaches the carried state at every block boundary.
+        // The future adjoints are intentionally discarded at the block edge:
+        // the numeric state is carried, but the previous block's graph is detached.
         first_target = end_target;
     }
 
