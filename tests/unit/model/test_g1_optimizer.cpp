@@ -140,6 +140,22 @@ void test_optimizer_state_isolation_and_mismatch() {
     require(rejected, "SGD must reject AdamW state");
 }
 
+void test_optimizer_rejects_segmenter_gradients() {
+    using namespace morok::model;
+    G1Parameters parameters{};
+    G1Gradients gradients{};
+    gradients.values[kG1ParameterCount - 1] = 0.5;
+    auto config = G1OptimizerConfig::adamw();
+    auto state = make_g1_optimizer_state(config.kind);
+    const auto before = parameters.flatten();
+    bool rejected = false;
+    try { (void)apply_g1_optimizer_step(parameters, gradients, config, state); }
+    catch (const std::invalid_argument&) { rejected = true; }
+    require(rejected && parameters.flatten() == before &&
+            std::get<G1AdamWState>(state).step == 0,
+            "B0 optimizer must reject gradients for the separate segmenter");
+}
+
 void test_invalid_gradient_is_transactional() {
     using namespace morok::model;
     G1Parameters parameters{};
@@ -195,6 +211,7 @@ int main() {
         test_adamw_bias_correction_and_clipping();
         test_sgd_momentum_and_decay_policy();
         test_optimizer_state_isolation_and_mismatch();
+        test_optimizer_rejects_segmenter_gradients();
         test_invalid_gradient_is_transactional();
         test_invalid_config_and_overflow_are_transactional();
         std::cout << "G1 optimizer tests passed\n";

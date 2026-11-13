@@ -112,6 +112,12 @@ G1OptimizerStepResult apply_g1_optimizer_step(
     if (!state_matches(config.kind, state)) {
         throw std::invalid_argument("optimizer state kind does not match optimizer configuration");
     }
+    for (std::size_t i = kG1ParameterCount - kG1SegmenterParameterCount;
+         i < kG1ParameterCount; ++i) {
+        if (gradients.values[i] != 0.0) {
+            throw std::invalid_argument("B0 optimizer cannot update segmenter gradients");
+        }
+    }
     require_finite_parameters(parameters);
 
     const double original_norm = norm_of(gradients);
