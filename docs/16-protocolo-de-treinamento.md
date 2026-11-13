@@ -1,53 +1,66 @@
 # 16. Protocolo matemático de treinamento
 
+**Estado:** protocolo de referência G1; hiperparâmetros iniciais detalhados no documento 18.
+
 ## 16.1 Objetivo
 
-Treinar os parâmetros do núcleo de sequência para minimizar a perda de predição de bits. A segmentação e o controlador serão atualizados em etapas separadas, para evitar que a estrutura de entrada mude durante cada atualização do modelo.
+Treinar os parâmetros do núcleo de sequência para minimizar a perda de predição do próximo byte. A segmentação e seu controlador são atualizados em etapas separadas. A segmentação G1 é auxiliar e não substitui bytes no caminho preditivo B0.
 
-## 16.2 Ordem de operações
+## 16.2 Ordem causal de operações
 
 Para cada documento:
-1. validar ou aplicar a política de entrada UTF-8;
-2. converter os dados em bytes;
-3. gerar vetores binários de oito dimensões;
+1. validar UTF-8 estritamente conforme documento 18;
+2. converter o documento em bytes;
+3. dividir em blocos de leitura sem quebrar a ordem;
 4. inicializar ou restaurar os estados fast/slow;
-5. processar bytes em ordem causal;
-6. prever o próximo byte;
-7. calcular perda binária por bit;
-8. acumular gradientes em blocos;
-9. aplicar clipping de gradiente;
-10. atualizar parâmetros;
-11. registrar métricas e estado do experimento.
+5. para cada byte observado na posição i, construir o vetor de 11 características definido no documento 13;
+6. atualizar os estados fast/slow com o byte i;
+7. prever o byte i+1 usando os estados atualizados;
+8. calcular a perda contra o byte real i+1, bit a bit;
+9. acumular gradientes durante o bloco BPTT;
+10. aplicar clipping global;
+11. atualizar parâmetros;
+12. transportar os valores numéricos do estado para o próximo bloco, interrompendo o grafo de gradientes na fronteira;
+13. registrar métricas e estado do experimento.
 
-## 16.3 Otimizador inicial
+O último byte de cada sequência não gera alvo se não existir byte seguinte. O alvo nunca pode participar da entrada que produz sua própria previsão.
 
-Escolha inicial: SGD com momentum ou Adam? Para o primeiro baseline, utilizar AdamW simplificado somente se o custo de estados auxiliares couber no orçamento de RAM. Como G1 tem poucos parâmetros, Adam pode acelerar convergência, mas duplica ou triplica armazenamento de estados por parâmetro.
+## 16.3 Entrada e alvos
 
-A especificação inicial seleciona **AdamW** para experimentos de qualidade e **SGD com momentum** como baseline de baixo estado. A implementação deverá comparar convergência, RAM e tempo. Não há hiperparâmetros finais aprovados.
+A entrada do núcleo tem 11 dimensões: oito bits codificados em {-1,+1}, paridade, contagem normalizada de bits 1 e valor do byte normalizado. Os oito bits do alvo são usados pela cabeça de predição; não substituir a entrada 11D por um vetor 8D.
 
-## 16.4 Truncamento de gradiente
+## 16.4 Otimizadores
 
-O fluxo será dividido em blocos de comprimento B. O estado numérico final de um bloco será a inicialização do próximo; o grafo de gradientes será interrompido entre blocos (truncated BPTT).
+AdamW é o otimizador principal do primeiro baseline. Padrão inicial: learning rate 0,001; beta1 0,9; beta2 0,999; epsilon 1e-8; weight decay 0,0001, aplicado a matrizes/pesos e não aos vieses.
 
-B deverá ser pequeno o suficiente para respeitar RAM, mas grande o suficiente para permitir dependências úteis. Valores de teste iniciais: 32, 64 e 128 bytes, comparados em benchmark.
+SGD com momentum é baseline comparativo: learning rate 0,01; momentum 0,9; weight decay 0,0001. Não misturar estados de otimizadores em uma mesma execução.
 
-## 16.5 Inicialização
+A busca inicial de learning rate e a configuração B0 estão detalhadas no documento 18. Nenhum valor é considerado ótimo antes de comparação em validação.
 
-Usar inicialização determinística baseada em semente. Matrizes recorrentes devem começar com escala controlada; vieses dos gates poderão ser inicializados para favorecer retenção moderada, evitando saturação inicial. A regra final deverá ser documentada e testada quanto a gradientes não nulos e estabilidade.
+## 16.5 Truncamento de gradiente
 
-## 16.6 Agendamento de segmentação
+O fluxo será dividido em blocos B. Padrão inicial B=64 bytes, comparando B=32 e B=128. O estado numérico final de um bloco é usado como estado inicial do próximo, mas o grafo de gradientes é interrompido na fronteira (truncated BPTT).
 
-A segmentação será avaliada entre épocas ou após blocos de treinamento definidos. Quando o conjunto de agrupamentos mudar:
-- registrar versão da segmentação;
-- congelar a nova versão durante a janela seguinte;
+## 16.6 Inicialização e estabilidade
+
+Usar inicialização determinística baseada em semente. Matrizes de entrada e cabeça usam Xavier uniform; matrizes recorrentes usam inicialização ortogonal. Vieses iniciais dos gates: rápido 0,0 e lento +1,0. Monitorar saturação, normas de estado e gradientes.
+
+Interromper atualização diante de NaN/Inf. Aplicar clipping pela norma global 1,0. Os demais gatilhos de parada e early stopping constam no documento 18.
+
+## 16.7 Agendamento de segmentação
+
+A segmentação é avaliada ao fim de cada época. Quando a estrutura mudar:
+- registrar versão e métricas;
+- congelar a nova versão durante a época seguinte;
 - invalidar caches derivados;
-- manter possibilidade de retomar a configuração anterior;
-- comparar a perda antes/depois da alteração.
+- preservar checkpoint anterior;
+- verificar round-trip;
+- não afirmar ganho de BPB do preditor enquanto agrupamentos não fizerem parte do caminho preditivo.
 
-## 16.7 Reprodutibilidade
+## 16.8 Reprodutibilidade
 
-A execução deverá registrar semente, ordem dos dados, versão de corpus, versão de arquitetura, parâmetros, otimizador, hiperparâmetros, configuração de segmentação, versão do compilador e métricas.
+Registrar semente, ordem dos dados, versão e hash do corpus, divisão, versão de arquitetura, inventário, parâmetros, otimizador, hiperparâmetros, versão do compilador, flags de build, hardware, configuração de segmentação e métricas.
 
-## 16.8 Critério de estabilidade
+## 16.9 Critério de estabilidade
 
-Interromper ou marcar experimento como falho se houver NaN/Inf, gradiente persistentemente nulo, explosão de norma, corrupção de checkpoint ou divergência de reconstrução. A falha deve gerar diagnóstico, não ser silenciosamente ignorada.
+Marcar experimento como falho se houver NaN/Inf, gradiente persistentemente nulo, explosão de norma, corrupção de checkpoint, quebra de causalidade ou divergência de reconstrução. A falha deve produzir diagnóstico e preservar o último checkpoint válido.
