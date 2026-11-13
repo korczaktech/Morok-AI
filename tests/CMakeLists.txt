@@ -66,3 +66,8 @@ add_executable(morok_test_g1_generation unit/model/test_g1_generation.cpp)
 target_link_libraries(morok_test_g1_generation PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_g1_generation)
 add_test(NAME model.g1_generation COMMAND morok_test_g1_generation)
+
+add_executable(morok_test_g1_evaluation unit/model/test_g1_evaluation.cpp)
+target_link_libraries(morok_test_g1_evaluation PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_g1_evaluation)
+add_test(NAME model.g1_evaluation COMMAND morok_test_g1_evaluation)
