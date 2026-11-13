@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
-> **Estado:** especificação arquitetural v0.3. As propostas matemáticas ainda precisam de implementação e validação experimental.
+> **Estado:** especificação G1 v1.0 documentalmente fechada. Implementação, compilação, treinamento e validação experimental continuam pendentes.
 
 ## Objetivo
 
@@ -43,10 +43,20 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 15. [Segmentação adaptativa e critério](docs/15-segmentacao-adaptativa-e-criterio.md)
 16. [Protocolo matemático de treinamento](docs/16-protocolo-de-treinamento.md)
 17. [Revisão bibliográfica e posicionamento](docs/17-revisao-bibliografica-e-posicionamento.md)
+18. [Especificação operacional fechada da G1](docs/18-especificacao-operacional-g1.md)
 
 ## Estado atual
 
-A arquitetura matemática proposta fecha um orçamento teórico de 1.000 parâmetros para G1. Ainda não há implementação, compilação, treinamento ou benchmark que comprove estabilidade, velocidade ou qualidade. Os resultados deverão ser registrados antes de declarar a arquitetura validada.
+A especificação documental da G1 está fechada em nível suficiente para iniciar a implementação sem inventar contratos operacionais. O inventário teórico soma 1.000 parâmetros. Ainda não há implementação, compilação, treinamento ou benchmark que comprove estabilidade, velocidade ou qualidade. Esses estados só serão atribuídos após execução real.
+
+## Próximas etapas
+
+1. Implementar testes matemáticos e inventário automático de parâmetros.
+2. Implementar o núcleo e a cabeça de predição.
+3. Implementar treinamento e checkpoints.
+4. Implementar segmentação reversível e seu pontuador auxiliar.
+5. Executar testes de aceitação e benchmarks.
+6. Comparar baselines e ablações antes de revisar a arquitetura.
 
 ## Princípio de engenharia
 
