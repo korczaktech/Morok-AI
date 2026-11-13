@@ -58,7 +58,24 @@ onde v possui 22 valores e θ possui sete vieses, um por comprimento candidato.
 
 A pontuação linear é usada para ordenar candidatos elegíveis. A preservação exata continua sendo uma condição obrigatória. O pontuador não substitui o controlador adaptativo dos pesos F/P/C/R.
 
-## 15.6 Controlador adaptativo de pesos
+## 15.6 Treinamento do pontuador
+
+Os alvos do pontuador serão gerados pelo critério multiobjetivo determinístico em blocos de avaliação:
+- y_g=1 para candidato reversível que supera o limiar de utilidade e apresenta benefício líquido;
+- y_g=0 para candidato reversível que não supera o limiar;
+- candidatos não reversíveis são excluídos e nunca usados como exemplos positivos.
+
+A perda do pontuador será entropia cruzada binária:
+L_group = - média_g [y_g log(S(g)) + (1-y_g) log(1-S(g))]
+
+A implementação deverá usar logits estáveis. A cabeça é treinada apenas nos ciclos de atualização da segmentação, e fica congelada durante a janela de treinamento seguinte.
+
+A função da G1 fica:
+L_total = L_pred + λ_group L_group
+
+λ_group será pequeno e calibrado; a cabeça não deve dominar o treinamento linguístico. O valor final será escolhido em validação.
+
+## 15.7 Controlador adaptativo de pesos
 
 Não haverá uma rede neural controladora. Os pesos serão atualizados apenas entre blocos de avaliação, não a cada byte.
 
@@ -76,13 +93,13 @@ Limites iniciais:
 
 A atualização será suspensa se métricas forem insuficientes, instáveis ou não comparáveis. Metas e definição operacional de d_i deverão ser registradas em cada experimento.
 
-## 15.7 Aceitação e histerese
+## 15.8 Aceitação e histerese
 
 Um candidato será rejeitado se não for reversível, não cumprir comprimento ou orçamento, ou não superar a frequência mínima. Será aceito somente se sua utilidade superar o limiar de criação. Será mantido enquanto permanecer acima do limiar inferior de retenção.
 
 O limiar de criação será maior que o limiar de retenção. Os limiares numéricos serão calibrados em validação.
 
-## 15.8 Cache e eficiência
+## 15.9 Cache e eficiência
 
 - Contagens serão atualizadas incrementalmente.
 - Hashes de candidatos evitarão recalcular sequências já vistas.
@@ -91,6 +108,6 @@ O limiar de criação será maior que o limiar de retenção. Os limiares numér
 - Tabelas terão limite de memória e política de remoção.
 - A segmentação será congelada durante cada janela de treinamento.
 
-## 15.9 Limitação de originalidade
+## 15.10 Limitação de originalidade
 
 Charformer/GBST, CANINE, ByteFlow e zip2zip já exploram aspectos de segmentação aprendida, granularidade ou compressão adaptativa. A RLAH combina escolhas específicas de reversibilidade hierárquica, pontuação multiobjetivo, controle periódico limitado e núcleo recorrente fast/slow, mas essa combinação ainda precisa de revisão bibliográfica profunda e experimentos. Não se declara novidade científica.

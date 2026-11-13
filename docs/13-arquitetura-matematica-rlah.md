@@ -12,18 +12,22 @@ A escolha é motivada por memória de inferência limitada ao estado corrente, c
 
 A arquitetura é inspirada pelo campo de modelos recorrentes e de espaço de estados, mas não é uma reprodução de Mamba, RWKV ou Mamba-3. Não se reivindica superioridade nem novidade científica.
 
-## 13.2 Convenções
+## 13.2 Convenções e entrada fixa
 
 - Entrada: fluxo de bytes UTF-8 validados.
 - Byte: inteiro sem sinal entre 0 e 255.
-- Representação binária: vetor x_t em {-1,+1}^8, derivado dos oito bits do byte.
-- Dimensão inicial de estado: d = 11 para a G1, conforme inventário de parâmetros.
+- Estado: d = 11.
+- O byte é convertido em um vetor fixo x_t de 11 características, sem parâmetros treináveis:
+  1. oito bits codificados em {-1,+1};
+  2. paridade dos oito bits em {-1,+1};
+  3. quantidade de bits 1 normalizada para [-1,+1];
+  4. valor do byte normalizado para [-1,+1].
 - Funções: sigmoid(z)=1/(1+exp(-z)); tanh aplicada elemento a elemento; ⊙ representa produto elemento a elemento.
 - h_f: estado rápido.
 - h_s: estado lento.
 - Todas as operações usam parâmetros compartilhados ao longo das posições.
 
-A representação binária direta evita uma tabela de embedding de 256 entradas. Isso reduz parâmetros e elimina lookup de vocabulário, mas não prova que seja a melhor representação; deverá ser comparada com embedding compacto.
+A expansão de oito bits para onze características é determinística e não adiciona parâmetros. As três características derivadas são redundantes em termos de informação, mas podem fornecer sinais úteis ao núcleo pequeno. Sua utilidade deverá ser testada por ablação; se não melhorarem o resultado, poderão ser removidas em uma revisão do orçamento.
 
 ## 13.3 Atualização do estado rápido
 
