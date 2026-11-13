@@ -54,7 +54,7 @@ std::string cpu_name() {
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        std::cerr << "usage: morok_benchmark <corpus-dir> <output.jsonl> [epochs=3] [seed=42] [license=UNKNOWN] [source=UNSPECIFIED]\n";
+        std::cerr << "usage: morok_benchmark <corpus-dir> <output.jsonl> [epochs=3] [seed=42] [license=UNKNOWN] [source=UNSPECIFIED] [repetitions=1]\n";
         return 2;
     }
     try {
@@ -62,8 +62,8 @@ int main(int argc, char** argv) {
         const std::size_t epochs = argc > 3 ? std::stoull(argv[3]) : 3;
         const std::uint64_t seed = argc > 4 ? std::stoull(argv[4]) : 42;
         const std::string license = argc > 5 ? argv[5] : "UNKNOWN";
-        const std::string source = argc > 6 ? argv[6] : "UNSPECIFIED";
-        if (epochs == 0 || license == "UNKNOWN" || source == "UNSPECIFIED")
+        const std::string source = argc > 6 ? argv[6] : "UNSPECIFIED";\n        const std::size_t repetitions = argc > 7 ? std::stoull(argv[7]) : 1;
+        if (epochs == 0 || repetitions == 0 || repetitions > 20 || license == "UNKNOWN" || source == "UNSPECIFIED")
             throw std::invalid_argument("provide positive epochs and explicit corpus license/source provenance");
         const auto baseline = morok::model::evaluate_g1_softmax256_unigram_baseline(corpus, seed);
         std::ofstream log(output, std::ios::binary | std::ios::app);
@@ -77,19 +77,19 @@ int main(int argc, char** argv) {
 #else
             "unknown";
 #endif
-        for (const auto truncation : {32U, 64U, 128U}) {
+        for (std::size_t repetition = 0; repetition < repetitions; ++repetition) {\n            const std::uint64_t run_seed = seed + repetition;\n            const auto baseline = morok::model::evaluate_g1_softmax256_unigram_baseline(corpus, run_seed);\n            for (const auto truncation : {32U, 64U, 128U}) {
             for (const auto kind : {morok::model::G1OptimizerKind::AdamW,
                                     morok::model::G1OptimizerKind::SGDMomentum}) {
                 morok::model::G1TrainingConfig config;
                 config.corpus_directory = corpus;
                 config.max_epochs = epochs;
-                config.seed = seed;
+                config.seed = run_seed;
                 config.truncation_length = truncation;
                 config.optimizer = kind == morok::model::G1OptimizerKind::AdamW
                     ? morok::model::G1OptimizerConfig::adamw()
                     : morok::model::G1OptimizerConfig::sgd_momentum();
                 morok::model::G1Parameters parameters;
-                morok::model::initialize_g1_parameters(parameters, seed);
+                morok::model::initialize_g1_parameters(parameters, run_seed);
                 const auto started = std::chrono::steady_clock::now();
                 const auto report = morok::model::train_g1_corpus(config, parameters);
                 const auto elapsed = std::chrono::duration<double>(
