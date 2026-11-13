@@ -19,7 +19,7 @@ void test_stable_activations_and_losses() {
     assert(close(sigmoid(0.0), 0.5));
     assert(sigmoid(1000.0) > 0.999999);
     assert(sigmoid(-1000.0) < 1e-12);
-    assert(close(tanh(0.0), 0.0));
+    assert(close(tanh_activation(0.0), 0.0));
     assert(close(softplus(0.0), std::log(2.0)));
     assert(close(softplus(1000.0), 1000.0));
     assert(softplus(-1000.0) >= 0.0);
