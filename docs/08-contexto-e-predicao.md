@@ -1,49 +1,25 @@
 # 8. RLAH — Contexto recorrente e predição
 
-## 8.1 DEC-008 — Contexto recorrente compacto
+> **Atualização normativa:** as equações, dimensões, indexação causal, saída e perda da G1 estão definidas nos documentos 13, 14, 16 e 18. Este documento é uma visão resumida e não deve ser usado isoladamente para implementar.
 
-**Decisão selecionada:** investigar um núcleo recorrente compacto em vez de atenção convencional global na primeira arquitetura.
+## 8.1 Contexto recorrente compacto
 
-Fluxo conceitual:
-1. receber unidade;
-2. incorporar informação ao estado interno;
-3. atualizar o estado;
-4. processar a próxima unidade;
-5. utilizar o estado para previsão.
-
-O estado terá dimensão limitada. A memória persistente de longo prazo pertence ao IA-MEM, não ao estado recorrente.
+A G1 utiliza núcleo recorrente fast/slow com dimensão d=11 e estado limitado. O estado transitório não substitui a memória persistente IA-MEM.
 
 ## 8.2 Motivação de eficiência
 
-Um estado recorrente compacto pode evitar armazenar e comparar todas as posições anteriores a cada passo. Isso pode reduzir memória de contexto e custo por sequência.
+Um estado recorrente compacto evita armazenar e comparar todas as posições anteriores a cada passo. Isso pode reduzir memória de contexto, mas pode limitar paralelismo e dependências distantes. O custo real deverá ser comparado com baselines.
 
-Essa vantagem é uma hipótese. Recorrência pode limitar paralelismo e dificultar dependências distantes. O custo real deverá ser comparado com baselines adequados.
+## 8.3 Predição causal de bytes
 
-## 8.3 DEC-009 — Predição de bytes
+Após observar e processar o byte na posição i, o modelo prevê o byte i+1. O byte-alvo e bytes futuros não podem influenciar os logits dessa previsão.
 
-A primeira geração terá como objetivo principal estimar o próximo byte condicionado ao contexto:
-
-P(b_t | b_<t)
-
-Foi proposta uma saída binária sequencial: cada byte contém oito bits, e o modelo estima os bits condicionados aos bits anteriores e ao contexto.
-
-A forma exata de fatoração, ordem dos bits, codificação de saída, cálculo da perda e dimensões do cabeçalho de saída ainda precisam ser especificados.
-
-A escolha visa reduzir a dimensão da saída em relação a uma camada categórica ampla, mas não se presume que seja sempre mais rápida: serão medidos número de operações, dependências sequenciais e latência.
+O byte é representado por oito decisões binárias condicionais. A entrada do núcleo possui 11 características fixas; os oito bits correspondem ao alvo da cabeça de saída.
 
 ## 8.4 UTF-8 e reconstrução
 
-A geração de bytes deve produzir sequências que possam ser decodificadas como UTF-8 quando o contrato da tarefa exigir texto válido. O tratamento de bytes inválidos deverá ser explícito.
+A entrada textual usa UTF-8 estrito. A geração acumula bytes e valida a sequência antes de apresentá-la como texto. Reconstrução sem perdas de agrupamentos é distinta da previsão probabilística.
 
-A reconstrução sem perdas da entrada é uma exigência para os caminhos de compressão/reconstrução, mas não deve ser confundida com a tarefa probabilística de geração.
+## 8.5 Estado
 
-## 8.5 Pendências
-
-- Definir dimensão do estado recorrente.
-- Definir equações de atualização.
-- Definir inicialização e reset de estado.
-- Definir truncamento de gradiente, se necessário.
-- Definir fatoração binária da saída.
-- Definir função de perda de bits.
-- Definir amostragem e decodificação.
-- Comparar com predição categórica de 256 bytes e outros baselines.
+Estados fast/slow iniciam em zero para uma sessão nova, são isolados por sessão e podem ser transportados entre blocos de treinamento. Na fronteira BPTT, o valor do estado é mantido, mas o grafo de gradientes é interrompido.
