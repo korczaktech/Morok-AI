@@ -58,6 +58,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 30. [Etapa 6 — BPTT e gradientes da G1](docs/30-etapa-6-bptt-gradientes-g1.md)
 31. [Etapa 7 — Otimizadores e clipping global da G1](docs/31-etapa-7-otimizadores-g1.md)
 32. [Etapa 8 — Pipeline de treinamento da G1](docs/32-etapa-8-treinamento-g1.md)
+33. [GitHub Actions: entrada.txt -> saida.txt](docs/33-github-actions-entrada-saida.md)
 
 ## Estado atual
 
@@ -69,6 +70,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 6: BPTT truncado e gradientes manuais da G1 implementados.
 - Etapa 7: AdamW, SGD com momentum, clipping global e testes transacionais implementados.
 - Etapa 8: leitura/validação de corpus em fluxo, deduplicação exata, split determinístico por documento, treino BPTT em blocos, avaliação BPB, early stopping e CLI implementados. Checkpoints retomáveis permanecem pendentes.
+- Protótipo experimental `morok_complete`: lê `entrada.txt`, treina a G1 do zero sobre a sequência, gera uma continuação ASCII e grava `saida.txt`. O GitHub Actions executa esse fluxo quando `entrada.txt` muda na `main`; os parâmetros não persistem entre execuções.
 - G1: inventário de parâmetros, forward pass, gradientes B0 e otimizadores implementados; os 29 parâmetros do segmentador permanecem fora do caminho preditivo.
 
 ## Próximas etapas
