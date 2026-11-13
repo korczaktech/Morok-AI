@@ -11,11 +11,13 @@
 #include <vector>
 
 namespace {
+constexpr std::size_t kMaxPromptBytes = 64U * 1024U;
 std::string read_text(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) throw std::runtime_error("não foi possível abrir o prompt");
     std::string text((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     if (file.bad()) throw std::runtime_error("falha ao ler o prompt");
+    if (text.size() > kMaxPromptBytes) throw std::runtime_error("prompt excede 64 KiB");
     return text;
 }
 void write_text(const std::string& path, const std::string& text) {
