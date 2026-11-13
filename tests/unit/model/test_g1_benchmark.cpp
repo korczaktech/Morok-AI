@@ -24,7 +24,7 @@ int main() {
     try {
         write(root / "a.txt", "aaaaabbbbbccccc");
         write(root / "b.txt", "aaaaabbbbbddddd");
-        write(root / "c.txt", "aaaaabbbbbcccccxxxxx");
+        write(root / "c.txt", "aaaaabbbbbxxxxx");
         write(root / "duplicate.txt", "aaaaabbbbbccccc");
         const auto metrics = morok::model::evaluate_g1_softmax256_unigram_baseline(root, 42);
         require(metrics.discovered_documents == 4, "discovered count mismatch");
