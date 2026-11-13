@@ -1,0 +1,52 @@
+name: Morok AI - completar entrada.txt
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - entrada.txt
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: morok-text-completion
+  cancel-in-progress: false
+
+jobs:
+  complete:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Instalar ferramentas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++
+
+      - name: Compilar Morok AI
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=OFF
+          cmake --build build --target morok_complete --parallel 2
+
+      - name: Processar entrada.txt
+        run: ./build/morok_complete
+
+      - name: Publicar saida.txt
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add saida.txt
+          if git diff --cached --quiet; then
+            echo "A saida.txt nao mudou."
+            exit 0
+          fi
+          git commit -m "chore(ai): atualizar saida gerada pelo Morok"
+          git push origin HEAD:main
