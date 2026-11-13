@@ -90,7 +90,7 @@ A segmentação (29 parâmetros) permanece fora do caminho preditivo B0, conform
 - [x] Distribuição conjunta normalizada nos 256 bytes, inclusive com dependências condicionais.
 - [x] Rede responde a entrada com parâmetros inicializados.
 - [x] CI GCC/Clang Debug/Release aprovado no run 43517463554.
-- [ ] ASan/UBSan executado em ambiente compatível.
+- [x] ASan/UBSan aprovado no run 43517689716.
 
 ## Fora do escopo
 
