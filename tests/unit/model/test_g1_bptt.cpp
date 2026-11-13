@@ -16,14 +16,16 @@ void require(bool condition, const char* message) {
 }
 
 double loss_only(const morok::model::G1Parameters& p,
-                 const std::vector<std::uint8_t>& bytes) {
-    return morok::model::compute_g1_bptt_gradients(p, bytes, bytes.size()).mean_loss_nats;
+                 const std::vector<std::uint8_t>& bytes,
+                 std::size_t truncation) {
+    return morok::model::compute_g1_bptt_gradients(p, bytes, truncation).mean_loss_nats;
 }
 
 void finite_difference_check(const morok::model::G1Parameters& original,
                              const std::vector<std::uint8_t>& bytes,
                              const morok::model::G1Gradients& analytic,
-                             std::size_t index) {
+                             std::size_t index,
+                             std::size_t truncation) {
     auto plus = original.flatten();
     auto minus = original.flatten();
     constexpr float epsilon = 1.0e-2F;
@@ -34,7 +36,7 @@ void finite_difference_check(const morok::model::G1Parameters& original,
     require(p_plus.assign(plus), "plus parameter assignment failed");
     require(p_minus.assign(minus), "minus parameter assignment failed");
     const double numeric =
-        (loss_only(p_plus, bytes) - loss_only(p_minus, bytes)) /
+        (loss_only(p_plus, bytes, truncation) - loss_only(p_minus, bytes, truncation)) /
         (2.0 * static_cast<double>(epsilon));
     const double expected = analytic.values[index];
     const double tolerance = 2.5e-2 + 8.0e-2 * std::abs(numeric);
@@ -70,6 +72,13 @@ int main() {
                 "truncation must not change forward loss");
         require(short_blocks.gradients.global_norm() > 0.0,
                 "truncated BPTT gradient is unexpectedly zero");
+        double truncation_difference = 0.0;
+        for (std::size_t i = 0; i < kG1ParameterCount; ++i) {
+            truncation_difference += std::abs(full.gradients.values[i] -
+                                              short_blocks.gradients.values[i]);
+        }
+        require(truncation_difference > 1.0e-8,
+                "truncated BPTT must cut gradient paths at block boundaries");
         require(short_blocks.final_state.fast == full.final_state.fast &&
                 short_blocks.final_state.slow == full.final_state.slow,
                 "carried state must match regardless of truncation length");
@@ -77,7 +86,8 @@ int main() {
         // Selected central-difference checks cover every trainable tensor family.
         for (const std::size_t index : std::array<std::size_t, 12>{
                  0, 121, 242, 363, 484, 495, 506, 627, 748, 759, 935, 943}) {
-            finite_difference_check(parameters, bytes, full.gradients, index);
+            finite_difference_check(parameters, bytes, full.gradients, index, bytes.size());
+            finite_difference_check(parameters, bytes, short_blocks.gradients, index, 2);
         }
 
         bool rejected = false;

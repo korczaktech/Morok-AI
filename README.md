@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
-> **Estado:** infraestrutura C++20, tipos compartilhados e primitivas matemáticas iniciais implementados. Modelo neural, treinamento e avaliação experimental ainda não foram implementados.
+ > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Otimizadores, treinamento por épocas e avaliação experimental ainda não foram implementados.
 
 ## Objetivo
 
