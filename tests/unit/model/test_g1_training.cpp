@@ -1,6 +1,7 @@
 #include "morok/model/learn/g1_training.hpp"
 #include "morok/model/learn/g1_bptt.hpp"
 #include "morok/model/parameters/g1_parameters.hpp"
+#include "morok/model/parameters/g1_parameters.hpp"
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -43,6 +44,30 @@ void incremental_state_continuity(){
   req(std::abs(second.final_state.slow[i]-expected.slow[i])<1e-6F,"overlapped slow state mismatch");
  }
 }
+
+void deterministic_resume(){
+ auto root=std::filesystem::temp_directory_path()/"morok-g1-resume-test";
+ auto ck=root/"resume.ckpt";std::filesystem::remove_all(root);std::filesystem::create_directories(root);
+ try{
+  for(int i=0;i<20;++i)write(root/("d"+std::to_string(i)+".txt"),"documento de treino "+std::to_string(i)+" com contexto repetido\n");
+  morok::model::G1TrainingConfig full;full.corpus_directory=root;full.max_epochs=4;full.patience=10;full.truncation_length=8;
+  morok::model::G1Parameters uninterrupted;morok::model::initialize_g1_parameters(uninterrupted,77);
+  auto full_report=morok::model::train_g1_corpus(full,uninterrupted);
+  auto first=full;first.max_epochs=2;first.checkpoint_path=ck;
+  morok::model::G1Parameters interrupted;morok::model::initialize_g1_parameters(interrupted,77);
+  auto first_report=morok::model::train_g1_corpus(first,interrupted);
+  req(first_report.epochs.size()==2&&std::filesystem::exists(ck),"checkpoint not saved at epoch boundary");
+  auto resumed=full;resumed.resume_from_checkpoint=ck;resumed.checkpoint_path=ck;
+  morok::model::G1Parameters resumed_parameters;
+  auto resumed_report=morok::model::train_g1_corpus(resumed,resumed_parameters);
+  req(resumed_report.resumed,"resume flag not set");
+  req(resumed_report.epochs.size()==2&&resumed_report.epochs.front().epoch==3,"resume did not continue at next epoch");
+  req(uninterrupted.flatten()==resumed_parameters.flatten(),"resumed training diverged from uninterrupted training");
+  req(full_report.best_epoch==resumed_report.best_epoch,"best epoch differs after resume");
+ }catch(...){std::filesystem::remove_all(root);throw;}
+ std::filesystem::remove_all(root);
+}
+
 void invalid_utf8(){
  auto root=std::filesystem::temp_directory_path()/"morok-g1-invalid-test";std::filesystem::remove_all(root);std::filesystem::create_directories(root);
  try{
@@ -53,4 +78,4 @@ void invalid_utf8(){
  }catch(...){std::filesystem::remove_all(root);throw;}std::filesystem::remove_all(root);
 }
 }
-int main(){try{pipeline();incremental_state_continuity();invalid_utf8();std::cout<<"G1 training tests passed\n";return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+int main(){try{pipeline();incremental_state_continuity();deterministic_resume();invalid_utf8();std::cout<<"G1 training tests passed\n";return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
