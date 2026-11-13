@@ -103,7 +103,7 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
 
     auto valid = common::Utf8Text::from_utf8(generated);
     if (!valid) throw std::logic_error("decoder UTF-8 gerou uma sequência inválida");
-    G1GenerationReport report{std::move(valid).value(), evaluations, generated.size(),
+    G1GenerationReport report{std::move(*valid.value_if()), evaluations, generated.size(),
                               generated.size() == config.max_new_bytes};
     return report;
 }
