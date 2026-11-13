@@ -77,7 +77,8 @@ int main(int argc, char** argv) {
 #else
             "unknown";
 #endif
-        for (std::size_t repetition = 0; repetition < repetitions; ++repetition) {\n            const std::uint64_t run_seed = seed + repetition;\n            const auto baseline = morok::model::evaluate_g1_softmax256_unigram_baseline(corpus, run_seed);\n            for (const auto truncation : {32U, 64U, 128U}) {
+        for (std::size_t repetition = 0; repetition < repetitions; ++repetition) {
+            const std::uint64_t run_seed = seed + repetition;\n            const auto baseline = morok::model::evaluate_g1_softmax256_unigram_baseline(corpus, run_seed);\n            for (const auto truncation : {32U, 64U, 128U}) {
             for (const auto kind : {morok::model::G1OptimizerKind::AdamW,
                                     morok::model::G1OptimizerKind::SGDMomentum}) {
                 morok::model::G1TrainingConfig config;
@@ -112,7 +113,7 @@ int main(int argc, char** argv) {
                     << "\"corpus_source\":\"" << json_escape(source) << "\","
                     << "\"corpus_license\":\"" << json_escape(license) << "\","
                     << "\"corpus_hash\":\"" << report.corpus_hash << "\","
-                    << "\"seed\":" << seed << ",\"epochs_requested\":" << epochs << ','
+                    << "\"seed\":" << run_seed << ",\"epochs_requested\":" << epochs << ','
                     << "\"epochs_completed\":" << report.epochs.size() << ','
                     << "\"truncation_bytes\":" << truncation << ','
                     << "\"optimizer\":\"" << optimizer << "\","
@@ -136,6 +137,7 @@ int main(int argc, char** argv) {
                           << " softmax256_unigram_BPB=" << baseline.softmax256_unigram_bpb
                           << " throughput_Bps=" << throughput
                           << " wall_s=" << elapsed << " peak_RSS_B=" << peak_rss_bytes() << '\n';
+            }
             }
         }
         return 0;
