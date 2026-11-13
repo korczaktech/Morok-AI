@@ -43,7 +43,7 @@ Cada linha JSONL registra:
 - tempo total de parede e pico de RSS do processo;
 - indicação de early stopping.
 
-O throughput é calculado por alvos de treino processados dividido pelo tempo total de treinamento, avaliação e overhead medido da chamada. Não deve ser interpretado como throughput puro de kernel. RSS é o pico reportado pelo sistema operacional para o processo, não a RAM do dispositivo inteiro.
+O throughput é calculado por alvos de treino processados dividido pelo tempo total de treinamento, avaliação e overhead medido da chamada. Não deve ser interpretado como throughput puro de kernel. RSS é o pico reportado pelo sistema operacional para o processo, não a RAM do dispositivo inteiro. O pico é acumulado durante a campanha dentro do mesmo processo e, portanto, não deve ser comparado como se fosse uma medição isolada de cada configuração.
 
 ## Uso local
 
