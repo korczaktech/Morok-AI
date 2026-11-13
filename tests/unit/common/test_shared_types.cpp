@@ -95,21 +95,25 @@ void test_identifiers() {
     static_assert(!std::is_same_v<SessionId, RequestId>);
 
     const auto session = SessionId::generate();
+    const auto another_session = SessionId::generate();
     const auto memory = MemoryId::generate();
     const auto request = RequestId::generate();
 
     check(session.has_value(), "SessionId can be generated");
+    check(another_session.has_value(), "second SessionId can be generated");
     check(memory.has_value(), "MemoryId can be generated");
     check(request.has_value(), "RequestId can be generated");
 
-    if (session && memory && request) {
+    if (session && another_session && memory && request) {
         check(!session.value_if()->is_nil(), "generated SessionId is non-nil");
         check(session.value_if()->to_string().size() == 36U,
               "identifier uses canonical UUID text length");
-        check(*session.value_if() != *memory.value_if(),
-              "independent identifiers are distinct in test sample");
-        check(*request.value_if() != *session.value_if(),
-              "RequestId has independent value");
+        check(*session.value_if() != *another_session.value_if(),
+              "independently generated SessionIds are distinct in test sample");
+        check(memory.value_if()->to_string().size() == 36U,
+              "MemoryId has canonical UUID text representation");
+        check(request.value_if()->to_string().size() == 36U,
+              "RequestId has canonical UUID text representation");
     }
 }
 
