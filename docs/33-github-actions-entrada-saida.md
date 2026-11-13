@@ -4,7 +4,7 @@
 
 1. Uma alteracao em `entrada.txt` na branch `main` inicia o workflow `Morok AI - completar entrada.txt`.
 2. O runner Ubuntu compila o executavel experimental `morok_complete`.
-3. O programa le no maximo 64 KiB de entrada, inicializa os 1.000 parametros com uma semente derivada do proprio texto e realiza 100 epocas de atualizacao BPTT/AdamW sobre a sequencia fornecida.
+3. O programa le no maximo 4 KiB de entrada, inicializa os 1.000 parametros com uma semente derivada do proprio texto e realiza 50 epocas de atualizacao BPTT/AdamW sobre a sequencia fornecida.
 4. Depois do treino, condiciona a inferencia ao texto de entrada e escolhe a cada passo o byte imprimivel ASCII com menor perda condicional.
 5. Grava 160 bytes de continuacao em `saida.txt`.
 6. O workflow faz commit direto na `main`, sem abrir PR.
