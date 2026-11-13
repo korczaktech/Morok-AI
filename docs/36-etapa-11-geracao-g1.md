@@ -11,7 +11,7 @@ Disponibilizar inferência independente do treinamento: carregar um checkpoint d
 - CLI `morok_generate` em `apps/generate_g1.cpp`.
 - Testes em `tests/unit/model/test_g1_generation.cpp`.
 - Checkpoint de inferência MOROKCKP v1 carregado por `load_g1_checkpoint`; o arquivo deve conter os 1.000 parâmetros e pode omitir o estado do otimizador.
-- Prompt é validado por `Utf8Text` estrito antes de qualquer inferência.
+- Prompt é limitado a 64 KiB na CLI e validado por `Utf8Text` estrito antes de qualquer inferência.
 - Estado fast/slow é zerado no início de cada chamada e o prompt é consumido em ordem causal.
 - Decodificação gulosa: em cada posição são avaliados os bytes candidatos permitidos pela máquina de estados UTF-8; escolhe-se o de menor NLL condicional. Empates mantêm o menor valor de byte pela ordem de varredura.
 - Restrições UTF-8 cobrem bytes iniciais, continuações, overlong, surrogates e limite U+10FFFF. A seleção também impede iniciar uma sequência multibyte que não possa terminar dentro do orçamento restante.
@@ -61,7 +61,7 @@ A CLI grava JSON resumido no stdout com bytes gerados, quantidade de avaliaçõe
 - Determinismo da decodificação.
 - Limite máximo de bytes.
 - Validade UTF-8 estrita da continuação.
-- Orçamento insuficiente para sequência multibyte.
+- Prompt multibyte com orçamento de saída curto; sequência gerada continua UTF-8 válida.
 - Rejeição de limite zero.
 - Integração com checkpoint de inferência sem estado do otimizador.
 - Causalidade: score de candidato não altera estado; byte escolhido é consumido após a decisão.
