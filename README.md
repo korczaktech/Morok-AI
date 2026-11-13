@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
-> **Estado:** infraestrutura C++20 e tipos compartilhados básicos implementados. A validação contínua de compilação/testes está em andamento; modelo, treinamento e avaliação experimental ainda não foram implementados.
+> **Estado:** infraestrutura C++20, tipos compartilhados e primitivas matemáticas iniciais implementados. Modelo neural, treinamento e avaliação experimental ainda não foram implementados.
 
 ## Objetivo
 
@@ -52,20 +52,21 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 24. [Estrutura completa do repositório — G1 a G30](docs/24-estrutura-completa-repositorio.md)
 25. [Etapa 1 — Infraestrutura inicial](docs/25-etapa-1-infraestrutura.md)
 26. [Etapa 2 — Tipos compartilhados](docs/26-etapa-2-tipos-compartilhados.md)
+27. [Etapa 3 — Primitivas matemáticas](docs/27-etapa-3-primitivas-matematicas.md)
 
 ## Estado atual
 
 - Etapa 1: infraestrutura CMake/C++20, presets, sanitizers, teste de fumaça e CI adicionados.
-- Etapa 2: tipos comuns, validação UTF-8, IDs fortes, erros tipados e testes adicionados; aguardando confirmação do CI do commit atual.
+- Etapa 2: tipos comuns, validação UTF-8, IDs fortes, erros tipados e testes adicionados.
+- Etapa 3: primitivas matemáticas estáveis, inicialização determinística e testes numéricos adicionados; validação CI em andamento.
 - G1: arquitetura matemática especificada; implementação do modelo e treinamento ainda pendentes.
 
 ## Próximas etapas
 
-1. Implementar primitivas matemáticas e testes de estabilidade numérica.
-2. Implementar o inventário e a inicialização determinística dos 1.000 parâmetros.
-3. Implementar estados fast/slow e cabeça de predição.
-4. Implementar treinamento, checkpoints e avaliação.
-5. Implementar segmentação reversível e integrar os subsistemas gradualmente.
+1. Implementar inventário e inicialização determinística dos 1.000 parâmetros.
+2. Implementar estados fast/slow e cabeça de predição.
+3. Implementar treinamento, checkpoints e avaliação.
+4. Implementar segmentação reversível e integrar os subsistemas gradualmente.
 
 ## Princípio de engenharia
 
