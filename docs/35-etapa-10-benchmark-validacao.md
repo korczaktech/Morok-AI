@@ -89,7 +89,7 @@ Nesse fixture, o baseline de frequência superou a G1 em BPB em todas as configu
 
 O corpus sintético serve apenas para verificar o pipeline. Não permite inferir qualidade linguística, generalização ou comportamento em corpus real. O pico RSS e os tempos pertencem à VM de CI, não ao hardware de referência de 4 GB.
 
-O relatório JSONL está publicado no artifact `g1-benchmark-smoke` do mesmo run. Os quatro jobs GCC/Clang Debug/Release passaram no CI. O workflow ASan/UBSan do commit de código anterior também passou; a validação final do commit mais recente está em andamento.
+O relatório JSONL está publicado no artifact `g1-benchmark-smoke` do run. Os quatro jobs GCC/Clang Debug/Release passaram no CI [43529845758](https://github.com/korczaktech/Morok-AI/actions/runs/43529845758), e ASan/UBSan passou em [43529845785](https://github.com/korczaktech/Morok-AI/actions/runs/43529845785), no commit de código `890380b44ba66b47cb2870f13c75dc990706e921`. O commit posterior que atualizou os resultados e a documentação não alterou código.
 
 ## Critérios de aceitação da implementação
 
