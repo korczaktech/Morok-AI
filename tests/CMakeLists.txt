@@ -1,0 +1,4 @@
+add_executable(morok_test_build_info unit/common/test_build_info.cpp)
+target_link_libraries(morok_test_build_info PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_build_info)
+add_test(NAME common.build_info COMMAND morok_test_build_info)
