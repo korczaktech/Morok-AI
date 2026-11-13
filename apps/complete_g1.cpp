@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <stdexcept>
 #include <limits>
 #include <string>
 #include <vector>
@@ -32,7 +33,7 @@ std::vector<std::uint8_t> read_input(const char* path) {
     if (!file) throw std::runtime_error("nao foi possivel abrir entrada.txt");
     std::vector<std::uint8_t> bytes(
         std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
-    if (!file.eof() && file.fail()) throw std::runtime_error("erro ao ler entrada.txt");
+    if (file.bad()) throw std::runtime_error("erro ao ler entrada.txt");
     if (bytes.size() < 2) throw std::runtime_error("entrada.txt precisa conter pelo menos 2 bytes");
     if (bytes.size() > kMaxInputBytes) throw std::runtime_error("entrada.txt excede 64 KiB");
     return bytes;
