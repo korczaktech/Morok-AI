@@ -112,6 +112,11 @@ int main(int argc, char** argv) {
                 morok::model::initialize_g1_parameters(parameters, run_seed);
                 const auto started = std::chrono::steady_clock::now();
                 const auto report = morok::model::train_g1_corpus(config, parameters);
+                if (report.epochs.empty() ||
+                    baseline.unique_documents != report.unique_documents ||
+                    baseline.test_target_bytes != report.test_target_bytes ||
+                    baseline.training_target_bytes != report.epochs.front().training_target_bytes)
+                    throw std::runtime_error("softmax baseline and G1 trainer produced different document splits");
                 const auto elapsed = std::chrono::duration<double>(
                     std::chrono::steady_clock::now() - started).count();
                 std::uint64_t trained_targets = 0, updates = 0;
