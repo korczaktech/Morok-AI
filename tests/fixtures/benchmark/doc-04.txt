@@ -1,0 +1,1 @@
+A validacao escolhe configuracoes. O conjunto de teste mede generalizacao sem ajuste.\n
