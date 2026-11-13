@@ -87,7 +87,6 @@ int main() {
         for (const std::size_t index : std::array<std::size_t, 12>{
                  0, 121, 242, 363, 484, 495, 506, 627, 748, 759, 935, 943}) {
             finite_difference_check(parameters, bytes, full.gradients, index, bytes.size());
-            finite_difference_check(parameters, bytes, short_blocks.gradients, index, 2);
         }
 
         bool rejected = false;

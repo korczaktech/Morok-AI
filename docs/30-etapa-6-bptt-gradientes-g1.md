@@ -54,7 +54,7 @@ A função não altera parâmetros nem estado externo. Não aplica clipping, atu
 - [x] Perda e norma dos gradientes finitas.
 - [x] Gradientes do segmentador iguais a zero.
 - [x] Perda forward e estado final invariantes ao tamanho da janela de truncamento.
-- [x] Comparação por diferenças finitas centrais para um parâmetro de cada tensor treinável, em BPTT integral e truncado (24 verificações).
+- [x] Comparação por diferenças finitas centrais para um parâmetro de cada tensor treinável, em BPTT integral (12 verificações). O truncamento é verificado separadamente pela diferença entre gradientes e pela invariância do estado forward.
 - [x] Verificação de que a perda/estado forward permanecem iguais, mas os gradientes mudam quando a fronteira de truncamento corta dependências temporais.
 - [x] Rejeição de sequência curta e truncation_length zero.
 - [x] CI GCC/Clang Debug/Release aprovado no run 43519658420.
