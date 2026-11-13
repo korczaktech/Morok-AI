@@ -27,6 +27,7 @@ add_library(morok_core STATIC
     src/model/learn/g1_training.cpp
     src/model/learn/g1_checkpoint.cpp
     src/model/learn/g1_benchmark.cpp
+    src/model/learn/g1_generation.cpp
 )
 add_library(Morok::Core ALIAS morok_core)
 
@@ -61,3 +62,7 @@ morok_enable_sanitizers(morok_benchmark)
 add_executable(morok_complete apps/complete_g1.cpp)
 target_link_libraries(morok_complete PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_complete)
+
+add_executable(morok_generate apps/generate_g1.cpp)
+target_link_libraries(morok_generate PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_generate)
