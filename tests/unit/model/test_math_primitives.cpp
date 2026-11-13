@@ -3,12 +3,18 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
+#include <stdexcept>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
 
 namespace {
+
+void require(bool condition, const char* message = "math primitive test assertion failed") {
+    if (!condition) {
+        throw std::runtime_error(message);
+    }
+}
 
 bool close(double left, double right, double tolerance = 1e-10) {
     return std::abs(left - right) <= tolerance;
@@ -16,7 +22,7 @@ bool close(double left, double right, double tolerance = 1e-10) {
 
 void test_stable_activations_and_losses() {
     using namespace morok::math;
-    assert(close(sigmoid(0.0), 0.5));
+    require(close(sigmoid(0.0), 0.5));
     assert(sigmoid(1000.0) > 0.999999);
     assert(sigmoid(-1000.0) < 1e-12);
     assert(close(tanh_activation(0.0), 0.0));
