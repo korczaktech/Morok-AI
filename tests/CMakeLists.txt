@@ -11,3 +11,10 @@ add_executable(morok_test_shared_types
 target_link_libraries(morok_test_shared_types PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_shared_types)
 add_test(NAME common.shared_types COMMAND morok_test_shared_types)
+
+add_executable(morok_test_math_primitives
+    unit/model/test_math_primitives.cpp
+)
+target_link_libraries(morok_test_math_primitives PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_math_primitives)
+add_test(NAME model.math_primitives COMMAND morok_test_math_primitives)
