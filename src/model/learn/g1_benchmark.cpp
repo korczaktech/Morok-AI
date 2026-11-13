@@ -17,8 +17,8 @@ namespace morok::model { namespace {
 constexpr std::size_t kBufferSize = 64U * 1024U;
 constexpr std::uint64_t kFnvOffset = 14695981039346656037ULL;
 constexpr std::uint64_t kFnvPrime = 1099511628211ULL;
-struct Document { std::filesystem::path path; std::uint64_t hash{}; std::uint64_t size{}; };
 enum class Split { train, validation, test };
+struct Document { std::filesystem::path path; std::uint64_t hash{}; std::uint64_t size{}; Split split{Split::train}; };
 
 std::uint64_t hash_file(const std::filesystem::path& path, std::uint64_t limit,
                         std::uint64_t& size) {
