@@ -25,7 +25,8 @@ struct G1TrainingReport {
  std::uint64_t corpus_bytes{0};
  std::string corpus_hash{};
  std::size_t best_epoch{0};
- double best_validation_bpb{0}, test_bpb{0};\n double test_evaluation_seconds{0}, test_evaluation_bytes_per_second{0};
+ double best_validation_bpb{0}, test_bpb{0};
+ double test_evaluation_seconds{0}, test_evaluation_bytes_per_second{0};
  std::uint64_t test_target_bytes{0};
  bool stopped_early{false}, resumed{false};
  std::vector<G1EpochMetrics> epochs{};
