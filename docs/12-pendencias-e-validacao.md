@@ -24,23 +24,24 @@ Os padrões são valores de partida. Sua qualidade não está validada e eles po
 1. Organização final dos diretórios C++.
 2. Sistema de build e compilador de referência.
 3. Implementação das operações tensoriais e funções de ativação.
-4. Autodiferenciação ou gradientes manuais, com justificativa de custo e verificações por diferenças finitas.
+4. Gradientes manuais com justificativa de custo e verificações por diferenças finitas.
 5. Inventário automático dos 1.000 parâmetros.
 6. Formato de corpus e carregamento incremental.
 7. Formato binário de checkpoint e testes de corrupção.
-8. Testes unitários, integração e benchmark.
-9. Implementação do preditor baseline de frequência e do baseline softmax comparativo.
-10. Implementação do núcleo fast/slow, pontuador e segmentador.
+8. Testes unitários, integração e harness de benchmark: implementados; smoke test sintético executado em CI.
+9. Baseline de frequência/softmax-256 unigram implementado. Baseline softmax-256 neural condicionado ao estado para comparação direta com a fatoração binária ainda pendente.
+10. Núcleo fast/slow implementado; pontuador e segmentador continuam pendentes de integração no caminho experimental.
 
 ## 12.3 Pendências de validação experimental
 
-- Avaliar se d=11 oferece estabilidade e capacidade úteis.
+- Avaliar se d=11 oferece estabilidade e capacidade úteis em corpus representativo.
 - Comparar BPTT 32/64/128 e learning rates definidos no documento 18.
-- Comparar AdamW e SGD com momentum.
-- Comparar fatoração binária com softmax de 256 classes.
-- Medir BPB, latência, throughput, RAM e tempo de treinamento.
+- Comparar AdamW e SGD com momentum em múltiplas sementes.
+- Comparar fatoração binária com baseline softmax-256 neural condicionado ao estado; o baseline atual é unigram e não é capacidade-equivalente.
+- O harness já mede BPB, latência da avaliação final, throughput efetivo, pico RSS e tempo. Os resultados existentes são apenas smoke test em fixture sintético e VM de CI.
+- Medir as mesmas métricas em corpus real/licenciado e hardware de referência de 4 GB.
 - Executar ablações: fast/slow versus RNN simples; segmentação desligada/ligada; hierarquia de uma versus três escalas; pesos fixos versus adaptativos.
-- Repetir experimentos com múltiplas sementes.
+- Repetir experimentos com múltiplas sementes em dados representativos.
 - Avaliar dados fora do treino.
 - Fazer revisão bibliográfica ampliada antes de qualquer reivindicação de originalidade.
 
@@ -55,8 +56,8 @@ A segmentação da G1 é auxiliar e não altera o caminho preditivo B0. Qualquer
 5. Validar estado transportado entre blocos e truncamento de gradientes.
 6. Validar UTF-8, round-trip, colisões e limites de cache.
 7. Validar checkpoint, retomada e isolamento de sessões.
-8. Treinar baseline pequeno e verificar estabilidade.
-9. Executar comparações e ablações controladas.
+8. Smoke test sintético do pipeline de treinamento e benchmark executado em CI; estabilidade em corpus real ainda não validada.
+9. Executar comparações e ablações controladas em corpus licenciado e hardware de referência.
 10. Registrar relatório reproduzível com dados, hardware, compilador, configuração e métricas.
 
 ## 12.5 Regra de status
