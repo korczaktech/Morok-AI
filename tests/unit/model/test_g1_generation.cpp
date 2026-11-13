@@ -1,8 +1,8 @@
-#include "morok/model/learn/g1_generation.hpp"
+#include "morok/model/learn/g1_generation.hpp"\n#include "morok/model/learn/g1_checkpoint.hpp"
 #include "morok/model/parameters/g1_parameters.hpp"
 
 #include <cmath>
-#include <iostream>
+#include <iostream>\n#include <filesystem>
 #include <stdexcept>\n#include <utility>
 
 namespace {
@@ -40,7 +40,28 @@ void test_multibyte_utf8_is_never_truncated() {
     require(common::Utf8Text::from_utf8(report.continuation.string()).has_value(),
             "one-byte generation must remain valid UTF-8");
 }
-void test_invalid_limits_rejected() {
+
+void test_inference_checkpoint_round_trip() {
+    using namespace morok;
+    const auto path = std::filesystem::temp_directory_path() / "morok-g1-generation-inference.ckpt";
+    model::G1Checkpoint saved;
+    model::initialize_g1_parameters(saved.parameters, 777);
+    saved.metadata = "kind=inference";
+    model::save_g1_checkpoint(path, saved);
+    const auto loaded = model::load_g1_checkpoint(path);
+    require(!loaded.has_optimizer, "inference checkpoint must not require optimizer state");
+    require(loaded.parameters.flatten() == saved.parameters.flatten(),
+            "inference checkpoint must preserve all G1 parameters");
+    auto prompt_result = common::Utf8Text::from_utf8("Morok");
+    require(prompt_result.has_value(), "integration prompt must be valid");
+    const auto generated = model::generate_g1(
+        loaded.parameters, *prompt_result.value_if(), {12});
+    require(common::Utf8Text::from_utf8(generated.continuation.string()).has_value(),
+            "checkpoint-backed generation must return valid UTF-8");
+    std::error_code ignored;
+    std::filesystem::remove(path, ignored);
+}
+\nvoid test_invalid_limits_rejected() {
     using namespace morok;
     model::G1Parameters parameters{};
     auto prompt_result = common::Utf8Text::from_utf8("x");\n    require(prompt_result.has_value(), "ASCII prompt must validate");\n    auto prompt = std::move(*prompt_result.value_if());
@@ -55,7 +76,7 @@ int main() {
         test_empty_prompt_and_bounded_valid_output();
         test_prompt_is_context_and_generation_is_deterministic();
         test_multibyte_utf8_is_never_truncated();
-        test_invalid_limits_rejected();
+        test_invalid_limits_rejected();\n        test_inference_checkpoint_round_trip();
     } catch (const std::exception& error) {
         std::cerr << "G1 generation test failed: " << error.what() << '\n';
         return 1;
