@@ -1,4 +1,5 @@
 #include "morok/model/learn/g1_benchmark.hpp"
+#include "morok/model/learn/g1_evaluation.hpp"
 #include "morok/model/learn/g1_training.hpp"
 #include "morok/model/parameters/g1_parameters.hpp"
 
@@ -126,6 +127,19 @@ int main(int argc, char** argv) {
                 }
                 const double throughput = elapsed > 0.0
                     ? static_cast<double>(trained_targets) / elapsed : 0.0;
+                const auto parameter_stats = morok::model::evaluate_g1_parameters(parameters);
+                double weighted_gradient_norm = 0.0;
+                double maximum_gradient_norm = 0.0;
+                std::uint64_t gradient_updates = 0;
+                for (const auto& epoch : report.epochs) {
+                    weighted_gradient_norm += epoch.mean_gradient_norm *
+                        static_cast<double>(epoch.optimizer_updates);
+                    gradient_updates += epoch.optimizer_updates;
+                    maximum_gradient_norm = std::max(maximum_gradient_norm, epoch.max_gradient_norm);
+                }
+                if (gradient_updates)
+                    weighted_gradient_norm /= static_cast<double>(gradient_updates);
+                const double training_bpb = report.epochs.back().training_bpb;
                 const char* optimizer = kind == morok::model::G1OptimizerKind::AdamW
                     ? "AdamW" : "SGD_Momentum";
                 log << std::setprecision(17)
