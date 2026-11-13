@@ -89,7 +89,7 @@ void test_adamw_bias_correction_and_clipping() {
             std::abs(parameters.W_ax[1] + 0.001F) < 1e-6F,
             "AdamW must use the clipped gradient and first-step bias correction");
     const auto& adam = std::get<G1AdamWState>(state);
-    require(std::abs(adam.first_moment[0] - 0.0006F) < 1e-8F &&
+    require(std::abs(adam.first_moment[0] - 0.06F) < 1e-7F &&
             std::abs(adam.second_moment[0] - 0.00036F) < 1e-7F,
             "AdamW moment estimates are incorrect");
 }
