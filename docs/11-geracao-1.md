@@ -55,3 +55,11 @@ Qualquer novo parâmetro treinável exige retirar a mesma quantidade de outro co
 ## 11.6 Limites
 
 Uma G1 de 1.000 parâmetros terá capacidade extremamente limitada. O objetivo é verificar o pipeline de aprendizado, a contagem, a estabilidade e as hipóteses de representação. Não se espera conversação geral de qualidade.
+
+## 11.7 Estado de implementação da geração
+
+A geração autoregressiva G1 foi implementada na Etapa 11. A API `generate_g1` recebe parâmetros, prompt `Utf8Text` e limite de bytes; retorna somente a continuação validada. A CLI `morok_generate` carrega um checkpoint de inferência MOROKCKP v1 e grava a continuação em arquivo.
+
+A decodificação atual é greedy e restringida por uma máquina de estados UTF-8 estrita. A G1 não possui EOS; a saída termina pelo limite configurado. Não há ainda amostragem, temperatura, top-k/top-p, streaming ou diálogo com memória.
+
+A implementação e os limites estão detalhados em [Etapa 11 — Geração autoregressiva da G1](36-etapa-11-geracao-g1.md). A validade UTF-8 e a execução do pipeline são testáveis; qualidade linguística ainda depende de avaliação em corpus real/licenciado.
