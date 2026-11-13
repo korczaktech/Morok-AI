@@ -14,7 +14,7 @@
 #include <vector>
 
 namespace {
-constexpr std::size_t kMaxInputBytes = 4U * 1024U;
+constexpr std::size_t kMaxInputBytes = 64U * 1024U;
 constexpr std::size_t kTrainingEpochs = 50;
 constexpr std::size_t kGenerationBytes = 160;
 constexpr std::size_t kBpttWindow = 64;
