@@ -78,7 +78,8 @@ int main(int argc, char** argv) {
             "unknown";
 #endif
         for (std::size_t repetition = 0; repetition < repetitions; ++repetition) {
-            const std::uint64_t run_seed = seed + repetition;\n            const auto baseline = morok::model::evaluate_g1_softmax256_unigram_baseline(corpus, run_seed);\n            for (const auto truncation : {32U, 64U, 128U}) {
+            const std::uint64_t run_seed = seed + repetition;
+            const auto baseline = morok::model::evaluate_g1_softmax256_unigram_baseline(corpus, run_seed);\n            for (const auto truncation : {32U, 64U, 128U}) {
             for (const auto kind : {morok::model::G1OptimizerKind::AdamW,
                                     morok::model::G1OptimizerKind::SGDMomentum}) {
                 morok::model::G1TrainingConfig config;
