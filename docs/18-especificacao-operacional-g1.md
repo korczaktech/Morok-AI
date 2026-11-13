@@ -279,3 +279,108 @@ Total: 22. Frequência é representada somente por F; não duplicar com outra fe
 ### Atualização do pontuador
 
 A cada avaliação de segmentação, treinar o pontuador por uma passagem sobre os candidatos rotulados, em um passo AdamW com learning rate 0,001 e BCE-with-logits. Separar os estados do otimizador do preditor. Se houver menos de 16 candidatos rotulados, não atualizar. Comparar a pontuação aprendida com a ordenação determinística U(g); se não aproximar o critério ou piorar estabilidade, desativar o pontuador na configuração experimental sem alterar o inventário oficial da arquitetura G1.
+
+## 18.16 Inicialização completa e retropropagação
+
+Inicialização determinística:
+- matrizes de entrada W_ax, W_cx: Xavier uniform;
+- matrizes recorrentes W_ah, W_ch, W_gh, W_gs: ortogonal;
+- matriz O da cabeça: Xavier uniform;
+- matriz triangular A: zeros;
+- vieses da cabeça: zeros;
+- pesos v e vieses θ do pontuador: zeros;
+- estados h_f e h_s: zeros por sequência nova.
+
+Derivadas locais para o estado rápido, com h'=a⊙h_prev+(1-a)⊙c:
+- δa = δh'⊙(h_prev-c);
+- δh_prev,direto = δh'⊙a;
+- δc = δh'⊙(1-a);
+- δz_a = δa⊙a⊙(1-a);
+- δz_c = δc⊙(1-c⊙c).
+
+Para o estado lento, com s'=g⊙s_prev+(1-g)⊙h:
+- δg = δs'⊙(s_prev-h);
+- δs_prev,direto = δs'⊙g;
+- δh,direto = δs'⊙(1-g);
+- δz_g = δg⊙g⊙(1-g).
+
+Os gradientes dos estados rápido e lento devem ser somados antes de retropropagar pelo estado rápido. Gradientes das matrizes são produtos externos entre gradiente pré-ativação e entrada correspondente; gradientes dos vieses são somas no tempo. A BPTT percorre os bytes do bloco em ordem inversa. Na fronteira do bloco, manter h_f/h_s numéricos e zerar os gradientes associados ao grafo anterior.
+
+Na cabeça, para cada bit j, δz_j = p_j-y_j. Acumular gradientes em O_j, c_j e A_{j,k}; os bits-alvo anteriores são entradas observadas constantes, sem gradiente. A implementação deverá validar essas regras por diferenças finitas centrais em pelo menos um peso de cada matriz, um viés de gate e um coeficiente A.
+
+## 18.17 Formato binário RLAH-BLOCK v1
+
+O formato comprimido por bloco é determinístico e reversível. Inteiros são little-endian.
+
+Cabeçalho fixo de 24 bytes:
+- magic: quatro bytes ASCII `RLAH`;
+- version: u16 = 1;
+- flags: u16; bit 0 indica payload com dicionário; demais bits devem ser zero;
+- raw_length: u32, bytes originais;
+- dictionary_count: u16, de 0 a 64;
+- reserved: u16 = 0;
+- token_count: u32;
+- raw_crc32: u32, CRC-32/IEEE dos bytes originais.
+
+Após o cabeçalho:
+- dicionário: para cada entrada, um comprimento u8 seguido dos bytes da unidade; comprimento entre 2 e 32;
+- fluxo de tokens: exatamente token_count tokens. Tag 0 é seguida por um byte literal. Tag 1 é seguida por um ID u8 entre 0 e dictionary_count-1.
+
+Quando flags=0, dictionary_count=0, token_count=raw_length e o payload contém exatamente os bytes originais, sem tokens. Quando flags=1, o fluxo usa tags e referências do dicionário.
+
+Codificação:
+1. escolher no máximo 64 unidades ativas;
+2. ordenar IDs por score decrescente e, em empate, bytes lexicográficos crescentes;
+3. percorrer o bloco da esquerda para a direita;
+4. selecionar a unidade correspondente mais longa no offset atual;
+5. em empate de comprimento, usar maior score; persistindo empate, ordem lexicográfica;
+6. se nenhuma unidade corresponder, emitir literal;
+7. se a representação completa não for menor que o payload bruto, usar flags=0.
+
+Decodificação:
+- validar magic, versão, flags, reserved, contagens e limites antes de alocar;
+- validar comprimento e bytes de cada entrada do dicionário;
+- validar cada tag e ID;
+- impedir que a saída exceda raw_length;
+- exigir comprimento final exatamente igual a raw_length;
+- validar CRC32;
+- rejeitar bytes restantes, truncamento ou campos inconsistentes.
+
+O custo de compressão C usa o tamanho integral serializado, incluindo cabeçalho, dicionário e tokens. O bloco de segmentação tem 4.096 bytes no padrão inicial; o tamanho pode ser menor no final do documento.
+
+## 18.18 Formato binário de checkpoint MOROKCKP v1
+
+Todos os inteiros são little-endian. Cabeçalho fixo:
+- magic: oito bytes ASCII `MOROKCKP`;
+- format_version: u16 = 1;
+- header_size: u16;
+- flags: u32; bit 0 indica estados AdamW presentes; bit 1 indica estado RNG presente; bit 2 indica cursor de treinamento presente;
+- architecture_id: 32 bytes identificando RLAH-G1-fastslow-d11-bit8;
+- parameter_count: u32, deve ser 1000;
+- dtype: u8 = 1 (FP32);
+- reserved: três bytes zero;
+- optimizer_step: u64;
+- epoch: u32;
+- block_index: u64;
+- parameter_payload_bytes: u64, deve ser 4000;
+- optimizer_payload_bytes: u64;
+- rng_payload_bytes: u32;
+- metadata_payload_bytes: u32;
+- payload_crc32: u32, CRC-32/IEEE de todos os payloads concatenados.
+
+Payload em ordem:
+1. 1.000 parâmetros FP32 na ordem canônica do inventário;
+2. se flag AdamW: 1.000 valores FP32 de primeiro momento e 1.000 de segundo momento;
+3. se flag RNG: quatro u64 de estado do gerador xoshiro256**; estado totalmente zero é inválido;
+4. se flag cursor: cursor de documento, offset de byte e estado de embaralhamento serializados em campos de tamanho fixo;
+5. metadados UTF-8 com tamanho limitado a 64 KiB, contendo configuração, hash do corpus, commit, compilador e versão.
+
+O cabeçalho deve declarar comprimentos exatos. Rejeitar arquivo truncado, bytes extras, CRC inválido, parâmetro não finito, arquitetura divergente ou dimensão inesperada. Gravar em arquivo temporário, sincronizar e renomear atomicamente. Checkpoint de inferência pode omitir otimizador e cursor, mas nunca parâmetros, versão, contagem e checksum.
+
+O gerador xoshiro256** será inicializado por SplitMix64 a partir da semente explícita. Não usar estado RNG implícito global. A mesma versão do gerador e a mesma semente devem produzir a mesma sequência.
+
+## 18.19 Leitura e embaralhamento de dados
+
+A divisão treino/validação/teste é feita por documento antes de gerar blocos. A ordem dos documentos de treino é embaralhada por época usando o gerador especificado; os bytes dentro de cada documento nunca são embaralhados. A lista de IDs e o estado RNG são persistidos para retomada determinística.
+
+O estado recorrente é zerado no início de cada documento. Blocos BPTT podem atravessar fronteiras de buffer de leitura, mas não fronteiras de documentos. Nunca transportar estado entre documentos distintos.
