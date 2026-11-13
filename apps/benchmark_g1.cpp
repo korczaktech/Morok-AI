@@ -152,7 +152,7 @@ int main(int argc, char** argv) {
                     << "\"training_throughput_bytes_per_second\":" << throughput << ','
                     << "\"wall_seconds\":" << elapsed << ','
                     << "\"peak_rss_bytes\":" << peak_rss_bytes() << ','
-                    << "\"early_stopped\":" << (report.stopped_early ? "true" : "false") << "}\\n";
+                    << "\"early_stopped\":" << (report.stopped_early ? "true" : "false") << "}\n";
                 log.flush();
                 if (!log) throw std::runtime_error("failed writing benchmark JSONL output");
                 std::cout << experiment.group << " " << optimizer << " BPTT=" << truncation
@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
                           << " test_BPB=" << report.test_bpb
                           << " softmax256_unigram_BPB=" << baseline.softmax256_unigram_bpb
                           << " throughput_Bps=" << throughput
-                          << " wall_s=" << elapsed << " peak_RSS_B=" << peak_rss_bytes() << '\\n';
+                          << " wall_s=" << elapsed << " peak_RSS_B=" << peak_rss_bytes() << '\n';
             }
         }
         return 0;
