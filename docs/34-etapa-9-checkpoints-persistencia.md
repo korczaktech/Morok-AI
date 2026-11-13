@@ -56,7 +56,7 @@ Retomar e continuar gravando no mesmo arquivo:
 ./build/morok_train ./data/corpus 20 42 --resume ./artifacts/g1.ckpt
 ```
 
-O diretório de destino do checkpoint e do log precisa existir. O corpus precisa ter pelo menos três documentos `.txt` UTF-8 únicos e cada documento tem limite configurável. O arquivo JSONL é aberto em modo append e sincronizado em disco após cada evento.
+Os caminhos do checkpoint de treino, exportação do melhor modelo e log precisam ser distintos. Os diretórios de destino precisam existir. O corpus precisa ter pelo menos três documentos `.txt` UTF-8 únicos e cada documento tem limite configurável. O arquivo JSONL é aberto em modo append e sincronizado em disco após cada evento.
 
 ## Logs JSONL persistentes\n\nA opção `--log caminho.jsonl` grava eventos `start`, `resume`, `epoch`, `checkpoint_saved` e `finished`. Cada linha é um objeto JSON independente, contendo métricas BPB, quantidade de alvos, atualizações, norma de gradiente, época e hash do corpus. O arquivo é append-only; cada evento é flushado e sincronizado com `fsync`. Em retomadas, os eventos novos são acrescentados ao mesmo arquivo.\n\nExemplo:\n\n```sh\n./build/morok_train ./data/corpus 10 42 --checkpoint ./artifacts/g1.ckpt --log ./artifacts/treinamento.jsonl --export-best ./artifacts/g1-best.ckpt\n./build/morok_train ./data/corpus 20 42 --resume ./artifacts/g1.ckpt --log ./artifacts/treinamento.jsonl --export-best ./artifacts/g1-best.ckpt\n```\n\n## Testes automatizados
 
