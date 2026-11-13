@@ -47,23 +47,23 @@ void incremental_state_continuity(){
 
 void deterministic_resume(){
  auto root=std::filesystem::temp_directory_path()/"morok-g1-resume-test";
- auto ck=root/"resume.ckpt";std::filesystem::remove_all(root);std::filesystem::create_directories(root);
+ auto ck=root/"resume.ckpt";auto log=root/"training.jsonl";std::filesystem::remove_all(root);std::filesystem::create_directories(root);
  try{
   for(int i=0;i<20;++i)write(root/("d"+std::to_string(i)+".txt"),"documento de treino "+std::to_string(i)+" com contexto repetido\n");
   morok::model::G1TrainingConfig full;full.corpus_directory=root;full.max_epochs=4;full.patience=10;full.truncation_length=8;
   morok::model::G1Parameters uninterrupted;morok::model::initialize_g1_parameters(uninterrupted,77);
   auto full_report=morok::model::train_g1_corpus(full,uninterrupted);
-  auto first=full;first.max_epochs=2;first.checkpoint_path=ck;
+  auto first=full;first.max_epochs=2;first.checkpoint_path=ck;first.metrics_log_path=log;
   morok::model::G1Parameters interrupted;morok::model::initialize_g1_parameters(interrupted,77);
   auto first_report=morok::model::train_g1_corpus(first,interrupted);
   req(first_report.epochs.size()==2&&std::filesystem::exists(ck),"checkpoint not saved at epoch boundary");
-  auto resumed=full;resumed.resume_from_checkpoint=ck;resumed.checkpoint_path=ck;
+  auto resumed=full;resumed.resume_from_checkpoint=ck;resumed.checkpoint_path=ck;resumed.metrics_log_path=log;
   morok::model::G1Parameters resumed_parameters;
   auto resumed_report=morok::model::train_g1_corpus(resumed,resumed_parameters);
   req(resumed_report.resumed,"resume flag not set");
   req(resumed_report.epochs.size()==2&&resumed_report.epochs.front().epoch==3,"resume did not continue at next epoch");
   req(uninterrupted.flatten()==resumed_parameters.flatten(),"resumed training diverged from uninterrupted training");
-  req(full_report.best_epoch==resumed_report.best_epoch,"best epoch differs after resume");
+  req(full_report.best_epoch==resumed_report.best_epoch,"best epoch differs after resume");\n  std::ifstream lf(log);std::string logs((std::istreambuf_iterator<char>(lf)),std::istreambuf_iterator<char>());req(logs.find("\\\"event\\\":\\\"epoch\\\"")!=std::string::npos&&logs.find("\\\"event\\\":\\\"finished\\\"")!=std::string::npos,"persistent JSONL log events missing");
  }catch(...){std::filesystem::remove_all(root);throw;}
  std::filesystem::remove_all(root);
 }
