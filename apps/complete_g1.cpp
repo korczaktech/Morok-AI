@@ -31,9 +31,15 @@ std::uint64_t input_seed(const std::vector<std::uint8_t>& bytes) {
 std::vector<std::uint8_t> read_input(const char* path) {
     std::ifstream file(path, std::ios::binary);
     if (!file) throw std::runtime_error("nao foi possivel abrir entrada.txt");
-    std::vector<std::uint8_t> bytes(
-        std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+    const std::vector<char> raw(
+        (std::istreambuf_iterator<char>(file)),
+        std::istreambuf_iterator<char>{});
     if (file.bad()) throw std::runtime_error("erro ao ler entrada.txt");
+    std::vector<std::uint8_t> bytes;
+    bytes.reserve(raw.size());
+    for (const unsigned char byte : raw) {
+        bytes.push_back(static_cast<std::uint8_t>(byte));
+    }
     if (bytes.size() < 2) throw std::runtime_error("entrada.txt precisa conter pelo menos 2 bytes");
     if (bytes.size() > kMaxInputBytes) throw std::runtime_error("entrada.txt excede 64 KiB");
     return bytes;
