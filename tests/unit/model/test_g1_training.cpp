@@ -63,7 +63,8 @@ void deterministic_resume(){
   req(resumed_report.resumed,"resume flag not set");
   req(resumed_report.epochs.size()==2&&resumed_report.epochs.front().epoch==3,"resume did not continue at next epoch");
   req(uninterrupted.flatten()==resumed_parameters.flatten(),"resumed training diverged from uninterrupted training");
-  req(full_report.best_epoch==resumed_report.best_epoch,"best epoch differs after resume");\n  std::ifstream lf(log);std::string logs((std::istreambuf_iterator<char>(lf)),std::istreambuf_iterator<char>());req(logs.find("\\\"event\\\":\\\"epoch\\\"")!=std::string::npos&&logs.find("\\\"event\\\":\\\"finished\\\"")!=std::string::npos,"persistent JSONL log events missing");
+  req(full_report.best_epoch==resumed_report.best_epoch,"best epoch differs after resume");
+  std::ifstream lf(log);std::string logs((std::istreambuf_iterator<char>(lf)),std::istreambuf_iterator<char>());req(logs.find("\"event\":\"epoch\"")!=std::string::npos&&logs.find("\"event\":\"finished\"")!=std::string::npos,"persistent JSONL log events missing");
  }catch(...){std::filesystem::remove_all(root);throw;}
  std::filesystem::remove_all(root);
 }
