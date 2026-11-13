@@ -1,6 +1,7 @@
 #include "morok/model/math/initialization.hpp"
 #include "morok/model/math/primitives.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
