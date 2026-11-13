@@ -37,6 +37,7 @@ struct StepCache {
     std::array<double, D> fast_previous{};
     std::array<double, D> slow_previous{};
     std::array<double, D> fast{};
+    std::array<double, D> fast_unrounded{};
     std::array<double, D> slow{};
     std::array<double, D> fast_gate{};
     std::array<double, D> fast_candidate{};
@@ -90,6 +91,8 @@ StepCache forward_step(const G1Parameters& p, const G1State& state,
         cache.fast[row] = cache.fast_gate[row] * cache.fast_previous[row] +
             (1.0 - cache.fast_gate[row]) * cache.fast_candidate[row];
     }
+
+    cache.fast_unrounded = cache.fast;
 
     for (std::size_t row = 0; row < D; ++row) {
         double zg = p.b_g[row];
@@ -174,7 +177,7 @@ void backward_recurrent_step(const G1Parameters& p, const StepCache& step,
     // Reverse the slow-state interpolation first.
     for (std::size_t row = 0; row < D; ++row) {
         const double g = step.slow_gate[row];
-        const double h = step.fast[row];
+        const double h = step.fast_unrounded[row];
         const double s_prev = step.slow_previous[row];
         const double dg = d_slow[row] * (s_prev - h);
         const double dz = dg * g * (1.0 - g);
@@ -187,7 +190,7 @@ void backward_recurrent_step(const G1Parameters& p, const StepCache& step,
         const double dz = d_slow_gate_pre[row];
         for (std::size_t col = 0; col < D; ++col) {
             const auto ix = row * D + col;
-            grad.values[O_WGH + ix] += dz * step.fast[col];
+            grad.values[O_WGH + ix] += dz * step.fast_unrounded[col];
             grad.values[O_WGS + ix] += dz * step.slow_previous[col];
             d_fast[col] += static_cast<double>(p.W_gh[ix]) * dz;
             d_slow_previous[col] += static_cast<double>(p.W_gs[ix]) * dz;
