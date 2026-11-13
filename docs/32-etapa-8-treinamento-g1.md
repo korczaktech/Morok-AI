@@ -33,8 +33,8 @@ A função BPTT recebe o estado imediatamente anterior ao primeiro byte da janel
 - [x] Split determinístico 18/1/1 em 20 documentos.
 - [x] Atualização do otimizador e métricas BPB finitas.
 - [x] Rejeição de UTF-8 inválido antes do treino.
-- [ ] CI GCC/Clang Debug/Release.
-- [ ] ASan/UBSan.
+- [x] CI GCC/Clang Debug/Release aprovado no run 43523134919.
+- [x] ASan/UBSan aprovado no run 43523135184.
 - [ ] Benchmark de RSS/throughput em máquina de 4 GB.
 - [ ] Treino real com corpus licenciado.
 
