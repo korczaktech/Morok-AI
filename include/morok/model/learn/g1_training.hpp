@@ -7,7 +7,7 @@
 #include <vector>
 namespace morok::model {
 struct G1TrainingConfig {
- std::filesystem::path corpus_directory{}, checkpoint_path{}, resume_from_checkpoint{}, metrics_log_path{};
+ std::filesystem::path corpus_directory{}, checkpoint_path{}, resume_from_checkpoint{}, metrics_log_path{}, best_model_path{};
  std::size_t max_epochs{50}, patience{5}, truncation_length{64};
  std::uint64_t seed{42};
  std::size_t max_documents{100000};
