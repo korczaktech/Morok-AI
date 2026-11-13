@@ -1,5 +1,6 @@
 #include "morok/model/learn/g1_checkpoint.hpp"
 #include <bit>
+#include <cstddef>
 #include <cmath>
 #include <fstream>
 #include <limits>
