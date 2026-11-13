@@ -79,8 +79,8 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 
 ## Próximas etapas
 
-1. Executar o primeiro treinamento com corpus licenciado e registrar RSS, throughput e BPB.
-2. Implementar relatório de benchmark com RSS, throughput e comparação de BPB.
+1. Executar campanha de benchmark com corpus real/licenciado e múltiplas sementes em hardware de referência.
+2. Analisar estabilidade, qualidade linguística, BPB, latência, throughput e limite de RAM de 4 GB.
 3. Implementar segmentação reversível e integrar os subsistemas gradualmente.
 
 ## Princípio de engenharia
