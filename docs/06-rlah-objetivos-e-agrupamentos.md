@@ -1,95 +1,46 @@
 # 6. RLAH — Objetivos matemáticos e seleção de agrupamentos
 
-## 6.1 DEC-001 — Objetivo conjunto
+> **Atualização normativa:** este documento registra as decisões conceituais iniciais. As definições computáveis, pesos, critérios, limites e função objetivo da G1 estão nos documentos 14, 15 e 18 e prevalecem sobre formulações preliminares deste arquivo.
 
-**Decisão aprovada:** combinar utilidade preditiva, compressão e reconstrução.
+## 6.1 Objetivo conceitual
 
-Formulação inicial:
+A proposta original combina utilidade preditiva, compressão e reconstrução. Na G1, a reconstrução é garantida estruturalmente por round-trip exato e não é uma perda neural. A função efetiva é L_total = L_pred + λ_group L_group.
 
-L_total = L_predição + λ L_compressão + μ L_reconstrução
+## 6.2 Critérios de utilidade
 
-Os coeficientes λ e μ serão definidos experimentalmente. Não há valores definitivos aprovados. Os termos deverão ser normalizados ou escalados de modo que suas magnitudes não causem dominância acidental.
-
-## 6.2 DEC-003 — Critérios de utilidade
-
-A seleção de agrupamentos combinará quatro critérios:
+A seleção de agrupamentos combina:
 1. frequência;
-2. ganho preditivo;
-3. eficiência de compressão;
-4. preservação de informação.
+2. associação preditiva diagnóstica;
+3. eficiência de compressão líquida;
+4. preservação exata.
 
-A frequência é um sinal auxiliar, não condição suficiente para criar uma unidade.
+A preservação é uma condição rígida. Frequência não é condição suficiente para criar uma unidade.
 
-## 6.3 DEC-004 — Pesos adaptativos
-
-**Decisão aprovada:** os pesos poderão mudar ao longo do treinamento conforme fase, qualidade observada e orçamento computacional.
-
-Para evitar custo desnecessário, o controlador será inicialmente matemático e externo ao modelo neural. Não será criada uma rede adicional para controlar pesos.
-
-Pesos iniciais provisórios:
+## 6.3 Pesos iniciais
 
 | Critério | Peso inicial |
 |---|---:|
 | Frequência | 0,10 |
-| Ganho preditivo | 0,40 |
+| Associação preditiva | 0,40 |
 | Compressão | 0,25 |
 | Preservação | 0,25 |
 
-A soma é 1,0. Esses valores são pontos de partida experimentais, não constantes definitivas.
+A política operacional do controlador e a calibração estão no documento 18.
 
-O ajuste deverá ser periódico, limitado e estável. A regra exata de atualização, limites mínimo/máximo, taxa e gatilhos ainda precisa ser especificada.
-
-## 6.4 DEC-005 — Pontuação de utilidade
-
-Forma conceitual:
+## 6.4 Pontuação
 
 U(g) = w_f F(g) + w_p P(g) + w_c C(g) + w_r R(g)
 
-Onde:
-- g é um candidato a agrupamento;
-- F é frequência normalizada;
-- P é ganho preditivo normalizado;
-- C é benefício de compressão normalizado;
-- R é preservação de informação normalizada;
-- w_f, w_p, w_c e w_r são pesos adaptativos.
+Todos os critérios devem ter definição computável e escala comparável. C inclui metadados e referências. R=0 rejeita o candidato antes da pontuação.
 
-Cada critério deverá ter definição computável. Em especial, o ganho preditivo deve ser medido como diferença de perda ou outra métrica definida entre modelo com e sem o agrupamento, com custo de avaliação controlado.
+## 6.5 Eficiência de avaliação
 
-A pontuação é uma proposta de ordenação, não substitui restrições obrigatórias de reconstrução ou segurança.
+Não será avaliado todo agrupamento possível. O sistema gera candidatos locais limitados por frequência, comprimento, orçamento de processamento e cache.
 
-## 6.5 Normalização e elegibilidade
+## 6.6 Ciclo de vida
 
-Todos os critérios deverão ser colocados em escalas comparáveis, idealmente [0,1]. A normalização deverá evitar divisão por zero, valores ausentes e distorções por amostras raras.
+Estados conceituais: candidato, em avaliação, aceito, estável, em revisão e descartado. A criação e remoção usam histerese.
 
-Um candidato que viole a preservação mínima exigida deverá ser rejeitado, mesmo que sua pontuação agregada seja alta.
+## 6.7 Limite da G1
 
-## 6.6 Eficiência de avaliação
-
-Não será avaliado todo agrupamento possível. O sistema deverá gerar um conjunto limitado de candidatos com base em ocorrências locais, padrões observados e limites de tamanho.
-
-O orçamento máximo de candidatos por posição ainda será definido e medido.
-
-## 6.7 DEC-007 — Política de ciclo de vida
-
-Estados conceituais:
-- candidato;
-- em avaliação;
-- aceito;
-- estável;
-- em revisão;
-- descartado.
-
-A criação e o descarte utilizarão limiares diferentes (histerese) para evitar oscilações. O tamanho da janela de avaliação e os limiares numéricos serão determinados experimentalmente.
-
-A preservação de informação funciona como restrição obrigatória. Agrupamentos que impossibilitem a reconstrução exigida serão rejeitados.
-
-## 6.8 Pendências matemáticas
-
-- Definir L_predição, L_compressão e L_reconstrução.
-- Definir estimador de frequência.
-- Definir ganho preditivo marginal.
-- Definir custo real de compressão, incluindo metadados e referências.
-- Definir preservação mínima e teste de reconstrução.
-- Definir normalização robusta.
-- Definir atualização adaptativa dos pesos.
-- Definir limiares de criação, aceitação, estabilidade e descarte.
+A métrica preditiva dos agrupamentos na G1 é diagnóstica e não representa redução causal da perda do preditor. O núcleo principal continua recebendo bytes individuais. Uma futura variante integrada deverá especificar como unidades agrupadas entram no modelo e deverá ser avaliada separadamente.
