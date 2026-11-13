@@ -51,3 +51,7 @@ message(STATUS "Tests: ${MOROK_BUILD_TESTS}")
 add_executable(morok_train apps/train_g1.cpp)
 target_link_libraries(morok_train PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_train)
+
+add_executable(morok_complete apps/complete_g1.cpp)
+target_link_libraries(morok_complete PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_complete)
