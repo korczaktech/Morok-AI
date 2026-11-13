@@ -6,16 +6,15 @@ Estabelecer um protocolo reproduzível para comparar a G1 com um baseline categ�
 
 ## Matriz de experimentos
 
-O executável `morok_benchmark` executa seis configurações por semente:
+O executável `morok_benchmark` executa seis configurações por semente, em comparações controladas de uma dimensão por vez:
 
-| Dimensão | Valores |
+| Grupo | Configurações |
 |---|---|
-| BPTT | 32, 64 e 128 bytes |
-| Otimizador | AdamW e SGD Momentum |
-| Sementes | `seed` até `seed + repetitions - 1` |
-| Inicialização | mesma semente para cada comparação correspondente |
-| Épocas | limite informado pelo operador |
-| Dados | mesmos documentos e split para cada configuração com a mesma semente |
+| BPTT | AdamW LR 0,001 com BPTT 32, 64 e 128 |
+| Otimizador | BPTT 64: AdamW LR 0,001 versus SGD Momentum LR 0,01 |
+| Learning rate | AdamW BPTT 64 com LR 0,0003; 0,001 (referência); 0,003 |
+
+A configuração de referência (BPTT 64, AdamW 0,001) é compartilhada entre as comparações. Cada repetição usa uma semente explícita, incrementada a partir da semente inicial, e a mesma semente de inicialização nos experimentos correspondentes.
 
 A validação escolhe o melhor checkpoint durante o treino. O conjunto de teste é avaliado somente depois dessa seleção. Não ajustar hiperparâmetros com base no teste.
 
