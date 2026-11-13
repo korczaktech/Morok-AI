@@ -23,6 +23,7 @@ add_library(morok_core STATIC
     src/model/parameters/g1_parameters.cpp
     src/model/g1_forward.cpp
     src/model/learn/g1_bptt.cpp
+    src/model/learn/optimizer.cpp
 )
 add_library(Morok::Core ALIAS morok_core)
 

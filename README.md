@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
- > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Otimizadores, treinamento por épocas e avaliação experimental ainda não foram implementados.
+ > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 7: AdamW, SGD com momentum e clipping global implementados; treinamento por épocas, checkpoints e avaliação experimental ainda pendentes.
 
 ## Objetivo
 
@@ -56,6 +56,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 28. [Etapa 4 — Inventário e inicialização dos parâmetros G1](docs/28-etapa-4-inventario-parametros-g1.md)
 29. [Etapa 5 — Forward pass da G1](docs/29-etapa-5-forward-pass-g1.md)
 30. [Etapa 6 — BPTT e gradientes da G1](docs/30-etapa-6-bptt-gradientes-g1.md)
+31. [Etapa 7 — Otimizadores e clipping global da G1](docs/31-etapa-7-otimizadores-g1.md)
 
 ## Estado atual
 
@@ -64,13 +65,15 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 3: primitivas matemáticas estáveis e testes numéricos adicionados; CI GCC/Clang Debug/Release aprovado no run 43514960300.
 - Etapa 4: inventário tipado de 1.000 parâmetros FP32, ordem canônica e inicialização determinística; CI GCC/Clang Debug/Release aprovado.
 - Etapa 5: forward pass fast/slow, cabeça binária causal, scoring em nats e testes adicionados; CI GCC/Clang Debug/Release aprovado no run 43517463554.
-- Etapa 6: BPTT truncado e gradientes manuais da G1 implementados; treinamento/otimizadores e avaliação experimental continuam pendentes.
-- G1: inventário de parâmetros, forward pass e gradientes B0 implementados; os 29 parâmetros do segmentador permanecem fora do caminho preditivo.
+- Etapa 6: BPTT truncado e gradientes manuais da G1 implementados.
+- Etapa 7: AdamW, SGD com momentum, clipping global e testes transacionais implementados; loop de treinamento, checkpoints e avaliação experimental continuam pendentes.
+- G1: inventário de parâmetros, forward pass, gradientes B0 e otimizadores implementados; os 29 parâmetros do segmentador permanecem fora do caminho preditivo.
 
 ## Próximas etapas
 
-1. Implementar treinamento, otimizadores, checkpoints e avaliação.
-2. Implementar segmentação reversível e integrar os subsistemas gradualmente.
+1. Implementar o loop de treinamento por épocas, carregamento de corpus e divisão treino/validação/teste.
+2. Implementar checkpoints retomáveis e avaliação BPB.
+3. Implementar segmentação reversível e integrar os subsistemas gradualmente.
 
 ## Princípio de engenharia
 
