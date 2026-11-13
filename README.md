@@ -53,17 +53,19 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 25. [Etapa 1 — Infraestrutura inicial](docs/25-etapa-1-infraestrutura.md)
 26. [Etapa 2 — Tipos compartilhados](docs/26-etapa-2-tipos-compartilhados.md)
 27. [Etapa 3 — Primitivas matemáticas](docs/27-etapa-3-primitivas-matematicas.md)
+28. [Etapa 4 — Inventário e inicialização dos parâmetros G1](docs/28-etapa-4-inventario-parametros-g1.md)
 
 ## Estado atual
 
 - Etapa 1: infraestrutura CMake/C++20, presets, sanitizers, teste de fumaça e CI adicionados.
 - Etapa 2: tipos comuns, validação UTF-8, IDs fortes, erros tipados e testes adicionados.
-- Etapa 3: primitivas matemáticas estáveis, inicialização determinística e testes numéricos adicionados; validação CI em andamento.
+- Etapa 3: primitivas matemáticas estáveis e testes numéricos adicionados; CI GCC/Clang Debug/Release aprovado no run 43514960300.
+- Etapa 4: inventário tipado de 1.000 parâmetros FP32, ordem canônica, inicialização determinística e testes adicionados; CI em andamento.
 - G1: arquitetura matemática especificada; implementação do modelo e treinamento ainda pendentes.
 
 ## Próximas etapas
 
-1. Implementar inventário e inicialização determinística dos 1.000 parâmetros.
+1. Implementar forward pass dos estados fast/slow e da cabeça de predição.
 2. Implementar estados fast/slow e cabeça de predição.
 3. Implementar treinamento, checkpoints e avaliação.
 4. Implementar segmentação reversível e integrar os subsistemas gradualmente.
