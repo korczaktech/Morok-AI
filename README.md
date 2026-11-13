@@ -78,7 +78,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 ## Próximas etapas
 
 1. Executar o primeiro treinamento com corpus licenciado e registrar RSS, throughput e BPB.
-2. Implementar logs persistentes de experimentos e relatório de benchmark.
+2. Implementar relatório de benchmark com RSS, throughput e comparação de BPB.
 3. Implementar segmentação reversível e integrar os subsistemas gradualmente.
 
 ## Princípio de engenharia
