@@ -30,11 +30,12 @@ A função BPTT recebe o estado imediatamente anterior ao primeiro byte da janel
 - O limite de RSS de 512 MiB é meta de projeto, não medição obtida nesta etapa.
 
 ## Testes
-- [x] Split determinístico 18/1/1 em 20 documentos.
+- [x] Split determinístico 18/1/1 em 20 documentos e remoção de duplicata exata.
 - [x] Atualização do otimizador e métricas BPB finitas.
+- [x] Continuidade do estado recorrente verificada entre janelas sobrepostas.
 - [x] Rejeição de UTF-8 inválido antes do treino.
-- [x] CI GCC/Clang Debug/Release aprovado no run 43523134919.
-- [x] ASan/UBSan aprovado no run 43523135184.
+- [x] CI GCC/Clang Debug/Release aprovado no run 43523330596.
+- [x] ASan/UBSan aprovado no run 43523330585.
 - [ ] Benchmark de RSS/throughput em máquina de 4 GB.
 - [ ] Treino real com corpus licenciado.
 
