@@ -64,7 +64,8 @@ void deterministic_resume(){
   auto resumed_report=morok::model::train_g1_corpus(resumed,resumed_parameters);
   req(resumed_report.resumed,"resume flag not set");
   req(resumed_report.epochs.size()==2&&resumed_report.epochs.front().epoch==3,"resume did not continue at next epoch");
-  req(uninterrupted.flatten()==resumed_parameters.flatten(),"resumed training diverged from uninterrupted training");\n  auto best_full=morok::model::load_g1_checkpoint(full.best_model_path);auto best_resumed=morok::model::load_g1_checkpoint(resumed.best_model_path);req(best_full.parameters.flatten()==best_resumed.parameters.flatten()&&!best_full.has_optimizer,"best inference checkpoint export mismatch");
+  req(uninterrupted.flatten()==resumed_parameters.flatten(),"resumed training diverged from uninterrupted training");
+  auto best_full=morok::model::load_g1_checkpoint(full.best_model_path);auto best_resumed=morok::model::load_g1_checkpoint(resumed.best_model_path);req(best_full.parameters.flatten()==best_resumed.parameters.flatten()&&!best_full.has_optimizer,"best inference checkpoint export mismatch");
   req(full_report.best_epoch==resumed_report.best_epoch,"best epoch differs after resume");
   std::ifstream lf(log);std::string logs((std::istreambuf_iterator<char>(lf)),std::istreambuf_iterator<char>());req(logs.find("\"event\":\"epoch\"")!=std::string::npos&&logs.find("\"event\":\"finished\"")!=std::string::npos,"persistent JSONL log events missing");
  }catch(...){std::filesystem::remove_all(root);throw;}
