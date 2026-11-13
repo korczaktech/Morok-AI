@@ -62,15 +62,14 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 2: tipos comuns, validação UTF-8, IDs fortes, erros tipados e testes adicionados.
 - Etapa 3: primitivas matemáticas estáveis e testes numéricos adicionados; CI GCC/Clang Debug/Release aprovado no run 43514960300.
 - Etapa 4: inventário tipado de 1.000 parâmetros FP32, ordem canônica e inicialização determinística; CI GCC/Clang Debug/Release aprovado.
-- Etapa 5: forward pass fast/slow, cabeça binária causal, scoring em nats e testes adicionados; CI em andamento.
-- G1: arquitetura matemática especificada; implementação do modelo e treinamento ainda pendentes.
+- Etapa 5: forward pass fast/slow, cabeça binária causal, scoring em nats e testes adicionados; CI GCC/Clang Debug/Release aprovado no run 43517463554.
+- G1: inventário de parâmetros e forward pass inicial implementados; BPTT, treinamento e avaliação experimental ainda pendentes.
 
 ## Próximas etapas
 
 1. Implementar backpropagation through time (BPTT) e gradientes da G1.
-2. Implementar estados fast/slow e cabeça de predição.
-3. Implementar treinamento, checkpoints e avaliação.
-4. Implementar segmentação reversível e integrar os subsistemas gradualmente.
+2. Implementar treinamento, checkpoints e avaliação.
+3. Implementar segmentação reversível e integrar os subsistemas gradualmente.
 
 ## Princípio de engenharia
 
