@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <charconv>
+#include <charconv>\n#include <chrono>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -64,6 +64,6 @@ G1TrainingReport train_g1_corpus(const G1TrainingConfig&c,G1Parameters&p){
   if(!c.checkpoint_path.empty()){G1Checkpoint ck;ck.parameters=p;ck.optimizer=opt;ck.has_optimizer=true;ck.rng_state=rng.s;ck.has_rng=true;ck.epoch=static_cast<std::uint32_t>(ep);ck.block_index=total_updates;for(auto id:train)ck.document_order.push_back(static_cast<std::uint32_t>(id));ck.document_position=static_cast<std::uint32_t>(train.size());ck.metadata=make_metadata(c,out.corpus_hash,best,best_epoch,stale,high,zero,bestp);save_g1_checkpoint(c.checkpoint_path,ck);append_jsonl(c.metrics_log_path,"{\"event\":\"checkpoint_saved\",\"epoch\":"+std::to_string(ep)+"}");}
   if(stale>=c.patience){out.stopped_early=true;break;}
  }
- if(!std::isfinite(best))throw std::runtime_error("training ended without a valid best checkpoint");p=bestp;out.best_epoch=best_epoch;out.best_validation_bpb=best;if(out.test_documents){auto test=evaluate(docs,Split::test,p);out.test_bpb=test.bpb;out.test_target_bytes=test.count;}if(!c.best_model_path.empty()){G1Checkpoint model;model.parameters=bestp;std::ostringstream metadata;metadata<<std::setprecision(17)<<"kind=inference\ncorpus_hash="<<out.corpus_hash<<"\nbest_epoch="<<out.best_epoch<<"\nvalidation_bpb="<<out.best_validation_bpb<<"\ntest_bpb="<<out.test_bpb;model.metadata=metadata.str();save_g1_checkpoint(c.best_model_path,model);} {std::ostringstream line;line<<std::setprecision(17)<<"{\"event\":\"finished\",\"best_epoch\":"<<out.best_epoch<<",\"validation_bpb\":"<<out.best_validation_bpb<<",\"test_bpb\":"<<out.test_bpb<<",\"resumed\":"<<(out.resumed?"true":"false")<<"}";append_jsonl(c.metrics_log_path,line.str());}return out;
+ if(!std::isfinite(best))throw std::runtime_error("training ended without a valid best checkpoint");p=bestp;out.best_epoch=best_epoch;out.best_validation_bpb=best;if(out.test_documents){const auto test_started=std::chrono::steady_clock::now();auto test=evaluate(docs,Split::test,p);out.test_evaluation_seconds=std::chrono::duration<double>(std::chrono::steady_clock::now()-test_started).count();out.test_bpb=test.bpb;out.test_target_bytes=test.count;out.test_evaluation_bytes_per_second=out.test_evaluation_seconds>0.0?static_cast<double>(test.count)/out.test_evaluation_seconds:0.0;}if(!c.best_model_path.empty()){G1Checkpoint model;model.parameters=bestp;std::ostringstream metadata;metadata<<std::setprecision(17)<<"kind=inference\ncorpus_hash="<<out.corpus_hash<<"\nbest_epoch="<<out.best_epoch<<"\nvalidation_bpb="<<out.best_validation_bpb<<"\ntest_bpb="<<out.test_bpb;model.metadata=metadata.str();save_g1_checkpoint(c.best_model_path,model);} {std::ostringstream line;line<<std::setprecision(17)<<"{\"event\":\"finished\",\"best_epoch\":"<<out.best_epoch<<",\"validation_bpb\":"<<out.best_validation_bpb<<",\"test_bpb\":"<<out.test_bpb<<",\"resumed\":"<<(out.resumed?"true":"false")<<"}";append_jsonl(c.metrics_log_path,line.str());}return out;
 }
 } // namespace morok::model
