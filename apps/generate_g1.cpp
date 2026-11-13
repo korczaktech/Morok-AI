@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
         const auto checkpoint = morok::model::load_g1_checkpoint(argv[1]);
         auto prompt_result = morok::common::Utf8Text::from_utf8(read_text(argv[2]));
         if (!prompt_result) throw std::runtime_error("prompt não é UTF-8 válido");
-        auto prompt = std::move(prompt_result).value();
+        auto prompt = std::move(*prompt_result.value_if());
         std::size_t max_bytes = 256;
         if (argc == 5) max_bytes = static_cast<std::size_t>(std::stoull(argv[4]));
         const auto report = morok::model::generate_g1(
