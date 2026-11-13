@@ -36,7 +36,7 @@ O fluxo é destinado ao ambiente Linux inicial do projeto. O processo pressupõe
 - O treinador aceita `checkpoint_path` e `resume_from_checkpoint`.
 - Um checkpoint é salvo automaticamente ao final de cada época concluída.
 - O checkpoint contém os parâmetros correntes, estado AdamW/SGD, RNG xoshiro256**, época, contador de atualizações, ordem de documentos de treino e posição final do cursor.
-- Metadados armazenam hash do corpus, assinatura da configuração, melhor BPB de validação, melhor época, contador de paciência e snapshot dos melhores 1.000 parâmetros.
+- Metadados armazenam hash do corpus, assinatura da configuração, melhor BPB de validação, melhor época, contador de paciência, contadores de segurança para sequências de gradientes extremos/zero e snapshot dos melhores 1.000 parâmetros.
 - A retomada valida corpus, seed, truncation length, paciência, tipo/hiperparâmetros do otimizador, permutação e split dos documentos.
 - A retomada começa na época seguinte, com o estado RNG restaurado; não reembaralha nem repete a época já concluída.
 - Ao terminar, o treinador devolve os melhores parâmetros selecionados pela validação e só então calcula a métrica de teste.
