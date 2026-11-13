@@ -6,6 +6,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace morok::model {
 namespace {
@@ -61,8 +62,10 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
         throw std::invalid_argument("max_new_bytes precisa estar entre 1 e 65536");
 
     G1State recurrent{};
-    for (const unsigned char byte : prompt.string())
-        advance_g1_state(parameters, recurrent, static_cast<std::uint8_t>(byte));
+    for (const char raw_byte : prompt.string()) {
+        const auto byte = static_cast<std::uint8_t>(static_cast<unsigned char>(raw_byte));
+        advance_g1_state(parameters, recurrent, byte);
+    }
 
     std::string generated;
     generated.reserve(config.max_new_bytes);
