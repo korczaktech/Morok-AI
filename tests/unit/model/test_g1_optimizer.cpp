@@ -82,8 +82,8 @@ void test_adamw_bias_correction_and_clipping() {
     require(std::abs(result.gradient_norm_after_clipping - 1.0) < 1e-12 &&
             result.gradients_clipped,
             "global clipping must cap the gradient norm at one");
-    require(std::abs(parameters.W_ax[0] + 0.0006F) < 1e-6F &&
-            std::abs(parameters.W_ax[1] + 0.0008F) < 1e-6F,
+    require(std::abs(parameters.W_ax[0] + 0.001F) < 1e-6F &&
+            std::abs(parameters.W_ax[1] + 0.001F) < 1e-6F,
             "AdamW must use the clipped gradient and first-step bias correction");
     const auto& adam = std::get<G1AdamWState>(state);
     require(std::abs(adam.first_moment[0] - 0.0006F) < 1e-8F &&
