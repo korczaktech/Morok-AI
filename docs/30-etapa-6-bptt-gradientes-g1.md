@@ -57,8 +57,8 @@ A função não altera parâmetros nem estado externo. Não aplica clipping, atu
 - [x] Comparação por diferenças finitas centrais para um parâmetro de cada tensor treinável, em BPTT integral (12 verificações). O truncamento é verificado separadamente pela diferença entre gradientes e pela invariância do estado forward.
 - [x] Verificação de que a perda/estado forward permanecem iguais, mas os gradientes mudam quando a fronteira de truncamento corta dependências temporais.
 - [x] Rejeição de sequência curta e truncation_length zero.
-- [x] CI GCC/Clang Debug/Release aprovado no run 43519658420.
-- [x] ASan/UBSan aprovado no run 43519658407.
+- [x] CI GCC/Clang Debug/Release aprovado no run 43519958949.
+- [x] ASan/UBSan aprovado no run 43519958912.
 
 ## Fora do escopo
 
