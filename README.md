@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
- > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 8: pipeline de treinamento por épocas, corpus em fluxo, divisão por documentos, validação e avaliação BPB implementados. Etapa 9: codec MOROKCKP v1 e testes de serialização adicionados; integração de retomada automática no treinador ainda pendente.
+ > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 8: pipeline de treinamento por épocas, corpus em fluxo, divisão por documentos, validação e avaliação BPB implementados. Etapa 9: checkpoints MOROKCKP v1 integrados ao treinador, salvamento automático por época e retomada determinística implementados; testes de equivalência após retomada adicionados.
 
 ## Objetivo
 
@@ -59,6 +59,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 31. [Etapa 7 — Otimizadores e clipping global da G1](docs/31-etapa-7-otimizadores-g1.md)
 32. [Etapa 8 — Pipeline de treinamento da G1](docs/32-etapa-8-treinamento-g1.md)
 33. [GitHub Actions: entrada.txt -> saida.txt](docs/33-github-actions-entrada-saida.md)
+34. [Etapa 9 — Checkpoints e persistência](docs/34-etapa-9-checkpoints-persistencia.md)
 
 ## Estado atual
 
@@ -69,14 +70,15 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 5: forward pass fast/slow, cabeça binária causal, scoring em nats e testes adicionados; CI GCC/Clang Debug/Release aprovado no run 43517463554.
 - Etapa 6: BPTT truncado e gradientes manuais da G1 implementados.
 - Etapa 7: AdamW, SGD com momentum, clipping global e testes transacionais implementados.
-- Etapa 8: leitura/validação de corpus em fluxo, deduplicação exata, split determinístico por documento, treino BPTT em blocos, avaliação BPB, early stopping e CLI implementados. Checkpoints retomáveis permanecem pendentes.
+- Etapa 8: leitura/validação de corpus em fluxo, deduplicação exata, split determinístico por documento, treino BPTT em blocos, avaliação BPB, early stopping e CLI implementados.
+- Etapa 9: formato MOROKCKP v1, CRC32, persistência de parâmetros/otimizador/RNG/cursor, fsync de arquivo e diretório, salvamento ao final de cada época, validação de compatibilidade e retomada determinística integrados ao treinador.
 - Protótipo experimental `morok_complete`: lê `entrada.txt`, treina a G1 do zero sobre a sequência, gera uma continuação ASCII e grava `saida.txt`. O GitHub Actions executa esse fluxo quando `entrada.txt` muda na `main`; os parâmetros não persistem entre execuções.
 - G1: inventário de parâmetros, forward pass, gradientes B0 e otimizadores implementados; os 29 parâmetros do segmentador permanecem fora do caminho preditivo.
 
 ## Próximas etapas
 
-1. Implementar checkpoints retomáveis e logs persistentes de experimentos.
-2. Executar o primeiro treinamento com corpus licenciado e registrar RSS, throughput e BPB.
+1. Executar o primeiro treinamento com corpus licenciado e registrar RSS, throughput e BPB.
+2. Implementar logs persistentes de experimentos e relatório de benchmark.
 3. Implementar segmentação reversível e integrar os subsistemas gradualmente.
 
 ## Princípio de engenharia
