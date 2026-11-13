@@ -7,7 +7,7 @@
 #include <vector>
 namespace morok::model {
 struct G1TrainingConfig {
- std::filesystem::path corpus_directory{};
+ std::filesystem::path corpus_directory{}, checkpoint_path{}, resume_from_checkpoint{};
  std::size_t max_epochs{50}, patience{5}, truncation_length{64};
  std::uint64_t seed{42};
  std::size_t max_documents{100000};
@@ -27,7 +27,7 @@ struct G1TrainingReport {
  std::size_t best_epoch{0};
  double best_validation_bpb{0}, test_bpb{0};
  std::uint64_t test_target_bytes{0};
- bool stopped_early{false};
+ bool stopped_early{false}, resumed{false};
  std::vector<G1EpochMetrics> epochs{};
 };
 [[nodiscard]] G1TrainingReport train_g1_corpus(const G1TrainingConfig&, G1Parameters&);
