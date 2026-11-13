@@ -46,21 +46,50 @@ struct Eval{double bpb;std::uint64_t count;};
 Eval evaluate(const std::vector<Doc>&docs,Split which,const G1Parameters&p){double nats=0;std::uint64_t count=0;std::array<char,kRead>b{};for(const auto&d:docs)if(d.split==which){std::ifstream f(d.path,std::ios::binary);if(!f)throw std::runtime_error("cannot reopen "+d.path.string());G1State state{};bool has=false;std::uint8_t prev=0;while(f){f.read(b.data(),b.size());auto n=static_cast<std::size_t>(f.gcount());for(std::size_t i=0;i<n;++i){auto x=static_cast<std::uint8_t>(static_cast<unsigned char>(b[i]));if(has){advance_g1_state(p,state,prev);nats+=evaluate_g1_next_byte(p,state,x).negative_log_likelihood_nats;++count;}prev=x;has=true;}}if(!f.eof())throw std::runtime_error("evaluation I/O error");}if(!count)throw std::runtime_error("evaluation split has no next-byte targets");return{nats/(static_cast<double>(count)*kLn2),count};}
 struct Totals{double nats{};std::uint64_t targets{},updates{};double norm{};};
 void train_doc(const Doc&d,const G1TrainingConfig&c,G1Parameters&p,G1OptimizerState&o,Totals&t,std::size_t&high,std::size_t&zero){std::ifstream f(d.path,std::ios::binary);if(!f)throw std::runtime_error("cannot reopen "+d.path.string());std::vector<std::uint8_t>w;w.reserve(c.truncation_length+1);char ch;while(w.size()<c.truncation_length+1&&f.get(ch))w.push_back(static_cast<std::uint8_t>(static_cast<unsigned char>(ch)));G1State state{};while(w.size()>=2){auto r=compute_g1_bptt_gradients(p,w,c.truncation_length,state);auto step=apply_g1_optimizer_step(p,r.gradients,c.optimizer,o);t.nats+=r.mean_loss_nats*r.target_byte_count;t.targets+=r.target_byte_count;++t.updates;t.norm=step.gradient_norm_before_clipping;high=step.gradient_norm_before_clipping>100?high+1:0;zero=step.gradient_norm_before_clipping==0?zero+1:0;if(high>=10)throw std::runtime_error("gradient norm exceeded 100 for 10 updates");if(zero>=100)throw std::runtime_error("gradient norm was zero for 100 updates");state=r.final_state;if(w.size()<c.truncation_length+1)break;const auto overlap=w.back();w.clear();w.push_back(overlap);while(w.size()<c.truncation_length+1&&f.get(ch))w.push_back(static_cast<std::uint8_t>(static_cast<unsigned char>(ch)));}if(!f.eof())throw std::runtime_error("training I/O error");}
-void append_jsonl(const std::filesystem::path&path,const std::string&line){if(path.empty())return;{std::ofstream f(path,std::ios::binary|std::ios::app);if(!f)throw std::runtime_error("cannot open training log: "+path.string());f<<line<<'
-';f.flush();if(!f)throw std::runtime_error("cannot write training log: "+path.string());}const int fd=::open(path.c_str(),O_WRONLY);if(fd<0)throw std::runtime_error("cannot open training log for fsync: "+std::string(std::strerror(errno)));const int rc=::fsync(fd);const int saved=errno;::close(fd);if(rc!=0)throw std::runtime_error("training log fsync failed: "+std::string(std::strerror(saved)));auto parent=path.parent_path();if(parent.empty())parent=".";const int dfd=::open(parent.c_str(),O_RDONLY|O_DIRECTORY);if(dfd<0)throw std::runtime_error("cannot open training log directory for fsync: "+std::string(std::strerror(errno)));const int drc=::fsync(dfd);const int dsaved=errno;::close(dfd);if(drc!=0)throw std::runtime_error("training log directory fsync failed: "+std::string(std::strerror(dsaved)));}
+void append_jsonl(const std::filesystem::path& path, const std::string& line) {
+    if (path.empty()) return;
+    {
+        std::ofstream file(path, std::ios::binary | std::ios::app);
+        if (!file) throw std::runtime_error("cannot open training log: " + path.string());
+        file << line << '\n';
+        file.flush();
+        if (!file) throw std::runtime_error("cannot write training log: " + path.string());
+    }
+    const int fd = ::open(path.c_str(), O_WRONLY);
+    if (fd < 0) throw std::runtime_error("cannot open training log for fsync: " + std::string(std::strerror(errno)));
+    const int rc = ::fsync(fd);
+    const int saved = errno;
+    ::close(fd);
+    if (rc != 0) throw std::runtime_error("training log fsync failed: " + std::string(std::strerror(saved)));
+    auto parent = path.parent_path();
+    if (parent.empty()) parent = ".";
+    const int directory_fd = ::open(parent.c_str(), O_RDONLY | O_DIRECTORY);
+    if (directory_fd < 0) throw std::runtime_error("cannot open training log directory for fsync: " + std::string(std::strerror(errno)));
+    const int directory_rc = ::fsync(directory_fd);
+    const int directory_error = errno;
+    ::close(directory_fd);
+    if (directory_rc != 0) throw std::runtime_error("training log directory fsync failed: " + std::string(std::strerror(directory_error)));
+}
 bool same_path(const std::filesystem::path&a,const std::filesystem::path&b){return !a.empty()&&!b.empty()&&std::filesystem::absolute(a).lexically_normal()==std::filesystem::absolute(b).lexically_normal();}
 std::string config_key(const G1TrainingConfig&c){std::ostringstream s;s<<std::setprecision(17)<<static_cast<int>(c.optimizer.kind)<<'|'<<c.optimizer.learning_rate<<'|'<<c.optimizer.beta1<<'|'<<c.optimizer.beta2<<'|'<<c.optimizer.epsilon<<'|'<<c.optimizer.momentum<<'|'<<c.optimizer.weight_decay<<'|'<<c.optimizer.max_gradient_norm<<'|'<<c.seed<<'|'<<c.truncation_length<<'|'<<c.patience;return s.str();}
 std::string encode_params(const G1Parameters&p){std::ostringstream s;s<<std::hex<<std::setfill('0');for(float x:p.flatten())s<<std::setw(8)<<std::bit_cast<std::uint32_t>(x);return s.str();}
 G1Parameters decode_params(const std::string&s){if(s.size()!=8000)throw std::runtime_error("invalid best-parameter snapshot");std::array<float,1000>a{};for(std::size_t i=0;i<a.size();++i){std::uint32_t x=0;auto r=std::from_chars(s.data()+i*8,s.data()+i*8+8,x,16);if(r.ec!=std::errc{}||r.ptr!=s.data()+i*8+8)throw std::runtime_error("malformed best-parameter snapshot");a[i]=std::bit_cast<float>(x);}G1Parameters p;if(!p.assign(a))throw std::runtime_error("non-finite best-parameter snapshot");return p;}
 std::map<std::string,std::string>parse_metadata(const std::string&s){std::map<std::string,std::string>m;std::istringstream in(s);std::string line;while(std::getline(in,line)){auto pos=line.find('=');if(pos==std::string::npos||!m.emplace(line.substr(0,pos),line.substr(pos+1)).second)throw std::runtime_error("malformed checkpoint metadata");}return m;}
-std::string make_metadata(const G1TrainingConfig&c,const std::string&hash,double best,std::size_t best_epoch,std::size_t stale,std::size_t high,std::size_t zero,const G1Parameters&bestp){std::ostringstream s;s<<std::setprecision(17)<<"corpus_hash="<<hash<<"
-config="<<config_key(c)<<"
-best="<<best<<"
-best_epoch="<<best_epoch<<"
-stale="<<stale<<"
-high_gradient_streak="<<high<<"
-zero_gradient_streak="<<zero<<"
-best_params="<<encode_params(bestp);return s.str();}
+std::string make_metadata(const G1TrainingConfig& c, const std::string& hash,
+                           double best, std::size_t best_epoch, std::size_t stale,
+                           std::size_t high, std::size_t zero, const G1Parameters& bestp) {
+    std::ostringstream stream;
+    stream << std::setprecision(17)
+           << "corpus_hash=" << hash << "\n"
+           << "config=" << config_key(c) << "\n"
+           << "best=" << best << "\n"
+           << "best_epoch=" << best_epoch << "\n"
+           << "stale=" << stale << "\n"
+           << "high_gradient_streak=" << high << "\n"
+           << "zero_gradient_streak=" << zero << "\n"
+           << "best_params=" << encode_params(bestp);
+    return stream.str();
+}
 }
 G1TrainingReport train_g1_corpus(const G1TrainingConfig&c,G1Parameters&p){
  if(!c.max_epochs||c.max_epochs>100000||!c.patience||!c.truncation_length||!c.max_documents||!c.max_document_bytes)throw std::invalid_argument("invalid G1 training limits");if(same_path(c.checkpoint_path,c.best_model_path)||same_path(c.checkpoint_path,c.metrics_log_path)||same_path(c.best_model_path,c.metrics_log_path))throw std::invalid_argument("checkpoint, best-model and log paths must be different");
@@ -73,10 +102,32 @@ G1TrainingReport train_g1_corpus(const G1TrainingConfig&c,G1Parameters&p){
   if(!c.checkpoint_path.empty()){G1Checkpoint ck;ck.parameters=p;ck.optimizer=opt;ck.has_optimizer=true;ck.rng_state=rng.s;ck.has_rng=true;ck.epoch=static_cast<std::uint32_t>(ep);ck.block_index=total_updates;for(auto id:train)ck.document_order.push_back(static_cast<std::uint32_t>(id));ck.document_position=static_cast<std::uint32_t>(train.size());ck.metadata=make_metadata(c,out.corpus_hash,best,best_epoch,stale,high,zero,bestp);save_g1_checkpoint(c.checkpoint_path,ck);append_jsonl(c.metrics_log_path,"{\"event\":\"checkpoint_saved\",\"epoch\":"+std::to_string(ep)+"}");}
   if(stale>=c.patience){out.stopped_early=true;break;}
  }
- if(!std::isfinite(best))throw std::runtime_error("training ended without a valid best checkpoint");p=bestp;out.best_epoch=best_epoch;out.best_validation_bpb=best;if(out.test_documents){const auto test_started=std::chrono::steady_clock::now();auto test=evaluate(docs,Split::test,p);out.test_evaluation_seconds=std::chrono::duration<double>(std::chrono::steady_clock::now()-test_started).count();out.test_bpb=test.bpb;out.test_target_bytes=test.count;out.test_evaluation_bytes_per_second=out.test_evaluation_seconds>0.0?static_cast<double>(test.count)/out.test_evaluation_seconds:0.0;}if(!c.best_model_path.empty()){G1Checkpoint model;model.parameters=bestp;std::ostringstream metadata;metadata<<std::setprecision(17)<<"kind=inference
-corpus_hash="<<out.corpus_hash<<"
-best_epoch="<<out.best_epoch<<"
-validation_bpb="<<out.best_validation_bpb<<"
-test_bpb="<<out.test_bpb;model.metadata=metadata.str();save_g1_checkpoint(c.best_model_path,model);} {std::ostringstream line;line<<std::setprecision(17)<<"{\"event\":\"finished\",\"best_epoch\":"<<out.best_epoch<<",\"validation_bpb\":"<<out.best_validation_bpb<<",\"test_bpb\":"<<out.test_bpb<<",\"resumed\":"<<(out.resumed?"true":"false")<<"}";append_jsonl(c.metrics_log_path,line.str());}return out;
+ if (!std::isfinite(best)) throw std::runtime_error("training ended without a valid best checkpoint");
+ p = bestp;
+ out.best_epoch = best_epoch;
+ out.best_validation_bpb = best;
+ if (out.test_documents) {
+     const auto test_started = std::chrono::steady_clock::now();
+     const auto test = evaluate(docs, Split::test, p);
+     out.test_evaluation_seconds = std::chrono::duration<double>(
+         std::chrono::steady_clock::now() - test_started).count();
+     out.test_bpb = test.bpb;
+     out.test_target_bytes = test.count;
+     out.test_evaluation_bytes_per_second = out.test_evaluation_seconds > 0.0
+         ? static_cast<double>(test.count) / out.test_evaluation_seconds : 0.0;
+ }
+ if (!c.best_model_path.empty()) {
+     G1Checkpoint model;
+     model.parameters = bestp;
+     std::ostringstream metadata;
+     metadata << std::setprecision(17)
+              << "kind=inference\n"
+              << "corpus_hash=" << out.corpus_hash << "\n"
+              << "best_epoch=" << out.best_epoch << "\n"
+              << "validation_bpb=" << out.best_validation_bpb << "\n"
+              << "test_bpb=" << out.test_bpb;
+     model.metadata = metadata.str();
+     save_g1_checkpoint(c.best_model_path, model);
+ } {std::ostringstream line;line<<std::setprecision(17)<<"{\"event\":\"finished\",\"best_epoch\":"<<out.best_epoch<<",\"validation_bpb\":"<<out.best_validation_bpb<<",\"test_bpb\":"<<out.test_bpb<<",\"resumed\":"<<(out.resumed?"true":"false")<<"}";append_jsonl(c.metrics_log_path,line.str());}return out;
 }
 } // namespace morok::model
