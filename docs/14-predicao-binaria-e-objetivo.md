@@ -2,58 +2,42 @@
 
 ## 14.1 Predição autoregressiva de bits
 
-O alvo é o byte seguinte ao byte observado. Após processar o byte na posição i e atualizar os estados h_f(i) e h_s(i), a cabeça prevê b_{i+1}, representado por oito bits b_{i+1,0},...,b_{i+1,7}. Essa convenção causal é obrigatória.
+Após processar o byte observado na posição i, o núcleo atualiza h_f(i) e h_s(i) e prevê o byte seguinte b_{i+1}. O byte-alvo e bytes futuros não podem participar da entrada que produz a previsão.
 
-A probabilidade do byte será fatorada em oito decisões binárias condicionais:
+O byte alvo possui oito bits b_{i+1,0},...,b_{i+1,7}. A probabilidade é fatorada em oito decisões condicionais:
 
-P(b_{i+1} | contexto) = produto, para j=0..7, de P(b_{i+1,j} | h_f(i), h_s(i), b_{i+1,0:j-1})
+P(b_{i+1}|contexto) = produto_j P(b_{i+1,j}|h_f(i),h_s(i),b_{i+1,0:j-1})
 
-A cabeça utiliza a concatenação [h_f;h_s], de dimensão 22:
+A cabeça usa [h_f;h_s], dimensão 22:
 
-p_{i+1,j} = sigmoid(o_j^T [h_f(i); h_s(i)] + soma_{k<j} A_{j,k}(2b_{i+1,k}-1) + c_j)
+p_{i+1,j} = sigmoid(o_jᵀ[h_f(i);h_s(i)] + soma_{k<j} A_{j,k}(2b_{i+1,k}-1) + c_j)
 
-A matriz O tem dimensão 8×22 e o vetor c tem dimensão 8. A matriz A contém 28 coeficientes da parte triangular estrita 8×8. Total: 176 + 8 + 28 = 212 parâmetros.
+O_j compõe matriz 8×22; c tem oito valores; A contém os 28 coeficientes da triangular estrita. Total: 176+8+28=212 parâmetros. Ordem de bits: mais significativo para menos significativo.
 
-A ordem dos bits é do mais significativo para o menos significativo. A geração prevê e decide um bit por vez, disponibilizando bits anteriores do mesmo byte à decisão seguinte.
+## 14.2 Perda e BPB
 
-## 14.2 Perda preditiva
+Usar BCE-with-logits estável. Se BCE_mean for média em bytes e bits, BPB=8*BCE_mean/ln(2). Se for acumulada a soma das oito perdas por byte, BPB=soma_nats/(N_bytes*ln(2)). Registrar sempre a convenção usada.
 
-Para bits-alvo y_j em {0,1}, utilizar entropia cruzada binária calculada a partir de logits:
+Mascarar posições sem alvo. O último byte de cada sequência não gera alvo sem próximo byte.
 
-L_pred = - média sobre bytes-alvo e bits de [y log(sigmoid(z)) + (1-y) log(1-sigmoid(z))]
+## 14.3 Distribuição conjunta
 
-A implementação deverá usar BCE-with-logits estável, sem calcular log(0) diretamente. Padding e posições sem alvo serão mascarados.
+As oito condicionais definem distribuição conjunta sobre 256 bytes. Teste obrigatório: somar as probabilidades dos 256 valores e verificar resultado próximo de 1 dentro da tolerância numérica definida no teste.
 
-A métrica será bits por byte (BPB): soma da perda em bits dividida pelo número de bytes-alvo. Quando a perda estiver em nats, dividir por ln(2). Para avaliar um modelo autoregressivo, acumular a perda de todos os oito bits de cada byte.
+## 14.4 Baseline softmax
 
-## 14.3 Normalização da distribuição de byte
+Implementar variante comparativa com softmax de 256 classes. Não incluir seus parâmetros no inventário oficial de 1.000; comparar em variante com orçamento próprio ou redistribuição formal. Medir BPB, latência, throughput, estabilidade e parâmetros.
 
-As oito condicionais definem uma distribuição conjunta fatorada sobre os 256 bytes possíveis. A soma das probabilidades dos 256 bytes deve ser aproximadamente 1, dentro da tolerância numérica definida nos testes. Esse teste detecta erros de indexação e condicionamento.
+## 14.5 Reconstrução
 
-## 14.4 Comparação com softmax de 256 classes
+A hierarquia usa expansão determinística e referências aos bytes originais. Round-trip deve ser exato. Não existe decoder neural de reconstrução na G1.
 
-A saída binária reduz a cabeça para 212 parâmetros, mas exige oito decisões sequenciais e não garante menor latência. Implementar baseline softmax de 256 classes em variante experimental separada. Não inserir sua cabeça no orçamento G1 de 1.000 parâmetros; comparar qualidade e velocidade em configuração com orçamento próprio ou redistribuição formal de parâmetros.
+## 14.6 Objetivo efetivo
 
-Registrar parâmetros da cabeça, operações estimadas, latência por byte, throughput, BPB e estabilidade.
+L_total = L_pred + lambda_group * L_group.
 
-## 14.5 Objetivo de reconstrução
-
-A representação hierárquica deverá ser reversível no modo sem perdas. A primeira implementação usa referências aos bytes originais e expansão determinística dos agrupamentos. A reconstrução exata é verificada por igualdade byte a byte.
-
-Não há decoder neural de reconstrução na G1. Se uma geração futura introduzir compressão latente com perda, deverá existir objetivo de reconstrução separado e avaliação explícita da distorção.
-
-## 14.6 Função objetivo efetiva
-
-Para a G1:
-
-L_total = L_pred + lambda_group * L_group
-
-L_group treina o pontuador auxiliar de candidatos. Como o pontuador não está no caminho do preditor B0, seus gradientes atualizam somente os 29 parâmetros de segmentação; L_pred atualiza os 971 parâmetros do núcleo e da cabeça. Não alegar que L_group melhora o preditor sem uma variante integrada e experimento que demonstre isso.
-
-A reconstrução sem perdas é uma restrição rígida de elegibilidade: se round-trip falhar, o candidato é rejeitado. Não é uma perda aproximada treinável na G1.
+L_pred atualiza os 971 parâmetros do núcleo e cabeça. L_group atualiza apenas os 29 parâmetros do pontuador. A soma é uma função objetivo sobre conjuntos de parâmetros disjuntos; não significa que a segmentação influencia a previsão B0.
 
 ## 14.7 Geração
 
-A política inicial é gulosa e determinística: bit 1 quando logit >= 0, caso contrário 0. Bits são gerados em ordem do mais significativo ao menos significativo. O byte resultante é anexado ao contexto e processado para prever o próximo.
-
-Amostragem com temperatura só será habilitada após o baseline estável, com RNG e semente explícitos. Não há token EOS dedicado na G1; a parada é controlada por limite de bytes ou sequência de parada do chamador. A saída deve passar por validação UTF-8 estrita antes de ser apresentada como texto. Bytes inválidos não serão descartados silenciosamente.
+Política inicial gulosa: bit 1 se logit>=0, caso contrário 0. Gerar bits do mais significativo ao menos significativo, montar byte e processá-lo para prever o seguinte. Não há EOS na G1; parar por limite de bytes ou sequência externa de parada. Validar UTF-8 estritamente antes de apresentar texto.
