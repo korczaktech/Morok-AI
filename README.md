@@ -55,6 +55,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 27. [Etapa 3 — Primitivas matemáticas](docs/27-etapa-3-primitivas-matematicas.md)
 28. [Etapa 4 — Inventário e inicialização dos parâmetros G1](docs/28-etapa-4-inventario-parametros-g1.md)
 29. [Etapa 5 — Forward pass da G1](docs/29-etapa-5-forward-pass-g1.md)
+30. [Etapa 6 — BPTT e gradientes da G1](docs/30-etapa-6-bptt-gradientes-g1.md)
 
 ## Estado atual
 
@@ -63,13 +64,13 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 3: primitivas matemáticas estáveis e testes numéricos adicionados; CI GCC/Clang Debug/Release aprovado no run 43514960300.
 - Etapa 4: inventário tipado de 1.000 parâmetros FP32, ordem canônica e inicialização determinística; CI GCC/Clang Debug/Release aprovado.
 - Etapa 5: forward pass fast/slow, cabeça binária causal, scoring em nats e testes adicionados; CI GCC/Clang Debug/Release aprovado no run 43517463554.
-- G1: inventário de parâmetros e forward pass inicial implementados; BPTT, treinamento e avaliação experimental ainda pendentes.
+- Etapa 6: BPTT truncado e gradientes manuais da G1 implementados; treinamento/otimizadores e avaliação experimental continuam pendentes.
+- G1: inventário de parâmetros, forward pass e gradientes B0 implementados; os 29 parâmetros do segmentador permanecem fora do caminho preditivo.
 
 ## Próximas etapas
 
-1. Implementar backpropagation through time (BPTT) e gradientes da G1.
-2. Implementar treinamento, checkpoints e avaliação.
-3. Implementar segmentação reversível e integrar os subsistemas gradualmente.
+1. Implementar treinamento, otimizadores, checkpoints e avaliação.
+2. Implementar segmentação reversível e integrar os subsistemas gradualmente.
 
 ## Princípio de engenharia
 

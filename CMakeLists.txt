@@ -22,6 +22,7 @@ add_library(morok_core STATIC
     src/common/utf8_text.cpp
     src/model/parameters/g1_parameters.cpp
     src/model/g1_forward.cpp
+    src/model/learn/g1_bptt.cpp
 )
 add_library(Morok::Core ALIAS morok_core)
 

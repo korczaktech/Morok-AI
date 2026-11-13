@@ -32,3 +32,10 @@ add_executable(morok_test_g1_forward
 target_link_libraries(morok_test_g1_forward PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_g1_forward)
 add_test(NAME model.g1_forward COMMAND morok_test_g1_forward)
+
+add_executable(morok_test_g1_bptt
+    unit/model/test_g1_bptt.cpp
+)
+target_link_libraries(morok_test_g1_bptt PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_g1_bptt)
+add_test(NAME model.g1_bptt COMMAND morok_test_g1_bptt)
