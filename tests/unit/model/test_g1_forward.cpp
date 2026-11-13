@@ -44,10 +44,10 @@ void test_zero_parameters_produce_uniform_distribution() {
     G1Parameters parameters{};
     G1State state{};
     const auto prediction = predict_g1_next_byte(parameters, state);
-    require(prediction.greedy_byte == 0, "zero logits must greedily choose zero bits");
+    require(prediction.greedy_byte == 0xFF, "zero logits must choose one for every bit under the >= 0 tie rule");
     for (std::size_t bit = 0; bit < 8; ++bit) {
         require(close(prediction.bit_probabilities[bit], 0.5),
-                "zero logits must yield probability 0.5");
+                "zero logits must yield probability 0.5 regardless of tie-breaking");
     }
 
     double total_probability = 0.0;
