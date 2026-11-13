@@ -234,3 +234,48 @@ A especificação G1 estará documentalmente encerrada quando:
 - recursos, limites e testes de aceitação estiverem definidos.
 
 O encerramento documental não significa implementação, teste ou validação científica. Esses estados só podem ser atribuídos após execução real.
+
+## 18.15 Precisões matemáticas adicionais
+
+### Codificação exata das 11 características
+
+Para byte b em [0,255], os oito bits são extraídos do mais significativo ao menos significativo e convertidos para {-1,+1}: bit 1 vira +1; bit 0 vira -1. As três características restantes são:
+- paridade: +1 quando popcount(b) é par; -1 quando é ímpar;
+- contagem: popcount(b)/4 - 1, no intervalo [-1,1];
+- valor: b/127,5 - 1, no intervalo [-1,1].
+
+### BPB e redução da perda
+
+Se BCE-with-logits retornar a média sobre bytes e oito bits, então:
+BPB = 8 * BCE_mean / ln(2), quando BCE está em nats.
+Se a implementação acumular a soma das oito perdas por byte, BPB = soma_nats / (N_bytes * ln(2)).
+Os relatórios devem registrar qual redução foi usada. Não misturar as duas convenções.
+
+### Gradientes
+
+A G1 usará retropropagação manual (reverse-mode) específica para as operações do núcleo e da cabeça, evitando dependência de framework de autodiferenciação. Implementar derivadas de affine, sigmoid, tanh, soma, produto elemento a elemento e mistura de estados; aplicar BPTT dentro do bloco B. A cabeça triangular será retropropagada em ordem reversa dos bits, acumulando gradientes nos 28 coeficientes A e nos logits. Os gradientes deverão ser comparados por diferenças finitas centrais em parâmetros selecionados e em modelos minúsculos determinísticos.
+
+### Associação preditiva diagnóstica P(g)
+
+Para cada candidato elegível, reunir os bytes imediatamente seguintes às ocorrências de g, respeitando limites de documento. Estimar a distribuição global q0 e a distribuição condicionada qg sobre 256 valores, com suavização add-one. Calcular entropias empíricas H(q0) e H(qg), em bits:
+P(g) = clip((H(q0) - H(qg)) / max(H(q0), epsilon), 0, 1).
+Exigir pelo menos quatro ocorrências. Essa métrica descreve associação estatística no corpus; não mede melhoria causal do modelo B0.
+
+### Projeção dos pesos
+
+O peso R permanece 0,25. Os pesos F, P e C são atualizados multiplicativamente e projetados no conjunto com soma 0,75, limites individuais [0,05;0,60] e teto adicional F<=0,20. A projeção usa water-filling determinístico: aplicar um deslocamento comum aos três pesos, saturar limites, redistribuir o restante entre os não saturados até somar 0,75. Se não houver solução numérica válida, manter os pesos anteriores.
+
+### Pontuador: características não redundantes
+
+R é condição rígida e não entra no vetor treinável: todos os exemplos aceitos têm R=1. Para manter 22 características informativas, usar:
+- F, P e C: 3;
+- médias dos oito bits do candidato: 8;
+- oito coordenadas do estado rápido: 8;
+- comprimento normalizado: 1;
+- diversidade interna (número de valores de byte distintos dividido pelo comprimento): 1;
+- sobreposição interna de prefixo/sufixo mais longa normalizada: 1.
+Total: 22. Frequência é representada somente por F; não duplicar com outra feature de frequência. R continua verificada antes do pontuador.
+
+### Atualização do pontuador
+
+A cada avaliação de segmentação, treinar o pontuador por uma passagem sobre os candidatos rotulados, em um passo AdamW com learning rate 0,001 e BCE-with-logits. Separar os estados do otimizador do preditor. Se houver menos de 16 candidatos rotulados, não atualizar. Comparar a pontuação aprendida com a ordenação determinística U(g); se não aproximar o critério ou piorar estabilidade, desativar o pontuador na configuração experimental sem alterar o inventário oficial da arquitetura G1.
