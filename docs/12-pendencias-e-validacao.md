@@ -1,32 +1,24 @@
 # 12. Pendências e plano de validação
 
-Este documento diferencia decisões conceituais aprovadas de detalhes ainda não especificados.
+Este documento diferencia decisões conceituais aprovadas de detalhes ainda não especificados. A arquitetura matemática proposta está nos documentos 13–17.
 
-## 12.1 Pendências matemáticas da RLAH
+## 12.1 Pendências matemáticas remanescentes
 
-- Definição operacional de perda preditiva.
-- Definição de custo de compressão, incluindo metadados.
-- Definição de perda de reconstrução.
-- Valores e estratégia de λ e μ.
-- Normalização dos quatro critérios.
-- Estimador de frequência.
-- Medida de ganho preditivo marginal.
-- Medida de preservação de informação.
-- Regra matemática de atualização dos pesos adaptativos.
-- Limites e taxa de atualização dos pesos.
-- Limiar de criação e descarte com histerese.
+- Definir metas numéricas e sinal operacional d_i para atualização adaptativa dos pesos.
+- Calibrar η e os limiares de criação, retenção e descarte.
+- Definir frequência mínima e orçamento máximo de candidatos por bloco.
+- Definir comprimento máximo das unidades de nível 2.
+- Especificar a política de tratamento de UTF-8 inválido.
+- Definir hiperparâmetros finais de treinamento.
+- Validar a fatoração de bits contra softmax de 256 bytes.
 
 ## 12.2 Pendências de arquitetura
 
-- Dimensões concretas do núcleo recorrente.
-- Equações de atualização do estado.
-- Dimensão e formato das representações latentes.
-- Estrutura de dados dos três níveis hierárquicos.
-- Algoritmo de geração de candidatos.
-- Orçamento máximo de candidatos por posição.
-- Política de atualização de segmentação.
-- Fatoração e ordem dos oito bits da saída.
-- Dimensões definitivas que somem exatamente 1.000 parâmetros na G1.
+- Formalizar o formato de dados hierárquico e suas referências.
+- Definir limites de memória e política de remoção do cache de candidatos.
+- Confirmar dimensões e contagem com inventário automático no código.
+- Avaliar se a dimensão d=11 oferece estabilidade suficiente.
+- Definir o contrato de transporte de estado entre blocos e sessões.
 
 ## 12.3 Pendências de engenharia
 
@@ -40,20 +32,22 @@ Este documento diferencia decisões conceituais aprovadas de detalhes ainda não
 
 ## 12.4 Revisão bibliográfica
 
-Comparar a proposta com abordagens de modelagem em bytes, tokenização aprendida, segmentação adaptativa, compressão e modelos recorrentes. Trabalhos de referência iniciais incluem ByT5, Charformer e CANINE. A revisão deverá procurar também trabalhos posteriores e resultados recentes antes de qualquer afirmação de novidade.
+A revisão inicial está em [Revisão bibliográfica e posicionamento](13-arquitetura-matematica-rlah.md) e, em detalhe, em [documento 17](17-revisao-bibliografica-e-posicionamento.md). Trabalhos relevantes incluem ByT5, Charformer, CANINE, RWKV, Mamba, Mamba-3, ByteFlow e zip2zip. A revisão deverá continuar antes de qualquer afirmação de novidade.
 
 ## 12.5 Plano de validação
 
-1. Formalizar matematicamente cada termo.
-2. Criar um baseline de predição de bytes.
-3. Implementar uma versão mínima sem segmentação adaptativa.
-4. Medir qualidade e desempenho.
-5. Adicionar segmentação e medir ganho marginal.
-6. Adicionar hierarquia e medir ganho marginal.
+1. Implementar baseline simples de predição de bytes.
+2. Implementar núcleo fast/slow e comparar com RNN simples.
+3. Validar gradientes e estabilidade numérica.
+4. Verificar inventário exato de 1.000 parâmetros.
+5. Implementar reconstrução hierárquica reversível.
+6. Adicionar pontuador de agrupamentos e medir ganho marginal.
 7. Adicionar controlador adaptativo e medir custo/benefício.
-8. Verificar reconstrução sem perdas.
-9. Validar contagem exata de parâmetros.
-10. Executar treinamento reproduzível dentro do orçamento de RAM.
+8. Comparar saída binária com softmax de 256 classes.
+9. Executar ablações de hierarquia, segmentação e pesos adaptativos.
+10. Medir BPB, latência, throughput, RAM e tempo de treinamento.
+11. Repetir experimentos com sementes diferentes.
+12. Avaliar dados fora do conjunto de treinamento.
 
 ## 12.6 Regra de status
 

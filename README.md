@@ -2,11 +2,11 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
-> **Estado:** especificação conceitual v0.2. Ainda não representa uma arquitetura matematicamente validada nem uma implementação funcional do modelo.
+> **Estado:** especificação arquitetural v0.3. As propostas matemáticas ainda precisam de implementação e validação experimental.
 
 ## Objetivo
 
-Construir progressivamente um sistema de IA independente de modelos externos durante a inferência. A primeira geração terá orçamento de exatamente 1.000 parâmetros treináveis e será desenvolvida considerando uma máquina com 4 GB de RAM.
+Construir progressivamente um sistema de IA independente de modelos externos durante a inferência. A primeira geração terá exatamente 1.000 parâmetros treináveis e será desenvolvida considerando uma máquina com 4 GB de RAM.
 
 O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, baixo consumo de memória e validação experimental. Não serão feitas alegações de originalidade científica ou superioridade sem revisão bibliográfica e comparação experimental.
 
@@ -18,8 +18,11 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Separação entre modelo, inferência, treinamento, representação linguística e sistema cognitivo.
 - Sete subsistemas cognitivos: IA-CORE, IA-LANG, IA-MEM, IA-REAS, IA-LEARN, IA-COMM e IA-TOOLS.
 - Progressão de parâmetros baseada em 1, 2, 5 e 10.
-- Primeira geração com 1.000 parâmetros treináveis, contando todos os componentes treináveis.
-- Pesquisa de representação linguística denominada provisoriamente **RLAH — Representação Latente Adaptativa Hierárquica**.
+- G1 com 1.000 parâmetros treináveis, contagem fechada na especificação matemática.
+- Representação linguística provisoriamente denominada **RLAH — Representação Latente Adaptativa Hierárquica**.
+- Núcleo recorrente fast/slow de dois ritmos.
+- Entrada binária direta dos bytes, sem tabela de embedding de 256 itens.
+- Segmentação hierárquica reversível, com pontuação compacta de candidatos.
 
 ## Documentação
 
@@ -34,12 +37,17 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 9. [Treinamento e avaliação](docs/09-treinamento-e-avaliacao.md)
 10. [Recursos e otimização](docs/10-recursos-e-otimizacao.md)
 11. [Geração 1](docs/11-geracao-1.md)
-12. [Pendências da especificação](docs/12-pendencias-e-validacao.md)
+12. [Pendências e validação](docs/12-pendencias-e-validacao.md)
+13. [Arquitetura matemática da RLAH](docs/13-arquitetura-matematica-rlah.md)
+14. [Predição binária e objetivo](docs/14-predicao-binaria-e-objetivo.md)
+15. [Segmentação adaptativa e critério](docs/15-segmentacao-adaptativa-e-criterio.md)
+16. [Protocolo matemático de treinamento](docs/16-protocolo-de-treinamento.md)
+17. [Revisão bibliográfica e posicionamento](docs/17-revisao-bibliografica-e-posicionamento.md)
 
 ## Estado atual
 
-As decisões conceituais DEC-001 a DEC-012 estão registradas nos documentos correspondentes. A especificação matemática operacional, as dimensões definitivas das matrizes, o algoritmo de atualização dos agrupamentos e os experimentos ainda precisam ser concluídos.
+A arquitetura matemática proposta fecha um orçamento teórico de 1.000 parâmetros para G1. Ainda não há implementação, compilação, treinamento ou benchmark que comprove estabilidade, velocidade ou qualidade. Os resultados deverão ser registrados antes de declarar a arquitetura validada.
 
 ## Princípio de engenharia
 
-Toda hipótese deve ser testável. Uma otimização só será considerada válida quando comparada com uma referência simples, usando dados, hardware e condições equivalentes. A qualidade linguística, a velocidade, o consumo de RAM e o custo de treinamento serão medidos separadamente.
+Toda hipótese deve ser testável. Uma otimização só será considerada válida quando comparada com uma referência simples, usando dados, hardware e condições equivalentes. Qualidade linguística, velocidade, consumo de RAM e custo de treinamento serão medidos separadamente.
