@@ -8,25 +8,22 @@ A segmentação será um mecanismo limitado de seleção de unidades em múltipl
 
 - Nível 0: bytes individuais, sempre disponíveis.
 - Nível 1: sequências contíguas candidatas de 2 a 8 bytes.
-- Nível 2: combinações de unidades do nível 1, com limite de comprimento total definido pelo orçamento de processamento.
+- Nível 2: combinações de unidades do nível 1, limitadas pelo orçamento de processamento.
 - Profundidade máxima inicial: três níveis contando bytes.
 
-O sistema não materializará todos os substrings possíveis. Candidatos serão extraídos de janelas locais e limitados por frequência mínima e orçamento máximo por bloco.
+O sistema não materializará todos os substrings possíveis. Candidatos serão extraídos de janelas locais e limitados por frequência mínima e orçamento máximo por bloco. Os limites numéricos estão no documento 18.
 
 ## 15.3 Quatro critérios
 
 Para cada candidato g, estimar:
 
-**Frequência F(g):** frequência suavizada e normalizada. Usar contagem com prior pequeno para evitar divisão por zero e favorecer estabilidade; transformar contagens por log1p e normalizar no conjunto de candidatos do bloco.
+**Frequência F(g):** frequência suavizada e normalizada. Usar contagem com prior pequeno, transformação log1p e normalização no conjunto de candidatos do bloco.
 
-**Ganho preditivo P(g):** redução relativa da perda de validação ao processar o agrupamento em comparação com a representação básica:
-P(g) = clip((L_base - L_g) / max(L_base, ε), 0, 1).
+**Ganho preditivo P(g):** na G1, é uma associação preditiva diagnóstica, não um ganho causal do modelo. Estimar a redução da entropia empírica do próximo byte nas ocorrências do candidato em relação à distribuição-base do mesmo bloco, com suavização e divisão de dados sem vazamento. A fórmula e a meta inicial estão no documento 18. Não denominar essa métrica redução de BPB end-to-end.
 
-**Benefício de compressão C(g):** economia líquida de bits, incluindo custo de metadados, índices, tabela e referências:
-C(g) = clip((B_base - B_grouped) / max(B_base, ε), 0, 1).
-Se o agrupamento aumenta o tamanho total, C(g)=0.
+**Benefício de compressão C(g):** economia líquida de bits, incluindo custo real de tabela, índices, comprimentos, escapes, cabeçalhos, referências e metadados. Se o agrupamento não reduzir o tamanho total serializado, C(g)=0.
 
-**Preservação R(g):** indicador de round-trip exato. R(g)=1 se expandir a estrutura agrupada reproduz exatamente os bytes originais; caso contrário R(g)=0. R é uma restrição obrigatória, não um atributo que possa ser compensado por frequência ou previsão.
+**Preservação R(g):** indicador de round-trip exato. R(g)=1 se expandir a estrutura agrupada reproduz exatamente os bytes originais; caso contrário R(g)=0. R é restrição obrigatória; R=0 rejeita o candidato antes da pontuação.
 
 ## 15.4 Pontuação multiobjetivo
 
@@ -38,76 +35,61 @@ Pesos iniciais:
 - w_c = 0,25;
 - w_r = 0,25.
 
-A soma é 1. Como R também é uma restrição rígida, candidatos com R=0 são rejeitados antes da pontuação.
+A soma é 1. R também é uma restrição rígida, não um atributo compensável.
 
 ## 15.5 Pontuador compacto da G1
 
-O pontuador possui 22 coeficientes treináveis e sete vieses específicos por comprimento (2, 3, 4, 5, 6, 7 ou 8 bytes), totalizando 29 parâmetros.
+O pontuador possui 22 coeficientes treináveis e sete vieses específicos por comprimento (2 a 8 bytes), totalizando 29 parâmetros.
 
 O vetor de características φ(g) tem 22 dimensões:
 - 4 métricas normalizadas F, P, C e R;
-- 8 estatísticas binárias médias do candidato, uma por posição de bit;
+- 8 estatísticas binárias médias do candidato;
 - 8 valores de contexto derivados das primeiras oito coordenadas do estado rápido;
 - 1 comprimento normalizado;
 - 1 frequência logarítmica normalizada.
 
-A pontuação é:
-S(g) = sigmoid(v^T φ(g) + θ_len(g))
+S(g) = sigmoid(vᵀ φ(g) + θ_len(g))
 
-onde v possui 22 valores e θ possui sete vieses, um por comprimento candidato.
-
-A pontuação linear é usada para ordenar candidatos elegíveis. A preservação exata continua sendo uma condição obrigatória. O pontuador não substitui o controlador adaptativo dos pesos F/P/C/R.
+O pontuador ordena candidatos elegíveis; não substitui o controlador. Sua perda treina somente os 29 parâmetros auxiliares.
 
 ## 15.6 Treinamento do pontuador
 
-Os alvos do pontuador serão gerados pelo critério multiobjetivo determinístico em blocos de avaliação:
-- y_g=1 para candidato reversível que supera o limiar de utilidade e apresenta benefício líquido;
-- y_g=0 para candidato reversível que não supera o limiar;
-- candidatos não reversíveis são excluídos e nunca usados como exemplos positivos.
+Os alvos são gerados pelo critério multiobjetivo determinístico:
+- y=1 para candidato reversível que supera o limiar de utilidade e apresenta benefício líquido;
+- y=0 para candidato reversível que não supera o limiar;
+- candidatos não reversíveis são excluídos.
 
-A perda do pontuador será entropia cruzada binária:
-L_group = - média_g [y_g log(S(g)) + (1-y_g) log(1-S(g))]
+A perda é entropia cruzada binária calculada a partir de logits estáveis. O pontuador é atualizado em ciclos de segmentação e congelado na janela seguinte.
 
-A implementação deverá usar logits estáveis. A cabeça é treinada apenas nos ciclos de atualização da segmentação, e fica congelada durante a janela de treinamento seguinte.
-
-A função da G1 fica:
-L_total = L_pred + λ_group L_group
-
-λ_group será pequeno e calibrado; a cabeça não deve dominar o treinamento linguístico. O valor final será escolhido em validação.
+Na G1, L_group não atualiza os parâmetros do núcleo ou da cabeça de predição: não existe caminho diferenciável do pontuador para o preditor byte a byte. O objetivo total é a soma das perdas sobre conjuntos de parâmetros disjuntos, não uma alegação de otimização conjunta end-to-end.
 
 ## 15.7 Controlador adaptativo de pesos
 
-Não haverá uma rede neural controladora. Os pesos serão atualizados apenas entre blocos de avaliação, não a cada byte.
+Não haverá rede neural controladora. Os pesos são atualizados apenas após avaliação completa e comparável.
 
-Regra multiplicativa proposta:
+Regra:
 w'_i = w_i · exp(η d_i)
-w_i(t+1) = clip_normalize(w'_i, w_min, w_max)
+w_i(t+1) = projeção nos limites e renormalização
 
-d_i representa o déficit normalizado do critério em relação à meta experimental. Déficit maior aumenta a atenção daquele critério. Depois do clipping, os pesos são renormalizados para somar 1.
-
-Limites iniciais:
-- w_min = 0,05;
-- w_max = 0,60;
-- frequência com teto adicional de 0,20;
-- η pequeno, calibrado por experimento.
-
-A atualização será suspensa se métricas forem insuficientes, instáveis ou não comparáveis. Metas e definição operacional de d_i deverão ser registradas em cada experimento.
+d_i é o déficit normalizado em relação à meta. As metas, η, limites, tratamento especial de R e política de suspensão estão especificados numericamente no documento 18. O peso de preservação permanece fixo na G1; candidatos não reversíveis são rejeitados.
 
 ## 15.8 Aceitação e histerese
 
-Um candidato será rejeitado se não for reversível, não cumprir comprimento ou orçamento, ou não superar a frequência mínima. Será aceito somente se sua utilidade superar o limiar de criação. Será mantido enquanto permanecer acima do limiar inferior de retenção.
-
-O limiar de criação será maior que o limiar de retenção. Os limiares numéricos serão calibrados em validação.
+Um candidato é rejeitado se não for reversível, não cumprir comprimento/orçamento ou não superar a frequência mínima. Candidato novo só entra quando U atingir o limiar de criação; candidato ativo é removido apenas abaixo do limiar inferior de retenção. Valores iniciais constam no documento 18.
 
 ## 15.9 Cache e eficiência
 
-- Contagens serão atualizadas incrementalmente.
-- Hashes de candidatos evitarão recalcular sequências já vistas.
-- Avaliação preditiva será amostrada, não executada para todo candidato.
-- O número de candidatos por bloco terá teto configurável.
-- Tabelas terão limite de memória e política de remoção.
-- A segmentação será congelada durante cada janela de treinamento.
+- Contagens atualizadas incrementalmente.
+- Hashes para evitar recálculo, com confirmação dos bytes para evitar colisões.
+- Avaliação preditiva amostrada.
+- Teto de candidatos por bloco e de candidatos ativos.
+- Limite de memória e política LRU.
+- Segmentação congelada durante cada época de treinamento.
 
 ## 15.10 Limitação de originalidade
 
 Charformer/GBST, CANINE, ByteFlow e zip2zip já exploram aspectos de segmentação aprendida, granularidade ou compressão adaptativa. A RLAH combina escolhas específicas de reversibilidade hierárquica, pontuação multiobjetivo, controle periódico limitado e núcleo recorrente fast/slow, mas essa combinação ainda precisa de revisão bibliográfica profunda e experimentos. Não se declara novidade científica.
+
+## 15.11 Limite explícito da G1
+
+O preditor B0 continua consumindo bytes individuais. A hierarquia é avaliada como subsistema de representação, organização e compressão reversível, sem alegar que ela acelera ou melhora o preditor. Para testar benefício linguístico end-to-end, uma geração posterior deverá definir como unidades agrupadas entram no núcleo, como o modelo retorna a bytes e qual baseline equivalente será comparado. Essa mudança poderá alterar o inventário de parâmetros e exige nova decisão arquitetural.
