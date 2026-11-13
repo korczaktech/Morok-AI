@@ -37,7 +37,7 @@ void test_weight_decay_mask() {
     using namespace morok::model;
     for (std::size_t i = 0; i < 1000; ++i) {
         const bool expected = i < 484 || (i >= 506 && i < 748) ||
-            (i >= 759 && i < 935) || (i >= 943 && i < 993);
+            (i >= 759 && i < 935) || (i >= 943 && i < 971);
         require(g1_parameter_uses_weight_decay(i) == expected,
                 "weight-decay mask does not match canonical parameter groups");
     }
@@ -50,6 +50,7 @@ void test_adamw_update_and_bias_exclusion() {
     G1Parameters parameters{};
     parameters.W_ax[0] = 2.0F;
     parameters.b_a[0] = 2.0F;
+    parameters.v[0] = 2.0F;
     parameters.theta_len[0] = 2.0F;
     G1Gradients gradients{};
     G1OptimizerConfig config = G1OptimizerConfig::adamw();
@@ -62,6 +63,8 @@ void test_adamw_update_and_bias_exclusion() {
             "AdamW must decouple weight decay for matrices");
     require(parameters.b_a[0] == 2.0F && parameters.theta_len[0] == 2.0F,
             "AdamW must not decay biases");
+    require(parameters.v[0] == 2.0F,
+            "the segmenter must remain outside the B0 optimizer update");
     const auto& adam = std::get<G1AdamWState>(state);
     require(adam.step == 1 && adam.first_moment[0] == 0.0F &&
             adam.second_moment[0] == 0.0F,

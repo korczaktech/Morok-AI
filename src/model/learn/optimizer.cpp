@@ -102,7 +102,7 @@ bool g1_parameter_uses_weight_decay(std::size_t index) noexcept {
     if (index >= kG1ParameterCount) return false;
     return index < 484U || (index >= 506U && index < 748U) ||
            (index >= 759U && index < 935U) ||
-           (index >= 943U && index < 993U);
+           (index >= 943U && index < 971U);
 }
 
 G1OptimizerStepResult apply_g1_optimizer_step(
