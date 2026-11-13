@@ -384,3 +384,34 @@ O gerador xoshiro256** será inicializado por SplitMix64 a partir da semente exp
 A divisão treino/validação/teste é feita por documento antes de gerar blocos. A ordem dos documentos de treino é embaralhada por época usando o gerador especificado; os bytes dentro de cada documento nunca são embaralhados. A lista de IDs e o estado RNG são persistidos para retomada determinística.
 
 O estado recorrente é zerado no início de cada documento. Blocos BPTT podem atravessar fronteiras de buffer de leitura, mas não fronteiras de documentos. Nunca transportar estado entre documentos distintos.
+
+## 18.20 Ordem canônica dos 1.000 parâmetros
+
+A serialização, inventário e carregamento usam esta ordem exata, row-major para matrizes:
+
+1. W_ax: 11×11 = 121;
+2. W_ah: 11×11 = 121;
+3. W_cx: 11×11 = 121;
+4. W_ch: 11×11 = 121;
+5. b_a: 11;
+6. b_c: 11;
+7. W_gh: 11×11 = 121;
+8. W_gs: 11×11 = 121;
+9. b_g: 11;
+10. O: 8×22 = 176;
+11. c: 8;
+12. A: triangular estrita por linhas, j=1..7 e k=0..j-1 = 28;
+13. v: 22;
+14. θ_len: sete valores na ordem de comprimentos 2,3,4,5,6,7,8.
+
+Soma: 506 + 253 + 212 + 29 = 1.000. O carregador deverá verificar cada segmento e o total antes de copiar qualquer parâmetro. architecture_id é a string ASCII `RLAH-G1-fastslow-d11-bit8`, completada com bytes NUL até 32 bytes. FP32 é IEEE-754 binary32.
+
+## 18.21 Precisões dos formatos e retomada
+
+- MOROKCKP v1 possui header_size=104 bytes.
+- CRC-32/IEEE usa polinômio refletido 0xEDB88320, inicialização 0xFFFFFFFF e XOR final 0xFFFFFFFF.
+- AdamW armazena exatamente 8.000 bytes de momentos (1.000 FP32 de primeiro momento + 1.000 FP32 de segundo momento). SGD com momentum armazena 4.000 bytes. optimizer_id e hiperparâmetros ficam nos metadados.
+- Se a flag de cursor estiver ativa, o início do payload de metadados contém document_count u32, seguido de document_count índices u32 na ordem embaralhada, current_document_position u32 e byte_offset u64. O restante do payload é o bloco de metadados UTF-8. Sem cursor, o payload contém apenas metadados.
+- O estado RNG xoshiro256** contém exatamente quatro u64. SplitMix64 expande a semente de 64 bits em estado inicial não nulo.
+- Para salvar checkpoint de inferência, omitir momentos, RNG e cursor; manter header, parâmetros e metadados.
+- Um checkpoint de treinamento só é retomável se optimizer_id, hiperparâmetros, corpus hash, permutação dos documentos, cursor e estado RNG estiverem presentes e forem compatíveis.
