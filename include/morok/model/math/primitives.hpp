@@ -56,7 +56,7 @@ inline Scalar sigmoid(Scalar x) noexcept {
     return z / (1.0 + z);
 }
 
-inline Scalar tanh_activation(Scalar x) noexcept { return std::tanh_activation(x); }
+inline Scalar tanh_activation(Scalar x) noexcept { return std::tanh(x); }
 
 inline Scalar softplus(Scalar x) noexcept {
     return std::max(x, 0.0) + std::log1p(std::exp(-std::abs(x)));
