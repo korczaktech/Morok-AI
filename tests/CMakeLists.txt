@@ -18,3 +18,10 @@ add_executable(morok_test_math_primitives
 target_link_libraries(morok_test_math_primitives PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_math_primitives)
 add_test(NAME model.math_primitives COMMAND morok_test_math_primitives)
+
+add_executable(morok_test_g1_parameters
+    unit/model/test_g1_parameters.cpp
+)
+target_link_libraries(morok_test_g1_parameters PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_g1_parameters)
+add_test(NAME model.g1_parameters COMMAND morok_test_g1_parameters)
