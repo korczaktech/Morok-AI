@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
- > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 8: pipeline de treinamento por épocas, corpus em fluxo, divisão por documentos, validação e avaliação BPB implementados. Etapa 9: checkpoints MOROKCKP v1 integrados ao treinador, salvamento automático por época, retomada determinística, logs JSONL persistentes e exportação do melhor modelo para inferência implementados; testes de equivalência após retomada adicionados.
+ > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 8: pipeline de treinamento por épocas, corpus em fluxo, divisão por documentos, validação e avaliação BPB implementados. Etapa 9: checkpoints MOROKCKP v1 integrados ao treinador, salvamento automático por época, retomada determinística, logs JSONL persistentes e exportação do melhor modelo para inferência implementados. Etapa 10: benchmark, baseline softmax-256 unigram, matriz de configurações, métricas e CI implementados; smoke test sintético executado. Validação com corpus real/licenciado ainda pendente.
 
 ## Objetivo
 
