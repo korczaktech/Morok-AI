@@ -62,6 +62,29 @@ void test_zero_parameters_produce_uniform_distribution() {
             "joint probabilities over all 256 bytes must sum to one");
 }
 
+void test_joint_distribution_normalizes_with_conditional_dependencies() {
+    using namespace morok::model;
+    G1Parameters parameters{};
+    initialize_g1_parameters(parameters, 314159);
+    for (std::size_t i = 0; i < parameters.A.size(); ++i) {
+        parameters.A[i] = static_cast<float>(static_cast<int>(i % 7) - 3) * 0.17F;
+    }
+
+    G1State state{};
+    for (const std::uint8_t byte : std::array<std::uint8_t, 4>{0x12, 0xA5, 0x00, 0xFE}) {
+        advance_g1_state(parameters, state, byte);
+    }
+
+    double total_probability = 0.0;
+    for (unsigned int value = 0; value < 256; ++value) {
+        const auto score = evaluate_g1_next_byte(
+            parameters, state, static_cast<std::uint8_t>(value));
+        total_probability += std::exp(-score.negative_log_likelihood_nats);
+    }
+    require(close(total_probability, 1.0, 1e-9),
+            "autoregressive conditional distribution must normalize over all bytes");
+}
+
 void test_state_update_and_prediction_are_deterministic() {
     using namespace morok::model;
     G1Parameters parameters{};
@@ -103,9 +126,10 @@ void test_causality_and_target_does_not_mutate_state() {
 
     G1State with_future = context;
     advance_g1_state(parameters, with_future, 'Z');
-    const auto after = predict_g1_next_byte(parameters, state_before);
-    require(before.base_logits == after.base_logits,
-            "future bytes must not alter an earlier prediction");
+    require(with_future.fast != context.fast || with_future.slow != context.slow,
+            "consuming a future byte must advance only the copied future state");
+    require(before.base_logits == predict_g1_next_byte(parameters, state_before).base_logits,
+            "future processing must not alter a prediction from the earlier state");
 }
 
 void test_reset_and_non_finite_state_rejection() {
@@ -149,6 +173,7 @@ int main() {
     try {
         test_byte_encoding();
         test_zero_parameters_produce_uniform_distribution();
+        test_joint_distribution_normalizes_with_conditional_dependencies();
         test_state_update_and_prediction_are_deterministic();
         test_causality_and_target_does_not_mutate_state();
         test_reset_and_non_finite_state_rejection();
