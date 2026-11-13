@@ -20,6 +20,7 @@ add_library(morok_core STATIC
     src/common/model_version.cpp
     src/common/timestamp.cpp
     src/common/utf8_text.cpp
+    src/model/parameters/g1_parameters.cpp
 )
 add_library(Morok::Core ALIAS morok_core)
 
