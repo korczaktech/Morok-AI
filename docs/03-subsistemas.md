@@ -1,90 +1,46 @@
 # 3. Sete subsistemas cognitivos
 
-O sistema cognitivo será organizado em sete subsistemas. Eles representam responsabilidades de produto e coordenação, não necessariamente sete redes neurais.
+Os sete subsistemas representam responsabilidades de coordenação e produto, não necessariamente sete redes neurais. A especificação funcional e os limites mínimos estão no documento 20.
 
 ## 3.1 IA-CORE — Núcleo
 
-Responsável por:
-- inicialização e encerramento;
-- ciclo de vida;
-- orquestração dos subsistemas;
-- configuração global;
-- tratamento de falhas;
-- observabilidade e estado do sistema.
+Inicialização, encerramento, ciclo de vida, orquestração, configuração, tratamento de falhas, observabilidade e estado global.
 
 ## 3.2 IA-LANG — Linguagem
 
-Responsável por:
-- entrada e saída linguística;
-- codificação e interpretação;
-- representação de unidades;
-- integração com a RLAH;
-- reconstrução e validação de texto.
+Entrada e saída linguística, UTF-8, representação RLAH, codificação, interpretação e integração com o modelo.
 
 ## 3.3 IA-MEM — Memória
 
-Responsável por:
-- memória de curto prazo;
-- memória de longo prazo;
-- persistência;
-- indexação e recuperação;
-- controle de contexto;
-- políticas de retenção.
-
-A memória externa não será contabilizada como parâmetros treináveis do modelo.
+Memória de trabalho, episódica e semântica; persistência, indexação, recuperação, retenção e proveniência. Memória externa não é parâmetro treinável.
 
 ## 3.4 IA-REAS — Raciocínio
 
-Responsável por:
-- operações lógicas;
-- resolução estruturada de problemas;
-- decomposição de tarefas;
-- planejamento;
-- avaliação de alternativas;
-- registro de justificativas operacionais.
-
-A capacidade de raciocínio não será presumida apenas pela existência deste módulo; deverá ser testada por tarefas específicas.
+Operações lógicas, resolução estruturada, decomposição, planejamento, avaliação de alternativas e justificativas operacionais. Capacidade geral não é presumida.
 
 ## 3.5 IA-LEARN — Aprendizado
 
-Responsável por:
-- treinamento;
-- atualização de parâmetros;
-- avaliação;
-- experimentos;
-- otimização;
-- checkpoints;
-- reprodutibilidade.
+Treinamento, atualização de parâmetros, avaliação, experimentos, otimização, checkpoints e reprodutibilidade. Treinamento não modifica pesos em serviço.
 
 ## 3.6 IA-COMM — Comunicação
 
-Responsável por:
-- interface de interação;
-- entrada e apresentação de mensagens;
-- sessões;
-- formatação de respostas;
-- adaptação aos canais de comunicação.
+Interface, mensagens, sessões, formatação, streaming e apresentação de erros.
 
 ## 3.7 IA-TOOLS — Ferramentas
 
-Responsável por:
-- integração com ferramentas;
-- execução controlada de operações;
-- validação de permissões;
-- isolamento de operações;
-- registro de resultados;
-- tratamento de erros externos.
+Registro, esquemas, permissões, execução controlada, isolamento, auditoria e tratamento de erros externos.
 
 ## 3.8 Regras de integração
 
-- IA-CORE coordena, mas não deve absorver a lógica interna de todos os módulos.
-- IA-LANG encapsula detalhes da representação linguística.
-- IA-MEM mantém persistência separada do estado transitório do modelo.
-- IA-REAS pode solicitar inferências e ferramentas por interfaces definidas.
-- IA-LEARN não deve modificar parâmetros durante uma inferência comum, salvo quando um modo de adaptação for formalmente especificado.
-- IA-TOOLS deve operar com permissões explícitas.
-- IA-COMM não deve conter lógica de treinamento.
+- IA-CORE coordena, sem absorver lógica dos módulos.
+- IA-LANG encapsula representação.
+- IA-MEM mantém persistência separada do estado transitório.
+- IA-REAS produz planos estruturados.
+- IA-LEARN não modifica parâmetros durante inferência comum.
+- IA-TOOLS opera com permissões explícitas.
+- IA-COMM não contém lógica de treinamento.
+- Dependências entre módulos seguem contratos unidirecionais.
 
 ## 3.9 Critérios de validação
 
-Cada subsistema deverá ter testes unitários e testes de integração. Falhas em um subsistema deverão ser detectáveis sem provocar corrupção silenciosa dos demais.
+Cada subsistema terá testes unitários, integração e critérios de maturidade separados. Implementação não implica validação.
