@@ -24,6 +24,7 @@ add_library(morok_core STATIC
     src/model/g1_forward.cpp
     src/model/learn/g1_bptt.cpp
     src/model/learn/optimizer.cpp
+    src/model/learn/g1_training.cpp
 )
 add_library(Morok::Core ALIAS morok_core)
 
@@ -46,3 +47,7 @@ endif()
 message(STATUS "Morok AI version: ${PROJECT_VERSION}")
 message(STATUS "C++ standard: C++20")
 message(STATUS "Tests: ${MOROK_BUILD_TESTS}")
+
+add_executable(morok_train apps/train_g1.cpp)
+target_link_libraries(morok_train PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_train)

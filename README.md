@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
- > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 7: AdamW, SGD com momentum e clipping global implementados; treinamento por épocas, checkpoints e avaliação experimental ainda pendentes.
+ > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 8: pipeline de treinamento por épocas, corpus em fluxo, divisão por documentos, validação e avaliação BPB implementados; checkpoints retomáveis permanecem na Etapa 9.
 
 ## Objetivo
 
@@ -57,6 +57,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 29. [Etapa 5 — Forward pass da G1](docs/29-etapa-5-forward-pass-g1.md)
 30. [Etapa 6 — BPTT e gradientes da G1](docs/30-etapa-6-bptt-gradientes-g1.md)
 31. [Etapa 7 — Otimizadores e clipping global da G1](docs/31-etapa-7-otimizadores-g1.md)
+32. [Etapa 8 — Pipeline de treinamento da G1](docs/32-etapa-8-treinamento-g1.md)
 
 ## Estado atual
 
@@ -66,13 +67,14 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 4: inventário tipado de 1.000 parâmetros FP32, ordem canônica e inicialização determinística; CI GCC/Clang Debug/Release aprovado.
 - Etapa 5: forward pass fast/slow, cabeça binária causal, scoring em nats e testes adicionados; CI GCC/Clang Debug/Release aprovado no run 43517463554.
 - Etapa 6: BPTT truncado e gradientes manuais da G1 implementados.
-- Etapa 7: AdamW, SGD com momentum, clipping global e testes transacionais implementados; loop de treinamento, checkpoints e avaliação experimental continuam pendentes.
+- Etapa 7: AdamW, SGD com momentum, clipping global e testes transacionais implementados.
+- Etapa 8: leitura/validação de corpus em fluxo, deduplicação exata, split determinístico por documento, treino BPTT em blocos, avaliação BPB, early stopping e CLI implementados. Checkpoints retomáveis permanecem pendentes.
 - G1: inventário de parâmetros, forward pass, gradientes B0 e otimizadores implementados; os 29 parâmetros do segmentador permanecem fora do caminho preditivo.
 
 ## Próximas etapas
 
-1. Implementar o loop de treinamento por épocas, carregamento de corpus e divisão treino/validação/teste.
-2. Implementar checkpoints retomáveis e avaliação BPB.
+1. Implementar checkpoints retomáveis e logs persistentes de experimentos.
+2. Executar o primeiro treinamento com corpus licenciado e registrar RSS, throughput e BPB.
 3. Implementar segmentação reversível e integrar os subsistemas gradualmente.
 
 ## Princípio de engenharia

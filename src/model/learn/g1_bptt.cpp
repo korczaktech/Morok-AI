@@ -236,7 +236,8 @@ double G1Gradients::global_norm() const noexcept {
 
 G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
                                        std::span<const std::uint8_t> bytes,
-                                       std::size_t truncation_length) {
+                                       std::size_t truncation_length,
+                                       const G1State& initial_state) {
     if (bytes.size() < 2) {
         throw std::invalid_argument("BPTT requires at least two bytes");
     }
@@ -247,7 +248,7 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
 
     G1BpttResult result{};
     result.target_byte_count = bytes.size() - 1;
-    G1State state{};
+    G1State state = initial_state;
 
     // A block contains at most truncation_length target bytes. Its incoming
     // numeric state is carried forward, but no adjoint crosses its left edge.
