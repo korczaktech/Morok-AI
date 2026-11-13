@@ -26,3 +26,16 @@ jobs:
         run: cmake --build build --parallel 2
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Benchmark smoke test
+        if: matrix.compiler == 'g++' && matrix.build_type == 'Release'
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p benchmark-smoke
+          ./build/morok_benchmark tests/fixtures/benchmark benchmark-smoke/g1.jsonl 1 42 CC0-1.0 "Morok AI generated synthetic fixture" 1
+      - name: Upload benchmark smoke report
+        if: matrix.compiler == 'g++' && matrix.build_type == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: g1-benchmark-smoke
+          path: benchmark-smoke/g1.jsonl
