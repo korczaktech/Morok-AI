@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
-> **Estado:** especificação G1 v1.0 documentalmente fechada. Implementação, compilação, treinamento e validação experimental continuam pendentes.
+> **Estado:** especificação documental da G1 e da arquitetura de sistema inicializada. Implementação, compilação, treinamento e validação experimental continuam pendentes.
 
 ## Objetivo
 
@@ -13,16 +13,16 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 ## Decisões fundamentais
 
 - Arquitetura experimental própria.
-- C++ como linguagem principal.
+- C++20 como linguagem principal.
 - Treinamento do zero, sem pesos pré-treinados.
 - Separação entre modelo, inferência, treinamento, representação linguística e sistema cognitivo.
 - Sete subsistemas cognitivos: IA-CORE, IA-LANG, IA-MEM, IA-REAS, IA-LEARN, IA-COMM e IA-TOOLS.
 - Progressão de parâmetros baseada em 1, 2, 5 e 10.
-- G1 com 1.000 parâmetros treináveis, contagem fechada na especificação matemática.
+- G1 com 1.000 parâmetros treináveis.
 - Representação linguística provisoriamente denominada **RLAH — Representação Latente Adaptativa Hierárquica**.
 - Núcleo recorrente fast/slow de dois ritmos.
-- Entrada binária direta dos bytes, sem tabela de embedding de 256 itens.
-- Segmentação hierárquica reversível, com pontuação compacta de candidatos.
+- Entrada binária direta dos bytes.
+- Segmentação hierárquica reversível, auxiliar na G1.
 
 ## Documentação
 
@@ -31,33 +31,38 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 3. [Sete subsistemas](docs/03-subsistemas.md)
 4. [Escala de parâmetros](docs/04-modelo-e-parametros.md)
 5. [RLAH: visão geral](docs/05-rlah-visao-geral.md)
-6. [Objetivos matemáticos e critérios de agrupamento](docs/06-rlah-objetivos-e-agrupamentos.md)
+6. [Objetivos matemáticos](docs/06-rlah-objetivos-e-agrupamentos.md)
 7. [Segmentação e hierarquia](docs/07-rlah-segmentacao-e-hierarquia.md)
 8. [Contexto e predição](docs/08-contexto-e-predicao.md)
 9. [Treinamento e avaliação](docs/09-treinamento-e-avaliacao.md)
 10. [Recursos e otimização](docs/10-recursos-e-otimizacao.md)
 11. [Geração 1](docs/11-geracao-1.md)
 12. [Pendências e validação](docs/12-pendencias-e-validacao.md)
-13. [Arquitetura matemática da RLAH](docs/13-arquitetura-matematica-rlah.md)
-14. [Predição binária e objetivo](docs/14-predicao-binaria-e-objetivo.md)
-15. [Segmentação adaptativa e critério](docs/15-segmentacao-adaptativa-e-criterio.md)
-16. [Protocolo matemático de treinamento](docs/16-protocolo-de-treinamento.md)
-17. [Revisão bibliográfica e posicionamento](docs/17-revisao-bibliografica-e-posicionamento.md)
-18. [Especificação operacional fechada da G1](docs/18-especificacao-operacional-g1.md)
+13. [Arquitetura matemática RLAH](docs/13-arquitetura-matematica-rlah.md)
+14. [Predição binária](docs/14-predicao-binaria-e-objetivo.md)
+15. [Segmentação adaptativa](docs/15-segmentacao-adaptativa-e-criterio.md)
+16. [Protocolo de treinamento](docs/16-protocolo-de-treinamento.md)
+17. [Revisão bibliográfica](docs/17-revisao-bibliografica-e-posicionamento.md)
+18. [Especificação operacional G1](docs/18-especificacao-operacional-g1.md)
+19. [Contratos de interfaces](docs/19-contratos-de-interfaces.md)
+20. [Subsistemas cognitivos](docs/20-subsistemas-cognitivos.md)
+21. [Persistência e memória](docs/21-persistencia-e-memoria.md)
+22. [Segurança e permissões](docs/22-seguranca-e-permissoes.md)
+23. [Build, testes e distribuição](docs/23-build-testes-e-distribuicao.md)
 
 ## Estado atual
 
-A especificação documental da G1 está fechada em nível suficiente para iniciar a implementação sem inventar contratos operacionais. O inventário teórico soma 1.000 parâmetros. Ainda não há implementação, compilação, treinamento ou benchmark que comprove estabilidade, velocidade ou qualidade. Esses estados só serão atribuídos após execução real.
+A G1 está especificada documentalmente em nível suficiente para iniciar a implementação. A arquitetura de sistema possui contratos e responsabilidades iniciais para os sete subsistemas. Ainda não há implementação, compilação, treinamento ou benchmark que comprove estabilidade, velocidade ou qualidade.
 
 ## Próximas etapas
 
-1. Implementar testes matemáticos e inventário automático de parâmetros.
+1. Implementar testes matemáticos e inventário automático.
 2. Implementar o núcleo e a cabeça de predição.
 3. Implementar treinamento e checkpoints.
-4. Implementar segmentação reversível e seu pontuador auxiliar.
-5. Executar testes de aceitação e benchmarks.
-6. Comparar baselines e ablações antes de revisar a arquitetura.
+4. Implementar segmentação reversível.
+5. Implementar persistência, orquestração e contratos dos subsistemas.
+6. Executar testes de aceitação, benchmarks e ablações.
 
 ## Princípio de engenharia
 
-Toda hipótese deve ser testável. Uma otimização só será considerada válida quando comparada com uma referência simples, usando dados, hardware e condições equivalentes. Qualidade linguística, velocidade, consumo de RAM e custo de treinamento serão medidos separadamente.
+Toda hipótese deve ser testável. Uma otimização só será considerada válida quando comparada com uma referência simples, usando dados, hardware e condições equivalentes.
