@@ -62,10 +62,10 @@ int main(int argc, char** argv) {
         const std::size_t epochs = argc > 3 ? std::stoull(argv[3]) : 3;
         const std::uint64_t seed = argc > 4 ? std::stoull(argv[4]) : 42;
         const std::string license = argc > 5 ? argv[5] : "UNKNOWN";
-        const std::string source = argc > 6 ? argv[6] : "UNSPECIFIED";\n        const std::size_t repetitions = argc > 7 ? std::stoull(argv[7]) : 1;
+        const std::string source = argc > 6 ? argv[6] : "UNSPECIFIED";
+        const std::size_t repetitions = argc > 7 ? std::stoull(argv[7]) : 1;
         if (epochs == 0 || repetitions == 0 || repetitions > 20 || license == "UNKNOWN" || source == "UNSPECIFIED")
             throw std::invalid_argument("provide positive epochs and explicit corpus license/source provenance");
-        const auto baseline = morok::model::evaluate_g1_softmax256_unigram_baseline(corpus, seed);
         std::ofstream log(output, std::ios::binary | std::ios::app);
         if (!log) throw std::runtime_error("cannot open benchmark JSONL output");
         const std::string commit = std::getenv("GITHUB_SHA") ? std::getenv("GITHUB_SHA") : "local";
@@ -79,7 +79,8 @@ int main(int argc, char** argv) {
 #endif
         for (std::size_t repetition = 0; repetition < repetitions; ++repetition) {
             const std::uint64_t run_seed = seed + repetition;
-            const auto baseline = morok::model::evaluate_g1_softmax256_unigram_baseline(corpus, run_seed);\n            for (const auto truncation : {32U, 64U, 128U}) {
+            const auto baseline = morok::model::evaluate_g1_softmax256_unigram_baseline(corpus, run_seed);
+            for (const auto truncation : {32U, 64U, 128U}) {
             for (const auto kind : {morok::model::G1OptimizerKind::AdamW,
                                     morok::model::G1OptimizerKind::SGDMomentum}) {
                 morok::model::G1TrainingConfig config;
