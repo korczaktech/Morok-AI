@@ -23,11 +23,20 @@ Result<ModelVersion> ModelVersion::create(
             "model_version_validation"));
     }
 
-    return Result<ModelVersion>::success(ModelVersion{
-        .architecture_id = std::move(architecture_id),
-        .parameter_count = parameter_count,
-        .format_version = format_version
-    });
+    return Result<ModelVersion>::success(ModelVersion(
+        std::move(architecture_id), parameter_count, format_version));
+}
+
+const std::string& ModelVersion::architecture_id() const noexcept {
+    return architecture_id_;
+}
+
+std::uint64_t ModelVersion::parameter_count() const noexcept {
+    return parameter_count_;
+}
+
+std::uint32_t ModelVersion::format_version() const noexcept {
+    return format_version_;
 }
 
 } // namespace morok::common

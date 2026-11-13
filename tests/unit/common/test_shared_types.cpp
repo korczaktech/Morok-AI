@@ -1,10 +1,4 @@
-#include "morok/common/byte_buffer.hpp"
-#include "morok/common/error.hpp"
-#include "morok/common/ids.hpp"
-#include "morok/common/model_version.hpp"
-#include "morok/common/result.hpp"
-#include "morok/common/timestamp.hpp"
-#include "morok/common/utf8_text.hpp"
+#include "morok/common/types.hpp"
 
 #include <array>
 #include <cstddef>
@@ -25,15 +19,15 @@ void check(bool condition, std::string_view name) {
 }
 
 void test_byte_buffer_and_utf8() {
-    using morok::common::ByteBuffer;
-    using morok::common::ErrorCode;
-    using morok::common::Utf8Text;
+    using namespace morok::common;
 
     const ByteBuffer raw{std::byte{0x41}, std::byte{0x00}, std::byte{0x42}};
     const auto valid = Utf8Text::from_bytes(raw);
     check(valid.has_value(), "ASCII bytes including NUL are valid UTF-8");
     check(valid.value_if() != nullptr && valid.value_if()->size_bytes() == 3U,
           "Utf8Text preserves embedded NUL and byte length");
+    check(valid.value_if() != nullptr && valid.value_if()->bytes().size() == raw.size(),
+          "Utf8Text exposes byte view with exact length");
 
     const auto portuguese = Utf8Text::from_utf8("Morok — inteligência artificial");
     check(portuguese.has_value(), "valid multibyte UTF-8 is accepted");
@@ -123,8 +117,11 @@ void test_model_version_and_timestamp() {
     const auto version = ModelVersion::create("RLAH-G1-fastslow-d11-bit8", 1000U, 1U);
     check(version.has_value(), "valid model version is accepted");
     check(version.value_if() != nullptr &&
-              version.value_if()->parameter_count == 1000U,
+              version.value_if()->parameter_count() == 1000U,
           "model version stores parameter inventory");
+    check(version.value_if() != nullptr &&
+              version.value_if()->architecture_id() == "RLAH-G1-fastslow-d11-bit8",
+          "model version stores architecture identity");
 
     const auto invalid = ModelVersion::create("", 1000U, 1U);
     check(!invalid.has_value() && invalid.error_if()->code == ErrorCode::invalid_argument,

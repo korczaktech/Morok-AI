@@ -1,18 +1,19 @@
 # Etapa 2 — Tipos compartilhados e contratos básicos
 
-**Status:** implementação adicionada; compilação e CI do commit devem confirmar os critérios.
+**Status:** implementação integrada; GCC/Clang em Debug/Release aprovados no CI.
 
 ## Tipos implementados
 
 - `ByteBuffer`: vetor de bytes arbitrários; não implica texto.
 - `Utf8Text`: texto proprietário que só pode ser construído após validação UTF-8 estrita.
 - `SessionId`, `MemoryId`, `RequestId`: tipos fortes distintos, com 128 bits e geração por fonte aleatória da plataforma. A geração retorna erro se a fonte não estiver disponível.
-- `ModelVersion`: identificador de arquitetura, quantidade de parâmetros e versão do formato, com validação.
+- `ModelVersion`: identidade imutável de arquitetura, quantidade de parâmetros e versão do formato, criada por fábrica validada.
 - `Timestamp`: instante UTC em nanossegundos desde Unix epoch.
 - `ErrorCode`: catálogo tipado dos códigos previstos no contrato.
 - `Error`: código, contexto de subsistema/etapa, mensagem técnica e RequestId opcional.
 - `Result<T>`: valor ou erro, sem estado parcialmente válido e sem exceções para fluxo normal.
 - `Status`: alias de `Result<void>`.
+- `types.hpp`: cabeçalho agregador para os contratos compartilhados.
 
 ## UTF-8
 
@@ -35,7 +36,7 @@ Os testes cobrem:
 - sucesso e falha em Result/Status;
 - códigos de erro e contexto;
 - distinção dos tipos fortes e geração de IDs;
-- validação de ModelVersion;
+- validação e imutabilidade de ModelVersion;
 - representação e relógio de Timestamp.
 
 ## Limites desta etapa
