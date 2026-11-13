@@ -1,60 +1,70 @@
 # 12. Pendências e plano de validação
 
-Este documento diferencia decisões conceituais aprovadas de detalhes ainda não especificados. A arquitetura matemática proposta está nos documentos 13–17.
+Este documento separa o que está especificado do que depende de implementação e evidência experimental. Os contratos operacionais da G1 foram fechados no documento 18.
 
-## 12.1 Pendências matemáticas remanescentes
+## 12.1 Estado das especificações
 
-- Definir metas numéricas e sinal operacional d_i para atualização adaptativa dos pesos.
-- Calibrar η e os limiares de criação, retenção e descarte.
-- Definir frequência mínima e orçamento máximo de candidatos por bloco.
-- Definir comprimento máximo das unidades de nível 2.
-- Especificar a política de tratamento de UTF-8 inválido.
-- Definir hiperparâmetros finais de treinamento.
-- Validar a fatoração de bits contra softmax de 256 bytes.
+Os seguintes pontos possuem padrões operacionais definidos:
+- indexação causal da previsão do próximo byte;
+- entrada fixa de 11 características e alvo binário de oito bits;
+- política estrita de UTF-8;
+- divisão de dados, deduplicação e prevenção de vazamento;
+- hiperparâmetros iniciais, clipping, parada e early stopping;
+- limites de RAM, leitura em fluxo e BPTT;
+- limites de candidatos, frequência, cache e hierarquia;
+- metas e controlador adaptativo;
+- serialização com custo de metadados;
+- geração, sessões, concorrência e checkpoints;
+- testes de aceitação.
 
-## 12.2 Pendências de arquitetura
+Os padrões são valores de partida. Sua qualidade não está validada e eles poderão ser alterados por experimento controlado, mantendo histórico de configuração.
 
-- Formalizar o formato de dados hierárquico e suas referências.
-- Definir limites de memória e política de remoção do cache de candidatos.
-- Confirmar dimensões e contagem com inventário automático no código.
-- Avaliar se a dimensão d=11 oferece estabilidade suficiente.
-- Definir o contrato de transporte de estado entre blocos e sessões.
+## 12.2 Pendências de implementação
 
-## 12.3 Pendências de engenharia
+1. Organização final dos diretórios C++.
+2. Sistema de build e compilador de referência.
+3. Implementação das operações tensoriais e funções de ativação.
+4. Autodiferenciação ou gradientes manuais, com justificativa de custo e verificações por diferenças finitas.
+5. Inventário automático dos 1.000 parâmetros.
+6. Formato de corpus e carregamento incremental.
+7. Formato binário de checkpoint e testes de corrupção.
+8. Testes unitários, integração e benchmark.
+9. Implementação do preditor baseline de frequência e do baseline softmax comparativo.
+10. Implementação do núcleo fast/slow, pontuador e segmentador.
 
-- Organização final dos diretórios C++.
-- Sistema de build e compilador de referência.
-- Biblioteca numérica, se necessária.
-- Formato de checkpoint.
-- Formato dos corpora e carregamento incremental.
-- Estratégia de testes unitários e integração.
-- Ferramentas de benchmark e perfil de memória.
+## 12.3 Pendências de validação experimental
 
-## 12.4 Revisão bibliográfica
+- Avaliar se d=11 oferece estabilidade e capacidade úteis.
+- Comparar BPTT 32/64/128 e learning rates definidos no documento 18.
+- Comparar AdamW e SGD com momentum.
+- Comparar fatoração binária com softmax de 256 classes.
+- Medir BPB, latência, throughput, RAM e tempo de treinamento.
+- Executar ablações: fast/slow versus RNN simples; segmentação desligada/ligada; hierarquia de uma versus três escalas; pesos fixos versus adaptativos.
+- Repetir experimentos com múltiplas sementes.
+- Avaliar dados fora do treino.
+- Fazer revisão bibliográfica ampliada antes de qualquer reivindicação de originalidade.
 
-A revisão inicial está em [Revisão bibliográfica e posicionamento](13-arquitetura-matematica-rlah.md) e, em detalhe, em [documento 17](17-revisao-bibliografica-e-posicionamento.md). Trabalhos relevantes incluem ByT5, Charformer, CANINE, RWKV, Mamba, Mamba-3, ByteFlow e zip2zip. A revisão deverá continuar antes de qualquer afirmação de novidade.
+A segmentação da G1 é auxiliar e não altera o caminho preditivo B0. Qualquer alegação de melhoria de BPB ou latência causada por agrupamentos exige uma variante integrada e comparação end-to-end.
 
-## 12.5 Plano de validação
+## 12.4 Plano de validação
 
-1. Implementar baseline simples de predição de bytes.
-2. Implementar núcleo fast/slow e comparar com RNN simples.
-3. Validar gradientes e estabilidade numérica.
-4. Verificar inventário exato de 1.000 parâmetros.
-5. Implementar reconstrução hierárquica reversível.
-6. Adicionar pontuador de agrupamentos e medir ganho marginal.
-7. Adicionar controlador adaptativo e medir custo/benefício.
-8. Comparar saída binária com softmax de 256 classes.
-9. Executar ablações de hierarquia, segmentação e pesos adaptativos.
-10. Medir BPB, latência, throughput, RAM e tempo de treinamento.
-11. Repetir experimentos com sementes diferentes.
-12. Avaliar dados fora do conjunto de treinamento.
+1. Compilar testes unitários de matemática sem iniciar treinamento.
+2. Verificar formas e contagem exata de parâmetros.
+3. Verificar causalidade e distribuição normalizada dos 256 bytes.
+4. Comparar gradientes com diferenças finitas.
+5. Validar estado transportado entre blocos e truncamento de gradientes.
+6. Validar UTF-8, round-trip, colisões e limites de cache.
+7. Validar checkpoint, retomada e isolamento de sessões.
+8. Treinar baseline pequeno e verificar estabilidade.
+9. Executar comparações e ablações controladas.
+10. Registrar relatório reproduzível com dados, hardware, compilador, configuração e métricas.
 
-## 12.6 Regra de status
+## 12.5 Regra de status
 
 - **Aprovado:** decisão de alto nível escolhida.
-- **Especificado:** detalhes suficientes para implementar sem inventar regras.
+- **Especificado:** contratos e padrões documentados.
 - **Implementado:** código existente.
 - **Testado:** testes executados com resultado registrado.
 - **Validado:** resultado comparado e aceito com evidência.
 
-Uma decisão aprovada não deve ser descrita como implementação concluída.
+A especificação documental da G1 está encerrada; implementação, testes e validação continuam pendentes. Não confundir esses estados.
