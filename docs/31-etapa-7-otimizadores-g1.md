@@ -72,8 +72,8 @@ O decay L2 entra no gradiente antes do momentum, conforme a forma clássica de S
 - [x] Vieses excluídos do weight decay.
 - [x] Rejeição de gradientes/configuração/estado inválidos.
 - [x] Atualização transacional em erro e overflow.
-- [ ] CI GCC/Clang Debug/Release.
-- [ ] ASan/UBSan.
+- [x] CI GCC/Clang Debug/Release aprovado no run 43522132721.
+- [x] ASan/UBSan aprovado no run 43522132701.
 
 ## Limitações
 
