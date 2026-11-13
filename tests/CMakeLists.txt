@@ -51,3 +51,8 @@ add_executable(morok_test_g1_training unit/model/test_g1_training.cpp)
 target_link_libraries(morok_test_g1_training PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_g1_training)
 add_test(NAME model.g1_training COMMAND morok_test_g1_training)
+
+add_executable(morok_test_g1_checkpoint unit/model/test_g1_checkpoint.cpp)
+target_link_libraries(morok_test_g1_checkpoint PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_g1_checkpoint)
+add_test(NAME model.g1_checkpoint COMMAND morok_test_g1_checkpoint)
