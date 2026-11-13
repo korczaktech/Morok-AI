@@ -75,20 +75,21 @@ Para executar: GitHub → Actions → G1 Benchmark → Run workflow. Os parâmet
 
 ## Execução de smoke test registrada
 
-O CI executou a matriz sintética no run [43529486367](https://github.com/korczaktech/Morok-AI/actions/runs/43529486367), commit `e49f3e888360d9758efea6a52bdac7d181754cd6`, com GCC 13.3.0 em uma VM Linux x86-64 com Intel Xeon 6975P-C.
+A matriz controlada foi executada no CI no run [43529785578](https://github.com/korczaktech/Morok-AI/actions/runs/43529785578), commit `588021a7fec2545c7c7f4736b935adf6ab692d24`, com GCC 13.3.0 em VM Linux x86-64 com Intel Xeon Platinum 8573C.
 
-- Corpus sintético: 6 documentos únicos, 559 bytes.
-- Uma época por configuração, semente 42.
-- Seis execuções: BPTT 32/64/128 × AdamW/SGD Momentum.
-- BPB de teste da G1: aproximadamente 7,119 a 8,772.
-- BPB de teste do baseline softmax-256 unigram: aproximadamente 4,996.
-- Throughput efetivo observado: aproximadamente 293 mil a 460 mil bytes-alvo/s.
-- Avaliação final: aproximadamente 877 a 995 ns por byte-alvo.
-- Pico RSS reportado: 4.857.856 bytes.
+- Corpus sintético: 6 documentos únicos, 559 bytes; 398 alvos de treino por época e 86 alvos de teste.
+- Uma época por configuração, semente 42; seis configurações na matriz controlada.
+- BPB de teste da G1: 7,9658 a 8,8871.
+- BPB do baseline softmax-256 unigram: 4,9958.
+- Throughput efetivo observado: aproximadamente 261,5 mil a 393,8 mil bytes-alvo/s.
+- Avaliação de inferência: aproximadamente 920 a 948 ns por byte-alvo.
+- Pico RSS reportado: 4.960.256 bytes.
 
-Nesse fixture, o baseline de frequência superou a G1 em BPB. Isso é um resultado negativo válido e deve permanecer registrado: a G1 ainda não demonstrou vantagem preditiva. Como o corpus é pequeno e sintético, não permite inferir qualidade linguística. O pico RSS e os tempos pertencem à VM de CI, não ao hardware de referência de 4 GB.
+Nesse fixture, o baseline de frequência superou a G1 em BPB em todas as configurações. O learning rate 0,003 foi o melhor dos valores testados neste smoke test, mas uma época e seis documentos não justificam escolher hiperparâmetros para uso real. Esse resultado negativo deve permanecer registrado: a G1 ainda não demonstrou vantagem preditiva.
 
-O relatório JSONL está publicado no artifact `g1-benchmark-smoke` do mesmo run. Os quatro jobs GCC/Clang Debug/Release e o workflow ASan/UBSan passaram; Sanitizers run [43529486368](https://github.com/korczaktech/Morok-AI/actions/runs/43529486368).
+O corpus sintético serve apenas para verificar o pipeline. Não permite inferir qualidade linguística, generalização ou comportamento em corpus real. O pico RSS e os tempos pertencem à VM de CI, não ao hardware de referência de 4 GB.
+
+O relatório JSONL está publicado no artifact `g1-benchmark-smoke` do mesmo run. Os quatro jobs GCC/Clang Debug/Release passaram no CI. O workflow ASan/UBSan do commit de código anterior também passou; a validação final do commit mais recente está em andamento.
 
 ## Critérios de aceitação da implementação
 
