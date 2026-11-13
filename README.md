@@ -50,6 +50,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 22. [Segurança e permissões](docs/22-seguranca-e-permissoes.md)
 23. [Build, testes e distribuição](docs/23-build-testes-e-distribuicao.md)
 24. [Estrutura completa do repositório — G1 a G30](docs/24-estrutura-completa-repositorio.md)
+25. [Etapa 1 — Infraestrutura inicial](docs/25-etapa-1-infraestrutura.md)
 
 ## Estado atual
 
