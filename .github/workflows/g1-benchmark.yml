@@ -1,0 +1,43 @@
+name: G1 Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      epochs:
+        description: "Training epochs per configuration"
+        required: true
+        default: "2"
+      repetitions:
+        description: "Number of deterministic seeds"
+        required: true
+        default: "1"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON
+      - name: Build benchmark
+        run: cmake --build build --parallel 2 --target morok_benchmark morok_test_g1_benchmark
+      - name: Run baseline tests
+        run: ctest --test-dir build --output-on-failure -R model.g1_benchmark
+      - name: Run synthetic benchmark matrix
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p benchmark-results
+          ./build/morok_benchmark tests/fixtures/benchmark benchmark-results/g1.jsonl "${{ inputs.epochs }}" 42 CC0-1.0 "Morok AI generated synthetic fixture" "${{ inputs.repetitions }}"
+      - name: Upload benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: morok-g1-benchmark-${{ github.run_id }}
+          path: benchmark-results/g1.jsonl
+          if-no-files-found: error
