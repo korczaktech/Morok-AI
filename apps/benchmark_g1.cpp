@@ -3,6 +3,7 @@
 #include "morok/model/parameters/g1_parameters.hpp"
 
 #include <chrono>
+#include <array>
 #include <cstdlib>
 #include <fstream>
 #include <filesystem>
@@ -78,20 +79,35 @@ int main(int argc, char** argv) {
 #else
             "unknown";
 #endif
+        struct Experiment {
+            std::size_t truncation;
+            morok::model::G1OptimizerConfig optimizer;
+            const char* group;
+        };
+        auto low_lr = morok::model::G1OptimizerConfig::adamw();
+        low_lr.learning_rate = 0.0003;
+        auto high_lr = morok::model::G1OptimizerConfig::adamw();
+        high_lr.learning_rate = 0.003;
+        const std::array<Experiment, 6> experiments{{
+            {32, morok::model::G1OptimizerConfig::adamw(), "bptt_sweep"},
+            {64, morok::model::G1OptimizerConfig::adamw(), "reference"},
+            {128, morok::model::G1OptimizerConfig::adamw(), "bptt_sweep"},
+            {64, morok::model::G1OptimizerConfig::sgd_momentum(), "optimizer_comparison"},
+            {64, low_lr, "learning_rate_sweep"},
+            {64, high_lr, "learning_rate_sweep"}
+        }};
         for (std::size_t repetition = 0; repetition < repetitions; ++repetition) {
             const std::uint64_t run_seed = seed + repetition;
             const auto baseline = morok::model::evaluate_g1_softmax256_unigram_baseline(corpus, run_seed);
-            for (const auto truncation : {32U, 64U, 128U}) {
-            for (const auto kind : {morok::model::G1OptimizerKind::AdamW,
-                                    morok::model::G1OptimizerKind::SGDMomentum}) {
+            for (const auto& experiment : experiments) {
+                const auto truncation = experiment.truncation;
+                const auto kind = experiment.optimizer.kind;
                 morok::model::G1TrainingConfig config;
                 config.corpus_directory = corpus;
                 config.max_epochs = epochs;
                 config.seed = run_seed;
                 config.truncation_length = truncation;
-                config.optimizer = kind == morok::model::G1OptimizerKind::AdamW
-                    ? morok::model::G1OptimizerConfig::adamw()
-                    : morok::model::G1OptimizerConfig::sgd_momentum();
+                config.optimizer = experiment.optimizer;
                 morok::model::G1Parameters parameters;
                 morok::model::initialize_g1_parameters(parameters, run_seed);
                 const auto started = std::chrono::steady_clock::now();
@@ -118,8 +134,10 @@ int main(int argc, char** argv) {
                     << "\"corpus_hash\":\"" << report.corpus_hash << "\","
                     << "\"seed\":" << run_seed << ",\"epochs_requested\":" << epochs << ','
                     << "\"epochs_completed\":" << report.epochs.size() << ','
+                    << "\"experiment_group\":\"" << experiment.group << "\","
                     << "\"truncation_bytes\":" << truncation << ','
                     << "\"optimizer\":\"" << optimizer << "\","
+                    << "\"learning_rate\":" << config.optimizer.learning_rate << ','
                     << "\"documents\":" << report.unique_documents << ','
                     << "\"corpus_bytes\":" << report.corpus_bytes << ','
                     << "\"training_targets\":" << trained_targets << ','
@@ -134,16 +152,16 @@ int main(int argc, char** argv) {
                     << "\"training_throughput_bytes_per_second\":" << throughput << ','
                     << "\"wall_seconds\":" << elapsed << ','
                     << "\"peak_rss_bytes\":" << peak_rss_bytes() << ','
-                    << "\"early_stopped\":" << (report.stopped_early ? "true" : "false") << "}\n";
+                    << "\"early_stopped\":" << (report.stopped_early ? "true" : "false") << "}\\n";
                 log.flush();
                 if (!log) throw std::runtime_error("failed writing benchmark JSONL output");
-                std::cout << optimizer << " BPTT=" << truncation
+                std::cout << experiment.group << " " << optimizer << " BPTT=" << truncation
+                          << " LR=" << config.optimizer.learning_rate
                           << " validation_BPB=" << report.best_validation_bpb
                           << " test_BPB=" << report.test_bpb
                           << " softmax256_unigram_BPB=" << baseline.softmax256_unigram_bpb
                           << " throughput_Bps=" << throughput
-                          << " wall_s=" << elapsed << " peak_RSS_B=" << peak_rss_bytes() << '\n';
-            }
+                          << " wall_s=" << elapsed << " peak_RSS_B=" << peak_rss_bytes() << '\\n';
             }
         }
         return 0;
