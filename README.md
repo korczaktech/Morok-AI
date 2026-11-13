@@ -73,7 +73,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 7: AdamW, SGD com momentum, clipping global e testes transacionais implementados.
 - Etapa 8: leitura/validação de corpus em fluxo, deduplicação exata, split determinístico por documento, treino BPTT em blocos, avaliação BPB, early stopping e CLI implementados.
 - Etapa 9: formato MOROKCKP v1, CRC32, persistência de parâmetros/otimizador/RNG/cursor, fsync de arquivo e diretório, salvamento ao final de cada época, validação de compatibilidade, retomada determinística, logs JSONL append-only e exportação do melhor modelo de inferência integrados ao treinador.
-- Etapa 10: executável `morok_benchmark`, baseline categórico softmax-256 unigram, matriz BPTT 32/64/128 × AdamW/SGD Momentum, repetições por sementes, métricas BPB/throughput/tempo/RSS, JSONL, testes e workflow de benchmark implementados. O fixture sintético valida o pipeline; avaliação linguística real aguarda corpus licenciado.
+- Etapa 10: executável `morok_benchmark`, baseline categórico softmax-256 unigram, matriz de comparações controladas de BPTT, otimizador e learning rate, com repetições por sementes, métricas BPB/throughput/tempo/RSS, JSONL, testes e workflow de benchmark implementados. O fixture sintético valida o pipeline; avaliação linguística real aguarda corpus licenciado.
 - Protótipo experimental `morok_complete`: lê `entrada.txt`, treina a G1 do zero sobre a sequência, gera uma continuação ASCII e grava `saida.txt`. O GitHub Actions executa esse fluxo quando `entrada.txt` muda na `main`; os parâmetros não persistem entre execuções.
 - G1: inventário de parâmetros, forward pass, gradientes B0 e otimizadores implementados; os 29 parâmetros do segmentador permanecem fora do caminho preditivo.
 
