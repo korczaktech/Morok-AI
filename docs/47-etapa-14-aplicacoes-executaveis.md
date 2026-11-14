@@ -64,7 +64,7 @@ curl -X POST http://127.0.0.1:8080/v1/chat \\
 
 ## Testes
 
-O CTest registra testes de fumaça para ajuda, versão e rejeição de comandos desconhecidos do CLI. Os componentes de modelo, checkpoint, geração, memória, comunicação, segurança e ferramentas mantêm seus próprios testes unitários.
+O CTest registra um teste de integração do composition root que inicializa IA-CORE, IA-LANG, IA-MEM, IA-REAS, IA-TOOLS, IA-COMM e IA-LEARN, cria uma conversa, gera uma resposta e encerra a sessão/runtime. Também verifica ajuda, versão, rejeição de comandos desconhecidos e os pontos de entrada dos executáveis. Os componentes de modelo, checkpoint, geração, memória, comunicação, segurança e ferramentas mantêm seus próprios testes unitários.
 
 A validação completa de integração de ponta a ponta ainda depende de executar o pipeline de CI após as alterações desta etapa. Um teste de compilação não comprova qualidade linguística da geração.
 
