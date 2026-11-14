@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 namespace morok::model {
@@ -13,6 +14,7 @@ struct G1TrainingConfig {
  std::size_t max_documents{100000};
  std::uint64_t max_document_bytes{1ULL<<30U};
  G1OptimizerConfig optimizer{G1OptimizerConfig::adamw()};
+ std::function<bool()> cancellation_requested{};
 };
 struct G1EpochMetrics {
  std::size_t epoch{0};
