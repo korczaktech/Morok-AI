@@ -1,24 +1,6 @@
 name: training
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/training.yml"
-      - "scripts/run-g1-continual-cycle.sh"
-      - "scripts/evaluate-g1-qa.py"
-      - "scripts/validate-g1-corpus.py"
-      - "tests/fixtures/continual/**"
-      - "tests/fixtures/continual-eval/**"
-      - "docs/53-aprendizagem-continua-g1-actions.md"
-      - "CMakeLists.txt"
-      - "tests/CMakeLists.txt"
-      - "tests/**"
-      - "apps/**"
-      - "include/morok/model/learn/**"
-      - "src/model/learn/**"
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 concurrency:
