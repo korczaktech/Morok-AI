@@ -258,6 +258,9 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
     if (truncation_length == 0) {
         throw std::invalid_argument("BPTT truncation length must be positive");
     }
+    if (truncation_length > kG1MaxBpttTruncationLength) {
+        throw std::invalid_argument("BPTT truncation length exceeds the 128-target memory bound");
+    }
     require_finite_parameters(parameters);
     require_finite_state(initial_state);
 
