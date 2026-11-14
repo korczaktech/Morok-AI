@@ -332,7 +332,7 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
     if (impl_->fts) {
         sql = std::string("SELECT ") + record_columns +
             " FROM memories_fts JOIN memories m ON m.rowid=memories_fts.rowid"
-            " WHERE memories_fts MATCH ? AND m.session_id=?"
+            " WHERE memories_fts MATCH ? AND m.session_id=? AND m.sensitivity<2"
             " AND (m.expires_at IS NULL OR m.expires_at>?)";
     } else {
         sql = std::string("SELECT ") + record_columns +
@@ -415,15 +415,17 @@ Status MemoryStore::erase(const common::SessionId& session_id,
         ErrorCode::invalid_argument, "audit actor is required", "memory", "erase"));
     const auto begin = exec(impl_->db, "BEGIN IMMEDIATE", "begin_erase");
     if (!begin) return begin;
-    Statement exists(impl_->db, "SELECT 1 FROM memories WHERE id=? AND session_id=?");
-    if (!exists) { (void)exec(impl_->db, "ROLLBACK", "rollback_erase");
-        return Status::failure(db_error(impl_->db, "prepare_erase")); }
-    bind_text(exists.get(), 1, memory_id.to_string());
-    bind_text(exists.get(), 2, session_id.to_string());
-    if (sqlite3_step(exists.get()) != SQLITE_ROW) {
-        (void)exec(impl_->db, "ROLLBACK", "rollback_erase");
-        return Status::failure(Error::make(ErrorCode::invalid_argument,
-            "memory not found in this session", "memory", "erase"));
+    {
+        Statement exists(impl_->db, "SELECT 1 FROM memories WHERE id=? AND session_id=?");
+        if (!exists) { (void)exec(impl_->db, "ROLLBACK", "rollback_erase");
+            return Status::failure(db_error(impl_->db, "prepare_erase")); }
+        bind_text(exists.get(), 1, memory_id.to_string());
+        bind_text(exists.get(), 2, session_id.to_string());
+        if (sqlite3_step(exists.get()) != SQLITE_ROW) {
+            (void)exec(impl_->db, "ROLLBACK", "rollback_erase");
+            return Status::failure(Error::make(ErrorCode::invalid_argument,
+                "memory not found in this session", "memory", "erase"));
+        }
     }
     const auto audit = insert_audit(impl_->db, memory_id.to_string(),
         session_id.to_string(), actor, "delete", "success", request_id);
