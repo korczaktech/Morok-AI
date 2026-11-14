@@ -9,6 +9,14 @@ namespace morok::model {
 
 struct G1GenerationConfig {
     std::size_t max_new_bytes{256};
+    // Zero temperature preserves greedy decoding. Positive values sample from
+    // the model distribution after optional top-k filtering.
+    double temperature{0.0};
+    std::size_t top_k{0}; // Zero means all valid UTF-8 candidates.
+    std::uint64_t seed{42};
+    // Add this many nats per recent occurrence of a printable ASCII byte.
+    double repetition_penalty{0.0};
+    std::size_t repetition_window{64};
 };
 
 struct G1GenerationReport {
