@@ -120,5 +120,7 @@ bool BasicId<Tag>::is_nil() const noexcept {
 template class BasicId<SessionIdTag>;
 template class BasicId<MemoryIdTag>;
 template class BasicId<RequestIdTag>;
+template class BasicId<MessageIdTag>;
+template class BasicId<ConversationIdTag>;
 
 } // namespace morok::common
