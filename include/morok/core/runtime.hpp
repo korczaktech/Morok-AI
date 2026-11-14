@@ -6,8 +6,10 @@
 #include "morok/core/health.hpp"
 #include "morok/core/lifecycle.hpp"
 
+#include <cstddef>
 #include <functional>
 #include <mutex>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -48,11 +50,20 @@ public:
                 return failure(common::ErrorCode::invalid_argument,
                                "empty subsystem initializer");
             }
-            const auto result = initializer(config_);
-            if (!result) {
+
+            try {
+                const auto result = initializer(config_);
+                if (!result) {
+                    const auto error = *result.error_if();
+                    rollback_locked();
+                    state_ = LifecycleState::failed;
+                    return common::Status::failure(error);
+                }
+            } catch (...) {
                 rollback_locked();
                 state_ = LifecycleState::failed;
-                return common::Status::failure(*result.error_if());
+                return failure(common::ErrorCode::internal_error,
+                               "subsystem initializer threw an exception");
             }
             ++initialized_count_;
         }
@@ -76,12 +87,12 @@ public:
         return common::Status::success();
     }
 
-    [[nodiscard]] LifecycleState state() const noexcept {
+    [[nodiscard]] LifecycleState state() const {
         std::lock_guard lock(mutex_);
         return state_;
     }
 
-    [[nodiscard]] bool accepts_requests() const noexcept {
+    [[nodiscard]] bool accepts_requests() const {
         return core::accepts_requests(state());
     }
 
