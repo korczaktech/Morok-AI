@@ -2,74 +2,76 @@
 
 ## Objetivo
 
-Executar ciclos periódicos e retomáveis de treinamento da G1, usando um pequeno corpus de paráfrases em português para a pergunta "Que cor é o céu?". Cada ciclo restaura o checkpoint do ciclo anterior, executa até 10 épocas adicionais, gera uma continuação para um prompt fixo e registra o estado.
+Executar ciclos periódicos e retomáveis de treinamento da G1. O experimento inicial usa um pequeno corpus de português e um prompt fixo sobre a cor do céu. Cada ciclo restaura o checkpoint anterior, executa até 10 épocas adicionais, gera uma continuação e registra métricas e limitações.
 
-O workflow não pretende enumerar todos os sinônimos ou paráfrases possíveis. O corpus contém exemplos humanos fixos, e o critério automatizado é intencionalmente estreito.
+Este workflow demonstra a infraestrutura de treinamento contínuo. Ele **não demonstra, por si só, compreensão de linguagem**.
 
 ## Agendamento e continuidade
 
 O workflow `.github/workflows/training.yml`:
 
 - executa a cada 15 minutos por `schedule`;
-- também aceita execução manual por `workflow_dispatch`;
-- impede execuções simultâneas com um grupo de concorrência;
+- aceita execução manual por `workflow_dispatch`;
+- impede execuções simultâneas;
 - restaura o artifact da última execução bem-sucedida;
-- compila a versão Release e executa CTest;
-- treina mais 10 épocas por ciclo, com teto total de 500 épocas;
-- salva checkpoint, melhor modelo, métricas, geração e estado em um artifact com retenção de 90 dias.
+- compila Release e executa CTest;
+- treina até 10 épocas adicionais por ciclo, com teto total de 500;
+- salva checkpoint, melhor modelo, métricas, geração e estado em artifact com retenção de 90 dias.
 
-O checkpoint e o contador de épocas são transportados entre execuções pelo artifact `morok-g1-continual-state`. O workflow não grava pesos no repositório e não cria commits automáticos.
+O checkpoint e o contador de épocas são transportados pelo artifact `morok-g1-continual-state`. O workflow não grava pesos no repositório e não cria commits automáticos. A agenda do GitHub Actions é periódica, não um processo sempre ativo, e pode atrasar.
 
-## Dados
+## Dados e avaliação atual
 
-Os arquivos em `tests/fixtures/continual/` contêm variações escritas para este experimento, por exemplo:
+Os arquivos em `tests/fixtures/continual/` contêm paráfrases humanas de uma pergunta e respostas curtas. O conjunto é pequeno, foi criado para teste técnico e não representa a distribuição da língua portuguesa.
 
-- "O céu é azul."
-- "Azul."
-- "Com certeza, é azul."
-- "A cor do céu é azul."
-- "O céu apresenta uma coloração azul."
-- "O céu tem aparência azul."
+A métrica principal do treinador é a perda de predição do próximo byte (BPB) em treino/validação/teste. Ela mede qualidade estatística de predição no corpus, não compreensão semântica.
 
-São paráfrases e respostas relacionadas, não uma lista matematicamente completa de sinônimos. O conjunto é pequeno e serve como fixture técnico; não é um corpus representativo de português.
+Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. A presença do token `azul` é registrada apenas como diagnóstico lexical. Ela **não** encerra o treinamento, não cria marcador de sucesso e não altera o estado do workflow para `goal_reached`.
 
-## Critério de parada
+O estado final possível do orçamento é `budget_exhausted`. Isso significa somente que o limite de épocas foi atingido. O status da avaliação semântica permanece `not_established` até existir um conjunto independente de perguntas e respostas, com critérios de aceitação que não sejam uma simples busca por substring.
 
-Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. Um verificador lexical procura o token "azul" na continuação e rejeita um caso simples de negação próxima.
+## Contagem de parâmetros
 
-Se o token for encontrado, o estado `goal_reached` é persistido e os ciclos seguintes deixam de compilar ou treinar. Se não for encontrado, o próximo ciclo agendado retoma o checkpoint. Ao atingir 500 épocas sem satisfazer o critério, o estado passa a `budget_exhausted` e os ciclos param.
+A arquitetura armazena exatamente 1.000 parâmetros FP32. O caminho de treinamento B0 atualiza 971 parâmetros. Os 29 parâmetros `v` e `theta_len` pertencem ao pontuador de segmentação e estão fora do otimizador B0; portanto, não devem ser descritos como atualizados pelo treinamento de linguagem atual.
 
-**Limitação essencial:** encontrar a palavra "azul" não comprova que o modelo compreendeu a pergunta ou produziu uma resposta semanticamente correta. É apenas um teste lexical automatizado para demonstrar a mecânica de continuidade e parada. A avaliação semântica confiável exigirá um conjunto de testes independente e um avaliador validado, preferencialmente com revisão humana.
+Essa distinção é registrada em `status.json`:
+- `architecture_parameters: 1000`;
+- `trainable_parameters: 971` para o caminho B0;
+- os 29 parâmetros do segmentador permanecem uma etapa de treinamento separada ainda não integrada ao loop contínuo.
+
+O limite arquitetural de 1.000 é preservado. Mais épocas não aumentam a capacidade estrutural do modelo.
 
 ## Artefatos
 
 O artifact de cada execução contém, quando produzidos:
 
-- `g1-continual-resume.morokckp`: estado retomável do treinamento;
-- `g1-continual-best.morokckp`: melhor modelo segundo a validação interna do treinador;
+- `g1-continual-resume.morokckp`: estado retomável;
+- `g1-continual-best.morokckp`: melhor modelo segundo a validação interna;
 - `metrics.jsonl` e `cycle-summary.jsonl`: métricas e resumo;
 - `generated.txt`: continuação gerada;
 - `completed-epochs.txt`: contador acumulado;
-- `status.json`: estado, hash do corpus e limitações;
-- `goal-reached.txt`: marcador terminal quando o critério lexical é satisfeito.
+- `status.json`: estado, hash do corpus, diagnóstico lexical e limitações.
 
-## Limites e riscos
+## Limites conhecidos
 
-- A G1 permanece com exatamente 1.000 parâmetros; mais épocas não aumentam sua capacidade estrutural.
-- O modelo pode memorizar o corpus e o prompt fixo.
-- O critério lexical não mede compreensão, generalização nem diversidade de paráfrases.
-- A agenda do GitHub Actions é periódica, não um processo permanentemente ativo; o horário pode atrasar.
-- Os artifacts têm retenção limitada. Se o estado deixar de estar disponível, uma execução sem checkpoint inicia novamente.
-- O orçamento é limitado a 500 épocas para evitar execução indefinida e consumo ilimitado de minutos.
-- A execução em runner hospedado não comprova operação em hardware físico com 4 GB de RAM.
+- 1.000 parâmetros arquiteturais são uma capacidade muito pequena para linguagem geral.
+- A entrada e a saída são processadas byte a byte; o estado recorrente é pequeno.
+- A geração atual é gulosa e não possui token EOS treinado, podendo repetir bytes e preencher o limite de saída.
+- O corpus é pequeno e o modelo pode memorizar exemplos e prompt.
+- A métrica BPB não substitui avaliação semântica.
+- O critério lexical `azul` é diagnóstico, não evidência de compreensão.
+- Runner hospedado não comprova execução em hardware físico com 4 GB de RAM.
 
 ## Critérios de aceitação da infraestrutura
 
 - [x] Workflow agendado e execução manual.
-- [x] Corpus de paráfrases versionado.
 - [x] Checkpoint transportado entre execuções por artifact.
 - [x] Retomada com orçamento incremental de épocas.
-- [x] Geração pós-treinamento e critério de parada lexical.
-- [x] Limite total de épocas e parada persistente.
-- [ ] Primeira execução do workflow aprovada no GitHub Actions.
-- [ ] Avaliação semântica independente da resposta gerada.
+- [x] Métricas de predição de bytes e geração pós-treinamento.
+- [x] Limite total de épocas.
+- [x] Busca lexical rebaixada a diagnóstico, sem declarar sucesso semântico.
+- [ ] Treinar os 29 parâmetros do segmentador em etapa integrada e verificável.
+- [ ] Implementar geração com amostragem controlada e critério de parada treinado.
+- [ ] Ampliar corpus natural, diversificado e licenciado.
+- [ ] Criar avaliação semântica independente com revisão humana.
+- [ ] Validar em hardware físico com 4 GB de RAM.
