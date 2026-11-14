@@ -10,9 +10,9 @@
 - Estados de otimizador separados e incompatíveis entre si.
 - Momentos e velocidade armazenados em FP32, com 1.000 posições por vetor.
 - Atualização transacional: parâmetros e estado só são confirmados depois de todos os valores candidatos serem validados.
-- Weight decay somente em pesos/matrizes do preditor B0; vieses não são penalizados. Os 29 parâmetros do segmentador ficam completamente fora deste otimizador, pois a segmentação é atualizada em etapa separada.
+- Weight decay somente em pesos/matrizes do preditor B0; vieses não são penalizados. Os 29 parâmetros do segmentador ficam integrados ao B0 como cabeça EOS treinada com alvos de continuação e fim de documento.
 - Verificação de NaN/Inf, hiperparâmetros, estados e overflow.
-- O otimizador não altera os gradientes de entrada. Os slots de estado correspondentes aos 29 parâmetros do segmentador permanecem zerados nesta etapa.
+- O otimizador não altera os gradientes de entrada. Os 1.000 slots do estado do otimizador são elegíveis para atualização; os 22 pesos EOS recebem decay e os sete vieses EOS não.
 
 ## Ordem canônica e grupos de decay
 
@@ -27,7 +27,8 @@ Usando índices do vetor canônico:
 | [759, 935) | O | Sim |
 | [935, 943) | c | Não |
 | [943, 971) | A | Sim |
-| [971, 1000) | v, theta_len (segmentador) | Fora do otimizador B0 |
+| [971, 993) | v (pesos EOS) | Sim |
+| [993, 1000) | theta_len (vieses EOS) | Não |
 
 ## Algoritmos
 
