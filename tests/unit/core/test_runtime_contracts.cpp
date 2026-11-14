@@ -4,6 +4,7 @@
 #include "morok/core/request_context.hpp"
 #include "morok/core/resource_limits.hpp"
 #include "morok/core/runtime.hpp"
+#include "morok/core/session_registry.hpp"
 
 #include <cassert>
 #include <utility>
@@ -20,6 +21,19 @@ int main() {
     assert(!limits.permits_generation(257));
     limits.target_memory_bytes = limits.hard_memory_bytes + 1;
     assert(!limits.validate());
+
+    core::SessionRegistry sessions(1);
+    auto registered_session = sessions.create();
+    assert(registered_session);
+    assert(sessions.size() == 1);
+    assert(sessions.contains(*registered_session.value_if()));
+    auto capacity_error = sessions.create();
+    assert(!capacity_error);
+    assert(capacity_error.error_if()->code == common::ErrorCode::resource_limit);
+    assert(sessions.close(*registered_session.value_if()));
+    assert(!sessions.contains(*registered_session.value_if()));
+    assert(!sessions.close(*registered_session.value_if()));
+    assert(sessions.size() == 0);
 
     core::CancellationSource cancellation;
     const auto token = cancellation.token();
