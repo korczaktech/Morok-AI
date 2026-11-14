@@ -1,0 +1,2 @@
+Pergunta: Quantos lados tem um triângulo?
+Resposta: Um triângulo tem três lados.
