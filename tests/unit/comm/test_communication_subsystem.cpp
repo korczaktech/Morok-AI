@@ -72,6 +72,12 @@ int main() {
     assert(history);
     assert(history.value_if()->size() == 4);
     assert((*history.value_if())[0].id != (*history.value_if())[1].id);
+    auto parsed_message_id = common::MessageId::from_string(
+        (*history.value_if())[0].id.to_string());
+    auto parsed_conversation_id = common::ConversationId::from_string(
+        conversation.value_if()->to_string());
+    assert(parsed_message_id && *parsed_message_id.value_if() == (*history.value_if())[0].id);
+    assert(parsed_conversation_id && *parsed_conversation_id.value_if() == *conversation.value_if());
     assert((*history.value_if())[0].role == comm::MessageRole::system);
     assert((*history.value_if())[1].role == comm::MessageRole::tool);
     assert((*history.value_if())[1].tool_name == "fixture");
