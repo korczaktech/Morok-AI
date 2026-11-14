@@ -1,5 +1,7 @@
 #include "morok/common/utf8_text.hpp"
 
+#include <algorithm>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
