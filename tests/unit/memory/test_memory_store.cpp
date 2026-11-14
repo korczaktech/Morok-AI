@@ -133,7 +133,10 @@ int main() {
     auto active_session = registry.create();
     assert(active_session);
     memory::MemorySubsystem subsystem(integrated_database);
-    assert(subsystem.initialize(core::RuntimeConfig{}));
+    core::Runtime memory_runtime(core::RuntimeConfig{});
+    assert(memory_runtime.initialize(
+        {subsystem.initializer()}, {subsystem.shutdown_callback()}));
+    assert(subsystem.initialized());
     memory::MemoryInput transient{
         *active_session.value_if(), memory::MemoryKind::working,
         *working_title.value_if(), *working_body.value_if(),
@@ -144,7 +147,8 @@ int main() {
     assert(subsystem.close_session(registry, *active_session.value_if()));
     assert(!registry.contains(*active_session.value_if()));
     assert(!subsystem.store().retrieve(*active_session.value_if(), *transient_id.value_if()));
-    assert(subsystem.shutdown());
+    assert(memory_runtime.shutdown());
+    assert(!subsystem.initialized());
 
     std::remove(database.c_str());
     std::remove(backup.c_str());
