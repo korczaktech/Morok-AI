@@ -16,11 +16,7 @@ using Vector = std::vector<Scalar>;
 class Matrix {
 public:
     Matrix(std::size_t rows, std::size_t columns, Scalar value = 0.0)
-        : rows_(rows), columns_(columns), values_(rows * columns, value) {
-        if (rows == 0 || columns == 0) {
-            throw std::invalid_argument("matrix dimensions must be positive");
-        }
-    }
+        : rows_(rows), columns_(columns), values_(checked_size(rows, columns), value) {}
 
     [[nodiscard]] std::size_t rows() const noexcept { return rows_; }
     [[nodiscard]] std::size_t columns() const noexcept { return columns_; }
@@ -35,6 +31,17 @@ public:
     }
 
 private:
+    [[nodiscard]] static std::size_t checked_size(std::size_t rows,
+                                                  std::size_t columns) {
+        if (rows == 0 || columns == 0) {
+            throw std::invalid_argument("matrix dimensions must be positive");
+        }
+        if (rows > std::numeric_limits<std::size_t>::max() / columns) {
+            throw std::length_error("matrix dimensions overflow addressable storage");
+        }
+        return rows * columns;
+    }
+
     [[nodiscard]] std::size_t index(std::size_t row, std::size_t column) const {
         if (row >= rows_ || column >= columns_) {
             throw std::out_of_range("matrix index out of range");
@@ -63,6 +70,9 @@ inline Scalar softplus(Scalar x) noexcept {
 }
 
 inline Scalar binary_cross_entropy_with_logits(Scalar logit, Scalar target) {
+    if (!std::isfinite(logit)) {
+        throw std::invalid_argument("BCE logit must be finite");
+    }
     if (!std::isfinite(target) || target < 0.0 || target > 1.0) {
         throw std::invalid_argument("BCE target must be finite and in [0, 1]");
     }
