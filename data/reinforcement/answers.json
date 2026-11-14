@@ -52,7 +52,9 @@
     "correct": 0,
     "incorrect": 0,
     "policy_updates": 0,
-    "skipped_updates": 0
+    "skipped_updates": 0,
+    "oracle_demonstrations": 0
   },
-  "episodes": []
+  "episodes": [],
+  "oracle_demonstrations_applied": false
 }
