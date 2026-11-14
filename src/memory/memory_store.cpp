@@ -14,6 +14,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <thread>
 
 namespace morok::memory {
 namespace {
@@ -186,7 +187,9 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
     std::lock_guard lock(impl_->mutex);
     if (database_path.empty() || limits.max_record_bytes == 0 ||
         limits.max_results == 0 || limits.max_context_bytes == 0 ||
-        limits.max_database_bytes < 4096U || limits.busy_timeout_ms == 0 ||
+        limits.max_database_bytes < 1024U * 1024U ||
+        limits.max_database_bytes > static_cast<std::size_t>(std::numeric_limits<sqlite3_int64>::max()) ||
+        limits.busy_timeout_ms == 0 ||
         limits.search_timeout_ms == 0 ||
         limits.busy_timeout_ms > static_cast<std::uint32_t>(std::numeric_limits<int>::max()) ||
         limits.search_timeout_ms > static_cast<std::uint32_t>(std::numeric_limits<int>::max())) {
@@ -664,9 +667,22 @@ Status MemoryStore::backup_to(const std::string& destination_path) {
         const auto error=db_error(destination,"backup_open");if(destination)sqlite3_close(destination);return Status::failure(error);}
     sqlite3_backup* backup=sqlite3_backup_init(destination,"main",impl_->db,"main");
     if(!backup){const auto error=db_error(destination,"backup_init");sqlite3_close(destination);return Status::failure(error);}
-    const int step=sqlite3_backup_step(backup,-1);
-    const int finish=sqlite3_backup_finish(backup);
-    if((step!=SQLITE_DONE&&step!=SQLITE_OK)||finish!=SQLITE_OK){const auto error=db_error(destination,"backup_copy");sqlite3_close(destination);return Status::failure(error);}
+    const auto backup_deadline = std::chrono::steady_clock::now() +
+        std::chrono::milliseconds(static_cast<std::chrono::milliseconds::rep>(
+            impl_->limits.busy_timeout_ms));
+    int step = SQLITE_OK;
+    do {
+        step = sqlite3_backup_step(backup, -1);
+        if (step == SQLITE_BUSY || step == SQLITE_LOCKED)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    } while ((step == SQLITE_BUSY || step == SQLITE_LOCKED) &&
+             std::chrono::steady_clock::now() < backup_deadline);
+    const int finish = sqlite3_backup_finish(backup);
+    if (step != SQLITE_DONE || finish != SQLITE_OK) {
+        const auto error = db_error(destination, "backup_copy");
+        sqlite3_close(destination);
+        return Status::failure(error);
+    }
     if(sqlite3_close(destination)!=SQLITE_OK)return Status::failure(Error::make(
         ErrorCode::internal_error,"failed to close backup database","memory","backup_close"));
     return Status::success();
