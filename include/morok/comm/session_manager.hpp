@@ -2,6 +2,7 @@
 
 #include "morok/comm/conversation.hpp"
 #include "morok/comm/event_stream.hpp"
+#include "morok/core/cancellation.hpp"
 #include "morok/core/configuration.hpp"
 #include "morok/core/request_context.hpp"
 #include "morok/core/session_registry.hpp"
@@ -24,6 +25,14 @@ public:
     [[nodiscard]] common::Status initialize(const core::RuntimeConfig& config);
     [[nodiscard]] common::Status shutdown() noexcept;
     [[nodiscard]] common::Result<common::ConversationId> create_conversation();
+    [[nodiscard]] common::Result<core::RequestContext> create_request_context(
+        const common::ConversationId& conversation_id,
+        core::CancellationToken cancellation = {}) const;
+    [[nodiscard]] common::Status append_control_message(
+        const core::RequestContext& request,
+        const common::ConversationId& conversation_id,
+        MessageRole role, const common::Utf8Text& text,
+        std::string tool_name = {});
     [[nodiscard]] common::Status close_conversation(
         const common::ConversationId& conversation_id);
     [[nodiscard]] common::Result<Message> send_message(
