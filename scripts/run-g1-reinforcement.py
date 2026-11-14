@@ -37,6 +37,18 @@ def normalized_tokens(text: str) -> list[str]:
     return re.findall(r"[a-z0-9]+", value)
 
 
+def select_question(questions: list[dict], attempt_index: int) -> dict:
+    return questions[attempt_index % len(questions)]
+
+
+def format_attempt_results(summaries: list[dict]) -> list[str]:
+    return [
+        f"{item['attempt']}. {item['answer'].replace(chr(10), ' ').replace(chr(13), ' ').strip() or '[resposta vazia]'} - "
+        f"{'correto' if item['verdict'] == 'correct' else 'errado'}"
+        for item in summaries
+    ]
+
+
 def grade(question_id: str, answer: str) -> tuple[str, int, str]:
     tokens = normalized_tokens(answer)
     token_set = set(tokens)
@@ -221,14 +233,14 @@ def main() -> int:
         # Exactly N generated attempts, rotating through the three questions.
         # Correct and incorrect verdicts are both recorded and never stop the loop.
         for attempt_index in range(args.attempts):
-            question = questions[attempt_index % len(questions)]
+            question = select_question(questions, attempt_index)
             question_id = question["id"]
             prompt_path = temporary / f"{question_id}.prompt.txt"
             answer_path = temporary / f"{question_id}.answer.txt"
             prompt_path.write_text(question["prompt"], encoding="utf-8")
             episode_number = len(database["episodes"]) + 1
             model_before = sha256(args.checkpoint)
-            seed = 20261114 + episode_number * 17 + offset
+            seed = 20261114 + episode_number * 17 + attempt_index
             run_checked([
                 str(args.generator), str(args.checkpoint), str(prompt_path),
                 str(answer_path), "48",
@@ -305,11 +317,7 @@ def main() -> int:
                 "policy_update": episode["policy_update"]["status"],
             })
 
-    result_lines = [
-        f"{item['attempt']}. {item['answer'].replace(chr(10), ' ').replace(chr(13), ' ').strip() or '[resposta vazia]'} - "
-        f"{'correto' if item['verdict'] == 'correct' else 'errado'}"
-        for item in summaries
-    ]
+    result_lines = format_attempt_results(summaries)
     args.results_file.parent.mkdir(parents=True, exist_ok=True)
     args.results_file.write_text("\n".join(result_lines) + "\n", encoding="utf-8")
     report = {
