@@ -1,4 +1,4 @@
-# Etapa 18 — Segurança e integração
+# Controles complementares de segurança e integração
 
 **Sequência:** roteiro oficial de 20 etapas do projeto. Esta etapa é distinta da etapa operacional IA-LEARN, também numerada como 18 na sequência interna da G1.
 
@@ -35,4 +35,4 @@ Aplicar controles de segurança nas fronteiras entre entrada, modelo, memória, 
 
 ## Critério de conclusão
 
-A etapa é considerada implementada quando as fronteiras de entrada/saída, sessão, permissão, checkpoint, log e recurso estão ligadas por contratos verificáveis e testes automatizados. A validação do commit exige CI GCC/Clang Debug/Release, ASan/UBSan e fuzzing aprovados. As limitações acima permanecem declaradas e não podem ser apresentadas como controles implementados.
+Este conjunto de controles complementares é considerado implementado quando as fronteiras de entrada/saída, sessão, permissão, checkpoint, log e recurso estão ligadas por contratos verificáveis e testes automatizados. A validação do commit exige CI GCC/Clang Debug/Release, ASan/UBSan e fuzzing aprovados. As limitações acima permanecem declaradas e não podem ser apresentadas como controles implementados.
