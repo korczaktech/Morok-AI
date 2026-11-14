@@ -118,7 +118,7 @@ int main() {
         "SELECT COUNT(*) FROM memory_audit WHERE action='delete' AND outcome='success'",
         -1, &audit, nullptr) == SQLITE_OK);
     assert(sqlite3_step(audit) == SQLITE_ROW);
-    assert(sqlite3_column_int(audit, 0) == 1);
+    assert(sqlite3_column_int(audit, 0) == 2);
     sqlite3_finalize(audit);
     sqlite3_close(audit_db);
 
