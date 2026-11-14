@@ -33,6 +33,8 @@ class ReinforcementGraderTests(unittest.TestCase):
             "sky_is_blue", "mountains_high_or_low", "grass_color"
         })
         self.assertEqual(database["totals"]["episodes"], len(database["episodes"]))
+        episode_ids = [episode.get("episode_id") for episode in database["episodes"]]
+        self.assertEqual(len(episode_ids), len(set(episode_ids)))
         for episode in database["episodes"]:
             self.assertIn(episode["verdict"], {"correct", "incorrect"})
             self.assertIn(episode["reward"], {-1, 1})
