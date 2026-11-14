@@ -43,10 +43,10 @@ struct ToolPermissionGrant final {
 };
 
 struct ToolAccessPolicy final {
-    // Exact pairs are preferred. When non-empty, legacy lists are ignored.
-    std::vector<ToolPermissionGrant> exact_grants;
     std::vector<std::string> allowed_tools;
     std::vector<ToolCapability> granted_capabilities;
+    // Exact pairs are preferred. When non-empty, legacy lists are ignored.
+    std::vector<ToolPermissionGrant> exact_grants;
 };
 
 struct ToolExecutionContext final {
