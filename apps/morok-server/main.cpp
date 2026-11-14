@@ -48,8 +48,11 @@ void apply_process_memory_limit() {
     if (::getrlimit(RLIMIT_AS, &limit) != 0) {
         throw std::runtime_error("could not read process address-space limit");
     }
-    const rlim_t hard_cap = limit.rlim_max == RLIM_INFINITY
+    rlim_t hard_cap = limit.rlim_max == RLIM_INFINITY
         ? kAddressSpaceCap : std::min(kAddressSpaceCap, limit.rlim_max);
+    if (limit.rlim_cur != RLIM_INFINITY) {
+        hard_cap = std::min(hard_cap, limit.rlim_cur);
+    }
     limit.rlim_cur = hard_cap;
     limit.rlim_max = hard_cap;
     if (::setrlimit(RLIMIT_AS, &limit) != 0) {
