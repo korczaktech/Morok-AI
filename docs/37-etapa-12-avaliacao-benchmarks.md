@@ -21,7 +21,7 @@ A API oferece:
   - pontuador/segmentador: 29.
 - `summarize_g1_loss`: transforma NLL acumulada e número de alvos em nats/byte, bits/byte (BPB) e perplexidade por byte (2^{BPB}); rejeita contagem zero, perda negativa ou valores não finitos.
 
-A perplexidade reportada é perplexidade por byte, não perplexidade por palavra ou token linguístico.
+A perplexidade reportada é perplexidade por byte, não perplexidade por palavra ou token linguístico. O inventário arquitetural contém 1.000 parâmetros; no estado atual do treinamento B0, somente 971 recebem gradientes/updates e os 29 parâmetros do segmentador permanecem fora do caminho de treino.
 
 ### Diagnóstico de treinamento
 
@@ -29,19 +29,20 @@ Cada época agora registra:
 - norma de gradiente da última atualização;
 - média da norma pré-clipping em todas as atualizações da época;
 - maior norma pré-clipping observada;
+- tempo de parede por época, incluindo treino e avaliação de validação;
 - BPB de treino e validação;
 - perplexidade por byte de treino e validação.
 
-Os valores são gravados no JSONL persistente da execução. A média é ponderada igualmente por atualização, não por documento.
+Os valores são gravados no JSONL persistente da execução. A média de norma é ponderada igualmente por atualização, não por documento. O tempo por época inclui processamento de treino e avaliação de validação.
 
 ### Relatório de benchmark
 
 O executável `morok_benchmark` acrescenta ao JSONL:
-- contagem de parâmetros treináveis e verificação de finitude;
+- contagem de parâmetros da arquitetura (1.000), contagem atualizada pelo caminho preditivo B0 (971) e verificação de finitude; os 29 parâmetros do segmentador permanecem reservados e não são atualizados pelo B0;
 - média, desvio-padrão, mínimo e máximo da distribuição global;
 - média e desvio-padrão por grupo rápido, lento, predição e segmentador;
 - perplexidade por byte de treino, validação e teste;
-- norma média ponderada e norma máxima de gradiente;
+- norma média ponderada e norma máxima de gradiente; tempo médio e máximo por época;
 - diferença absoluta e razão de BPB entre G1 e baseline unigram.
 
 Continuam registrados commit, compilador, máquina, CPU, hash, origem/licença declaradas, semente, divisão, alvos, épocas, atualizações, BPB, throughput, latência de avaliação, tempo total, pico RSS e early stopping.
