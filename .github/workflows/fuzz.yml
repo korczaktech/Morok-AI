@@ -25,6 +25,6 @@ jobs:
       - name: Fuzz strict UTF-8 validation
         run: ./build-fuzz/morok_fuzz_utf8 -max_len=65536 -runs=2000 tests/fixtures/benchmark
       - name: Fuzz RLAH decoder
-        run: ./build-fuzz/morok_fuzz_rlah_decode -max_len=65536 -runs=2000 tests/fixtures/benchmark
+        run: ./build-fuzz/morok_fuzz_rlah_decode -max_len=65536 -runs=2000 tests/fixtures/fuzz
       - name: Fuzz checkpoint parser
-        run: ./build-fuzz/morok_fuzz_checkpoint -max_len=65536 -runs=2000 tests/fixtures/benchmark
+        run: ./build-fuzz/morok_fuzz_checkpoint -max_len=65536 -runs=2000 tests/fixtures/fuzz
