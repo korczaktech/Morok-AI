@@ -119,7 +119,7 @@ void initialize_g1_parameters(G1Parameters& parameters, std::uint64_t seed) {
     parameters.b_c.fill(0.0F);
     parameters.b_g.fill(1.0F);
 
-    // Prediction and segmenter biases/weights start at zero.
+    // Prediction biases start at zero; EOS weights start at zero with a continuation bias.
     parameters.c.fill(0.0F);
     parameters.A.fill(0.0F);
     parameters.v.fill(0.0F);
