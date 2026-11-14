@@ -81,7 +81,8 @@ O teste comm.communication_subsystem cobre:
 5. validação do nome da ferramenta;
 6. envio de texto UTF-8 e geração IA-LANG;
 7. correlação por RequestId e identificadores distintos;
-8. eventos de streaming e fragmentos UTF-8 válidos;\n9. formatação de transcrição e erros;
+8. eventos de streaming e fragmentos UTF-8 válidos;
+9. formatação de transcrição e erros;
 10. histórico ordenado;
 11. cancelamento antes e durante a entrega;
 12. rejeição de papel inválido e falha do consumidor de streaming;
