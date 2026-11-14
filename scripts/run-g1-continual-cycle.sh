@@ -46,7 +46,7 @@ except (OSError, ValueError):
     print("")
 PY
 )"
-if [[ -s "$checkpoint" ]] && { ! grep -q "$expected_arch" "$status_file" 2>/dev/null || [[ "$stored_corpus_sha" != "$current_corpus_sha" ]]; }; then
+if [[ -e "$checkpoint" || -e "$epoch_file" || -e "$status_file" ]] && { ! grep -q "$expected_arch" "$status_file" 2>/dev/null || [[ "$stored_corpus_sha" != "$current_corpus_sha" ]]; }; then
   echo "Discarding incompatible pre-EOS checkpoint and restarting from deterministic initialization."
   rm -f "$checkpoint" "$best_model" "$metrics" "$summary" "$generated" "$epoch_file" "$status_file"
 fi
