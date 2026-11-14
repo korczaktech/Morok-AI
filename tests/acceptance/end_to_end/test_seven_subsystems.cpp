@@ -58,7 +58,7 @@ int main() {
     assert(request);
     const auto session = request.value_if()->session_id();
     const security::SecurityPrincipal principal{"acceptance", session};
-    assert(security.grant_tool(principal, "acceptance_read",
+    assert(security.grant_tool(principal, "acceptance_echo",
                                tools::ToolCapability::read_only));
     auto policy = security.tool_policy(principal);
     assert(policy && policy.value_if()->exact_grants.size() == 1);
@@ -110,9 +110,9 @@ int main() {
     tools::ToolAccessPolicy tool_policy;
     tool_policy.allowed_tools = {"acceptance_echo"};
     tool_policy.granted_capabilities = {tools::ToolCapability::read_only};
-    auto tool_result = tools.invoke(
-        *request.value_if(), "acceptance_echo",
-        {{"text", std::string("tool-ok")}}, tool_policy);
+    auto tool_result = security.invoke_tool(
+        tools, *request.value_if(), principal, "acceptance_echo",
+        {{"text", std::string("tool-ok")}});
     assert(tool_result && *tool_result.value_if() == "tool-ok");
 
     auto prompt = common::Utf8Text::from_utf8("Acceptance request");
