@@ -47,10 +47,10 @@ G1ParameterEvaluation evaluate_g1_parameters(const G1Parameters& parameters) {
     result.fast = summarize_g1_values(flat.data(), 506);
     result.slow = summarize_g1_values(flat.data() + 506, 253);
     result.prediction = summarize_g1_values(flat.data() + 759, 212);
-    result.segmenter = summarize_g1_values(flat.data() + 971, 29);
+    result.eos = summarize_g1_values(flat.data() + 971, 29);
     result.all_finite = result.all.all_finite && result.fast.all_finite &&
         result.slow.all_finite && result.prediction.all_finite &&
-        result.segmenter.all_finite;
+        result.eos.all_finite;
     return result;
 }
 
