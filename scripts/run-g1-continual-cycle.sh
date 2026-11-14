@@ -36,19 +36,30 @@ for path in sorted(Path("tests/fixtures/continual").glob("doc-*.txt")):
 print(digest.hexdigest())
 PY
 )"
-stored_corpus_sha="$(python3 - "$status_file" <<'PY'
+checkpoint_compatible=false
+if [[ -s "$checkpoint" ]]; then
+  if python3 - "$status_file" "$expected_arch" "$current_corpus_sha" <<'PY'
 import json
 import sys
 from pathlib import Path
 try:
-    print(json.loads(Path(sys.argv[1]).read_text()).get("corpus_sha256", ""))
+    status = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 except (OSError, ValueError):
-    print("")
+    raise SystemExit(1)
+compatible = (
+    status.get("architecture_id") == sys.argv[2]
+    and status.get("corpus_sha256") == sys.argv[3]
+)
+raise SystemExit(0 if compatible else 1)
 PY
-)"
-if [[ -e "$checkpoint" || -e "$epoch_file" || -e "$status_file" ]] && { ! grep -q "$expected_arch" "$status_file" 2>/dev/null || [[ "$stored_corpus_sha" != "$current_corpus_sha" ]]; }; then
-  echo "Discarding incompatible pre-EOS checkpoint and restarting from deterministic initialization."
-  rm -f "$checkpoint" "$best_model" "$metrics" "$summary" "$generated" "$epoch_file" "$status_file"
+  then
+    checkpoint_compatible=true
+  fi
+fi
+
+if [[ -s "$checkpoint" && "$checkpoint_compatible" != "true" ]]; then
+  echo "Discarding incompatible checkpoint and its dependent training state."
+  rm -f "$checkpoint" "$best_model" "$metrics" "$summary" "$generated" "$epoch_file" "$status_file" "$qa_report"
 fi
 
 completed_epochs=0
