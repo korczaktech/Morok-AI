@@ -45,11 +45,11 @@ struct ToolAccessPolicy final {
 struct ToolExecutionContext final {
     common::SessionId session_id;
     common::RequestId request_id;
-    core::CancellationToken cancellation;
+    std::function<bool()> cancellation_check;
     std::chrono::steady_clock::time_point deadline;
 
     [[nodiscard]] bool is_cancelled() const noexcept {
-        return cancellation.is_cancelled();
+        return cancellation_check && cancellation_check();
     }
     [[nodiscard]] bool deadline_exceeded() const noexcept {
         return std::chrono::steady_clock::now() >= deadline;
