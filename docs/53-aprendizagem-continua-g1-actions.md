@@ -26,7 +26,7 @@ Os documentos `doc-*.txt` em `tests/fixtures/continual/` contêm um par pergunta
 
 A métrica principal do treinador é a perda de predição do próximo byte (BPB) em treino/validação/teste. Ela mede qualidade estatística de predição no corpus, não compreensão semântica.
 
-Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. O script `scripts/evaluate-g1-qa.py` também avalia oito perguntas reservadas em `tests/fixtures/continual-eval/cases.json`, com paráfrases e tópicos factuais distintos, registrando exact match e token F1. Ela **não** encerra o treinamento, não cria marcador de sucesso e não altera o estado do workflow para `goal_reached`.
+Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. O script `scripts/evaluate-g1-qa.py` também avalia perguntas reservadas em `tests/fixtures/continual-eval/cases.json`, com paráfrases e tópicos factuais distintos, registrando exact match e token F1. Ela **não** encerra o treinamento, não cria marcador de sucesso e não altera o estado do workflow para `goal_reached`.
 
 O estado final possível do orçamento é `budget_exhausted`. Isso significa somente que o limite de épocas foi atingido. O status da avaliação semântica permanece `not_established` até existir um conjunto independente de perguntas e respostas, com critérios de aceitação que não sejam uma simples busca por substring.
 
