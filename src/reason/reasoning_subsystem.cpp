@@ -56,7 +56,8 @@ bool valid_name(std::string_view name) {
 
 std::size_t value_bytes(const Value& value) {
     if (const auto* text = std::get_if<std::string>(&value)) return text->size();
-    return sizeof(value);
+    if (std::holds_alternative<double>(value)) return sizeof(double);
+    return sizeof(bool);
 }
 
 bool valid_value(const Value& value, std::size_t maximum_bytes) {
@@ -159,11 +160,19 @@ common::Status check_conditions(const std::vector<Condition>& conditions,
     return common::Status::success();
 }
 
+std::size_t required_inputs(Operation operation);
+
 common::Result<Value> evaluate(const ReasoningStep& step,
                                const std::map<std::string, Value>& values,
                                const core::RequestContext& request) {
     if (step.operation == Operation::assign)
         return common::Result<Value>::success(step.literal);
+
+    if (!valid_operation(step.operation) ||
+        step.inputs.size() != required_inputs(step.operation)) {
+        return fail_result<Value>(common::ErrorCode::invalid_argument,
+            "operation has an invalid input signature", "execute", &request);
+    }
 
     std::vector<const Value*> operands;
     operands.reserve(step.inputs.size());
@@ -273,7 +282,8 @@ common::Status ReasoningSubsystem::validate_config(
     if (!runtime_valid) return runtime_valid;
     if (config_.max_steps == 0 || config_.max_steps > 32 ||
         config_.max_dependency_depth == 0 || config_.max_dependency_depth > 8 ||
-        config_.max_value_bytes == 0 || config_.max_objective_bytes == 0 ||
+        config_.max_value_bytes == 0 || config_.max_value_bytes > 4096 ||
+        config_.max_objective_bytes == 0 || config_.max_objective_bytes > 512 ||
         config_.max_recovery_attempts > 1) {
         return fail_status(common::ErrorCode::resource_limit,
             "IA-REAS configuration exceeds the supported deterministic planner limits",
@@ -356,7 +366,6 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
                 !step_by_id.emplace(step.id, i).second ||
                 plan.initial_values.contains(step.output) ||
                 !producer_by_key.emplace(step.output, i).second ||
-                !valid_operation(step.operation) ||
                 !valid_operation(step.operation) ||
                 step.inputs.size() != required_inputs(step.operation) ||
                 (step.operation == Operation::assign &&
@@ -489,6 +498,106 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
             "reasoning plan metadata is invalid", "execute", &request);
 
     try {
+        // A ReasoningPlan is a public value type and may have been modified after
+        // create_plan(). Reconstruct its dependency graph before executing anything.
+        std::unordered_map<std::string, std::size_t> step_by_id;
+        std::unordered_map<std::string, std::size_t> producer_by_key;
+        for (const auto& [key, value] : plan.initial_values) {
+            if (!valid_name(key) || !valid_value(value, config_.max_value_bytes))
+                return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                    "reasoning plan contains an invalid initial value",
+                    "execute.preflight", &request);
+        }
+        for (const auto& condition : plan.preconditions) {
+            if (!valid_condition(condition) ||
+                !valid_value(condition.expected, config_.max_value_bytes) ||
+                !plan.initial_values.contains(condition.key))
+                return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                    "reasoning plan contains an invalid task precondition",
+                    "execute.preflight", &request);
+        }
+        for (std::size_t i = 0; i < plan.ordered_steps.size(); ++i) {
+            const auto& step = plan.ordered_steps[i];
+            if (!valid_name(step.id) || !valid_name(step.output) ||
+                !valid_operation(step.operation) ||
+                step.inputs.size() != required_inputs(step.operation) ||
+                !step_by_id.emplace(step.id, i).second ||
+                plan.initial_values.contains(step.output) ||
+                !producer_by_key.emplace(step.output, i).second ||
+                (step.operation == Operation::assign &&
+                 !valid_value(step.literal, config_.max_value_bytes)) ||
+                (step.fallback &&
+                 !valid_value(*step.fallback, config_.max_value_bytes))) {
+                return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                    "reasoning plan contains a duplicate or malformed step",
+                    "execute.preflight", &request);
+            }
+            for (const auto& input : step.inputs)
+                if (!valid_name(input))
+                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                        "reasoning plan contains an invalid input name",
+                        "execute.preflight", &request);
+            for (const auto& condition : step.preconditions)
+                if (!valid_condition(condition) ||
+                    !valid_value(condition.expected, config_.max_value_bytes) ||
+                    condition.key == step.output)
+                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                        "reasoning plan contains an invalid step precondition",
+                        "execute.preflight", &request);
+            for (const auto& condition : step.postconditions)
+                if (!valid_condition(condition) ||
+                    !valid_value(condition.expected, config_.max_value_bytes) ||
+                    condition.key != step.output)
+                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                        "reasoning plan contains an invalid step postcondition",
+                        "execute.preflight", &request);
+        }
+
+        std::vector<std::size_t> verified_depths(plan.ordered_steps.size(), 1);
+        std::size_t verified_max_depth = 1;
+        for (std::size_t i = 0; i < plan.ordered_steps.size(); ++i) {
+            const auto& step = plan.ordered_steps[i];
+            std::set<std::size_t> parents;
+            std::unordered_set<std::string> unique_dependencies;
+            for (const auto& dependency : step.dependencies) {
+                const auto found = step_by_id.find(dependency);
+                if (found == step_by_id.end() || found->second >= i ||
+                    !unique_dependencies.insert(dependency).second) {
+                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                        "reasoning plan contains a missing, repeated, or forward dependency",
+                        "execute.preflight", &request);
+                }
+                parents.insert(found->second);
+            }
+            auto require_prior_value = [&](const std::string& key) -> bool {
+                if (plan.initial_values.contains(key)) return true;
+                const auto found = producer_by_key.find(key);
+                if (found == producer_by_key.end() || found->second >= i) return false;
+                parents.insert(found->second);
+                return true;
+            };
+            for (const auto& input : step.inputs)
+                if (!require_prior_value(input))
+                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                        "reasoning plan input has no prior producer: " + input,
+                        "execute.preflight", &request);
+            for (const auto& condition : step.preconditions)
+                if (!require_prior_value(condition.key))
+                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                        "reasoning plan precondition has no prior value: " + condition.key,
+                        "execute.preflight", &request);
+            for (const auto parent : parents)
+                verified_depths[i] = std::max(verified_depths[i],
+                                               verified_depths[parent] + 1);
+            verified_max_depth = std::max(verified_max_depth, verified_depths[i]);
+        }
+        if (verified_max_depth != plan.dependency_depth ||
+            verified_max_depth > config_.max_dependency_depth) {
+            return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                "reasoning plan dependency depth does not match its graph",
+                "execute.preflight", &request);
+        }
+
         ReasoningResult result;
         result.values = plan.initial_values;
         for (const auto& [key, value] : result.values) {
