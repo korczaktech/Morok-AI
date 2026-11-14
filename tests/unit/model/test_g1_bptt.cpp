@@ -90,10 +90,11 @@ int main() {
                 "BPTT gradient is unexpectedly zero");
         require(full.final_state.fast != G1State{}.fast,
                 "BPTT final fast state was not advanced");
-        for (std::size_t i = 971; i < kG1ParameterCount; ++i) {
-            require(full.gradients.values[i] == 0.0,
-                    "segmenter parameters must not receive B0 gradients");
-        }
+        double eos_gradient_norm = 0.0;
+        for (std::size_t i = 971; i < kG1ParameterCount; ++i)
+            eos_gradient_norm = std::hypot(eos_gradient_norm, full.gradients.values[i]);
+        require(eos_gradient_norm > 0.0,
+                "EOS parameters must receive continuation gradients from BPTT");
 
         require(std::abs(full.mean_loss_nats - reference_loss(parameters, bytes, {})) < 1e-11,
                 "BPTT forward loss differs from the production forward/evaluation path");
@@ -199,6 +200,18 @@ int main() {
             (void)compute_g1_bptt_gradients(bad_parameters, bytes, 2);
         } catch (const std::domain_error&) { rejected = true; }
         require(rejected, "BPTT must reject non-finite parameters");
+
+        G1State eos_state{};
+        eos_state.fast[0] = 0.5F;
+        eos_state.slow[0] = -0.25F;
+        const auto continue_eos = compute_g1_eos_gradients(parameters, eos_state, 12, false);
+        const auto stop_eos = compute_g1_eos_gradients(parameters, eos_state, 12, true);
+        require(continue_eos.gradients.values[993 + 3] > 0.0 &&
+                stop_eos.gradients.values[993 + 3] < 0.0,
+                "EOS labels must push stop bias in opposite directions");
+        require(continue_eos.gradients.global_norm() > 0.0 &&
+                stop_eos.gradients.global_norm() > 0.0,
+                "EOS head must produce finite trainable gradients");
 
         std::cout << "G1 BPTT tests passed\n";
         return 0;
