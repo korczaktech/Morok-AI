@@ -16,7 +16,7 @@
 namespace morok::model { namespace {
 using Bytes=std::vector<std::byte>;
 constexpr std::array<char,8> magic{'M','O','R','O','K','C','K','P'};
-constexpr std::array<char,32> arch=[] {std::array<char,32>a{};constexpr char s[]="RLAH-G1-fastslow-d11-bit8";for(std::size_t i=0;i<sizeof(s)-1;++i)a[i]=s[i];return a;}();
+constexpr std::array<char,32> arch=[] {std::array<char,32>a{};constexpr char s[]="RLAH-G1-fastslow-d11-bit8-eos";for(std::size_t i=0;i<sizeof(s)-1;++i)a[i]=s[i];return a;}();
 template<class T>void put(Bytes&b,T v){static_assert(std::is_integral_v<T>);using U=std::make_unsigned_t<T>;U x=static_cast<U>(v);for(std::size_t i=0;i<sizeof(T);++i)b.push_back(std::byte((x>>(i*8U))&0xffU));}
 void putf(Bytes&b,float v){put(b,std::bit_cast<std::uint32_t>(v));}
 template<class T>T get(std::span<const std::byte>b,std::size_t&p){static_assert(std::is_integral_v<T>);if(p+sizeof(T)>b.size())throw std::runtime_error("checkpoint truncado");using U=std::make_unsigned_t<T>;U x=0;for(std::size_t i=0;i<sizeof(T);++i)x|=U(std::to_integer<unsigned char>(b[p++]))<<(i*8U);return static_cast<T>(x);}
