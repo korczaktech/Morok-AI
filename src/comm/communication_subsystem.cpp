@@ -69,6 +69,7 @@ common::Status CommunicationSubsystem::initialize(
     if (!language_.initialized())
         return failure(common::ErrorCode::model_not_loaded,
                        "IA-LANG must be initialized before IA-COMM", "initialize");
+    max_conversations_ = std::min(limits_.max_conversations, config.max_sessions);
     initialized_ = true;
     return common::Status::success();
 }
@@ -97,7 +98,7 @@ CommunicationSubsystem::create_conversation() {
             return common::Result<common::ConversationId>::failure(
                 common::Error::make(common::ErrorCode::model_not_loaded,
                     "IA-COMM is not initialized", "comm", "conversation.create"));
-        if (conversations_.size() >= limits_.max_conversations)
+        if (conversations_.size() >= max_conversations_)
             return common::Result<common::ConversationId>::failure(
                 common::Error::make(common::ErrorCode::resource_limit,
                     "maximum active conversations reached", "comm", "conversation.create"));
