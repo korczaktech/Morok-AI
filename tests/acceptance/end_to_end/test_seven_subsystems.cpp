@@ -12,6 +12,7 @@
 #include <cassert>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <variant>
 
@@ -120,6 +121,33 @@ int main() {
     assert(response.value_if()->content.size() <= 12);
     auto history = communication.history(*conversation.value_if());
     assert(history && history.value_if()->size() >= 2);
+
+    const auto learning_root = fs::temp_directory_path() /
+        ("morok-stage19-learning-" + std::to_string(nonce));
+    const auto learning_corpus = learning_root / "corpus";
+    fs::create_directories(learning_corpus);
+    const auto fixture = fs::path(MOROK_TEST_SOURCE_DIR) /
+        "tests" / "fixtures" / "benchmark";
+    for (const auto& entry : fs::directory_iterator(fixture)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".txt")
+            fs::copy_file(entry.path(), learning_corpus / entry.path().filename());
+    }
+    model::G1TrainingConfig experiment;
+    experiment.corpus_directory = learning_corpus;
+    experiment.max_epochs = 1;
+    experiment.patience = 1;
+    experiment.truncation_length = 8;
+    experiment.seed = 19;
+    const auto original_parameters = parameters.flatten();
+    auto learning_result = learning.run_experiment(
+        *request.value_if(), experiment, parameters);
+    assert(learning_result);
+    assert(learning_result.value_if()->request_id ==
+           request.value_if()->request_id().to_string());
+    assert(learning_result.value_if()->report.unique_documents >= 3);
+    assert(learning_result.value_if()->parameter_evaluation.all_finite);
+    assert(parameters.flatten() == original_parameters);
+    fs::remove_all(learning_root);
 
     auto cleared_working = memory.store().clear_working(session);
     assert(cleared_working);
