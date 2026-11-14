@@ -7,6 +7,7 @@ on:
       - ".github/workflows/training.yml"
       - "scripts/run-g1-continual-cycle.sh"
       - "scripts/evaluate-g1-qa.py"
+      - "scripts/validate-g1-corpus.py"
       - "tests/fixtures/continual/**"
       - "tests/fixtures/continual-eval/**"
       - "docs/53-aprendizagem-continua-g1-actions.md"
@@ -176,8 +177,8 @@ jobs:
         shell: bash
         run: |
           generated="artifacts/continual-g1/generated.txt"
-          if [[ ! -f "$generated" ]]; then
-            echo "::error::generated.txt was not found; there is no generated response to display."
-            exit 1
+          if [[ -f "$generated" ]]; then
+            cat "$generated"
+          else
+            echo "::warning::generated.txt was not produced by this run."
           fi
-          cat "$generated"
