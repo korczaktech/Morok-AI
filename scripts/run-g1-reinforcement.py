@@ -123,6 +123,8 @@ def main() -> int:
         raise ValueError("database must contain exactly the three configured questions")
 
     bootstrap_if_needed(args.checkpoint, args.trainer, args.bootstrap_epochs)
+    run_id = os.environ.get("GITHUB_RUN_ID", "local")
+    run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
     summaries = []
     with tempfile.TemporaryDirectory(prefix="morok-g1-reinforcement-") as temp_dir:
         temporary = Path(temp_dir)
@@ -146,6 +148,9 @@ def main() -> int:
                 ])
                 episode = {
                     "episode": episode_number,
+                    "episode_id": f"{run_id}:{run_attempt}:oracle:{question_id}:v5",
+                    "run_id": run_id,
+                    "run_attempt": int(run_attempt),
                     "source": "oracle_demonstration",
                     "demonstration_version": 5,
                     "question_id": question_id,
@@ -199,6 +204,9 @@ def main() -> int:
             verdict, reward, reason = grade(question_id, answer)
             episode = {
                 "episode": episode_number,
+                "episode_id": f"{run_id}:{run_attempt}:generated:{question_id}",
+                "run_id": run_id,
+                "run_attempt": int(run_attempt),
                 "source": "model_generated",
                 "question_id": question_id,
                 "prompt": question["prompt"],
