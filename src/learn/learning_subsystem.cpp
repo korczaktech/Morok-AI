@@ -3,6 +3,7 @@
 #include <cmath>
 #include <new>
 #include <utility>
+#include <string_view>
 
 namespace morok::learn {
 namespace {
@@ -118,7 +119,13 @@ common::Result<LearningRunResult> LearningSubsystem::run_experiment(
         // Train a private candidate. The caller's live/inference parameters are
         // never modified by IA-LEARN.
         auto candidate = initial_parameters;
-        auto report = model::train_g1_corpus(experiment, candidate);
+        auto controlled_experiment = experiment;
+        const auto caller_cancellation = controlled_experiment.cancellation_requested;
+        controlled_experiment.cancellation_requested = [&request, caller_cancellation] {
+            return request.is_cancelled() ||
+                (caller_cancellation && caller_cancellation());
+        };
+        auto report = model::train_g1_corpus(controlled_experiment, candidate);
         if (request.is_cancelled())
             return failure<LearningRunResult>(error(
                 common::ErrorCode::cancelled,
@@ -140,9 +147,10 @@ common::Result<LearningRunResult> LearningSubsystem::run_experiment(
             common::ErrorCode::out_of_memory,
             "memory allocation failed during experiment", "run", &request));
     } catch (const std::exception& exception) {
+        const bool cancelled = std::string_view(exception.what()) == "training cancelled";
         return failure<LearningRunResult>(error(
-            common::ErrorCode::internal_error,
-            exception.what(), "run", &request));
+            cancelled ? common::ErrorCode::cancelled : common::ErrorCode::internal_error,
+            exception.what(), cancelled ? "cancel" : "run", &request));
     } catch (...) {
         return failure<LearningRunResult>(error(
             common::ErrorCode::internal_error,
