@@ -23,6 +23,8 @@ status_file="$state_dir/status.json"
 
 mkdir -p "$state_dir"
 
+python3 scripts/validate-g1-corpus.py
+
 # EOS changed the meaning of the final 29 model parameters. Never resume an
 # older checkpoint whose architecture identifier predates the EOS head.
 expected_arch="RLAH-G1-fastslow-d11-bit8-eos"
@@ -165,6 +167,9 @@ status = {
     "trainable_parameters": 1000,
     "architecture_id": "RLAH-G1-fastslow-d11-bit8-eos",
     "corpus_manifest_version": 2,
+    "corpus_license": "CC0-1.0",
+    "corpus_kind": "curated_factual_qa",
+    "corpus_topics": ["céu e atmosfera", "geografia", "astronomia", "água e química", "plantas e ecologia", "animais", "corpo humano", "matemática", "física"],
     "qa_evaluation": "token-overlap diagnostic only; semantic acceptance not established",
     "architecture_parameters": 1000,
     "corpus_documents": len(files),
@@ -178,10 +183,11 @@ status = {
         "reason": "No held-out semantic evaluation is implemented; lexical matching cannot establish understanding."
     },
     "limitations": [
-        "The curated fixture contains a small set of authored Portuguese paraphrases.",
+        "The curated fixture contains 52 manually authored Portuguese factual question-answer documents under CC0-1.0.",
         "The 29 EOS-head parameters are updated by continuation and document-boundary objectives.",
-        "The model may memorize the fixed prompt and corpus.",
-        "A valid UTF-8 continuation and a lexical match do not prove semantic correctness."
+        "The model may memorize the fixed prompt and corpus; broader generalization is not established.",
+        "A valid UTF-8 continuation and lexical overlap scores do not prove semantic correctness.",
+        "The corpus contains introductory facts, not a comprehensive or independently peer-reviewed knowledge base."
     ]
 }
 (out / "status.json").write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n")
