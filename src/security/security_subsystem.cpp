@@ -158,7 +158,7 @@ common::Status SecuritySubsystem::grant_tool(
     record.type = SecurityEventType::grant_added;
     record.subject_id = principal.subject_id;
     record.session_id = principal.session_id;
-    record.tool_name = std::move(tool_name);
+    record.tool_name = tool_name;
     record.operation = "grant";
     const auto written = audit(std::move(record));
     if (!written) {
@@ -225,6 +225,8 @@ common::Result<tools::ToolAccessPolicy> SecuritySubsystem::tool_policy(
     for (const auto& grant : grants_) {
         if (grant.subject_id != principal.subject_id ||
             !(grant.session_id == principal.session_id)) continue;
+        policy.exact_grants.push_back(tools::ToolPermissionGrant{
+            grant.tool_name, grant.capability});
         if (std::find(policy.allowed_tools.begin(), policy.allowed_tools.end(),
                       grant.tool_name) == policy.allowed_tools.end()) {
             policy.allowed_tools.push_back(grant.tool_name);
@@ -342,6 +344,10 @@ common::Result<ConfirmationGrant> SecuritySubsystem::approve_confirmation(
         expired = pending.expires_at <= std::chrono::system_clock::now();
         if (expired) {
             confirmations_.erase(found);
+        } else if (pending.approved) {
+            return result_failure<ConfirmationGrant>(
+                common::ErrorCode::confirmation_required,
+                "confirmation ticket has already been approved", "confirmation");
         } else if (!(pending.principal.subject_id == principal.subject_id &&
                      pending.principal.session_id == principal.session_id) ||
                    !same_action(pending.action, action) ||
