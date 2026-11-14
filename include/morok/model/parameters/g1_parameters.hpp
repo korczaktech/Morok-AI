@@ -42,7 +42,7 @@ struct G1Parameters {
     std::array<float, 8> c{};
     std::array<float, 28> A{};
 
-    // Adaptive segmenter scorer: 22 features and seven length biases.
+    // Learned end-of-sequence head: 22 recurrent-state weights and seven length-bucket biases.
     std::array<float, 22> v{};
     std::array<float, 7> theta_len{};
 
