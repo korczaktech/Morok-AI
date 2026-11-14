@@ -40,7 +40,7 @@ Os valores são gravados no JSONL persistente da execução. A média de norma �
 O executável `morok_benchmark` acrescenta ao JSONL:
 - contagem de parâmetros da arquitetura (1.000), contagem atualizada pelo caminho B0 (1.000) e verificação de finitude; os 29 parâmetros do segmentador permanecem reservados e não são atualizados pelo B0;
 - média, desvio-padrão, mínimo e máximo da distribuição global;
-- média e desvio-padrão por grupo rápido, lento, predição e segmentador;
+- média e desvio-padrão por grupo rápido, lento, predição e EOS;
 - perplexidade por byte de treino, validação e teste;
 - norma média ponderada e norma máxima de gradiente; tempo médio e máximo por época;
 - diferença absoluta e razão de BPB entre G1 e baseline unigram.
@@ -64,7 +64,7 @@ As comparações alteram uma dimensão por vez. Repetições usam sementes expl�
 - Baseline atual: softmax-256 unigram com suavização add-one. Não possui contexto e não é uma rede neural de capacidade equivalente.
 - Baseline softmax-256 neural condicionado ao mesmo estado recorrente: ainda pendente.
 - A matriz atual compara BPTT, otimizador e learning rate; não executa automaticamente todas as ablações de arquitetura previstas.
-- Comparação fast/slow contra RNN simples, segmentação ligada/desligada, hierarquia de escalas e pesos adaptativos/fixos continuam pendentes. A cabeça EOS de 29 parâmetros participa da geração e é treinada com fronteiras de documentos; sua qualidade precisa ser avaliada em dados com limites de resposta representativos.
+- Comparação fast/slow contra RNN simples, cabeça EOS ligada/desligada, hierarquia de escalas e pesos adaptativos/fixos continuam pendentes. A cabeça EOS de 29 parâmetros participa da geração e é treinada com fronteiras de documentos; sua qualidade precisa ser avaliada em dados com limites de resposta representativos.
 - O conjunto de fixtures sintéticos em CI verifica o mecanismo e as fórmulas, não aprendizagem de linguagem.
 - Ainda é necessário corpus real/licenciado com origem, licença e hash verificáveis, múltiplas sementes e execução no hardware de referência de 4 GB.
 - O pico RSS é máximo cumulativo do processo da campanha; não é uma medição isolada por configuração nem prova de consumo total do dispositivo.
