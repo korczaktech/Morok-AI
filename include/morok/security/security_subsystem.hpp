@@ -22,18 +22,24 @@ enum class ContentOrigin {
     external_document,
     retrieved_memory,
     model_output,
-    tool_output,
-    trusted_configuration
+    tool_output
 };
 
-struct TrustLabel final {
-    ContentOrigin origin{ContentOrigin::user_input};
-    std::string source_id;
-    bool untrusted{true};
+class TrustLabel final {
+public:
+    [[nodiscard]] ContentOrigin origin() const noexcept { return origin_; }
+    [[nodiscard]] const std::string& source_id() const noexcept { return source_id_; }
+    [[nodiscard]] bool is_untrusted() const noexcept { return true; }
+
+private:
+    TrustLabel(ContentOrigin origin, std::string source_id)
+        : origin_(origin), source_id_(std::move(source_id)) {}
+    ContentOrigin origin_;
+    std::string source_id_;
+    friend TrustLabel classify_content(ContentOrigin, std::string);
 };
 
 [[nodiscard]] TrustLabel classify_content(ContentOrigin origin, std::string source_id = {});
-[[nodiscard]] bool may_supply_security_policy(const TrustLabel& label) noexcept;
 
 struct SecurityPrincipal final {
     std::string subject_id;
