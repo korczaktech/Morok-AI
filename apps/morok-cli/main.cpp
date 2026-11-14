@@ -4,6 +4,7 @@
 #include "morok/model/learn/g1_evaluation.hpp"
 #include "morok/model/learn/g1_generation.hpp"
 
+#include <charconv>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -75,7 +76,14 @@ int main(int argc, char** argv) {
             const auto prompt_result = morok::common::Utf8Text::from_utf8(prompt_raw);
             if (!prompt_result) throw std::runtime_error("prompt is not valid UTF-8");
             std::size_t max_bytes = 256;
-            if (argc == 6) max_bytes = static_cast<std::size_t>(std::stoull(argv[5]));
+            if (argc == 6) {
+                const std::string_view value(argv[5]);
+                const auto parsed = std::from_chars(
+                    value.data(), value.data() + value.size(), max_bytes);
+                if (value.empty() || parsed.ec != std::errc{} ||
+                    parsed.ptr != value.data() + value.size())
+                    throw std::invalid_argument("max_bytes must be an integer");
+            }
             if (max_bytes == 0 || max_bytes > 4096)
                 throw std::invalid_argument("max_bytes must be between 1 and 4096");
             const auto result = morok::model::generate_g1(
