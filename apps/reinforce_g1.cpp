@@ -5,12 +5,14 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace {
 std::string read_file(const char* path) {
