@@ -154,6 +154,7 @@ common::Status SecuritySubsystem::grant_tool(
         grants_.push_back(SecurityGrant{
             principal.subject_id, principal.session_id, tool_name, capability});
     }
+    const auto rollback_tool_name = tool_name;
     SecurityAuditRecord record;
     record.type = SecurityEventType::grant_added;
     record.subject_id = principal.subject_id;
@@ -166,7 +167,7 @@ common::Status SecuritySubsystem::grant_tool(
         std::erase_if(grants_, [&](const SecurityGrant& grant) {
             return grant.subject_id == principal.subject_id &&
                    grant.session_id == principal.session_id &&
-                   grant.tool_name == record.tool_name &&
+                   grant.tool_name == rollback_tool_name &&
                    grant.capability == capability;
         });
         return written;
