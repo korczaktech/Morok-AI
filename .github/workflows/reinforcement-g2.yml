@@ -7,6 +7,7 @@ on:
       - "apps/reinforce_g2.cpp"
       - "scripts/run-g2-reinforcement.py"
       - "tests/unit/model/test_g2_reinforcement.cpp"
+      - "tests/scripts/test_g2_reinforcement.py"
       - "data/reinforcement-g2/answers.json"
       - "docs/56-aprendizado-por-reforco-g2.md"
       - "CMakeLists.txt"
