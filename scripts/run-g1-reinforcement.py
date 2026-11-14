@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one reward-driven episode for each of the three Morok G1 questions."""
+"""Run a fixed number of reward-driven G1 answer attempts."""
 from __future__ import annotations
 
 import argparse
@@ -108,11 +108,15 @@ def main() -> int:
     parser.add_argument("--reinforcer", type=Path, default=ROOT / "build" / "morok-reinforce")
     parser.add_argument("--trainer", type=Path, default=ROOT / "build" / "morok-train")
     parser.add_argument("--bootstrap-epochs", type=int, default=8)
+    parser.add_argument("--attempts", type=int, default=3)
+    parser.add_argument("--results-file", type=Path, default=ROOT / "artifacts" / "reinforcement" / "attempt-results.txt")
     parser.add_argument("--learning-rate", type=float, default=0.0001)
     args = parser.parse_args()
 
     if args.bootstrap_epochs < 1 or args.bootstrap_epochs > 100:
         raise ValueError("bootstrap-epochs must be between 1 and 100")
+    if args.attempts < 1 or args.attempts > 100:
+        raise ValueError("attempts must be between 1 and 100")
     if not args.database.is_file():
         raise FileNotFoundError(f"feedback database not found: {args.database}")
     database = json.loads(args.database.read_text(encoding="utf-8"))
@@ -214,7 +218,10 @@ def main() -> int:
             database["oracle_demonstration_version"] = 6
             atomic_write(args.database, database)
 
-        for offset, question in enumerate(questions):
+        # Exactly N generated attempts, rotating through the three questions.
+        # Correct and incorrect verdicts are both recorded and never stop the loop.
+        for attempt_index in range(args.attempts):
+            question = questions[attempt_index % len(questions)]
             question_id = question["id"]
             prompt_path = temporary / f"{question_id}.prompt.txt"
             answer_path = temporary / f"{question_id}.answer.txt"
@@ -238,7 +245,7 @@ def main() -> int:
             verdict, reward, reason = grade(question_id, answer)
             episode = {
                 "episode": episode_number,
-                "episode_id": f"{run_id}:{run_attempt}:generated:{question_id}",
+                "episode_id": f"{run_id}:{run_attempt}:generated:{attempt_index + 1}:{question_id}",
                 "run_id": run_id,
                 "run_attempt": int(run_attempt),
                 "source": "model_generated",
@@ -289,6 +296,7 @@ def main() -> int:
             episode["model_sha256_after"] = sha256(args.checkpoint)
             atomic_write(args.database, database)
             summaries.append({
+                "attempt": attempt_index + 1,
                 "episode": episode_number,
                 "question_id": question_id,
                 "answer": answer,
@@ -297,14 +305,34 @@ def main() -> int:
                 "policy_update": episode["policy_update"]["status"],
             })
 
-    print(json.dumps({
-        "episodes_this_run": len(summaries),
+    result_lines = [
+        f"{item['attempt']}. {item['answer'].replace(chr(10), ' ').replace(chr(13), ' ').strip() or '[resposta vazia]'} - "
+        f"{'correto' if item['verdict'] == 'correct' else 'errado'}"
+        for item in summaries
+    ]
+    args.results_file.parent.mkdir(parents=True, exist_ok=True)
+    args.results_file.write_text("\n".join(result_lines) + "\n", encoding="utf-8")
+    report = {
+        "attempts_requested": args.attempts,
+        "attempts_completed": len(summaries),
         "totals": database["totals"],
         "results": summaries,
         "database": str(args.database),
         "checkpoint_sha256": sha256(args.checkpoint),
         "trainable_parameters": 1000,
-    }, ensure_ascii=False, indent=2))
+    }
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with open(summary_path, "a", encoding="utf-8") as summary:
+            summary.write(f"## Resultado das {len(summaries)} tentativas\n\n")
+            summary.write("| # | Pergunta | Resposta da IA | Resultado |\n")
+            summary.write("|---:|---|---|---|\n")
+            for item in summaries:
+                answer = item["answer"].replace("|", "\\|").replace("\n", " ").replace("\r", " ").strip() or "[resposta vazia]"
+                verdict = "correto" if item["verdict"] == "correct" else "errado"
+                summary.write(f"| {item['attempt']} | {item['question_id']} | {answer} | {verdict} |\n")
+            summary.write(f"\nTentativas solicitadas: **{args.attempts}**. Concluídas: **{len(summaries)}**.\n")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
 
 
