@@ -5,13 +5,12 @@
 #include <sqlite3.h>
 
 #include <algorithm>
-#include <chrono>
 #include <cctype>
 #include <cstdint>
-#include <limits>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace morok::memory {
 namespace {
@@ -29,10 +28,9 @@ using common::Status;
 
 class Statement final {
 public:
-    Statement(sqlite3* db, const char* sql) : db_(db) {
-        if (sqlite3_prepare_v2(db, sql, -1, &statement_, nullptr) != SQLITE_OK) {
+    Statement(sqlite3* db, const char* sql) {
+        if (sqlite3_prepare_v2(db, sql, -1, &statement_, nullptr) != SQLITE_OK)
             statement_ = nullptr;
-        }
     }
     ~Statement() { if (statement_) sqlite3_finalize(statement_); }
     Statement(const Statement&) = delete;
@@ -40,37 +38,26 @@ public:
     [[nodiscard]] sqlite3_stmt* get() const noexcept { return statement_; }
     [[nodiscard]] explicit operator bool() const noexcept { return statement_ != nullptr; }
 private:
-    sqlite3* db_{};
     sqlite3_stmt* statement_{};
 };
 
 void bind_text(sqlite3_stmt* stmt, int index, std::string_view value) {
-    sqlite3_bind_text(stmt, index, value.data(),
+    (void)sqlite3_bind_text(stmt, index, value.data(),
         static_cast<int>(value.size()), SQLITE_TRANSIENT);
 }
 
 [[nodiscard]] std::string column_text(sqlite3_stmt* stmt, int column) {
     const auto* value = sqlite3_column_text(stmt, column);
-    const auto bytes = sqlite3_column_bytes(stmt, column);
+    const int bytes = sqlite3_column_bytes(stmt, column);
     if (value == nullptr || bytes <= 0) return {};
     return std::string(reinterpret_cast<const char*>(value),
                        static_cast<std::size_t>(bytes));
 }
 
-[[nodiscard]] int kind_value(MemoryKind kind) {
-    return static_cast<int>(kind);
-}
-[[nodiscard]] int source_value(MemorySource source) {
-    return static_cast<int>(source);
-}
-[[nodiscard]] int sensitivity_value(Sensitivity sensitivity) {
-    return static_cast<int>(sensitivity);
-}
-
 [[nodiscard]] std::string literal_fts_query(std::string_view input) {
     std::string query;
     std::string token;
-    const auto flush = [&]() mutable {
+    auto flush = [&]() {
         if (token.empty()) return;
         if (!query.empty()) query += " AND ";
         query += '"';
@@ -89,38 +76,65 @@ void bind_text(sqlite3_stmt* stmt, int index, std::string_view value) {
     return query;
 }
 
+[[nodiscard]] Status exec(sqlite3* db, const char* sql, std::string stage) {
+    char* message = nullptr;
+    if (sqlite3_exec(db, sql, nullptr, nullptr, &message) == SQLITE_OK)
+        return Status::success();
+    const std::string detail = message ? message : sqlite3_errmsg(db);
+    sqlite3_free(message);
+    return Status::failure(Error::make(
+        ErrorCode::internal_error, detail, "memory", std::move(stage)));
+}
+
+[[nodiscard]] Status insert_audit(sqlite3* db, std::string_view memory_id,
+    std::string_view session_id, std::string_view actor, std::string_view action,
+    std::string_view outcome, const std::optional<common::RequestId>& request_id) {
+    Statement statement(db,
+        "INSERT INTO memory_audit(memory_id,session_id,request_id,actor,action,occurred_at,outcome)"
+        " VALUES(?,?,?,?,?,?,?)");
+    if (!statement) return Status::failure(db_error(db, "prepare_audit"));
+    bind_text(statement.get(), 1, memory_id);
+    bind_text(statement.get(), 2, session_id);
+    if (request_id) bind_text(statement.get(), 3, request_id->to_string());
+    else sqlite3_bind_null(statement.get(), 3);
+    bind_text(statement.get(), 4, actor);
+    bind_text(statement.get(), 5, action);
+    sqlite3_bind_int64(statement.get(), 6,
+        common::Timestamp::now().unix_nanoseconds());
+    bind_text(statement.get(), 7, outcome);
+    if (sqlite3_step(statement.get()) != SQLITE_DONE)
+        return Status::failure(db_error(db, "insert_audit"));
+    return Status::success();
+}
+
 [[nodiscard]] Result<MemoryRecord> read_record(sqlite3_stmt* stmt) {
-    auto id = common::Utf8Text::from_utf8(column_text(stmt, 0));
-    auto session = common::Utf8Text::from_utf8(column_text(stmt, 1));
+    auto id = common::MemoryId::from_string(column_text(stmt, 0));
+    auto session = common::SessionId::from_string(column_text(stmt, 1));
     auto title = common::Utf8Text::from_utf8(column_text(stmt, 4));
     auto body = common::Utf8Text::from_utf8(column_text(stmt, 5));
-    auto source_id = common::Utf8Text::from_utf8(column_text(stmt, 7));
-    if (!id || !session || !title || !body || !source_id) {
+    if (!id || !session || !title || !body) {
         return Result<MemoryRecord>::failure(Error::make(
-            ErrorCode::internal_error, "database contains invalid UTF-8",
+            ErrorCode::internal_error, "database contains invalid memory data",
             "memory", "decode_record"));
     }
-    // Strong IDs are created at write time; records are addressed externally by their UUID strings.
-    auto parsed_id = common::MemoryId::generate();
-    auto parsed_session = common::SessionId::generate();
-    if (!parsed_id || !parsed_session) {
-        return Result<MemoryRecord>::failure(Error::make(
-            ErrorCode::internal_error, "unable to create typed memory result",
-            "memory", "decode_record"));
-    }
+    auto source_id = column_text(stmt, 6);
     const auto created = common::Timestamp::from_unix_nanoseconds(
-        sqlite3_column_int64(stmt, 9));
+        sqlite3_column_int64(stmt, 8));
     std::optional<common::Timestamp> expires;
-    if (sqlite3_column_type(stmt, 10) != SQLITE_NULL) {
+    if (sqlite3_column_type(stmt, 9) != SQLITE_NULL)
         expires = common::Timestamp::from_unix_nanoseconds(
-            sqlite3_column_int64(stmt, 10));
-    }
-    // UUID value constructors are intentionally private; return the canonical IDs via
-    // dedicated string fields in the public record in a future schema revision.
-    return Result<MemoryRecord>::failure(Error::make(
-        ErrorCode::internal_error,
-        "typed identifier decoding is unavailable for persisted UUID values",
-        "memory", "decode_record"));
+            sqlite3_column_int64(stmt, 9));
+
+    MemoryRecord record{
+        *id.value_if(), *session.value_if(),
+        static_cast<MemoryKind>(sqlite3_column_int(stmt, 2)),
+        std::move(*title.value_if()), std::move(*body.value_if()),
+        static_cast<MemorySource>(sqlite3_column_int(stmt, 3)),
+        std::move(source_id),
+        static_cast<Sensitivity>(sqlite3_column_int(stmt, 7)),
+        created, expires
+    };
+    return Result<MemoryRecord>::success(std::move(record));
 }
 
 constexpr const char* record_columns =
@@ -159,7 +173,7 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
     }
     impl_->db = db;
     impl_->limits = limits;
-    sqlite3_busy_timeout(db, static_cast<int>(limits.busy_timeout_ms));
+    (void)sqlite3_busy_timeout(db, static_cast<int>(limits.busy_timeout_ms));
 
     const char* schema =
         "PRAGMA foreign_keys=ON;"
@@ -180,13 +194,11 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
         " outcome TEXT NOT NULL);"
         "CREATE INDEX IF NOT EXISTS idx_memory_audit_session ON memory_audit(session_id,occurred_at);"
         "INSERT OR IGNORE INTO schema_migrations(version,applied_at) VALUES(1,unixepoch());";
-    char* message = nullptr;
-    if (sqlite3_exec(db, schema, nullptr, nullptr, &message) != SQLITE_OK) {
-        const std::string detail = message ? message : sqlite3_errmsg(db);
-        sqlite3_free(message);
+    const auto schema_result = exec(db, schema, "schema_migration");
+    if (!schema_result) {
+        const auto error = *schema_result.error_if();
         (void)close();
-        return Status::failure(Error::make(ErrorCode::internal_error, detail,
-            "memory", "schema_migration"));
+        return Status::failure(error);
     }
 
     const char* fts_schema =
@@ -199,11 +211,10 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
         "CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN "
         "INSERT INTO memories_fts(memories_fts,rowid,title,body) VALUES('delete',old.rowid,old.title,old.body);"
         "INSERT INTO memories_fts(rowid,title,body) VALUES(new.rowid,new.title,new.body); END;";
-    if (sqlite3_exec(db, fts_schema, nullptr, nullptr, nullptr) == SQLITE_OK) {
+    if (exec(db, fts_schema, "fts5_setup")) {
         impl_->fts = true;
-        (void)sqlite3_exec(db,
-            "INSERT INTO memories_fts(memories_fts) VALUES('rebuild');",
-            nullptr, nullptr, nullptr);
+        (void)exec(db, "INSERT INTO memories_fts(memories_fts) VALUES('rebuild');",
+                   "fts5_rebuild");
     } else {
         impl_->fts = false;
     }
@@ -228,85 +239,250 @@ Result<common::MemoryId> MemoryStore::store(
     const std::optional<common::RequestId>& request_id) {
     if (!is_open()) return Result<common::MemoryId>::failure(Error::make(
         ErrorCode::internal_error, "memory store is not open", "memory", "store"));
-    if (input.title.size_bytes() + input.body.size_bytes() > impl_->limits.max_record_bytes ||
-        input.body.empty() || input.session_id.is_nil()) {
+    const auto total_bytes = input.title.size_bytes() + input.body.size_bytes() +
+        input.source_id.size();
+    if (total_bytes > impl_->limits.max_record_bytes || input.body.empty() ||
+        input.session_id.is_nil() || input.source_id.empty()) {
         return Result<common::MemoryId>::failure(Error::make(
-            ErrorCode::input_too_large, "memory record is empty or exceeds size limit",
+            total_bytes > impl_->limits.max_record_bytes ? ErrorCode::input_too_large
+                                                         : ErrorCode::invalid_argument,
+            "memory record is invalid or exceeds the configured size limit",
             "memory", "store"));
     }
     auto id = common::MemoryId::generate();
     if (!id) return id;
+    const auto memory_id = id.value_if()->to_string();
+    const auto session_id = input.session_id.to_string();
+    auto begin = exec(impl_->db, "BEGIN IMMEDIATE", "begin_store");
+    if (!begin) return Result<common::MemoryId>::failure(*begin.error_if());
+
     Statement statement(impl_->db,
         "INSERT INTO memories(id,session_id,kind,source,title,body,source_id,sensitivity,created_at,expires_at)"
         " VALUES(?,?,?,?,?,?,?,?,?,?)");
-    if (!statement) return Result<common::MemoryId>::failure(db_error(impl_->db, "prepare_store"));
-    const auto memory_id = id.value_if()->to_string();
-    const auto session_id = input.session_id.to_string();
+    if (!statement) {
+        (void)exec(impl_->db, "ROLLBACK", "rollback_store");
+        return Result<common::MemoryId>::failure(db_error(impl_->db, "prepare_store"));
+    }
     bind_text(statement.get(), 1, memory_id);
     bind_text(statement.get(), 2, session_id);
-    sqlite3_bind_int(statement.get(), 3, kind_value(input.kind));
-    sqlite3_bind_int(statement.get(), 4, source_value(input.source));
+    sqlite3_bind_int(statement.get(), 3, static_cast<int>(input.kind));
+    sqlite3_bind_int(statement.get(), 4, static_cast<int>(input.source));
     bind_text(statement.get(), 5, input.title.view());
     bind_text(statement.get(), 6, input.body.view());
     bind_text(statement.get(), 7, input.source_id);
-    sqlite3_bind_int(statement.get(), 8, sensitivity_value(input.sensitivity));
+    sqlite3_bind_int(statement.get(), 8, static_cast<int>(input.sensitivity));
     sqlite3_bind_int64(statement.get(), 9, common::Timestamp::now().unix_nanoseconds());
-    if (input.expires_at) sqlite3_bind_int64(statement.get(), 10, input.expires_at->unix_nanoseconds());
+    if (input.expires_at)
+        sqlite3_bind_int64(statement.get(), 10, input.expires_at->unix_nanoseconds());
     else sqlite3_bind_null(statement.get(), 10);
-    if (sqlite3_step(statement.get()) != SQLITE_DONE)
-        return Result<common::MemoryId>::failure(db_error(impl_->db, "insert_memory"));
-
-    Statement audit(impl_->db,
-        "INSERT INTO memory_audit(memory_id,session_id,request_id,actor,action,occurred_at,outcome)"
-        " VALUES(?,?,?,'system','store',?,'success')");
-    if (audit) {
-        bind_text(audit.get(), 1, memory_id);
-        bind_text(audit.get(), 2, session_id);
-        if (request_id) bind_text(audit.get(), 3, request_id->to_string());
-        else sqlite3_bind_null(audit.get(), 3);
-        sqlite3_bind_int64(audit.get(), 4, common::Timestamp::now().unix_nanoseconds());
-        (void)sqlite3_step(audit.get());
+    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+        const auto error = db_error(impl_->db, "insert_memory");
+        (void)exec(impl_->db, "ROLLBACK", "rollback_store");
+        return Result<common::MemoryId>::failure(error);
+    }
+    const auto audit = insert_audit(impl_->db, memory_id, session_id,
+        "system", "store", "success", request_id);
+    if (!audit) {
+        const auto error = *audit.error_if();
+        (void)exec(impl_->db, "ROLLBACK", "rollback_store");
+        return Result<common::MemoryId>::failure(error);
+    }
+    const auto commit = exec(impl_->db, "COMMIT", "commit_store");
+    if (!commit) {
+        const auto error = *commit.error_if();
+        (void)exec(impl_->db, "ROLLBACK", "rollback_store");
+        return Result<common::MemoryId>::failure(error);
     }
     return Result<common::MemoryId>::success(*id.value_if());
 }
 
 Result<MemoryRecord> MemoryStore::retrieve(
     const common::SessionId& session_id, const common::MemoryId& memory_id) {
-    (void)session_id; (void)memory_id;
-    return Result<MemoryRecord>::failure(Error::make(
-        ErrorCode::internal_error, "typed UUID decoding is pending", "memory", "retrieve"));
+    if (!is_open()) return Result<MemoryRecord>::failure(Error::make(
+        ErrorCode::internal_error, "memory store is not open", "memory", "retrieve"));
+    const std::string sql = std::string("SELECT ") + record_columns +
+        " FROM memories m WHERE m.id=? AND m.session_id=? AND "
+        "(m.expires_at IS NULL OR m.expires_at>?)";
+    Statement statement(impl_->db, sql.c_str());
+    if (!statement) return Result<MemoryRecord>::failure(db_error(impl_->db, "prepare_retrieve"));
+    bind_text(statement.get(), 1, memory_id.to_string());
+    bind_text(statement.get(), 2, session_id.to_string());
+    sqlite3_bind_int64(statement.get(), 3, common::Timestamp::now().unix_nanoseconds());
+    if (sqlite3_step(statement.get()) != SQLITE_ROW)
+        return Result<MemoryRecord>::failure(Error::make(
+            ErrorCode::invalid_argument, "memory not found in this session",
+            "memory", "retrieve"));
+    return read_record(statement.get());
 }
 
 Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) {
-    (void)query;
-    return Result<std::vector<MemoryRecord>>::failure(Error::make(
-        ErrorCode::internal_error, "typed UUID decoding is pending", "memory", "search"));
+    if (!is_open()) return Result<std::vector<MemoryRecord>>::failure(Error::make(
+        ErrorCode::internal_error, "memory store is not open", "memory", "search"));
+    if (query.text.empty() || query.session_id.is_nil())
+        return Result<std::vector<MemoryRecord>>::failure(Error::make(
+            ErrorCode::invalid_argument, "search text and session are required",
+            "memory", "search"));
+    const auto limit = std::min(query.limit, impl_->limits.max_results);
+    const auto context_limit = std::min(query.max_context_bytes,
+                                        impl_->limits.max_context_bytes);
+    if (limit == 0 || context_limit == 0)
+        return Result<std::vector<MemoryRecord>>::failure(Error::make(
+            ErrorCode::invalid_argument, "search limits must be positive",
+            "memory", "search"));
+
+    std::string sql;
+    if (impl_->fts) {
+        sql = std::string("SELECT ") + record_columns +
+            " FROM memories_fts JOIN memories m ON m.rowid=memories_fts.rowid"
+            " WHERE memories_fts MATCH ? AND m.session_id=?"
+            " AND (m.expires_at IS NULL OR m.expires_at>?)";
+    } else {
+        sql = std::string("SELECT ") + record_columns +
+            " FROM memories m WHERE m.session_id=? AND (m.title LIKE ? OR m.body LIKE ?)"
+            " AND (m.expires_at IS NULL OR m.expires_at>?)";
+    }
+    if (query.kind) sql += " AND m.kind=?";
+    sql += impl_->fts ? " ORDER BY rank LIMIT ?" : " ORDER BY m.created_at DESC LIMIT ?";
+
+    Statement statement(impl_->db, sql.c_str());
+    if (!statement) return Result<std::vector<MemoryRecord>>::failure(
+        db_error(impl_->db, "prepare_search"));
+    int bind_index = 1;
+    if (impl_->fts) {
+        const auto fts_query = literal_fts_query(query.text.view());
+        if (fts_query.empty()) return Result<std::vector<MemoryRecord>>::failure(
+            Error::make(ErrorCode::invalid_argument, "search has no searchable terms",
+                        "memory", "search"));
+        bind_text(statement.get(), bind_index++, fts_query);
+        bind_text(statement.get(), bind_index++, query.session_id.to_string());
+    } else {
+        bind_text(statement.get(), bind_index++, query.session_id.to_string());
+        const std::string pattern = "%" + std::string(query.text.view()) + "%";
+        bind_text(statement.get(), bind_index++, pattern);
+        bind_text(statement.get(), bind_index++, pattern);
+    }
+    sqlite3_bind_int64(statement.get(), bind_index++,
+                       common::Timestamp::now().unix_nanoseconds());
+    if (query.kind) sqlite3_bind_int(statement.get(), bind_index++,
+                                     static_cast<int>(*query.kind));
+    sqlite3_bind_int64(statement.get(), bind_index, static_cast<sqlite3_int64>(limit));
+
+    std::vector<MemoryRecord> records;
+    std::size_t used_bytes = 0;
+    while (sqlite3_step(statement.get()) == SQLITE_ROW) {
+        const auto title_bytes = static_cast<std::size_t>(
+            std::max(0, sqlite3_column_bytes(statement.get(), 4)));
+        const auto body_bytes = static_cast<std::size_t>(
+            std::max(0, sqlite3_column_bytes(statement.get(), 5)));
+        const auto record_bytes = title_bytes + body_bytes;
+        if (record_bytes > context_limit - std::min(used_bytes, context_limit)) continue;
+        auto record = read_record(statement.get());
+        if (!record) return Result<std::vector<MemoryRecord>>::failure(*record.error_if());
+        used_bytes += record_bytes;
+        records.push_back(std::move(*record.value_if()));
+    }
+    return Result<std::vector<MemoryRecord>>::success(std::move(records));
 }
 
 Status MemoryStore::erase(const common::SessionId& session_id,
     const common::MemoryId& memory_id, std::string actor,
     const std::optional<common::RequestId>& request_id) {
-    (void)session_id; (void)memory_id; (void)actor; (void)request_id;
-    return Status::failure(Error::make(ErrorCode::internal_error,
-        "typed UUID decoding is pending", "memory", "erase"));
+    if (!is_open()) return Status::failure(Error::make(
+        ErrorCode::internal_error, "memory store is not open", "memory", "erase"));
+    if (actor.empty()) return Status::failure(Error::make(
+        ErrorCode::invalid_argument, "audit actor is required", "memory", "erase"));
+    const auto begin = exec(impl_->db, "BEGIN IMMEDIATE", "begin_erase");
+    if (!begin) return begin;
+    Statement exists(impl_->db, "SELECT 1 FROM memories WHERE id=? AND session_id=?");
+    if (!exists) { (void)exec(impl_->db, "ROLLBACK", "rollback_erase");
+        return Status::failure(db_error(impl_->db, "prepare_erase")); }
+    bind_text(exists.get(), 1, memory_id.to_string());
+    bind_text(exists.get(), 2, session_id.to_string());
+    if (sqlite3_step(exists.get()) != SQLITE_ROW) {
+        (void)exec(impl_->db, "ROLLBACK", "rollback_erase");
+        return Status::failure(Error::make(ErrorCode::invalid_argument,
+            "memory not found in this session", "memory", "erase"));
+    }
+    const auto audit = insert_audit(impl_->db, memory_id.to_string(),
+        session_id.to_string(), actor, "delete", "success", request_id);
+    if (!audit) { const auto error=*audit.error_if();
+        (void)exec(impl_->db, "ROLLBACK", "rollback_erase");
+        return Status::failure(error); }
+    Statement remove(impl_->db, "DELETE FROM memories WHERE id=? AND session_id=?");
+    if (!remove) { (void)exec(impl_->db, "ROLLBACK", "rollback_erase");
+        return Status::failure(db_error(impl_->db, "prepare_delete")); }
+    bind_text(remove.get(), 1, memory_id.to_string());
+    bind_text(remove.get(), 2, session_id.to_string());
+    if (sqlite3_step(remove.get()) != SQLITE_DONE) { const auto error=db_error(impl_->db,"delete");
+        (void)exec(impl_->db, "ROLLBACK", "rollback_erase");
+        return Status::failure(error); }
+    const auto commit = exec(impl_->db, "COMMIT", "commit_erase");
+    if (!commit) { const auto error=*commit.error_if();
+        (void)exec(impl_->db, "ROLLBACK", "rollback_erase");
+        return Status::failure(error); }
+    return Status::success();
 }
 
 Result<std::size_t> MemoryStore::clear_working(const common::SessionId& session_id) {
-    (void)session_id;
-    return Result<std::size_t>::failure(Error::make(ErrorCode::internal_error,
-        "working memory cleanup is pending", "memory", "clear_working"));
+    if (!is_open()) return Result<std::size_t>::failure(Error::make(
+        ErrorCode::internal_error, "memory store is not open", "memory", "clear_working"));
+    const auto begin = exec(impl_->db, "BEGIN IMMEDIATE", "begin_clear_working");
+    if (!begin) return Result<std::size_t>::failure(*begin.error_if());
+    Statement select(impl_->db, "SELECT id FROM memories WHERE session_id=? AND kind=0");
+    if (!select) { const auto error=db_error(impl_->db,"prepare_clear_working");
+        (void)exec(impl_->db,"ROLLBACK","rollback_clear_working");
+        return Result<std::size_t>::failure(error); }
+    bind_text(select.get(),1,session_id.to_string());
+    std::vector<std::string> ids;
+    while(sqlite3_step(select.get())==SQLITE_ROW) ids.push_back(column_text(select.get(),0));
+    for(const auto& id:ids) {
+        const auto audit=insert_audit(impl_->db,id,session_id.to_string(),
+            "session","session_close","success",std::nullopt);
+        if(!audit){const auto error=*audit.error_if();(void)exec(impl_->db,"ROLLBACK","rollback_clear_working");return Result<std::size_t>::failure(error);}
+    }
+    Statement remove(impl_->db,"DELETE FROM memories WHERE session_id=? AND kind=0");
+    if(!remove){const auto error=db_error(impl_->db,"prepare_clear_delete");(void)exec(impl_->db,"ROLLBACK","rollback_clear_working");return Result<std::size_t>::failure(error);}
+    bind_text(remove.get(),1,session_id.to_string());
+    if(sqlite3_step(remove.get())!=SQLITE_DONE){const auto error=db_error(impl_->db,"clear_delete");(void)exec(impl_->db,"ROLLBACK","rollback_clear_working");return Result<std::size_t>::failure(error);}
+    const auto commit=exec(impl_->db,"COMMIT","commit_clear_working");
+    if(!commit){const auto error=*commit.error_if();(void)exec(impl_->db,"ROLLBACK","rollback_clear_working");return Result<std::size_t>::failure(error);}
+    return Result<std::size_t>::success(ids.size());
 }
 
 Result<std::size_t> MemoryStore::prune_expired(common::Timestamp now) {
-    (void)now;
-    return Result<std::size_t>::failure(Error::make(ErrorCode::internal_error,
-        "retention pruning is pending", "memory", "prune_expired"));
+    if (!is_open()) return Result<std::size_t>::failure(Error::make(
+        ErrorCode::internal_error, "memory store is not open", "memory", "prune_expired"));
+    const auto begin=exec(impl_->db,"BEGIN IMMEDIATE","begin_prune");
+    if(!begin)return Result<std::size_t>::failure(*begin.error_if());
+    Statement select(impl_->db,"SELECT id,session_id FROM memories WHERE expires_at IS NOT NULL AND expires_at<=?");
+    if(!select){const auto error=db_error(impl_->db,"prepare_prune");(void)exec(impl_->db,"ROLLBACK","rollback_prune");return Result<std::size_t>::failure(error);}
+    sqlite3_bind_int64(select.get(),1,now.unix_nanoseconds());
+    std::vector<std::pair<std::string,std::string>> expired;
+    while(sqlite3_step(select.get())==SQLITE_ROW)expired.emplace_back(column_text(select.get(),0),column_text(select.get(),1));
+    for(const auto& item:expired){const auto audit=insert_audit(impl_->db,item.first,item.second,"retention","expire","success",std::nullopt);if(!audit){const auto error=*audit.error_if();(void)exec(impl_->db,"ROLLBACK","rollback_prune");return Result<std::size_t>::failure(error);}}
+    Statement remove(impl_->db,"DELETE FROM memories WHERE expires_at IS NOT NULL AND expires_at<=?");
+    if(!remove){const auto error=db_error(impl_->db,"prepare_expiry_delete");(void)exec(impl_->db,"ROLLBACK","rollback_prune");return Result<std::size_t>::failure(error);}
+    sqlite3_bind_int64(remove.get(),1,now.unix_nanoseconds());
+    if(sqlite3_step(remove.get())!=SQLITE_DONE){const auto error=db_error(impl_->db,"expiry_delete");(void)exec(impl_->db,"ROLLBACK","rollback_prune");return Result<std::size_t>::failure(error);}
+    const auto commit=exec(impl_->db,"COMMIT","commit_prune");
+    if(!commit){const auto error=*commit.error_if();(void)exec(impl_->db,"ROLLBACK","rollback_prune");return Result<std::size_t>::failure(error);}
+    return Result<std::size_t>::success(expired.size());
 }
 
 Status MemoryStore::backup_to(const std::string& destination_path) {
-    (void)destination_path;
-    return Status::failure(Error::make(ErrorCode::internal_error,
-        "backup is pending", "memory", "backup"));
+    if(!is_open())return Status::failure(Error::make(ErrorCode::internal_error,"memory store is not open","memory","backup"));
+    if(destination_path.empty())return Status::failure(Error::make(ErrorCode::invalid_argument,"backup path is empty","memory","backup"));
+    sqlite3* destination=nullptr;
+    if(sqlite3_open_v2(destination_path.c_str(),&destination,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,nullptr)!=SQLITE_OK){
+        const auto error=db_error(destination,"backup_open");if(destination)sqlite3_close(destination);return Status::failure(error);}
+    sqlite3_backup* backup=sqlite3_backup_init(destination,"main",impl_->db,"main");
+    if(!backup){const auto error=db_error(destination,"backup_init");sqlite3_close(destination);return Status::failure(error);}
+    const int step=sqlite3_backup_step(backup,-1);
+    const int finish=sqlite3_backup_finish(backup);
+    if((step!=SQLITE_DONE&&step!=SQLITE_OK)||finish!=SQLITE_OK){const auto error=db_error(destination,"backup_copy");sqlite3_close(destination);return Status::failure(error);}
+    if(sqlite3_close(destination)!=SQLITE_OK)return Status::failure(Error::make(
+        ErrorCode::internal_error,"failed to close backup database","memory","backup_close"));
+    return Status::success();
 }
 
 Status MemoryStore::integrity_check() {
