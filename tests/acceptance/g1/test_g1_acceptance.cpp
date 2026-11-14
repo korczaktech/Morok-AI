@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
+#include <span>
 #include <string>
 #include <vector>
 
