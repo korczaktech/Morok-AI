@@ -10,6 +10,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(MorokCompilerOptions)
 include(MorokSanitizers)
 
+find_package(SQLite3 REQUIRED)
+
 add_library(morok_build_options INTERFACE)
 morok_configure_compiler_options(morok_build_options)
 
@@ -20,6 +22,7 @@ add_library(morok_core STATIC
     src/common/model_version.cpp
     src/common/timestamp.cpp
     src/common/utf8_text.cpp
+    src/memory/memory_store.cpp
     src/model/parameters/g1_parameters.cpp
     src/model/g1_forward.cpp
     src/model/learn/g1_bptt.cpp
@@ -38,7 +41,7 @@ target_include_directories(morok_core
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(morok_core PRIVATE morok_build_options)
+target_link_libraries(morok_core PRIVATE morok_build_options SQLite::SQLite3)
 target_compile_definitions(morok_core PUBLIC MOROK_VERSION_STRING="${PROJECT_VERSION}")
 morok_enable_sanitizers(morok_core)
 
