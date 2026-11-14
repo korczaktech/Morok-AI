@@ -164,7 +164,7 @@ int main() {
                                      bytes.size(), nonzero_state);
         }
 
-        bool rejected = false;
+        rejected = false;
         try {
             (void)compute_g1_bptt_gradients(parameters,
                 std::span<const std::uint8_t>(bytes.data(), 1), 2);
