@@ -78,6 +78,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 48. [Etapa 16 — Documentação e experimentos](docs/49-etapa-16-documentacao-experimentos.md)
 49. [Controles complementares de segurança e integração](docs/50-etapa-18-seguranca-integracao.md)
 50. [Etapa 19 — Testes de aceitação](docs/51-etapa-19-testes-aceitacao.md)
+51. [Etapa 20 — Primeiro treinamento completo da G1](docs/52-etapa-20-primeiro-treinamento-g1.md)
 
 ## Estado atual
 
@@ -91,6 +92,8 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Controles complementares de segurança e integração: validação de entrada/saída, identidade vinculada à sessão, revogação de grants e confirmações no encerramento, política de negação por padrão, checkpoint com CRC32 e escrita atômica em arquivo privado, logs sem conteúdo sensível e teto Linux de espaço virtual do servidor. Este trabalho complementar não altera a numeração do roteiro oficial; a etapa 18 é IA-LEARN. Consulte [Controles complementares de segurança e integração](docs/50-etapa-18-seguranca-integracao.md).
 
 - Etapa 19 — Testes de aceitação: adicionados fluxos de aceitação da G1 (1.000 parâmetros, treino, checkpoint, geração e round-trip RLAH) e da integração do IA-CORE com os seis subsistemas cognitivos e a camada de segurança, incluindo memória, linguagem, raciocínio, ferramentas, comunicação e aprendizado. A aprovação depende dos workflows completos no commit final. Consulte [Etapa 19 — Testes de aceitação](docs/51-etapa-19-testes-aceitacao.md).
+
+- Etapa 20 — Primeiro treinamento completo da G1: runner reproduzível, workflow Release + CTest + treinamento, validação de retomada, checkpoint de inferência, geração UTF-8, manifesto e hashes implementados. A primeira campanha usa o fixture técnico sintético CC0-1.0; não demonstra qualidade linguística. A aprovação do workflow, corpus natural/licenciado e medição em hardware físico de 4 GB permanecem pendentes. Consulte [Etapa 20 — Primeiro treinamento completo da G1](docs/52-etapa-20-primeiro-treinamento-g1.md).
 
 - Etapa 12 — IA-TOOLS: registro, descoberta, esquema tipado, allowlist, grants de capacidade, confirmação de efeitos colaterais, validação UTF-8 e de tipos, limites de concorrência/entrada/saída/tempo, captura de exceções, auditoria injetável e lifecycle IA-CORE implementados. Teste `tools.tool_subsystem` registrado no CTest. Isolamento de processo/OS e interrupção forçada de handlers não fazem parte desta versão; handlers devem ser código confiável. Consulte [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md).
 
