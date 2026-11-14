@@ -115,6 +115,61 @@ int main() {
     assert(!failed_result);
     assert(failed_result.error_if()->code == ErrorCode::invalid_argument);
 
+    ReasoningTask operators_task;
+    operators_task.objective = "validar operadores matemáticos e lógicos";
+    operators_task.initial_values.emplace("ten", Value{10.0});
+    operators_task.initial_values.emplace("four", Value{4.0});
+    operators_task.initial_values.emplace("eight", Value{8.0});
+    operators_task.initial_values.emplace("two", Value{2.0});
+    operators_task.initial_values.emplace("yes", Value{true});
+    operators_task.initial_values.emplace("no", Value{false});
+    operators_task.steps.push_back(step("subtract", "difference", Operation::subtract,
+                                         {"ten", "four"}));
+    operators_task.steps.push_back(step("divide", "ratio", Operation::divide,
+                                         {"eight", "two"}));
+    operators_task.steps.push_back(step("equal", "same", Operation::equal,
+                                         {"difference", "ratio"}));
+    operators_task.steps.push_back(step("and", "both", Operation::logical_and,
+                                         {"yes", "no"}));
+    operators_task.steps.push_back(step("or", "either", Operation::logical_or,
+                                         {"yes", "no"}));
+    operators_task.steps.push_back(step("not", "negated", Operation::logical_not,
+                                         {"no"}));
+    auto operators_plan = reasoning.create_plan(request, operators_task);
+    assert(operators_plan);
+    auto operators_result = reasoning.execute(request, *operators_plan.value_if());
+    assert(operators_result);
+    assert(std::get<double>(operators_result.value_if()->values.at("difference")) == 6.0);
+    assert(std::get<double>(operators_result.value_if()->values.at("ratio")) == 4.0);
+    assert(std::get<bool>(operators_result.value_if()->values.at("same")) == false);
+    assert(std::get<bool>(operators_result.value_if()->values.at("both")) == false);
+    assert(std::get<bool>(operators_result.value_if()->values.at("either")) == true);
+    assert(std::get<bool>(operators_result.value_if()->values.at("negated")) == true);
+
+    ReasoningTask continue_task;
+    continue_task.objective = "continuar somente etapas independentes";
+    continue_task.failure_policy = morok::reason::FailurePolicy::continue_independent;
+    continue_task.initial_values.emplace("numerator", Value{8.0});
+    continue_task.initial_values.emplace("zero", Value{0.0});
+    continue_task.steps.push_back(step("broken", "quotient", Operation::divide,
+                                       {"numerator", "zero"}));
+    auto independent = step("independent", "ready", Operation::assign);
+    independent.literal = Value{true};
+    continue_task.steps.push_back(std::move(independent));
+    continue_task.steps.push_back(step("dependent", "next", Operation::logical_not,
+                                       {"ready"}));
+    continue_task.steps.back().dependencies.push_back("broken");
+    auto continue_plan = reasoning.create_plan(request, continue_task);
+    assert(continue_plan);
+    auto continue_result = reasoning.execute(request, *continue_plan.value_if());
+    assert(continue_result);
+    assert(continue_result.value_if()->failed_steps.size() == 1);
+    assert(continue_result.value_if()->failed_steps.front() == "broken");
+    assert(continue_result.value_if()->skipped_steps.size() == 1);
+    assert(continue_result.value_if()->skipped_steps.front() == "dependent");
+    assert(continue_result.value_if()->completed_steps.size() == 1);
+    assert(continue_result.value_if()->completed_steps.front() == "independent");
+
     ReasoningTask cycle_task;
     cycle_task.objective = "detectar ciclo";
     cycle_task.steps.push_back(step("first", "first_value", Operation::logical_not,
