@@ -71,10 +71,13 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 43. [Etapa 18 — IA-LEARN](docs/43-etapa-18-ia-learn.md)
 44. [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md)
 45. [Etapa 13 — Segurança](docs/46-etapa-13-seguranca.md)
+46. [Etapa 14 — Aplicações executáveis (roteiro de 20 etapas)](docs/47-etapa-14-aplicacoes-executaveis.md)
 
 ## Estado atual
 
 - Etapa 13 — Segurança: SecuritySubsystem com negação por padrão, grants exatos por sujeito/sessão/ferramenta/capacidade, revogação, política para IA-TOOLS, confirmações humanas de uso único vinculadas à ação e aos argumentos exatos, wrapper seguro de execução IA-TOOLS, classificação imutável de origem e auditoria sem conteúdo sensível. Teste `security.security_subsystem` registrado no CTest. Sandbox de processo/OS, criptografia em repouso e detecção completa de prompt injection não estão implementadas. Consulte [Etapa 13 — Segurança](docs/46-etapa-13-seguranca.md).
+
+- Etapa 14 — Aplicações executáveis: CLI unificada, conversor UTF-8 de corpus, treinamento, avaliação BPB, benchmark, geração offline e servidor HTTP local com composição de lifecycle IA-CORE adicionados; validação CI pendente. Consulte [Etapa 14 — Aplicações executáveis](docs/47-etapa-14-aplicacoes-executaveis.md).
 
 - Etapa 12 — IA-TOOLS: registro, descoberta, esquema tipado, allowlist, grants de capacidade, confirmação de efeitos colaterais, validação UTF-8 e de tipos, limites de concorrência/entrada/saída/tempo, captura de exceções, auditoria injetável e lifecycle IA-CORE implementados. Teste `tools.tool_subsystem` registrado no CTest. Isolamento de processo/OS e interrupção forçada de handlers não fazem parte desta versão; handlers devem ser código confiável. Consulte [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md).
 
