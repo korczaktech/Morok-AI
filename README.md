@@ -79,6 +79,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 49. [Controles complementares de segurança e integração](docs/50-etapa-18-seguranca-integracao.md)
 50. [Etapa 19 — Testes de aceitação](docs/51-etapa-19-testes-aceitacao.md)
 51. [Etapa 20 — Primeiro treinamento completo da G1](docs/52-etapa-20-primeiro-treinamento-g1.md)
+52. [Experimento de aprendizado por reforço da G1](docs/54-aprendizado-por-reforco-g1.md)
 
 ## Estado atual
 
@@ -130,6 +131,6 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 Toda hipótese deve ser testável. Uma otimização só será considerada válida quando comparada com uma referência simples, usando dados, hardware e condições equivalentes.
 
 
-## Aprendizagem contínua da G1
+## Aprendizado por reforço da G1
 
-O workflow [training](.github/workflows/training.yml) executa ciclos agendados a cada 15 minutos, retoma o checkpoint do ciclo anterior e treina até 10 épocas adicionais por execução, com teto de 500 épocas. O corpus factual inicial contém 52 documentos em português, escritos manualmente e publicados sob CC0-1.0, com fatos introdutórios sobre natureza, geografia, astronomia, química, biologia, corpo humano, matemática e física. Um manifesto e um validador verificam proveniência declarada, estrutura e integridade dos documentos antes do treinamento. A avaliação reservada contém 20 perguntas e mede sobreposição lexical; ela **não comprova compreensão semântica**. O estado é preservado em artifacts do GitHub Actions, sem commits automáticos de pesos no repositório. Consulte [Aprendizagem contínua da G1](docs/53-aprendizagem-continua-g1-actions.md).
+O workflow [reinforcement](.github/workflows/reinforcement.yml) executa um ciclo a cada 15 minutos e trabalha com três perguntas: se o céu é azul, se as montanhas são altas ou baixas e qual é a cor da grama. Cada resposta é classificada como `correct` ou `incorrect`, recebe recompensa +1 ou -1 e é registrada em [answers.json](data/reinforcement/answers.json). O executável `morok-reinforce` aplica uma atualização reward-weighted aos 1.000 parâmetros da G1. Os checkpoints são preservados como artifacts do Actions; o histórico JSON é versionado diretamente na `main`. O avaliador é lexical e o gradiente é uma aproximação REINFORCE baseada no BPTT byte-level, não uma prova de compreensão semântica. O workflow anterior [training](.github/workflows/training.yml) foi mantido apenas para execução manual e não disputa mais o checkpoint automaticamente. Consulte [Experimento de aprendizado por reforço da G1](docs/54-aprendizado-por-reforco-g1.md).
