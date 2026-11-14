@@ -239,8 +239,7 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
     }
 
     const char* fts_schema =
-        "CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5("
-        "title,body,content='memories',content_rowid='rowid');"
+        "CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(title,body);"
         "CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN "
         "INSERT INTO memories_fts(rowid,title,body) SELECT new.rowid,new.title,new.body WHERE new.sensitivity<2; END;"
         "CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN "
@@ -250,6 +249,11 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
         "INSERT INTO memories_fts(rowid,title,body) SELECT new.rowid,new.title,new.body WHERE new.sensitivity<2; END;";
     if (exec(db, fts_schema, "fts5_setup")) {
         impl_->fts = true;
+        (void)exec(db,
+            "INSERT INTO memories_fts(rowid,title,body) "
+            "SELECT m.rowid,m.title,m.body FROM memories m "
+            "WHERE m.sensitivity<2 AND m.rowid NOT IN (SELECT rowid FROM memories_fts);",
+            "fts5_backfill");
      } else {
         impl_->fts = false;
     }
