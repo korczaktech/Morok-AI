@@ -1,5 +1,2 @@
-Pergunta: Que cor é o céu?
-Resposta: O céu apresenta uma coloração azul.
-
-Pergunta: Que cor é o céu?
-Resposta: Normalmente, vemos o céu azul.
+Pergunta: De que cor vemos o céu durante o dia?
+Resposta: Com certeza, é azul.
