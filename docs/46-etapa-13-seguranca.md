@@ -12,8 +12,8 @@
 - Confirmações humanas com ticket opaco, prazo de validade, vínculo ao principal/sessão/ação exata e consumo único.
 - Auditoria de concessão, revogação, negação e ciclo de confirmação; metadados sem argumentos, destinos completos ou conteúdo sensível.
 - Limites de quantidade de grants e confirmações pendentes.
-- Classificação de conteúdo por origem: entrada do usuário, documento externo, memória recuperada, saída do modelo, saída de ferramenta e configuração confiável.
-- Conteúdo não confiável não pode ser fonte de política de segurança.
+- Classificação imutável de conteúdo por origem: entrada do usuário, documento externo, memória recuperada, saída do modelo e saída de ferramenta. Todos esses rótulos são sempre não confiáveis; não existe API pública para um conteúdo se declarar configuração confiável.
+- Configuração confiável permanece fora do fluxo de conteúdo e só pode vir do host após validação e controle de acesso.
 - Integração ao lifecycle do IA-CORE por initializer/shutdown callback.
 
 ## Autorização de ferramentas
