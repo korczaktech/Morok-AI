@@ -29,7 +29,7 @@ Implementar o subsistema que coordena experimentos da G1 fora do caminho de infe
 
 ## Cancelamento: limite conhecido do pipeline
 
-O subsistema rejeita requisições já canceladas e descarta o candidato se o cancelamento for observado após o treinador retornar. O pipeline legado train_g1_corpus ainda não recebe token de cancelamento interno; portanto, uma execução longa não é interrompida no meio de uma época. O checkpoint/log já escrito pelo treinador pode permanecer no disco. Cancelamento cooperativo por documento/bloco é uma evolução pendente, não é anunciado como suportado nesta etapa.
+O subsistema combina o cancelamento do RequestContext com um callback opcional do chamador e o propaga ao treinador. O pipeline consulta o callback durante a varredura do corpus, antes de cada documento/época, durante blocos BPTT e durante avaliações de validação/teste. Ao cancelar, a execução retorna CANCELLED e o candidato privado não é publicado. Checkpoints e linhas de log gravados antes do cancelamento podem permanecer no disco; retomada continua sujeita à compatibilidade normal do checkpoint.
 
 ## Arquivos
 
@@ -41,7 +41,7 @@ O subsistema rejeita requisições já canceladas e descarta o candidato se o ca
 
 ## Testes de aceitação
 
-learn.learning_subsystem cobre lifecycle IA-CORE, treinamento de corpus temporário de três documentos, relatório/estatísticas, preservação dos parâmetros originais, correlação RequestId, cancelamento prévio, política de treinamento desabilitado e shutdown.
+learn.learning_subsystem cobre lifecycle IA-CORE, treinamento de corpus temporário de três documentos, relatório/estatísticas, preservação dos parâmetros originais, correlação RequestId, cancelamento prévio e durante a varredura/treinamento, política de treinamento desabilitado e shutdown.
 
 ## Limitações explícitas
 
@@ -49,7 +49,7 @@ learn.learning_subsystem cobre lifecycle IA-CORE, treinamento de corpus temporá
 - Sem scheduler concorrente, fila persistente ou execução em background.
 - Sem promoção automática do candidato para IA-LANG.
 - Sem validação automática de licença/proveniência do corpus; a autorização é responsabilidade do chamador.
-- Cancelamento não interrompe o pipeline legado durante a execução.
+- Cancelamento é cooperativo entre documentos/blocos e leituras; uma operação de sistema de arquivos já bloqueada não pode ser interrompida à força.
 - Métricas de qualidade continuam limitadas ao BPB; não demonstram compreensão ou qualidade conversacional.
 - Segmentador adaptativo de 29 parâmetros continua fora do caminho B0 de treinamento.
 
