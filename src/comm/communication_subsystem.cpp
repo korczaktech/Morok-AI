@@ -189,10 +189,13 @@ common::Status CommunicationSubsystem::append_control_message(
     if (!message) return common::Status::failure(*message.error_if());
     message.value_if()->tool_name = std::move(tool_name);
     try {
+        auto model_text = MessageFormatter::format_transcript(
+            std::vector<Message>{*message.value_if()});
+        if (!model_text) return common::Status::failure(*model_text.error_if());
         Conversation staged = found->second;
         const auto capacity = append_locked(staged, std::move(*message.value_if()));
         if (!capacity) return capacity;
-        const auto observed = language_.observe(request, text);
+        const auto observed = language_.observe(request, *model_text.value_if());
         if (!observed) return observed;
         found->second = std::move(staged);
     } catch (const std::bad_alloc&) {
@@ -318,7 +321,10 @@ common::Result<Message> CommunicationSubsystem::send_message(
     Conversation staged_user = snapshot;
     const auto user_capacity = append_locked(staged_user, *user.value_if());
     if (!user_capacity) { release(); return common::Result<Message>::failure(*user_capacity.error_if()); }
-    const auto observed = language_.observe(request, text);
+    auto model_text = MessageFormatter::format_transcript(
+        std::vector<Message>{*user.value_if()});
+    if (!model_text) { release(); return common::Result<Message>::failure(*model_text.error_if()); }
+    const auto observed = language_.observe(request, *model_text.value_if());
     if (!observed) { release(); return common::Result<Message>::failure(*observed.error_if()); }
     {
         std::lock_guard lock(mutex_);
