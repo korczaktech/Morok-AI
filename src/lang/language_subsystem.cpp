@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <exception>
+#include <cmath>
 #include <utility>
 
 namespace morok::lang {
@@ -18,6 +19,13 @@ common::Status LanguageSubsystem::initialize(const core::RuntimeConfig& config) 
             "IA-LANG is already initialized", "lang", "initialize"));
     const auto valid = config.validate();
     if (!valid) return common::Status::failure(*valid.error_if());
+    const auto flat_parameters = parameters_.flatten();
+    if (!std::all_of(flat_parameters.begin(), flat_parameters.end(),
+                     [](float value) { return std::isfinite(value); })) {
+        return common::Status::failure(common::Error::make(
+            common::ErrorCode::invalid_argument,
+            "G1 parameters contain a non-finite value", "lang", "initialize"));
+    }
     if (language_config_.max_context_bytes == 0 ||
         language_config_.max_context_bytes > config.resources.max_input_bytes ||
         config.max_sessions > 4096U) {
@@ -57,7 +65,15 @@ common::Result<common::SessionId> LanguageSubsystem::create_session(
         return common::Result<common::SessionId>::failure(*created.error_if());
     const auto id = *created.value_if();
     try {
-        session_contexts_.emplace(id.to_string(), std::string{});
+        const auto [position, inserted] =
+            session_contexts_.emplace(id.to_string(), std::string{});
+        (void)position;
+        if (!inserted) {
+            (void)registry.close(id);
+            return common::Result<common::SessionId>::failure(common::Error::make(
+                common::ErrorCode::internal_error,
+                "duplicate language session identifier", "lang", "session.create"));
+        }
     } catch (...) {
         (void)registry.close(id);
         return common::Result<common::SessionId>::failure(common::Error::make(
@@ -185,8 +201,10 @@ common::Status LanguageSubsystem::close_session(
         return common::Status::failure(common::Error::make(
             common::ErrorCode::invalid_argument,
             "language session does not exist", "lang", "session.close"));
+    const auto closed = registry.close(session_id);
+    if (!closed) return closed;
     session_contexts_.erase(found);
-    return registry.close(session_id);
+    return common::Status::success();
 }
 
 core::Runtime::Initializer LanguageSubsystem::initializer() {
