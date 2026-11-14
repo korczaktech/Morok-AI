@@ -70,6 +70,7 @@ private:
     core::SessionRegistry& sessions_;
     lang::LanguageSubsystem& language_;
     ConversationLimits limits_;
+    std::size_t max_conversations_{0};
     mutable std::mutex mutex_;
     std::unordered_map<std::string, Conversation> conversations_;
     std::unordered_map<std::string, bool> in_flight_;
