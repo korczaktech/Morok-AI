@@ -14,6 +14,12 @@ on:
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
+    inputs:
+      attempts:
+        description: "Quantidade total de respostas que a IA deve tentar gerar"
+        required: true
+        type: number
+        default: 10
 
 concurrency:
   group: morok-g1-reinforcement
@@ -26,7 +32,7 @@ permissions:
 jobs:
   three-question-reinforcement:
     runs-on: ubuntu-latest
-    timeout-minutes: 14
+    timeout-minutes: 30
     steps:
       - name: Checkout latest main
         uses: actions/checkout@v4
@@ -71,7 +77,7 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
 
-      - name: Generate, grade and reinforce the three answers
+      - name: Generate, grade and reinforce the requested number of attempts
         run: |
           python3 scripts/run-g1-reinforcement.py \
             --checkpoint artifacts/reinforcement/model.morokckp \
@@ -80,7 +86,9 @@ jobs:
             --generator build/morok_generate \
             --reinforcer build/morok-reinforce \
             --bootstrap-epochs 8 \
-            --learning-rate 0.0001
+            --learning-rate 0.0001 \\
+            --attempts "${{ github.event_name == 'workflow_dispatch' && inputs.attempts || 3 }}" \\
+            --results-file artifacts/reinforcement/attempt-results.txt
 
       - name: Commit answer and reward history to main
         run: |
@@ -103,3 +111,15 @@ jobs:
           path: artifacts/reinforcement/
           if-no-files-found: error
           retention-days: 90
+
+      - name: Display attempt results
+        if: always()
+        shell: bash
+        run: |
+          results="artifacts/reinforcement/attempt-results.txt"
+          if [[ -f "$results" ]]; then
+            cat "$results"
+          else
+            echo "No attempt results were produced."
+          fi
+
