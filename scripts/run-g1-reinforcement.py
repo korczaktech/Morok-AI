@@ -129,7 +129,7 @@ def main() -> int:
 
         # Seed the policy with three explicitly identified oracle demonstrations.
         # These are a warm start, not model-generated RL episodes.
-        if not database.get("oracle_demonstrations_applied", False):
+        if int(database.get("oracle_demonstration_version", 0)) < 2:
             for question in questions:
                 question_id = question["id"]
                 prompt_path = temporary / f"{question_id}.seed.prompt.txt"
@@ -142,11 +142,12 @@ def main() -> int:
                 update_output = run_checked([
                     str(args.reinforcer), str(args.checkpoint),
                     str(prompt_path), str(answer_path), "1",
-                    str(args.learning_rate),
+                    "0.005", "25",
                 ])
                 episode = {
                     "episode": episode_number,
                     "source": "oracle_demonstration",
+                    "demonstration_version": 2,
                     "question_id": question_id,
                     "prompt": question["prompt"],
                     "answer": answer,
@@ -160,6 +161,7 @@ def main() -> int:
                     "policy_update": {
                         "status": "applied",
                         "algorithm": "reward_weighted_bptt_score_function_surrogate",
+                        "optimizer_steps": 25,
                         "report": json.loads(update_output),
                     },
                 }
@@ -170,6 +172,7 @@ def main() -> int:
                 database["totals"]["oracle_demonstrations"] += 1
                 atomic_write(args.database, database)
             database["oracle_demonstrations_applied"] = True
+            database["oracle_demonstration_version"] = 2
             atomic_write(args.database, database)
 
         for offset, question in enumerate(questions):
