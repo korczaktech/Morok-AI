@@ -5,6 +5,7 @@
 #include <sqlite3.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <cstdint>
 #include <string>
@@ -157,7 +158,8 @@ MemoryStore& MemoryStore::operator=(MemoryStore&&) noexcept = default;
 Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) {
     if (database_path.empty() || limits.max_record_bytes == 0 ||
         limits.max_results == 0 || limits.max_context_bytes == 0 ||
-        limits.busy_timeout_ms == 0) {
+        limits.max_database_bytes < 4096U || limits.busy_timeout_ms == 0 ||
+        limits.search_timeout_ms == 0) {
         return Status::failure(Error::make(ErrorCode::invalid_argument,
             "invalid database path or memory limits", "memory", "open"));
     }
@@ -174,6 +176,11 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
     impl_->db = db;
     impl_->limits = limits;
     (void)sqlite3_busy_timeout(db, static_cast<int>(limits.busy_timeout_ms));
+
+    const auto max_pages = static_cast<sqlite3_int64>(limits.max_database_bytes / 4096U);
+    const std::string page_limit = "PRAGMA max_page_count=" + std::to_string(max_pages) + ";";
+    const auto page_limit_result = exec(db, page_limit.c_str(), "page_limit");
+    if (!page_limit_result) { const auto error = *page_limit_result.error_if(); (void)close(); return Status::failure(error); }
 
     const char* schema =
         "PRAGMA foreign_keys=ON;"
@@ -380,6 +387,44 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
         records.push_back(std::move(*record.value_if()));
     }
     return Result<std::vector<MemoryRecord>>::success(std::move(records));
+}
+
+Status MemoryStore::promote(
+    const common::SessionId& session_id, const common::MemoryId& memory_id,
+    MemoryKind target_kind) {
+    if (target_kind == MemoryKind::working)
+        return Status::failure(Error::make(ErrorCode::invalid_argument,
+            "promotion target must be episodic or semantic", "memory", "promote"));
+    if (!is_open()) return Status::failure(Error::make(
+        ErrorCode::internal_error, "memory store is not open", "memory", "promote"));
+    const auto begin = exec(impl_->db, "BEGIN IMMEDIATE", "begin_promote");
+    if (!begin) return begin;
+    Statement statement(impl_->db,
+        "UPDATE memories SET kind=? WHERE id=? AND session_id=? AND kind=0");
+    if (!statement) {
+        const auto error=db_error(impl_->db,"prepare_promote");
+        (void)exec(impl_->db,"ROLLBACK","rollback_promote");
+        return Status::failure(error);
+    }
+    sqlite3_bind_int(statement.get(),1,static_cast<int>(target_kind));
+    bind_text(statement.get(),2,memory_id.to_string());
+    bind_text(statement.get(),3,session_id.to_string());
+    if(sqlite3_step(statement.get())!=SQLITE_DONE){
+        const auto error=db_error(impl_->db,"promote");
+        (void)exec(impl_->db,"ROLLBACK","rollback_promote");
+        return Status::failure(error);
+    }
+    if(sqlite3_changes(impl_->db)==0){
+        (void)exec(impl_->db,"ROLLBACK","rollback_promote");
+        return Status::failure(Error::make(ErrorCode::invalid_argument,
+            "working memory not found in this session", "memory", "promote"));
+    }
+    const auto audit=insert_audit(impl_->db,memory_id.to_string(),
+        session_id.to_string(),"system","promote","success",std::nullopt);
+    if(!audit){const auto error=*audit.error_if();(void)exec(impl_->db,"ROLLBACK","rollback_promote");return Status::failure(error);}
+    const auto commit=exec(impl_->db,"COMMIT","commit_promote");
+    if(!commit){const auto error=*commit.error_if();(void)exec(impl_->db,"ROLLBACK","rollback_promote");return Status::failure(error);}
+    return Status::success();
 }
 
 Status MemoryStore::update_metadata(
