@@ -2,6 +2,7 @@
 
 #include "morok/core/configuration.hpp"
 #include "morok/core/session_registry.hpp"
+#include "morok/core/runtime.hpp"
 #include "morok/memory/memory_store.hpp"
 
 #include <string>
@@ -50,6 +51,14 @@ public:
         const auto cleared = store_.clear_working(session_id);
         if (!cleared) return common::Status::failure(*cleared.error_if());
         return sessions.close(session_id);
+    }
+
+    [[nodiscard]] core::Runtime::Initializer initializer() {
+        return [this](const core::RuntimeConfig& config) { return initialize(config); };
+    }
+
+    [[nodiscard]] core::Runtime::Shutdown shutdown_callback() {
+        return [this] { (void)shutdown(); };
     }
 
     [[nodiscard]] bool initialized() const noexcept { return initialized_; }
