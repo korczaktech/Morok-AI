@@ -26,7 +26,27 @@ mkdir -p "$state_dir"
 # EOS changed the meaning of the final 29 model parameters. Never resume an
 # older checkpoint whose architecture identifier predates the EOS head.
 expected_arch="RLAH-G1-fastslow-d11-bit8-eos"
-if [[ -s "$checkpoint" ]] && ! grep -q "$expected_arch" "$status_file" 2>/dev/null; then
+current_corpus_sha="$(python3 - <<'PY'
+import hashlib
+from pathlib import Path
+digest = hashlib.sha256()
+for path in sorted(Path("tests/fixtures/continual").glob("doc-*.txt")):
+    digest.update(path.name.encode("utf-8"))
+    digest.update(path.read_bytes())
+print(digest.hexdigest())
+PY
+)"
+stored_corpus_sha="$(python3 - "$status_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+try:
+    print(json.loads(Path(sys.argv[1]).read_text()).get("corpus_sha256", ""))
+except (OSError, ValueError):
+    print("")
+PY
+)"
+if [[ -s "$checkpoint" ]] && { ! grep -q "$expected_arch" "$status_file" 2>/dev/null || "$stored_corpus_sha" != "$current_corpus_sha"; }; then
   echo "Discarding incompatible pre-EOS checkpoint and restarting from deterministic initialization."
   rm -f "$checkpoint" "$best_model" "$metrics" "$summary" "$generated" "$epoch_file" "$status_file"
 fi
