@@ -84,7 +84,7 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
 
     bool stopped_by_eos = false;
     for (std::size_t position = 0; position < config.max_new_bytes; ++position) {
-        if (generated.size() >= config.min_new_bytes) {
+        if (generated.size() >= config.min_new_bytes && utf8.remaining == 0) {
             std::size_t bucket = 0;
             std::size_t length = prompt.size_bytes() + generated.size();
             while (length > 1 && bucket < 6) { length >>= 1U; ++bucket; }
