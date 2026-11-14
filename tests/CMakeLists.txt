@@ -135,7 +135,7 @@ if(MOROK_BUILD_APPS)
     add_test(NAME apps.train_usage COMMAND morok_train_cli)
     set_tests_properties(apps.convert_usage apps.evaluate_usage apps.train_usage
         PROPERTIES WILL_FAIL TRUE)
-    if(UNIX)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_test(NAME apps.server_usage COMMAND morok_server)
         set_tests_properties(apps.server_usage PROPERTIES WILL_FAIL TRUE)
     endif()
