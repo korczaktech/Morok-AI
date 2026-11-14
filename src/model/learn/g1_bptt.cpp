@@ -30,9 +30,11 @@ constexpr std::size_t O_BG = 748;
 constexpr std::size_t O_HEAD = 759;
 constexpr std::size_t O_HEAD_BIAS = 935;
 constexpr std::size_t O_TRIANGULAR = 943;
-constexpr std::size_t O_SEGMENTER = 971;
+constexpr std::size_t O_EOS_WEIGHTS = 971;
+constexpr std::size_t O_EOS_BIASES = 993;
 
-static_assert(O_SEGMENTER + kG1SegmenterParameterCount == kG1ParameterCount);
+static_assert(O_EOS_WEIGHTS + kG1CombinedStateDimension == O_EOS_BIASES);
+static_assert(O_EOS_BIASES + 7 == kG1ParameterCount);
 
 struct StepCache {
     std::array<double, D> input{};
@@ -46,7 +48,17 @@ struct StepCache {
     std::array<double, D> slow_gate{};
     std::array<double, B> base_logits{};
     std::uint8_t target{0};
+    std::size_t context_length{0};
 };
+
+std::size_t eos_length_bucket(std::size_t length) noexcept {
+    std::size_t bucket = 0;
+    while (length > 1 && bucket < 6) {
+        length >>= 1U;
+        ++bucket;
+    }
+    return bucket;
+}
 
 void require_finite_parameters(const G1Parameters& p) {
     const auto flat = p.flatten();
@@ -81,7 +93,7 @@ std::array<double, C> join(const std::array<double, D>& fast,
 }
 
 StepCache forward_step(const G1Parameters& p, const G1State& state,
-                       std::uint8_t observed, std::uint8_t target) {
+                       std::uint8_t observed, std::uint8_t target, std::size_t context_length) {
     StepCache cache{};
     const auto encoded = encode_g1_byte(observed);
     for (std::size_t i = 0; i < D; ++i) {
@@ -90,6 +102,7 @@ StepCache forward_step(const G1Parameters& p, const G1State& state,
         cache.slow_previous[i] = state.slow[i];
     }
     cache.target = target;
+    cache.context_length = context_length;
 
     for (std::size_t row = 0; row < D; ++row) {
         double za = p.b_a[row];
@@ -175,6 +188,15 @@ double step_loss_and_head_backward(const G1Parameters& p, const StepCache& step,
             grad.values[O_TRIANGULAR + a_ix] += dz * (one ? 1.0 : -1.0);
         }
     }
+    const auto bucket = eos_length_bucket(step.context_length);
+    double eos_logit = p.theta_len[bucket];
+    for (std::size_t col = 0; col < C; ++col)
+        eos_logit += static_cast<double>(p.v[col]) * combined[col];
+    const double eos_probability = math::sigmoid(eos_logit);
+    const double eos_dz = eos_probability; // A following byte means "continue".
+    grad.values[O_EOS_BIASES + bucket] += eos_dz;
+    for (std::size_t col = 0; col < C; ++col)
+        grad.values[O_EOS_WEIGHTS + col] += eos_dz * combined[col];
     return loss;
 }
 
@@ -251,7 +273,8 @@ double G1Gradients::global_norm() const noexcept {
 G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
                                        std::span<const std::uint8_t> bytes,
                                        std::size_t truncation_length,
-                                       const G1State& initial_state) {
+                                       const G1State& initial_state,
+                                       std::size_t context_offset) {
     if (bytes.size() < 2) {
         throw std::invalid_argument("BPTT requires at least two bytes");
     }
@@ -281,8 +304,10 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
 
         for (std::size_t target_index = first_target;
              target_index < end_target; ++target_index) {
+            if (context_offset > std::numeric_limits<std::size_t>::max() - target_index)
+                throw std::overflow_error("BPTT context length overflow");
             auto step = forward_step(parameters, state, bytes[target_index - 1],
-                                     bytes[target_index]);
+                                     bytes[target_index], context_offset + target_index);
             tape.push_back(step);
             for (std::size_t i = 0; i < D; ++i) {
                 state.fast[i] = static_cast<float>(step.fast[i]);
@@ -323,9 +348,37 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
         !std::isfinite(result.gradients.global_norm())) {
         throw std::domain_error("BPTT produced a non-finite loss or gradient");
     }
-    for (std::size_t i = O_SEGMENTER; i < kG1ParameterCount; ++i) {
-        result.gradients.values[i] = 0.0;
+    return result;
+}
+
+G1EosResult compute_g1_eos_gradients(const G1Parameters& parameters,
+                                     const G1State& state,
+                                     std::size_t context_length,
+                                     bool should_stop) {
+    require_finite_parameters(parameters);
+    require_finite_state(state);
+    constexpr std::size_t weight_offset = 971;
+    constexpr std::size_t bias_offset = 993;
+    std::array<double, C> combined{};
+    for (std::size_t i = 0; i < D; ++i) {
+        combined[i] = state.fast[i];
+        combined[D + i] = state.slow[i];
     }
+    const auto bucket = eos_length_bucket(context_length);
+    double logit = parameters.theta_len[bucket];
+    for (std::size_t i = 0; i < C; ++i)
+        logit += static_cast<double>(parameters.v[i]) * combined[i];
+    const double target = should_stop ? 1.0 : 0.0;
+    const double probability = math::sigmoid(logit);
+    const double dz = probability - target;
+    G1EosResult result;
+    result.loss_nats = math::binary_cross_entropy_with_logits(logit, target);
+    result.gradients.values[bias_offset + bucket] = dz;
+    for (std::size_t i = 0; i < C; ++i)
+        result.gradients.values[weight_offset + i] = dz * combined[i];
+    if (!std::isfinite(result.loss_nats) ||
+        !std::isfinite(result.gradients.global_norm()))
+        throw std::domain_error("EOS head produced a non-finite loss or gradient");
     return result;
 }
 
