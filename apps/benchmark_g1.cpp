@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
                     << "\"learning_rate\":" << config.optimizer.learning_rate << ','
                     << "\"architecture_parameter_count\":" << parameter_stats.architecture_parameter_count << ','
                     << "\"b0_updated_parameter_count\":" << parameter_stats.b0_updated_parameter_count << ','
-                    << "\"segmenter_parameters_updated\":false,'
+                    << "\"segmenter_parameters_updated\":false,"
                     << "\"parameters_finite\":" << (parameter_stats.all_finite ? "true" : "false") << ','
                     << "\"parameter_mean\":" << parameter_stats.all.mean << ','
                     << "\"parameter_stddev\":" << parameter_stats.all.standard_deviation << ','
