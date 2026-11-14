@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Executar ciclos periódicos e retomáveis de treinamento da G1. O experimento inicial usa um pequeno corpus de português e um prompt fixo sobre a cor do céu. Cada ciclo restaura o checkpoint anterior, executa até 10 épocas adicionais, gera uma continuação e registra métricas e limitações.
+Executar ciclos periódicos e retomáveis de treinamento da G1. O experimento usa um corpus factual introdutório em português, com perguntas e respostas sobre natureza, geografia, astronomia, química, biologia, corpo humano, matemática e física. O prompt de geração destacado no workflow continua sendo o da cor do céu. Cada ciclo restaura o checkpoint anterior, executa até 10 épocas adicionais, gera uma continuação e registra métricas e limitações.
 
 Este workflow demonstra a infraestrutura de treinamento contínuo. Ele **não demonstra, por si só, compreensão de linguagem**.
 
@@ -28,7 +28,7 @@ A métrica principal do treinador é a perda de predição do próximo byte (BPB
 
 Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. O script `scripts/evaluate-g1-qa.py` também avalia perguntas reservadas em `tests/fixtures/continual-eval/cases.json`, com paráfrases e tópicos factuais distintos, registrando exact match e token F1. Ela **não** encerra o treinamento, não cria marcador de sucesso e não altera o estado do workflow para `goal_reached`.
 
-O estado final possível do orçamento é `budget_exhausted`. Isso significa somente que o limite de épocas foi atingido. O status da avaliação semântica permanece `not_established` até existir um conjunto independente de perguntas e respostas, com critérios de aceitação que não sejam uma simples busca por substring.
+O estado final possível do orçamento é `budget_exhausted`. Isso significa somente que o limite de épocas foi atingido. O status da avaliação semântica permanece `not_established`: o conjunto reservado mede apenas sobreposição lexical (exact match/token F1), ainda sem revisão humana e sem critérios semânticos independentes.
 
 ## Contagem de parâmetros
 
@@ -57,7 +57,7 @@ O artifact de cada execução contém, quando produzidos:
 - 1.000 parâmetros arquiteturais são uma capacidade muito pequena para linguagem geral.
 - A entrada e a saída são processadas byte a byte; o estado recorrente é pequeno.
 - A geração tem uma cabeça EOS aprendida a partir de fronteiras de documentos, além do limite rígido de bytes. A qualidade do critério de parada depende da representatividade dos documentos de treinamento.
-- O corpus é pequeno e o modelo pode memorizar exemplos e prompt.
+- O corpus de 52 documentos é apenas introdutório; o modelo pode memorizar exemplos e prompt, e não há garantia de generalização para fatos não vistos.
 - A métrica BPB não substitui avaliação semântica.
 - O critério lexical `azul` é diagnóstico, não evidência de compreensão.
 - Runner hospedado não comprova execução em hardware físico com 4 GB de RAM.
@@ -72,7 +72,7 @@ O artifact de cada execução contém, quando produzidos:
 - [x] Busca lexical rebaixada a diagnóstico, sem declarar sucesso semântico.
 - [x] Treinar os 29 parâmetros da cabeça EOS em exemplos de continuação e fim de documento.
 - [x] Implementar geração com amostragem controlada e critério de parada treinado.
-- [ ] Ampliar corpus natural, diversificado e licenciado.
+- [x] Criar corpus factual introdutório manual, com licença CC0-1.0, manifesto e validação automática.\n- [ ] Ampliar corpus natural, diversificado e licenciado, com fontes verificadas e cobertura muito maior.
 - [ ] Criar avaliação semântica independente com revisão humana; o atual exact match/token F1 é somente lexical.
 - [ ] Validar em hardware físico com 4 GB de RAM.
 
