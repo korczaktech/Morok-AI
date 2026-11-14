@@ -2,6 +2,9 @@
 
 ## 22.1 Princípio
 
+A implementação inicial da etapa 13 está em `morok::security::SecuritySubsystem`, nos arquivos `include/morok/security/security_subsystem.hpp` e `src/security/security_subsystem.cpp`. O teste CTest correspondente é `security.security_subsystem`; detalhes de implementação e limites estão em [Etapa 13 — Segurança](46-etapa-13-seguranca.md).
+
+
 A IA deve operar com privilégio mínimo. Texto gerado, memória recuperada e conteúdo de ferramentas são dados não confiáveis, nunca instruções privilegiadas por si só.
 
 ## 22.2 Fronteiras de confiança
@@ -15,9 +18,15 @@ A IA deve operar com privilégio mínimo. Texto gerado, memória recuperada e co
 
 ## 22.3 Permissões
 
+A camada implementada mantém grants por sujeito, sessão, ferramenta e capacidade. A política gerada usa pares exatos, evitando que listas independentes de ferramentas e capacidades criem permissões cruzadas. A ausência de grant resulta em negação.
+
+
 Cada ferramenta declara permissões específicas: leitura, escrita, rede, execução, acesso a arquivos ou outras capacidades. Conceder somente o mínimo necessário. Permissão não pode ser ampliada pelo modelo nem pela ferramenta durante execução.
 
 ## 22.4 Confirmação humana
+
+A camada implementa tickets com expiração, vinculados ao sujeito, SessionId e conteúdo exato da ação, com aprovação pelo controlador confiável e consumo único. A confirmação não substitui a autorização.
+
 
 Exigir confirmação antes de:
 - excluir ou sobrescrever dados;
@@ -55,6 +64,9 @@ Não fornecer shell irrestrito na primeira versão.
 - Criptografia em repouso poderá ser adicionada se o modelo de ameaça exigir; não alegar proteção criptográfica enquanto não estiver implementada e testada.
 
 ## 22.7 Resistência a prompt injection
+
+A camada fornece rótulos de origem para conteúdo, mas a separação entre instruções e dados continua sendo responsabilidade do orquestrador. Classificação de origem não é detecção semântica completa nem prova criptográfica de proveniência.
+
 
 Instruções contidas em documentos, páginas, resultados de busca ou memória não podem alterar políticas, permissões ou configuração. O conteúdo deve ser marcado por origem e tratado como dado. A decisão de chamar ferramenta pertence ao orquestrador com verificação de política.
 
