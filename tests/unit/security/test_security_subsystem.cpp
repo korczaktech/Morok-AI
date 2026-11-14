@@ -86,20 +86,32 @@ int main() {
     publish.description = "Publish content to an external destination.";
     publish.capability = tools::ToolCapability::external_write;
     publish.requires_confirmation = true;
+    publish.schema.fields.push_back(
+        tools::ToolField{"message", tools::ToolValueType::string, true, 256});
     publish.handler = [](const tools::ToolExecutionContext&, const tools::ToolArguments&) {
         return common::Result<std::string>::success("published");
     };
     assert(tool_subsystem.register_tool(std::move(publish)));
+    const tools::ToolArguments publish_arguments{
+        {"message", std::string("approved message")}};
     security::SecurityAction publish_action{
-        "publish", "publish", "public-feed", "Publish the approved message"};
+        "publish", "publish", "public-feed", "Publish the approved message",
+        security::bind_tool_arguments(publish_arguments)};
     auto publish_ticket = security_system.request_confirmation(principal, publish_action);
     assert(publish_ticket);
     auto publish_approval = security_system.approve_confirmation(
         principal, *publish_ticket.value_if(), publish_action, true);
     assert(publish_approval);
+    const tools::ToolArguments tampered_arguments{
+        {"message", std::string("different message")}};
+    auto tampered_publish = security_system.invoke_tool(
+        tool_subsystem, *mismatch_request.value_if(), principal, "publish",
+        tampered_arguments, &publish_action, &*publish_approval.value_if());
+    assert(!tampered_publish &&
+           tampered_publish.error_if()->code == common::ErrorCode::permission_denied);
     auto publish_result = security_system.invoke_tool(
-        tool_subsystem, *mismatch_request.value_if(), principal, "publish", {},
-        &publish_action, &*publish_approval.value_if());
+        tool_subsystem, *mismatch_request.value_if(), principal, "publish",
+        publish_arguments, &publish_action, &*publish_approval.value_if());
     assert(publish_result && *publish_result.value_if() == "published");
     auto publish_replay = security_system.invoke_tool(
         tool_subsystem, *mismatch_request.value_if(), principal, "publish", {},
@@ -109,7 +121,8 @@ int main() {
     assert(tool_subsystem.shutdown());
 
     security::SecurityAction action{
-        "read_file", "read", "/workspace/report.txt", "Read one report file"};
+        "read_file", "read", "/workspace/report.txt", "Read one report file",
+        security::bind_tool_arguments({})};
     auto ticket = security_system.request_confirmation(principal, action);
     assert(ticket && security_system.pending_confirmations() == 1);
 
