@@ -5,6 +5,7 @@
 
 #include <array>
 #include <exception>
+#include <algorithm>
 #include <random>
 #include <string>
 
@@ -51,11 +52,21 @@ Result<BasicId<Tag>> BasicId<Tag>::from_string(std::string_view value) {
             ErrorCode::invalid_argument, "identifier must use canonical UUID form",
             "core", "identifier_parse"));
     }
+    constexpr std::array<std::size_t, 4> hyphen_positions{8U, 13U, 18U, 23U};
     Storage bytes{};
     std::size_t byte_index = 0;
     int high_nibble = -1;
-    for (const char ch : value) {
-        if (ch == '-') continue;
+    for (std::size_t index = 0; index < value.size(); ++index) {
+        const char ch = value[index];
+        const bool must_be_hyphen =
+            std::find(hyphen_positions.begin(), hyphen_positions.end(), index) !=
+            hyphen_positions.end();
+        if (must_be_hyphen) {
+            if (ch != '-') return Result<BasicId>::failure(Error::make(
+                ErrorCode::invalid_argument, "identifier has invalid UUID separators",
+                "core", "identifier_parse"));
+            continue;
+        }
         unsigned int digit = 0;
         if (ch >= '0' && ch <= '9') digit = static_cast<unsigned int>(ch - '0');
         else if (ch >= 'a' && ch <= 'f') digit = static_cast<unsigned int>(ch - 'a' + 10);
