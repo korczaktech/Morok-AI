@@ -93,6 +93,7 @@ message(STATUS "Morok AI version: ${PROJECT_VERSION}")
 message(STATUS "C++ standard: C++20")
 message(STATUS "Tests: ${MOROK_BUILD_TESTS}")
 
+if(MOROK_BUILD_APPS)
 add_executable(morok_train apps/train_g1.cpp)
 target_link_libraries(morok_train PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_train)
@@ -108,6 +109,7 @@ morok_enable_sanitizers(morok_complete)
 add_executable(morok_generate apps/generate_g1.cpp)
 target_link_libraries(morok_generate PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_generate)
+endif()
 
 if(MOROK_BUILD_APPS)
     install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
