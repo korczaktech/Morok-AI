@@ -70,6 +70,7 @@ void deterministic_resume(){
   auto best_full=morok::model::load_g1_checkpoint(full.best_model_path);auto best_resumed=morok::model::load_g1_checkpoint(resumed.best_model_path);req(best_full.parameters.flatten()==best_resumed.parameters.flatten()&&!best_full.has_optimizer,"best inference checkpoint export mismatch");
   req(full_report.best_epoch==resumed_report.best_epoch,"best epoch differs after resume");
   std::ifstream lf(log);std::string logs((std::istreambuf_iterator<char>(lf)),std::istreambuf_iterator<char>());req(logs.find("\"event\":\"epoch\"")!=std::string::npos&&logs.find("\"event\":\"finished\"")!=std::string::npos,"persistent JSONL log events missing");
+  req(logs.find("\"gradient_norm_mean\":")!=std::string::npos&&logs.find("\"train_byte_perplexity\":")!=std::string::npos,"extended evaluation metrics missing from training log");
  }catch(...){std::filesystem::remove_all(root);throw;}
  std::filesystem::remove_all(root);
 }
