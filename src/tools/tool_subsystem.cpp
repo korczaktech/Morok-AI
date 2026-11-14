@@ -192,6 +192,13 @@ common::Status ToolSubsystem::unregister_tool(const std::string& name) {
 
 bool ToolSubsystem::authorized(
     const ToolDefinition& definition, const ToolAccessPolicy& policy) const noexcept {
+    if (!policy.exact_grants.empty()) {
+        return std::any_of(policy.exact_grants.begin(), policy.exact_grants.end(),
+            [&](const ToolPermissionGrant& grant) {
+                return grant.tool_name == definition.name &&
+                       grant.capability == definition.capability;
+            });
+    }
     const bool named = std::find(policy.allowed_tools.begin(), policy.allowed_tools.end(),
                                  definition.name) != policy.allowed_tools.end();
     const bool capability = std::find(policy.granted_capabilities.begin(),
