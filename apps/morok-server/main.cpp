@@ -365,13 +365,13 @@ int main(int argc, char** argv) {
         morok::reason::ReasoningSubsystem reasoning;
         morok::tools::ToolAuditSink tool_audit = [](const morok::tools::ToolAuditRecord& record) {
             std::clog << "tool_audit event=" << static_cast<int>(record.type)
-                      << " tool=" << record.tool_name << '\\n';
+                      << " tool=" << record.tool_name << '\n';
             return morok::common::Status::success();
         };
         morok::security::SecurityAuditSink security_audit = [](const morok::security::SecurityAuditRecord& record) {
             std::clog << "security_audit event=" << static_cast<int>(record.type)
                       << " subject=" << record.subject_id
-                      << " tool=" << record.tool_name << '\\n';
+                      << " tool=" << record.tool_name << '\n';
             return morok::common::Status::success();
         };
         morok::tools::ToolSubsystem tools({}, std::move(tool_audit));
