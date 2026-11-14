@@ -290,7 +290,7 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
 
     try {
         ReasoningPlan plan{request.session_id(), request.request_id(),
-            task.objective, {}, task.preconditions, {}, 0};
+            task.objective, {}, task.preconditions, {}, 0, task.failure_policy};
         for (const auto& [key, value] : authorized_context) {
             if (!valid_name(key) || value_bytes(value) > config_.max_value_bytes ||
                 (std::holds_alternative<double>(value) && !numeric(value)))
@@ -352,6 +352,7 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
         }
 
         std::vector<std::set<std::size_t>> edges(count);
+        std::vector<std::set<std::size_t>> parents_by_step(count);
         std::vector<std::size_t> indegree(count, 0);
         for (std::size_t i = 0; i < count; ++i) {
             const auto& step = task.steps[i];
@@ -387,6 +388,7 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
                     parents.insert(found->second);
                 }
             }
+            parents_by_step[i] = parents;
             for (const auto parent : parents) edges[parent].insert(i);
             indegree[i] = parents.size();
         }
@@ -402,7 +404,11 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
                     "planning request was cancelled", "plan", &request);
             const auto current = ready.top();
             ready.pop();
-            plan.ordered_steps.push_back(task.steps[current]);
+            auto ordered_step = task.steps[current];
+            ordered_step.dependencies.clear();
+            for (const auto parent : parents_by_step[current])
+                ordered_step.dependencies.push_back(task.steps[parent].id);
+            plan.ordered_steps.push_back(std::move(ordered_step));
             plan.dependency_depth = std::max(plan.dependency_depth, depths[current]);
             for (const auto next : edges[current]) {
                 depths[next] = std::max(depths[next], depths[current] + 1);
@@ -454,30 +460,42 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
             return common::Result<ReasoningResult>::failure(*preconditions.error_if());
 
         std::unordered_set<std::string> completed;
+        std::unordered_set<std::string> seen_step_ids;
         std::unordered_set<std::string> output_keys;
         for (const auto& step : plan.ordered_steps) {
             if (!valid_name(step.id) || !valid_name(step.output) ||
-                !completed.insert(step.id).second || !output_keys.insert(step.output).second ||
+                !seen_step_ids.insert(step.id).second ||
+                !output_keys.insert(step.output).second ||
                 result.values.contains(step.output) ||
                 step.inputs.size() != required_inputs(step.operation)) {
                 return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
                     "reasoning plan contains duplicate or malformed steps",
                     "execute", &request);
             }
-            completed.erase(step.id);
             if (request.is_cancelled())
                 return fail_result<ReasoningResult>(common::ErrorCode::cancelled,
                     "reasoning execution was cancelled between steps",
                     "execute", &request);
-            for (const auto& dependency : step.dependencies) {
-                if (!completed.contains(dependency))
-                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
-                        "plan is not topologically ordered", "execute", &request);
+            bool dependency_failed = false;
+            for (const auto& dependency : step.dependencies)
+                if (!completed.contains(dependency)) dependency_failed = true;
+            if (dependency_failed) {
+                if (plan.failure_policy == FailurePolicy::continue_independent) {
+                    result.skipped_steps.push_back(step.id);
+                    continue;
+                }
+                return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                    "a required dependency did not complete", "execute", &request);
             }
             const auto before = check_conditions(
                 step.preconditions, result.values, request, "step.preconditions");
-            if (!before)
+            if (!before) {
+                if (plan.failure_policy == FailurePolicy::continue_independent) {
+                    result.failed_steps.push_back(step.id);
+                    continue;
+                }
                 return common::Result<ReasoningResult>::failure(*before.error_if());
+            }
 
             auto candidate = evaluate(step, result.values, request);
             bool recovered = false;
@@ -497,8 +515,13 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
                 if (!post) candidate = common::Result<Value>::failure(*post.error_if());
                 else recovered = true;
             }
-            if (!candidate)
+            if (!candidate) {
+                if (plan.failure_policy == FailurePolicy::continue_independent) {
+                    result.failed_steps.push_back(step.id);
+                    continue;
+                }
                 return common::Result<ReasoningResult>::failure(*candidate.error_if());
+            }
             if (value_bytes(*candidate.value_if()) > config_.max_value_bytes)
                 return fail_result<ReasoningResult>(common::ErrorCode::resource_limit,
                     "step result exceeds IA-REAS value limit", "execute", &request);
