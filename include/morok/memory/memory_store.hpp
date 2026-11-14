@@ -84,6 +84,12 @@ public:
     [[nodiscard]] common::Result<std::vector<MemoryRecord>> search(
         const SearchQuery& query);
 
+    [[nodiscard]] common::Status update_metadata(
+        const common::SessionId& session_id,
+        const common::MemoryId& memory_id,
+        Sensitivity sensitivity,
+        std::optional<common::Timestamp> expires_at);
+
     [[nodiscard]] common::Status erase(
         const common::SessionId& session_id,
         const common::MemoryId& memory_id,
