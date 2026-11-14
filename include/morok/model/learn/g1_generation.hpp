@@ -4,6 +4,7 @@
 #include "morok/model/g1_forward.hpp"
 
 #include <cstddef>
+#include <cstdint>
 
 namespace morok::model {
 
@@ -17,7 +18,7 @@ struct G1GenerationConfig {
     // Add this many nats per recent occurrence of a printable ASCII byte.
     double repetition_penalty{0.0};
     std::size_t repetition_window{64};
-    double eos_threshold{0.5};
+    double eos_threshold{0.75};
     std::size_t min_new_bytes{1};
 };
 
