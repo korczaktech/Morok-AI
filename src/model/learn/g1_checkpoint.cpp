@@ -8,6 +8,7 @@
 #include <system_error>
 #include <cerrno>
 #include <cstring>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <type_traits>
