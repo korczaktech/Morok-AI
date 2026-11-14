@@ -68,8 +68,8 @@ public:
 
     MemoryStore(const MemoryStore&) = delete;
     MemoryStore& operator=(const MemoryStore&) = delete;
-    MemoryStore(MemoryStore&&) noexcept;
-    MemoryStore& operator=(MemoryStore&&) noexcept;
+    MemoryStore(MemoryStore&&) = delete;
+    MemoryStore& operator=(MemoryStore&&) = delete;
 
     [[nodiscard]] common::Status open(
         const std::string& database_path,
