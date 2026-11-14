@@ -16,6 +16,8 @@ constexpr std::uint64_t kMaxFileBytes = 16ULL << 20U;
 constexpr std::uint64_t kMaxTotalBytes = 1ULL << 30U;
 }
 int main(int argc, char** argv) {
+    fs::path staging;
+    bool staging_created = false;
     if (argc != 3) {
         std::cerr << "usage: morok-convert <input-directory> <output-directory>\n"
                   << "Copies .txt corpus documents after strict UTF-8 validation.\n";
@@ -25,11 +27,17 @@ int main(int argc, char** argv) {
         const fs::path input = fs::canonical(argv[1]);
         if (!fs::is_directory(input)) throw std::invalid_argument("input is not a directory");
         const fs::path output = fs::absolute(argv[2]).lexically_normal();
-        if (fs::exists(output)) throw std::invalid_argument("output directory must not already exist");
+        staging = fs::path(output.string() + ".partial");
+        if (fs::exists(output) || fs::exists(staging))
+            throw std::invalid_argument("output and staging directories must not already exist");
         const auto relative = output.lexically_relative(input);
         if (!relative.empty() && *relative.begin() != "..")
             throw std::invalid_argument("output directory cannot be inside input directory");
-        fs::create_directories(output);
+        const auto staging_relative = staging.lexically_relative(input);
+        if (!staging_relative.empty() && *staging_relative.begin() != "..")
+            throw std::invalid_argument("staging directory cannot be inside input directory");
+        fs::create_directories(staging);
+        staging_created = true;
 
         std::vector<fs::path> files;
         for (const auto& entry : fs::recursive_directory_iterator(
@@ -55,7 +63,7 @@ int main(int argc, char** argv) {
                 throw std::runtime_error("invalid UTF-8 in " + source.string());
 
             const auto relative_path = fs::relative(source, input);
-            const auto destination = output / relative_path;
+            const auto destination = staging / relative_path;
             fs::create_directories(destination.parent_path());
             std::ofstream out(destination, std::ios::binary | std::ios::trunc);
             if (!out) throw std::runtime_error("cannot create " + destination.string());
@@ -65,10 +73,16 @@ int main(int argc, char** argv) {
             total += size;
             ++converted;
         }
+        fs::rename(staging, output);
+        staging_created = false;
         std::cout << "{\"converted_documents\":" << converted
                   << ",\"bytes\":" << total << ",\"encoding\":\"UTF-8\"}\n";
         return 0;
     } catch (const std::exception& error) {
+        if (staging_created) {
+            std::error_code cleanup_error;
+            fs::remove_all(staging, cleanup_error);
+        }
         std::cerr << "morok-convert: " << error.what() << '\n';
         return 1;
     }
