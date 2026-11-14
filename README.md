@@ -76,7 +76,8 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 46. [Etapa 14 — Aplicações executáveis (roteiro de 20 etapas)](docs/47-etapa-14-aplicacoes-executaveis.md)
 47. [Etapa 15 — Testes automatizados](docs/48-etapa-15-testes-automatizados.md)
 48. [Etapa 16 — Documentação e experimentos](docs/49-etapa-16-documentacao-experimentos.md)
-49. [Etapa 18 — Segurança e integração (roteiro de 20 etapas)](docs/50-etapa-18-seguranca-integracao.md)
+49. [Controles complementares de segurança e integração](docs/50-etapa-18-seguranca-integracao.md)
+50. [Etapa 19 — Testes de aceitação](docs/51-etapa-19-testes-aceitacao.md)
 
 ## Estado atual
 
@@ -87,7 +88,9 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 15 — Testes automatizados: camadas unitária, integração, propriedades, regressão e fuzzing adicionadas. Inclui pipeline treinamento → checkpoint → geração, invariantes determinísticos de parâmetros/UTF-8/G1/RLAH, regressão de rollback do IA-CORE e harnesses libFuzzer para UTF-8, RLAH e checkpoints. CI GCC/Clang Debug/Release aprovado com 32/32 testes em cada perfil; ASan/UBSan e três campanhas libFuzzer de 2.000 iterações aprovados no commit `08e7abeb`. Consulte [Etapa 15 — Testes automatizados](docs/48-etapa-15-testes-automatizados.md).
 
 - Etapa 16 — Documentação e experimentos: protocolo reproduzível, manifesto JSON, proveniência/licenças/hashes de corpus, critérios de análise, estrutura para ablações e escala de geração e índice de resultados implementados. O smoke test sintético anterior está documentado com resultado negativo da G1 frente ao baseline unigram. Campanha real/licenciada e medição em hardware físico de 4 GB permanecem pendentes. Consulte [Etapa 16 — Documentação e experimentos](docs/49-etapa-16-documentacao-experimentos.md).
-- Etapa 18 — Segurança e integração (roteiro de 20 etapas): validação de entrada/saída, identidade vinculada à sessão, revogação de grants e confirmações no encerramento, política de negação por padrão, checkpoint com CRC32 e escrita atômica em arquivo privado, logs sem conteúdo sensível e teto Linux de espaço virtual do servidor. Consulte [Etapa 18 — Segurança e integração](docs/50-etapa-18-seguranca-integracao.md). Esta etapa não é a etapa operacional IA-LEARN, também numerada 18.
+- Controles complementares de segurança e integração: validação de entrada/saída, identidade vinculada à sessão, revogação de grants e confirmações no encerramento, política de negação por padrão, checkpoint com CRC32 e escrita atômica em arquivo privado, logs sem conteúdo sensível e teto Linux de espaço virtual do servidor. Este trabalho complementar não altera a numeração do roteiro oficial; a etapa 18 é IA-LEARN. Consulte [Controles complementares de segurança e integração](docs/50-etapa-18-seguranca-integracao.md).
+
+- Etapa 19 — Testes de aceitação: adicionados fluxos de aceitação da G1 (1.000 parâmetros, treino, checkpoint, geração e round-trip RLAH) e da integração dos sete subsistemas pelo IA-CORE, incluindo memória, raciocínio, ferramentas, segurança e comunicação. A aprovação depende dos workflows completos no commit final. Consulte [Etapa 19 — Testes de aceitação](docs/51-etapa-19-testes-aceitacao.md).
 
 - Etapa 12 — IA-TOOLS: registro, descoberta, esquema tipado, allowlist, grants de capacidade, confirmação de efeitos colaterais, validação UTF-8 e de tipos, limites de concorrência/entrada/saída/tempo, captura de exceções, auditoria injetável e lifecycle IA-CORE implementados. Teste `tools.tool_subsystem` registrado no CTest. Isolamento de processo/OS e interrupção forçada de handlers não fazem parte desta versão; handlers devem ser código confiável. Consulte [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md).
 
