@@ -118,7 +118,7 @@ int main() {
     assert(reordered_result.error_if()->code == ErrorCode::invalid_argument);
 
     auto missing_dependency_plan = *chained_plan.value_if();
-    missing_dependency_plan.ordered_steps.back().dependencies.clear();
+    missing_dependency_plan.ordered_steps.back().dependencies.push_back("unknown_step");
     auto missing_dependency_result = reasoning.execute(request, missing_dependency_plan);
     assert(!missing_dependency_result);
     assert(missing_dependency_result.error_if()->code == ErrorCode::invalid_argument);
