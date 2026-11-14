@@ -129,7 +129,7 @@ def main() -> int:
 
         # Seed the policy with three explicitly identified oracle demonstrations.
         # These are a warm start, not model-generated RL episodes.
-        if int(database.get("oracle_demonstration_version", 0)) < 4:
+        if int(database.get("oracle_demonstration_version", 0)) < 5:
             for question in questions:
                 question_id = question["id"]
                 prompt_path = temporary / f"{question_id}.seed.prompt.txt"
@@ -147,7 +147,7 @@ def main() -> int:
                 episode = {
                     "episode": episode_number,
                     "source": "oracle_demonstration",
-                    "demonstration_version": 4,
+                    "demonstration_version": 5,
                     "question_id": question_id,
                     "prompt": question["prompt"],
                     "answer": answer,
@@ -172,7 +172,7 @@ def main() -> int:
                 database["totals"]["oracle_demonstrations"] += 1
                 atomic_write(args.database, database)
             database["oracle_demonstrations_applied"] = True
-            database["oracle_demonstration_version"] = 4
+            database["oracle_demonstration_version"] = 5
             atomic_write(args.database, database)
 
         for offset, question in enumerate(questions):
