@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
- > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 8: pipeline de treinamento por épocas, corpus em fluxo, divisão por documentos, validação e avaliação BPB implementados. Etapa 9: checkpoints MOROKCKP v1 integrados ao treinador, salvamento automático por época, retomada determinística, logs JSONL persistentes e exportação do melhor modelo para inferência implementados. Etapa 10: benchmark, baseline softmax-256 unigram, matriz de configurações, métricas e CI implementados; smoke test sintético executado. Validação com corpus real/licenciado ainda pendente. Etapa 11: inferência autoregressiva G1, decodificação greedy com UTF-8 estrito, CLI `morok_generate` e testes adicionados.
+ > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 8: pipeline de treinamento por épocas, corpus em fluxo, divisão por documentos, validação e avaliação BPB implementados. Etapa 9: checkpoints MOROKCKP v1 integrados ao treinador, salvamento automático por época, retomada determinística, logs JSONL persistentes e exportação do melhor modelo para inferência implementados. Etapa 10: benchmark, baseline softmax-256 unigram, matriz de configurações, métricas e CI implementados; smoke test sintético executado. Validação com corpus real/licenciado ainda pendente. Etapa 11: inferência autoregressiva G1, decodificação greedy com UTF-8 estrito, CLI `morok_generate` e testes adicionados. Etapa 12: estatísticas de parâmetros, estabilidade dos gradientes, perplexidade por byte e relatórios de benchmark ampliados implementados; validação científica com corpus real ainda pendente.
 
 ## Objetivo
 
@@ -62,6 +62,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 34. [Etapa 9 — Checkpoints e persistência](docs/34-etapa-9-checkpoints-persistencia.md)
 35. [Etapa 10 — Benchmark e validação experimental](docs/35-etapa-10-benchmark-validacao.md)
 36. [Etapa 11 — Geração autoregressiva da G1](docs/36-etapa-11-geracao-g1.md)
+37. [Etapa 12 — Avaliação e benchmarks](docs/37-etapa-12-avaliacao-benchmarks.md)
 
 ## Estado atual
 
@@ -76,6 +77,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 9: formato MOROKCKP v1, CRC32, persistência de parâmetros/otimizador/RNG/cursor, fsync de arquivo e diretório, salvamento ao final de cada época, validação de compatibilidade, retomada determinística, logs JSONL append-only e exportação do melhor modelo de inferência integrados ao treinador.
 - Etapa 10: executável `morok_benchmark`, baseline categórico softmax-256 unigram, matriz de comparações controladas de BPTT, otimizador e learning rate, com repetições por sementes, métricas BPB/throughput/tempo/RSS, JSONL, testes e workflow de benchmark implementados. O fixture sintético valida o pipeline; avaliação linguística real aguarda corpus licenciado.
 - Etapa 11: API de geração autoregressiva, leitura de checkpoint de inferência, prompt UTF-8 estrito, decodificação greedy limitada por bytes, preservação de UTF-8 e CLI `morok_generate` implementados; qualidade linguística não validada.
+- Etapa 12: biblioteca de avaliação com estatísticas globais e por grupo dos 1.000 parâmetros, perplexidade por byte, normas médias/máximas de gradientes por época e relatório JSONL ampliado implementados; corpus real, baseline neural comparável e ablações arquiteturais continuam pendentes.
 - Protótipo experimental `morok_complete`: lê `entrada.txt`, treina a G1 do zero sobre a sequência, gera uma continuação ASCII e grava `saida.txt`. O GitHub Actions executa esse fluxo quando `entrada.txt` muda na `main`; os parâmetros não persistem entre execuções.
 - G1: inventário de parâmetros, forward pass, gradientes B0 e otimizadores implementados; os 29 parâmetros do segmentador permanecem fora do caminho preditivo.
 
