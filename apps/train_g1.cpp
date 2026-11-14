@@ -7,6 +7,7 @@
 #include <exception>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -81,11 +82,13 @@ int main(int argc, char** argv) {
             else if (option == "--learning-rate")
                 config.optimizer.learning_rate = parse_positive_double(value, "learning-rate");
             else if (option == "--optimizer") {
+                const double selected_learning_rate = config.optimizer.learning_rate;
                 if (value == "adamw")
                     config.optimizer = morok::model::G1OptimizerConfig::adamw();
                 else if (value == "sgd")
                     config.optimizer = morok::model::G1OptimizerConfig::sgd_momentum();
                 else throw std::invalid_argument("optimizer must be adamw or sgd");
+                config.optimizer.learning_rate = selected_learning_rate;
             } else {
                 throw std::invalid_argument("unknown option: " + option);
             }
