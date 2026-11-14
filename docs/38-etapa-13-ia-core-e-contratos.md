@@ -31,15 +31,13 @@ Estados explícitos:
 - `stopped`;
 - `failed`.
 
-O runtime só aceita requisições no estado `ready). A inicialização valida configuração e executa callbacks na ordem fornecida pelo composition root. Em falha, executa rollback dos subsistemas já inicializados em ordem inversa. O encerramento é idempotente após atingir `stopped`.
+O runtime só aceita requisições no estado `ready`. A inicialização valida configuração e executa callbacks na ordem fornecida pelo composition root. Em falha, executa rollback dos subsistemas já inicializados em ordem inversa. O encerramento é idempotente após atingir `stopped`.
 
 A ordem de dependências definida no documento 20 continua sendo responsabilidade do composition root: configuração → armazenamento → IA-LANG/modelo → IA-MEM → IA-REAS → IA-TOOLS → IA-COMM. IA-CORE fornece o mecanismo e não instancia subsistemas ainda inexistentes.
 
 ### Sessões, identidade e contexto de requisição
 
 `SessionRegistry` cria e encerra sessões com IDs fortes, timestamp de criação e limite máximo configurável. O registro é protegido por mutex e rejeita criação acima da capacidade. O conteúdo/estado de inferência não é armazenado nesse registro: permanece isolado no subsistema de inferência.
-
-`RequestContext` associa uma requisição a um
 
 `RequestContext` associa uma requisição a um `SessionId`, um `RequestId`, instante UTC de criação e token de cancelamento. Os identificadores usam os tipos fortes compartilhados da etapa 2. O contexto não guarda conteúdo de usuário por padrão.
 
@@ -82,15 +80,15 @@ O teste de contratos verifica:
 5. geração de RequestId associado a SessionId;
 6. classificação de saúde healthy/degraded/unhealthy;
 7. transições de inicialização, pronto e encerramento;
-7. bloqueio de requisições fora do estado ready;
+8. bloqueio de requisições fora do estado ready;
 9. rollback inverso após falha de inicialização;
 10. encerramento idempotente.
 
 ## Limitações explícitas
 
 - Não existe ainda composition root da aplicação nem servidor.
-- A inicialização recebe callbacks; os sete subsistemas não foram todos implementados.
-- Não há criação/expiração de sessões nem registro concorrente de requisições.
+- A inicialização recebe callbacks; cada inicializador deve ter callback de encerramento correspondente, e os sete subsistemas não foram todos implementados.
+- A criação e o encerramento explícito de sessões estão implementados; expiração automática, timeouts e registro concorrente de requisições ainda não.
 - O cancelamento é cooperativo.
 - Limites são validados e consultáveis, mas não impostos ao sistema operacional.
 - Não há coleta de métricas, tracing distribuído ou logger integrado nesta etapa.
