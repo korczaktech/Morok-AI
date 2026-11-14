@@ -14,7 +14,7 @@ Implementar o subsistema que coordena experimentos da G1 fora do caminho de infe
 - Treina uma cópia privada dos parâmetros; o objeto de parâmetros fornecido pelo chamador permanece inalterado.
 - Reutiliza train_g1_corpus, incluindo split determinístico, deduplicação, AdamW/SGD, BPTT, early stopping, métricas, checkpoints e exportação opcional do melhor artefato.
 - Revalida finitude e calcula estatísticas dos parâmetros do candidato antes de devolvê-lo.
-- Retorna relatório, candidato versionado pelo formato de checkpoint existente, avaliação dos parâmetros e RequestId.
+- Retorna relatório, parâmetros candidatos em memória, avaliação dos parâmetros e RequestId. Quando best_model_path é configurado, o treinador também exporta o checkpoint de inferência no formato MOROKCKP existente.
 - Erros são retornados como Result<T> com subsistema/estágio/RequestId; falhas de alocação são mapeadas para OUT_OF_MEMORY.
 - Treinamento desabilitado é negado por política explícita.
 
