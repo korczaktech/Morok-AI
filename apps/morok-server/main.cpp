@@ -31,6 +31,7 @@
 #include <string>
 #include <string_view>
 #include <sys/socket.h>
+#include <sys/resource.h>
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -39,6 +40,23 @@ constexpr std::size_t kMaxHeaderBytes = 16U * 1024U;
 constexpr std::size_t kMaxBodyBytes = 64U * 1024U;
 volatile std::sig_atomic_t running = 1;
 void stop_server(int) { running = 0; }
+
+void apply_process_memory_limit() {
+    // Keep headroom for the operating system on the documented 4 GiB host.
+    constexpr rlim_t kAddressSpaceCap = 3ULL * 1024ULL * 1024ULL * 1024ULL;
+    struct rlimit limit {};
+    if (::getrlimit(RLIMIT_AS, &limit) != 0) {
+        throw std::runtime_error("could not read process address-space limit");
+    }
+    const rlim_t hard_cap = limit.rlim_max == RLIM_INFINITY
+        ? kAddressSpaceCap : std::min(kAddressSpaceCap, limit.rlim_max);
+    if (limit.rlim_cur == RLIM_INFINITY || limit.rlim_cur > hard_cap) {
+        limit.rlim_cur = hard_cap;
+    }
+    if (::setrlimit(RLIMIT_AS, &limit) != 0) {
+        throw std::runtime_error("could not enforce process address-space limit");
+    }
+}
 
 void append_utf8(std::string& out, std::uint32_t cp) {
     if (cp <= 0x7fU) out.push_back(static_cast<char>(cp));
@@ -368,6 +386,7 @@ int main(int argc, char** argv) {
         unsigned long port = 8080;
         if (argc >= 3) port = std::stoul(argv[2]);
         if (port == 0 || port > 65535) throw std::invalid_argument("port must be 1..65535");
+        apply_process_memory_limit();
         const auto checkpoint = morok::model::load_g1_checkpoint(argv[1]);
         const std::string memory_path = argc == 4 ? argv[3] : "morok-server-memory.sqlite";
         morok::core::RuntimeConfig runtime_config;
