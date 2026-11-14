@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
- > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 8: pipeline de treinamento por épocas, corpus em fluxo, divisão por documentos, validação e avaliação BPB implementados. Etapa 9: checkpoints MOROKCKP v1 integrados ao treinador, salvamento automático por época, retomada determinística, logs JSONL persistentes e exportação do melhor modelo para inferência implementados. Etapa 10: benchmark, baseline softmax-256 unigram, matriz de configurações, métricas e CI implementados; smoke test sintético executado. Validação com corpus real/licenciado ainda pendente. Etapa 11: inferência autoregressiva G1, decodificação greedy com UTF-8 estrito, CLI `morok_generate` e testes adicionados. Etapa 12: estatísticas de parâmetros, estabilidade dos gradientes, perplexidade por byte e relatórios de benchmark ampliados implementados; validação científica com corpus real ainda pendente. Etapa 13: contratos IA-CORE de configuração, ciclo de vida, contexto de requisição, cancelamento cooperativo, limites de recursos, saúde e rollback de inicialização implementados; integração real dos sete subsistemas ainda pendente.
+ > **Estado:** infraestrutura C++20, tipos compartilhados, primitivas matemáticas, forward pass e gradientes BPTT da G1 implementados. Etapa 8: pipeline de treinamento por épocas, corpus em fluxo, divisão por documentos, validação e avaliação BPB implementados. Etapa 9: checkpoints MOROKCKP v1 integrados ao treinador, salvamento automático por época, retomada determinística, logs JSONL persistentes e exportação do melhor modelo para inferência implementados. Etapa 10: benchmark, baseline softmax-256 unigram, matriz de configurações, métricas e CI implementados; smoke test sintético executado. Validação com corpus real/licenciado ainda pendente. Etapa 11: inferência autoregressiva G1, decodificação greedy com UTF-8 estrito, CLI `morok_generate` e testes adicionados. Etapa 12: estatísticas de parâmetros, estabilidade dos gradientes, perplexidade por byte e relatórios de benchmark ampliados implementados; validação científica com corpus real ainda pendente. Etapa 13: contratos IA-CORE de configuração, ciclo de vida, contexto de requisição, cancelamento cooperativo, limites de recursos, saúde e rollback de inicialização implementados; integração real dos sete subsistemas ainda pendente. Etapa 14: IA-MEM com SQLite, memória de trabalho/episódica/semântica, busca lexical, proveniência, isolamento por sessão, retenção, exclusão auditável, backup e integridade implementados; conexão automática ao composition root ainda pendente.
 
 ## Objetivo
 
@@ -64,6 +64,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 36. [Etapa 11 — Geração autoregressiva da G1](docs/36-etapa-11-geracao-g1.md)
 37. [Etapa 12 — Avaliação e benchmarks](docs/37-etapa-12-avaliacao-benchmarks.md)
 38. [Etapa 13 — IA-CORE e contratos](docs/38-etapa-13-ia-core-e-contratos.md)
+39. [Etapa 14 — IA-MEM](docs/39-etapa-14-ia-mem.md)
 
 ## Estado atual
 
@@ -80,6 +81,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 11: API de geração autoregressiva, leitura de checkpoint de inferência, prompt UTF-8 estrito, decodificação greedy limitada por bytes, preservação de UTF-8 e CLI `morok_generate` implementados; qualidade linguística não validada.
 - Etapa 12: biblioteca de avaliação com estatísticas globais e por grupo dos 1.000 parâmetros, perplexidade por byte, normas médias/máximas de gradientes por época e relatório JSONL ampliado implementados; corpus real, baseline neural comparável e ablações arquiteturais continuam pendentes.
 - Etapa 13: IA-CORE possui contratos C++20 para configuração validada, lifecycle, inicialização/rollback/encerramento, RequestContext, registro limitado de sessões, cancelamento atômico cooperativo, limites e health report; teste unitário registrado no CTest.
+- Etapa 14: IA-MEM usa SQLite/WAL, FTS5 quando disponível, migração versionada, memória de trabalho/episódica/semântica, promoção explícita, proveniência, isolamento por SessionId, busca limitada por tempo/contexto, retenção, auditoria de exclusão, backup e integrity_check; teste `memory.store` registrado no CTest. A integração com o composition root permanece pendente.
 - Protótipo experimental `morok_complete`: lê `entrada.txt`, treina a G1 do zero sobre a sequência, gera uma continuação ASCII e grava `saida.txt`. O GitHub Actions executa esse fluxo quando `entrada.txt` muda na `main`; os parâmetros não persistem entre execuções.
 - G1: inventário de parâmetros, forward pass, gradientes B0 e otimizadores implementados; os 29 parâmetros do segmentador permanecem fora do caminho preditivo.
 
