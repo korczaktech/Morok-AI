@@ -102,7 +102,8 @@ bool g1_parameter_uses_weight_decay(std::size_t index) noexcept {
     if (index >= kG1ParameterCount) return false;
     return index < 484U || (index >= 506U && index < 748U) ||
            (index >= 759U && index < 935U) ||
-           (index >= 943U && index < 971U);
+           (index >= 943U && index < 971U) ||
+           (index >= 971U && index < 993U);
 }
 
 G1OptimizerStepResult apply_g1_optimizer_step(
@@ -111,12 +112,6 @@ G1OptimizerStepResult apply_g1_optimizer_step(
     validate_config(config);
     if (!state_matches(config.kind, state)) {
         throw std::invalid_argument("optimizer state kind does not match optimizer configuration");
-    }
-    for (std::size_t i = kG1ParameterCount - kG1SegmenterParameterCount;
-         i < kG1ParameterCount; ++i) {
-        if (gradients.values[i] != 0.0) {
-            throw std::invalid_argument("B0 optimizer cannot update segmenter gradients");
-        }
     }
     require_finite_parameters(parameters);
 
