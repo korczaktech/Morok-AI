@@ -76,9 +76,21 @@ int main() {
         memory::Sensitivity::private_data, std::nullopt};
     auto working_id = store.store(working);
     assert(working_id);
+    assert(store.promote(session, *working_id.value_if(),
+        memory::MemoryKind::semantic));
+    auto promoted = store.retrieve(session, *working_id.value_if());
+    assert(promoted);
+    assert(promoted.value_if()->kind == memory::MemoryKind::semantic);
+
+    auto second_working = store.store(working);
+    assert(second_working);
     auto cleared = store.clear_working(session);
-    assert(cleared && *cleared.value_if() == 1);
-    assert(!store.retrieve(session, *working_id.value_if()));
+    assert(cleared && *cleared.value_if() == 0);
+    assert(store.retrieve(session, *working_id.value_if()));
+    assert(store.erase(session, *working_id.value_if(), "test"));
+    auto cleared_again = store.clear_working(session);
+    assert(cleared_again && *cleared_again.value_if() == 1);
+    assert(!store.retrieve(session, *second_working.value_if()));
 
     memory::MemoryInput expiring{
         session, memory::MemoryKind::semantic,
