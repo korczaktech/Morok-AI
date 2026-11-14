@@ -92,9 +92,13 @@ Responsabilidades:
 - validação de esquema;
 - autorização;
 - confirmação de efeitos colaterais;
-- execução isolada;
+- execução controlada;
 - timeout e limite de saída;
 - auditoria.
+
+**Implementação inicial:** registro tipado, descoberta filtrada, allowlist por nome, grants explícitos de capacidade, confirmação obrigatória para ferramentas com efeitos colaterais, validação de argumentos UTF-8/número/booleano, limites de concorrência/entrada/saída/tempo, captura de exceções, correlação por SessionId/RequestId e audit sink obrigatório por padrão. O lifecycle integra-se ao IA-CORE por initializer/shutdown callback. Teste CTest: `tools.tool_subsystem`.
+
+**Limite explícito:** os handlers são código C++ confiável no mesmo processo. Timeout e cancelamento são cooperativos; não existe isolamento de processo/OS nesta versão e handlers não confiáveis não devem ser registrados. Para ferramentas externas não confiáveis, é necessário backend de processo/sandbox com isolamento e interrupção real.
 
 Ferramentas são desativadas por padrão até serem registradas e autorizadas. Nenhuma ferramenta recebe acesso irrestrito ao sistema operacional.
 
