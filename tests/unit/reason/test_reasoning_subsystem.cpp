@@ -60,6 +60,9 @@ int main() {
     ReasoningTask task;
     task.objective = "calcular e validar resultado";
     task.preconditions.push_back(Condition{"a", Comparator::greater, Value{0.0}});
+    task.preconditions.push_back(Condition{"a", Comparator::not_equal, Value{1.0}});
+    task.preconditions.push_back(Condition{"b", Comparator::greater_equal, Value{2.0}});
+    task.preconditions.push_back(Condition{"a", Comparator::less_equal, Value{2.0}});
     task.steps.push_back(step("sum", "sum", Operation::add, {"a", "b"}));
     task.steps.back().preconditions.push_back(
         Condition{"a", Comparator::greater, Value{0.0}});
@@ -71,6 +74,8 @@ int main() {
                               {"sum", "double"}));
     task.steps.push_back(step("join", "joined", Operation::concatenate,
                               {"left", "right"}));
+    task.steps.back().postconditions.push_back(
+        Condition{"joined", Comparator::greater, Value{std::string("morok")}});
     task.initial_values.emplace("left", Value{std::string("morok ")});
     task.initial_values.emplace("right", Value{std::string("ai")});
     const std::map<std::string, Value> context{
@@ -172,6 +177,19 @@ int main() {
     assert(continue_result.value_if()->skipped_steps.front() == "dependent");
     assert(continue_result.value_if()->completed_steps.size() == 1);
     assert(continue_result.value_if()->completed_steps.front() == "independent");
+
+    ReasoningTask invalid_utf8;
+    invalid_utf8.objective = "texto inválido";
+    invalid_utf8.initial_values.emplace("bad", Value{std::string(1, static_cast<char>(0xFF))});
+    invalid_utf8.steps.push_back(step("copy", "copy", Operation::assign));
+    auto invalid_value = reasoning.create_plan(request, invalid_utf8);
+    assert(!invalid_value);
+    assert(invalid_value.error_if()->code == ErrorCode::invalid_argument);
+
+    ReasoningSubsystem invalid_configuration(ReasoningConfig{33, 8, 4096, 512, 1});
+    auto rejected_configuration = invalid_configuration.initialize(RuntimeConfig{});
+    assert(!rejected_configuration);
+    assert(rejected_configuration.error_if()->code == ErrorCode::resource_limit);
 
     ReasoningTask cycle_task;
     cycle_task.objective = "detectar ciclo";
