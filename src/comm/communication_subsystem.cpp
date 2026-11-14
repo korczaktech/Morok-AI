@@ -142,6 +142,51 @@ CommunicationSubsystem::create_conversation() {
     return common::Result<common::ConversationId>::success(id);
 }
 
+common::Result<core::RequestContext>
+CommunicationSubsystem::create_request_context(
+    const common::ConversationId& conversation_id,
+    core::CancellationToken cancellation) const {
+    std::lock_guard lock(mutex_);
+    const auto found = conversations_.find(conversation_id.to_string());
+    if (!initialized_ || found == conversations_.end() || found->second.closed)
+        return common::Result<core::RequestContext>::failure(common::Error::make(
+            common::ErrorCode::invalid_argument,
+            "conversation is unavailable", "comm", "request.create"));
+    return core::RequestContext::create(found->second.session_id,
+                                        std::move(cancellation));
+}
+
+common::Status CommunicationSubsystem::append_control_message(
+    const core::RequestContext& request,
+    const common::ConversationId& conversation_id,
+    MessageRole role, const common::Utf8Text& text, std::string tool_name) {
+    if (role != MessageRole::system && role != MessageRole::tool)
+        return failure(common::ErrorCode::invalid_argument,
+                       "control messages must use system or tool role",
+                       "message.append");
+    if ((role == MessageRole::tool && tool_name.empty()) ||
+        (role == MessageRole::system && !tool_name.empty()))
+        return failure(common::ErrorCode::invalid_argument,
+                       "tool messages require a tool name; system messages must not have one",
+                       "message.append");
+    if (tool_name.size() > 128U || text.size_bytes() > limits_.max_message_bytes)
+        return failure(common::ErrorCode::input_too_large,
+                       "control message metadata or content exceeds its limit",
+                       "message.append");
+    std::lock_guard lock(mutex_);
+    const auto found = conversations_.find(conversation_id.to_string());
+    if (!initialized_ || found == conversations_.end() ||
+        found->second.session_id != request.session_id() ||
+        found->second.closed || in_flight_.contains(conversation_id.to_string()))
+        return failure(common::ErrorCode::invalid_argument,
+                       "control message refers to an unavailable conversation",
+                       "message.append");
+    auto message = make_message(found->second, request, role, text.string());
+    if (!message) return common::Status::failure(*message.error_if());
+    message.value_if()->tool_name = std::move(tool_name);
+    return append_locked(found->second, std::move(*message.value_if()));
+}
+
 common::Status CommunicationSubsystem::close_conversation(
     const common::ConversationId& conversation_id) {
     std::lock_guard lock(mutex_);
