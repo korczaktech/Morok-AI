@@ -38,7 +38,7 @@ int main() {
         const auto corpus=dir/"corpus"; std::filesystem::create_directories(corpus);
         for(int i=0;i<3;++i){std::ofstream f(corpus/(std::to_string(i)+".txt"));f<<"Este e um documento de teste da geracao dois. Numero "<<i<<".\n";}
         G2TrainingConfig training; training.base.corpus_directory=corpus;
-        training.base.max_epochs=1; training.base.patience=1; training.base.truncation_length=8;
+        training.base.max_epochs=1; training.base.patience=5; training.base.truncation_length=8;
         training.checkpoint_prefix=dir/"trained";
         G2Parameters trained; initialize_g2_parameters(trained,7);
         const auto report=train_g2_corpus(training,trained);
@@ -46,6 +46,10 @@ int main() {
             throw std::runtime_error("both G2 experts must complete one training epoch");
         if(load_g2_checkpoint(training.checkpoint_prefix).flatten()!=trained.flatten())
             throw std::runtime_error("trained G2 checkpoint does not match trained parameters");
+        training.base.max_epochs=2; training.resume=true;
+        const auto resumed=train_g2_corpus(training,trained);
+        if(!resumed.expert_a.resumed||!resumed.expert_b.resumed)
+            throw std::runtime_error("both G2 experts must resume their own training checkpoints");
         std::filesystem::remove_all(dir);
     } catch(const std::exception& e){std::filesystem::remove_all(dir);std::cerr<<"G2 test failed: "<<e.what()<<'\n';return 1;}
     return 0;

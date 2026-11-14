@@ -22,11 +22,11 @@ O checkpoint G2 é um par de arquivos com sufixos `.expert-a` e `.expert-b`, cad
 
 ## Treinamento e inferência
 
-- `morok-train-g2 <corpus-dir> <checkpoint-prefix> [epochs] [seed]`
+- `morok-train-g2 <corpus-dir> <checkpoint-prefix> [epochs] [seed] [--resume]`
 - `morok-generate-g2 <checkpoint-prefix> <prompt.txt> <saida.txt> [max-bytes]`
 
-O treinamento ocorre sequencialmente para manter o uso de memória abaixo do limite operacional inicial de 4 GB. Cada especialista usa o pipeline BPTT/AdamW ou SGD já testado pela G1. A G2 não importa pesos externos nem usa modelos pré-treinados.
+O treinamento ocorre sequencialmente para manter o uso de memória controlado. O argumento `--resume` retoma os checkpoints de treinamento dos dois especialistas de forma independente. Cada especialista usa a mesma partição determinística de documentos, mas mantém pesos e estados de otimizador próprios. Cada especialista usa o pipeline BPTT/AdamW ou SGD já testado pela G1. A G2 não importa pesos externos nem usa modelos pré-treinados.
 
-## Limites conhecidos
+## Workflow de treinamento\n\nO workflow `G2 First Complete Training` pode ser iniciado manualmente no GitHub Actions. Ele compila a aplicação, executa a suíte CTest, treina os dois especialistas, verifica a retomada de ambos, executa inferência e publica checkpoints, métricas, saída gerada, hashes e uso de recursos como artefato. O corpus usado pelo workflow é a fixture sintética CC0 do repositório.\n\n## Limites conhecidos
 
 A geração atual é reranking de duas continuações independentes, não beam search conjunto nem atualização conjunta dos dois especialistas por uma única função de perda. As métricas devem ser reportadas por especialista e comparadas com a G1 em corpus e sementes equivalentes. A G2 só poderá ser considerada melhor após avaliação cega em dados não vistos, medição de RAM/latência e análise de diversidade/qualidade. A contagem de 2.000 parâmetros não implica melhoria automática.
