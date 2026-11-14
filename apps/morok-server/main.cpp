@@ -13,6 +13,7 @@
 #include "morok/learn/learning_subsystem.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <arpa/inet.h>
 #include <cctype>
 #include <cstdint>
@@ -247,24 +248,53 @@ void handle_client(int client, morok::comm::CommunicationSubsystem& communicatio
         return;
     }
     std::size_t content_length = 0;
+    bool has_content_length = false;
+    bool has_json_content_type = false;
     std::istringstream headers(request.substr(first_end + 2, header_end - first_end - 2));
     std::string line;
     while (std::getline(headers, line)) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
         const auto colon = line.find(':');
-        if (colon == std::string::npos) continue;
+        if (colon == std::string::npos) {
+            respond(client, 400, "Bad Request", "{\"error\":\"malformed HTTP header\"}");
+            return;
+        }
         std::string name = line.substr(0, colon);
         std::transform(name.begin(), name.end(), name.begin(),
                        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        std::string value = line.substr(colon + 1);
+        const auto first = value.find_first_not_of(" \t");
+        const auto last = value.find_last_not_of(" \t");
+        value = first == std::string::npos ? std::string{} : value.substr(first, last - first + 1);
         if (name == "transfer-encoding") {
             respond(client, 400, "Bad Request", "{\"error\":\"transfer encoding is unsupported\"}");
             return;
         }
         if (name == "content-length") {
-            const auto value = line.substr(colon + 1);
-            try { content_length = static_cast<std::size_t>(std::stoull(value)); }
-            catch (...) { respond(client, 400, "Bad Request", "{\"error\":\"invalid content length\"}"); return; }
+            if (has_content_length) {
+                respond(client, 400, "Bad Request", "{\"error\":\"duplicate content length\"}");
+                return;
+            }
+            const auto parsed = std::from_chars(value.data(), value.data() + value.size(), content_length);
+            if (value.empty() || parsed.ec != std::errc{} || parsed.ptr != value.data() + value.size()) {
+                respond(client, 400, "Bad Request", "{\"error\":\"invalid content length\"}");
+                return;
+            }
+            has_content_length = true;
+        } else if (name == "content-type") {
+            std::transform(value.begin(), value.end(), value.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            has_json_content_type = value == "application/json" ||
+                value.rfind("application/json;", 0) == 0;
         }
+    }
+    if (!has_json_content_type) {
+        respond(client, 415, "Unsupported Media Type", "{\"error\":\"Content-Type must be application/json\"}");
+        return;
+    }
+    if (!has_content_length) {
+        respond(client, 411, "Length Required", "{\"error\":\"Content-Length is required\"}");
+        return;
     }
     if (content_length == 0 || content_length > kMaxBodyBytes) {
         respond(client, 413, "Payload Too Large", "{\"error\":\"body must be between 1 and 65536 bytes\"}");
