@@ -93,7 +93,8 @@ enum class SecurityEventType {
     confirmation_approved,
     confirmation_rejected,
     confirmation_consumed,
-    confirmation_expired
+    confirmation_expired,
+    session_closed
 };
 
 struct SecurityAuditRecord final {
@@ -129,6 +130,8 @@ public:
     [[nodiscard]] common::Status revoke_tool(
         const SecurityPrincipal& principal, const std::string& tool_name,
         tools::ToolCapability capability);
+    // Removes every grant and pending confirmation bound to this exact session.
+    [[nodiscard]] common::Status close_session(const SecurityPrincipal& principal);
 
     [[nodiscard]] common::Result<tools::ToolAccessPolicy> tool_policy(
         const SecurityPrincipal& principal) const;
