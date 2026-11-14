@@ -145,3 +145,30 @@ if(MOROK_BUILD_APPS)
         set_tests_properties(apps.server_usage PROPERTIES WILL_FAIL TRUE)
     endif()
 endif()
+
+# Stage 15: property, integration and regression coverage.
+add_executable(morok_test_model_properties property/test_model_properties.cpp)
+target_link_libraries(morok_test_model_properties PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_model_properties)
+add_test(NAME property.model_invariants COMMAND morok_test_model_properties)
+set_tests_properties(property.model_invariants PROPERTIES LABELS "property;fast" TIMEOUT 30)
+
+add_executable(morok_test_training_generation_pipeline
+    integration/model_training_generation_pipeline.cpp)
+target_link_libraries(morok_test_training_generation_pipeline PRIVATE Morok::Core morok_build_options)
+target_compile_definitions(morok_test_training_generation_pipeline PRIVATE
+    MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+morok_enable_sanitizers(morok_test_training_generation_pipeline)
+add_test(NAME integration.training_generation_pipeline
+    COMMAND morok_test_training_generation_pipeline)
+set_tests_properties(integration.training_generation_pipeline
+    PROPERTIES LABELS "integration;model" TIMEOUT 180)
+
+add_executable(morok_test_runtime_rollback regression/test_runtime_rollback.cpp)
+target_link_libraries(morok_test_runtime_rollback PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_runtime_rollback)
+add_test(NAME regression.runtime_rollback COMMAND morok_test_runtime_rollback)
+set_tests_properties(regression.runtime_rollback PROPERTIES LABELS "regression;core" TIMEOUT 30)
+
+get_property(_morok_tests DIRECTORY PROPERTY TESTS)
+set_tests_properties(${_morok_tests} PROPERTIES TIMEOUT 120)
