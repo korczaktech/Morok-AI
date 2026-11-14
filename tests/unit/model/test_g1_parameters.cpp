@@ -30,7 +30,7 @@ void test_inventory_count_and_shapes() {
     static_assert(kG1FastParameterCount == 506);
     static_assert(kG1SlowParameterCount == 253);
     static_assert(kG1PredictionParameterCount == 212);
-    static_assert(kG1SegmenterParameterCount == 29);
+    static_assert(kG1EosParameterCount == 29);
 
     G1Parameters parameters{};
     const auto flat = parameters.flatten();
