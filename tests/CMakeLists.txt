@@ -123,3 +123,11 @@ add_executable(morok_test_security_subsystem unit/security/test_security_subsyst
 target_link_libraries(morok_test_security_subsystem PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_security_subsystem)
 add_test(NAME security.security_subsystem COMMAND morok_test_security_subsystem)
+
+if(MOROK_BUILD_APPS)
+    add_test(NAME apps.cli_help COMMAND morok_cli --help)
+    add_test(NAME apps.cli_version COMMAND morok_cli version)
+    add_test(NAME apps.cli_unknown_command
+        COMMAND morok_cli command-that-does-not-exist)
+    set_tests_properties(apps.cli_unknown_command PROPERTIES WILL_FAIL TRUE)
+endif()
