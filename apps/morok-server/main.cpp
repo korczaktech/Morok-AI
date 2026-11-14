@@ -210,7 +210,8 @@ void respond(int client, int status, std::string_view reason, std::string body) 
     (void)send_all(client, header.str());
     (void)send_all(client, body);
 }
-void handle_client(int client, morok::comm::CommunicationSubsystem& communication) {
+void handle_client(int client, morok::comm::CommunicationSubsystem& communication,
+                   morok::security::SecuritySubsystem& security) {
     std::string request;
     char buffer[4096];
     std::size_t header_end = std::string::npos;
@@ -331,10 +332,23 @@ void handle_client(int client, morok::comm::CommunicationSubsystem& communicatio
             (void)communication.close_conversation(conversation_id);
             throw std::runtime_error(request_context.error_if()->message);
         }
+        // Local loopback only: no remote identity is asserted and no tool
+        // capability is granted implicitly to generated content.
+        const morok::security::SecurityPrincipal principal{
+            "local-loopback", request_context.value_if()->session_id()};
+        struct SessionSecurityScope final {
+            morok::security::SecuritySubsystem& security;
+            morok::security::SecurityPrincipal principal;
+            ~SessionSecurityScope() { (void)security.close_session(principal); }
+        } security_scope{security, principal};
         const auto result = communication.send_message(
             *request_context.value_if(), conversation_id, *prompt.value_if(), max_bytes);
         (void)communication.close_conversation(conversation_id);
         if (!result) throw std::runtime_error(result.error_if()->message);
+        if (result.value_if()->content.size() > 64U * 1024U ||
+            !morok::common::Utf8Text::from_utf8(result.value_if()->content)) {
+            throw std::runtime_error("generated output failed UTF-8 or size validation");
+        }
         respond(client, 200, "OK",
             "{\"response\":\"" + escape_json(result.value_if()->content) +
             "\",\"request_id\":\"" + result.value_if()->request_id.to_string() +
@@ -369,8 +383,8 @@ int main(int argc, char** argv) {
             return morok::common::Status::success();
         };
         morok::security::SecurityAuditSink security_audit = [](const morok::security::SecurityAuditRecord& record) {
+            // Principal IDs and user-controlled content are intentionally omitted.
             std::clog << "security_audit event=" << static_cast<int>(record.type)
-                      << " subject=" << record.subject_id
                       << " tool=" << record.tool_name << '\n';
             return morok::common::Status::success();
         };
@@ -431,7 +445,7 @@ int main(int argc, char** argv) {
                                &client_timeout, sizeof(client_timeout));
             (void)::setsockopt(client, SOL_SOCKET, SO_SNDTIMEO,
                                &client_timeout, sizeof(client_timeout));
-            handle_client(client, communication);
+            handle_client(client, communication, security);
             ::close(client);
         }
         ::close(server);
