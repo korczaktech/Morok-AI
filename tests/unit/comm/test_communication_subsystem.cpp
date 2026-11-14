@@ -76,21 +76,41 @@ int main() {
     assert((*history.value_if())[2].role == comm::MessageRole::user);
     assert((*history.value_if())[3].role == comm::MessageRole::assistant);
 
+    auto second_conversation = communication.create_conversation();
+    assert(second_conversation);
+    auto second_request = communication.create_request_context(*second_conversation.value_if());
+    assert(second_request);
+    auto cross_session = communication.send_message(
+        *request.value_if(), *second_conversation.value_if(),
+        *user_text.value_if(), 4);
+    assert(!cross_session);
+    assert(cross_session.error_if()->code == common::ErrorCode::invalid_argument);
+
     core::CancellationSource cancelled_source;
-    assert(cancelled_source.cancel());
     auto cancelled_request = communication.create_request_context(
         *conversation.value_if(), cancelled_source.token());
     assert(cancelled_request);
     auto cancelled = communication.send_message(
         *cancelled_request.value_if(), *conversation.value_if(),
-        *user_text.value_if(), 4);
+        *user_text.value_if(), 4,
+        [&](const comm::StreamEvent& event) {
+            if (event.kind == comm::StreamEventKind::message_started)
+                assert(cancelled_source.cancel());
+            return common::Status::success();
+        });
     assert(!cancelled);
     assert(cancelled.error_if()->code == common::ErrorCode::cancelled);
+    auto after_cancel = communication.history(*conversation.value_if());
+    assert(after_cancel);
+    assert(after_cancel.value_if()->size() == 6);
+    assert(after_cancel.value_if()->back().role == comm::MessageRole::assistant);
+    assert(after_cancel.value_if()->back().state == comm::MessageState::cancelled);
 
     auto invalid_role = communication.append_control_message(
         *request.value_if(), *conversation.value_if(),
         comm::MessageRole::assistant, *tool_text.value_if());
     assert(!invalid_role);
+    assert(communication.close_conversation(*second_conversation.value_if()));
     assert(communication.close_conversation(*conversation.value_if()));
     assert(communication.active_conversations() == 0);
     assert(sessions.size() == 0);
