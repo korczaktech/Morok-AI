@@ -37,7 +37,14 @@ struct ToolSchema final {
     bool reject_unknown_fields{true};
 };
 
+struct ToolPermissionGrant final {
+    std::string tool_name;
+    ToolCapability capability{ToolCapability::read_only};
+};
+
 struct ToolAccessPolicy final {
+    // Exact pairs are preferred. When non-empty, legacy lists are ignored.
+    std::vector<ToolPermissionGrant> exact_grants;
     std::vector<std::string> allowed_tools;
     std::vector<ToolCapability> granted_capabilities;
 };
