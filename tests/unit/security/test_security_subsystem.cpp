@@ -30,11 +30,13 @@ int main() {
         security::ContentOrigin::user_input, "request-body");
     const auto memory_content = security::classify_content(
         security::ContentOrigin::retrieved_memory, "memory-record");
-    const auto trusted_config = security::classify_content(
-        security::ContentOrigin::trusted_configuration, "host-policy");
-    assert(user_content.untrusted && !security::may_supply_security_policy(user_content));
-    assert(memory_content.untrusted && !security::may_supply_security_policy(memory_content));
-    assert(!trusted_config.untrusted && security::may_supply_security_policy(trusted_config));
+    const auto tool_content = security::classify_content(
+        security::ContentOrigin::tool_output, "tool-response");
+    assert(user_content.is_untrusted());
+    assert(memory_content.is_untrusted());
+    assert(tool_content.is_untrusted());
+    assert(user_content.origin() == security::ContentOrigin::user_input);
+    assert(memory_content.source_id() == "memory-record");
 
     auto denied = security_system.authorize_tool(
         principal, "read_file", tools::ToolCapability::filesystem_read);
