@@ -373,6 +373,16 @@ common::Result<Message> CommunicationSubsystem::send_message(
         release();
         return common::Result<Message>::failure(*status.error_if());
     }
+    if (request.is_cancelled()) {
+        (void)emit(stream, StreamEventKind::message_cancelled,
+            snapshot, assistant.value_if()->id, {}, 0);
+        update_state(MessageState::cancelled);
+        release();
+        return common::Result<Message>::failure(common::Error::make(
+            common::ErrorCode::cancelled,
+            "request was cancelled while starting response delivery",
+            "comm", "message.stream"));
+    }
 
     const auto output = generated.value_if()->text.view();
     std::size_t offset = 0;
