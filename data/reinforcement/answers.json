@@ -48,12 +48,12 @@
     }
   ],
   "totals": {
-    "episodes": 24,
-    "correct": 12,
-    "incorrect": 12,
-    "policy_updates": 24,
+    "episodes": 30,
+    "correct": 15,
+    "incorrect": 15,
+    "policy_updates": 30,
     "skipped_updates": 0,
-    "oracle_demonstrations": 12
+    "oracle_demonstrations": 15
   },
   "episodes": [
     {
@@ -77,7 +77,7 @@
           "target_bytes": 4,
           "gradient_norm": 3.10982,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 0.0000249911,
+          "parameter_delta_l2": 2.49911e-05,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -104,7 +104,7 @@
           "target_bytes": 6,
           "gradient_norm": 1.87259,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 0.0000249854,
+          "parameter_delta_l2": 2.49854e-05,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -131,7 +131,7 @@
           "target_bytes": 6,
           "gradient_norm": 2.2998,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 0.0000250081,
+          "parameter_delta_l2": 2.50081e-05,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -157,7 +157,7 @@
           "target_bytes": 48,
           "gradient_norm": 0.838229,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 0.0000250076,
+          "parameter_delta_l2": 2.50076e-05,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -183,7 +183,7 @@
           "target_bytes": 35,
           "gradient_norm": 1.13052,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 0.0000249976,
+          "parameter_delta_l2": 2.49976e-05,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -209,7 +209,7 @@
           "target_bytes": 48,
           "gradient_norm": 1.03885,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 0.0000250202,
+          "parameter_delta_l2": 2.50202e-05,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -326,7 +326,7 @@
           "target_bytes": 48,
           "gradient_norm_first": 0.786481,
           "gradient_norm_last": 0.786481,
-          "parameter_delta_l2": 0.0000250076,
+          "parameter_delta_l2": 2.50076e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
@@ -354,7 +354,7 @@
           "target_bytes": 48,
           "gradient_norm_first": 0.805296,
           "gradient_norm_last": 0.805296,
-          "parameter_delta_l2": 0.0000250012,
+          "parameter_delta_l2": 2.50012e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
@@ -382,7 +382,7 @@
           "target_bytes": 48,
           "gradient_norm_first": 1.00482,
           "gradient_norm_last": 1.00482,
-          "parameter_delta_l2": 0.0000249778,
+          "parameter_delta_l2": 2.49778e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
@@ -500,7 +500,7 @@
           "target_bytes": 48,
           "gradient_norm_first": 1.09436,
           "gradient_norm_last": 1.09436,
-          "parameter_delta_l2": 0.0000250018,
+          "parameter_delta_l2": 2.50018e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
@@ -528,7 +528,7 @@
           "target_bytes": 48,
           "gradient_norm_first": 0.96424,
           "gradient_norm_last": 0.96424,
-          "parameter_delta_l2": 0.0000249745,
+          "parameter_delta_l2": 2.49745e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
@@ -556,7 +556,7 @@
           "target_bytes": 48,
           "gradient_norm_first": 1.00273,
           "gradient_norm_last": 1.00273,
-          "parameter_delta_l2": 0.0000250075,
+          "parameter_delta_l2": 2.50075e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
@@ -674,7 +674,7 @@
           "target_bytes": 48,
           "gradient_norm_first": 1.13427,
           "gradient_norm_last": 1.13427,
-          "parameter_delta_l2": 0.0000250052,
+          "parameter_delta_l2": 2.50052e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
@@ -702,7 +702,7 @@
           "target_bytes": 48,
           "gradient_norm_first": 1.13535,
           "gradient_norm_last": 1.13535,
-          "parameter_delta_l2": 0.0000250015,
+          "parameter_delta_l2": 2.50015e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
@@ -730,7 +730,181 @@
           "target_bytes": 48,
           "gradient_norm_first": 1.05289,
           "gradient_norm_last": 1.05289,
-          "parameter_delta_l2": 0.0000250025,
+          "parameter_delta_l2": 2.50025e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 25,
+      "source": "oracle_demonstration",
+      "demonstration_version": 5,
+      "question_id": "sky_is_blue",
+      "prompt": "O céu é azul?\nResposta: ",
+      "answer": "Sim.",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "known_target_demonstration_for_policy_warm_start",
+      "timestamp_utc": "2026-11-14T22:50:25.420130+00:00",
+      "model_sha256_before": "18b6d11fca9762eb765b9c849a3c9565e24c5d1ee23713c8e9819ecd65e244a7",
+      "model_sha256_after": "f992ab7f1dcc91de67e1db051837698e85d0a204beeaf8ab9e4d4180066b3650",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "optimizer_steps": 1000,
+        "report": {
+          "reward": 1,
+          "target_bytes": 4,
+          "gradient_norm_first": 2.46376,
+          "gradient_norm_last": 1.22278,
+          "parameter_delta_l2": 0.617098,
+          "optimizer_steps": 1000,
+          "optimizer_step": 1000,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 26,
+      "source": "oracle_demonstration",
+      "demonstration_version": 5,
+      "question_id": "mountains_high_or_low",
+      "prompt": "As montanhas são altas ou baixas?\nResposta: ",
+      "answer": "Altas.",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "known_target_demonstration_for_policy_warm_start",
+      "timestamp_utc": "2026-11-14T22:50:25.529460+00:00",
+      "model_sha256_before": "f992ab7f1dcc91de67e1db051837698e85d0a204beeaf8ab9e4d4180066b3650",
+      "model_sha256_after": "6613715a8c473f8c6c4c1a01a0b8de51e3e62812fca165020a7984d80628d62f",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "optimizer_steps": 1000,
+        "report": {
+          "reward": 1,
+          "target_bytes": 6,
+          "gradient_norm_first": 1.16086,
+          "gradient_norm_last": 0.740443,
+          "parameter_delta_l2": 0.618009,
+          "optimizer_steps": 1000,
+          "optimizer_step": 1000,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 27,
+      "source": "oracle_demonstration",
+      "demonstration_version": 5,
+      "question_id": "grass_color",
+      "prompt": "Que cor é a grama?\nResposta: ",
+      "answer": "Verde.",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "known_target_demonstration_for_policy_warm_start",
+      "timestamp_utc": "2026-11-14T22:50:25.624663+00:00",
+      "model_sha256_before": "6613715a8c473f8c6c4c1a01a0b8de51e3e62812fca165020a7984d80628d62f",
+      "model_sha256_after": "45b7a0008a7721823204aee038297acd325a503d8e8783798b12b19cbd5498b9",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "optimizer_steps": 1000,
+        "report": {
+          "reward": 1,
+          "target_bytes": 6,
+          "gradient_norm_first": 2.28943,
+          "gradient_norm_last": 0.92668,
+          "parameter_delta_l2": 0.612685,
+          "optimizer_steps": 1000,
+          "optimizer_step": 1000,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 28,
+      "source": "model_generated",
+      "question_id": "sky_is_blue",
+      "prompt": "O céu é azul?\nResposta: ",
+      "answer": "Sm,,,Dde..Rarde..Rarde..Ravtevdde..Rarde..Rarde.",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T22:50:25.630547+00:00",
+      "model_sha256_before": "45b7a0008a7721823204aee038297acd325a503d8e8783798b12b19cbd5498b9",
+      "model_sha256_after": "4af2f4c022c6c4150d378acc5f6d9928331f9b713a8b96c2bd0ebdf2820b571a",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.22142,
+          "gradient_norm_last": 1.22142,
+          "parameter_delta_l2": 2.50058e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 29,
+      "source": "model_generated",
+      "question_id": "mountains_high_or_low",
+      "prompt": "As montanhas são altas ou baixas?\nResposta: ",
+      "answer": "Sm,,,De..Rarde..Rarde..Ravtevdde..Rarde..Rarde..",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T22:50:25.638309+00:00",
+      "model_sha256_before": "4af2f4c022c6c4150d378acc5f6d9928331f9b713a8b96c2bd0ebdf2820b571a",
+      "model_sha256_after": "0935b822689dd5eafdd9ec8c80fb936e50a7ad2b2e6768497be106bf31055095",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.26415,
+          "gradient_norm_last": 1.26415,
+          "parameter_delta_l2": 2.49922e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 30,
+      "source": "model_generated",
+      "question_id": "grass_color",
+      "prompt": "Que cor é a grama?\nResposta: ",
+      "answer": "Sm,.Rarde..Rarde..Ravtevde..Ras.2Sm,,,Dde..Rarde",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T22:50:25.645814+00:00",
+      "model_sha256_before": "0935b822689dd5eafdd9ec8c80fb936e50a7ad2b2e6768497be106bf31055095",
+      "model_sha256_after": "778a171b4e177865d8fe949fafed15dec81c4a4313a9723f0e6de81f2a530fa3",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.17475,
+          "gradient_norm_last": 1.17475,
+          "parameter_delta_l2": 2.49937e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
@@ -913,5 +1087,5 @@
     }
   ],
   "oracle_demonstrations_applied": true,
-  "oracle_demonstration_version": 4
+  "oracle_demonstration_version": 5
 }
