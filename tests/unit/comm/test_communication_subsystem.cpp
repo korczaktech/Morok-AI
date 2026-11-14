@@ -70,6 +70,7 @@ int main() {
     auto history = communication.history(*conversation.value_if());
     assert(history);
     assert(history.value_if()->size() == 4);
+    assert((*history.value_if())[0].id != (*history.value_if())[1].id);
     assert((*history.value_if())[0].role == comm::MessageRole::system);
     assert((*history.value_if())[1].role == comm::MessageRole::tool);
     assert((*history.value_if())[1].tool_name == "fixture");
@@ -111,6 +112,28 @@ int main() {
         comm::MessageRole::assistant, *tool_text.value_if());
     assert(!invalid_role);
     assert(communication.close_conversation(*second_conversation.value_if()));
+
+    auto third_conversation = communication.create_conversation();
+    assert(third_conversation);
+    auto third_request = communication.create_request_context(*third_conversation.value_if());
+    assert(third_request);
+    auto callback_failure = communication.send_message(
+        *third_request.value_if(), *third_conversation.value_if(),
+        *user_text.value_if(), 4,
+        [](const comm::StreamEvent& event) {
+            if (event.kind == comm::StreamEventKind::message_started)
+                return common::Status::failure(common::Error::make(
+                    common::ErrorCode::internal_error,
+                    "test stream consumer failure", "test", "stream"));
+            return common::Status::success();
+        });
+    assert(!callback_failure);
+    assert(callback_failure.error_if()->code == common::ErrorCode::internal_error);
+    auto failed_history = communication.history(*third_conversation.value_if());
+    assert(failed_history);
+    assert(failed_history.value_if()->back().state == comm::MessageState::failed);
+
+    assert(communication.close_conversation(*third_conversation.value_if()));
     assert(communication.close_conversation(*conversation.value_if()));
     assert(communication.active_conversations() == 0);
     assert(sessions.size() == 0);
