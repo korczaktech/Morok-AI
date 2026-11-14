@@ -24,6 +24,14 @@ jobs:
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DMOROK_BUILD_TESTS=ON
       - name: Build
         run: cmake --build build --parallel 2
+      - name: Install application artifacts
+        run: |
+          cmake --install build --prefix build/install
+          test -x build/install/bin/morok-cli
+          test -x build/install/bin/morok-convert
+          test -x build/install/bin/morok-train
+          test -x build/install/bin/morok-evaluate
+          test -x build/install/bin/morok-server
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Benchmark smoke test
