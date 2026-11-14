@@ -35,7 +35,11 @@ O runtime só aceita requisições no estado `ready). A inicialização valida c
 
 A ordem de dependências definida no documento 20 continua sendo responsabilidade do composition root: configuração → armazenamento → IA-LANG/modelo → IA-MEM → IA-REAS → IA-TOOLS → IA-COMM. IA-CORE fornece o mecanismo e não instancia subsistemas ainda inexistentes.
 
-### Identidade e contexto de requisição
+### Sessões, identidade e contexto de requisição
+
+`SessionRegistry` cria e encerra sessões com IDs fortes, timestamp de criação e limite máximo configurável. O registro é protegido por mutex e rejeita criação acima da capacidade. O conteúdo/estado de inferência não é armazenado nesse registro: permanece isolado no subsistema de inferência.
+
+`RequestContext` associa uma requisição a um
 
 `RequestContext` associa uma requisição a um `SessionId`, um `RequestId`, instante UTC de criação e token de cancelamento. Os identificadores usam os tipos fortes compartilhados da etapa 2. O contexto não guarda conteúdo de usuário por padrão.
 
@@ -62,6 +66,7 @@ A saúde não é inferida por existência de diretórios: cada integração deve
 - `include/morok/core/configuration.hpp`
 - `include/morok/core/cancellation.hpp`
 - `include/morok/core/request_context.hpp`
+- `include/morok/core/session_registry.hpp`
 - `include/morok/core/resource_limits.hpp`
 - `include/morok/core/health.hpp`
 - `include/morok/core/runtime.hpp`
@@ -72,13 +77,14 @@ A saúde não é inferida por existência de diretórios: cada integração deve
 O teste de contratos verifica:
 1. validação e rejeição de limites incoerentes;
 2. limites de entrada, geração e memória;
-3. cancelamento compartilhado e idempotente;
-4. geração de RequestId associado a SessionId;
-5. classificação de saúde healthy/degraded/unhealthy;
-6. transições de inicialização, pronto e encerramento;
+3. limite máximo de sessões, criação, consulta e encerramento;
+4. cancelamento compartilhado e idempotente;
+5. geração de RequestId associado a SessionId;
+6. classificação de saúde healthy/degraded/unhealthy;
+7. transições de inicialização, pronto e encerramento;
 7. bloqueio de requisições fora do estado ready;
-8. rollback inverso após falha de inicialização;
-9. encerramento idempotente.
+9. rollback inverso após falha de inicialização;
+10. encerramento idempotente.
 
 ## Limitações explícitas
 
