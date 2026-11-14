@@ -1,10 +1,10 @@
 # Controles complementares de segurança e integração
 
-**Sequência:** roteiro oficial de 20 etapas do projeto. Esta etapa é distinta da etapa operacional IA-LEARN, também numerada como 18 na sequência interna da G1.
+**Classificação:** trabalho complementar de segurança aplicado ao produto. Este documento não representa uma etapa numerada do roteiro oficial de 20 etapas. A etapa 18 desse roteiro é IA-LEARN; a etapa 19 é Testes de aceitação.
 
 ## Objetivo
 
-Aplicar controles de segurança nas fronteiras entre entrada, modelo, memória, sessões, ferramentas, checkpoints e aplicações. A etapa complementa a camada inicial descrita em `docs/46-etapa-13-seguranca.md`; não substitui auditoria externa nem certificação.
+Aplicar controles de segurança nas fronteiras entre entrada, modelo, memória, sessões, ferramentas, checkpoints e aplicações. Este trabalho complementa a camada inicial descrita em `docs/46-etapa-13-seguranca.md`; não substitui auditoria externa nem certificação.
 
 ## Controles e integração
 
