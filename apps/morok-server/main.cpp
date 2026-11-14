@@ -21,6 +21,7 @@
 #include <cstring>
 #include <exception>
 #include <iostream>
+#include <utility>
 #include <limits>
 #include <netinet/in.h>
 #include <signal.h>
@@ -132,11 +133,11 @@ std::size_t extract_max_bytes(std::string_view body) {
     const auto start = pos;
     while (pos < body.size() && body[pos] >= '0' && body[pos] <= '9') {
         const auto digit = static_cast<std::size_t>(body[pos++] - '0');
-        if (value > 4096U / 10U) throw std::runtime_error("max_new_bytes out of range");
+        if (value > 256U / 10U) throw std::runtime_error("max_new_bytes out of range");
         value = value * 10U + digit;
     }
-    if (pos == start || value == 0 || value > 4096)
-        throw std::runtime_error("max_new_bytes must be between 1 and 4096");
+    if (pos == start || value == 0 || value > 256)
+        throw std::runtime_error("max_new_bytes must be between 1 and 256");
     return value;
 }
 std::string escape_json(std::string_view value) {
@@ -303,10 +304,15 @@ int main(int argc, char** argv) {
         morok::memory::MemorySubsystem memory(memory_path);
         morok::lang::LanguageSubsystem language(checkpoint.parameters);
         morok::reason::ReasoningSubsystem reasoning;
-        morok::tools::ToolAuditSink tool_audit = [](const morok::tools::ToolAuditRecord&) {
+        morok::tools::ToolAuditSink tool_audit = [](const morok::tools::ToolAuditRecord& record) {
+            std::clog << "tool_audit event=" << static_cast<int>(record.type)
+                      << " tool=" << record.tool_name << '\\n';
             return morok::common::Status::success();
         };
-        morok::security::SecurityAuditSink security_audit = [](const morok::security::SecurityAuditRecord&) {
+        morok::security::SecurityAuditSink security_audit = [](const morok::security::SecurityAuditRecord& record) {
+            std::clog << "security_audit event=" << static_cast<int>(record.type)
+                      << " subject=" << record.subject_id
+                      << " tool=" << record.tool_name << '\\n';
             return morok::common::Status::success();
         };
         morok::tools::ToolSubsystem tools({}, std::move(tool_audit));
