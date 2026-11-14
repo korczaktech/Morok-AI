@@ -1,6 +1,9 @@
 #include "morok/security/security_subsystem.hpp"
 
 #include <algorithm>
+#include <charconv>
+#include <cmath>
+#include <limits>
 #include <utility>
 
 namespace morok::security {
@@ -38,6 +41,30 @@ bool valid_tool_capability(tools::ToolCapability capability) noexcept {
 
 TrustLabel classify_content(ContentOrigin origin, std::string source_id) {
     return TrustLabel(origin, std::move(source_id));
+}
+
+std::string bind_tool_arguments(const tools::ToolArguments& arguments) {
+    std::string binding = "args-v1;";
+    for (const auto& [name, value] : arguments) {
+        binding += std::to_string(name.size()) + ":" + name;
+        if (const auto* text = std::get_if<std::string>(&value)) {
+            binding += "s" + std::to_string(text->size()) + ":" + *text;
+        } else if (const auto* number = std::get_if<double>(&value)) {
+            if (!std::isfinite(*number)) return {};
+            char buffer[64]{};
+            const auto converted = std::to_chars(
+                buffer, buffer + sizeof(buffer), *number,
+                std::chars_format::general, std::numeric_limits<double>::max_digits10);
+            if (converted.ec != std::errc{}) return {};
+            const std::string encoded(buffer, converted.ptr);
+            binding += "n" + std::to_string(encoded.size()) + ":" + encoded;
+        } else if (const auto* boolean = std::get_if<bool>(&value)) {
+            binding += *boolean ? "b1" : "b0";
+        } else {
+            return {};
+        }
+    }
+    return binding;
 }
 
 SecuritySubsystem::SecuritySubsystem(SecurityConfig config, SecurityAuditSink audit_sink)
@@ -84,7 +111,9 @@ bool SecuritySubsystem::valid_action(const SecurityAction& action) noexcept {
     return !action.tool_name.empty() && action.tool_name.size() <= 64 &&
            !action.operation.empty() && action.operation.size() <= 128 &&
            !action.target.empty() && action.target.size() <= 512 &&
-           !action.effect_summary.empty() && action.effect_summary.size() <= 1024;
+           !action.effect_summary.empty() && action.effect_summary.size() <= 1024 &&
+           action.arguments_binding.size() <= 65536 &&
+           action.arguments_binding.rfind("args-v1;", 0) == 0;
 }
 
 bool SecuritySubsystem::same_action(
@@ -92,7 +121,8 @@ bool SecuritySubsystem::same_action(
     return left.tool_name == right.tool_name &&
            left.operation == right.operation &&
            left.target == right.target &&
-           left.effect_summary == right.effect_summary;
+           left.effect_summary == right.effect_summary &&
+           left.arguments_binding == right.arguments_binding;
 }
 
 common::Status SecuritySubsystem::audit(SecurityAuditRecord record) const {
@@ -470,7 +500,8 @@ common::Result<std::string> SecuritySubsystem::invoke_tool(
 
     bool confirmed = false;
     if (descriptor->requires_confirmation) {
-        if (!action || !confirmation || action->tool_name != tool_name) {
+        if (!action || !confirmation || action->tool_name != tool_name ||
+            action->arguments_binding != bind_tool_arguments(arguments)) {
             return result_failure<std::string>(
                 common::ErrorCode::confirmation_required,
                 "tool invocation requires a matching human confirmation grant",
