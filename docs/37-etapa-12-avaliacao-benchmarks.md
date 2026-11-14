@@ -90,6 +90,30 @@ mkdir -p benchmark-results
 
 A licença e a origem devem descrever exatamente os dados utilizados. Use um arquivo de saída novo para cada campanha.
 
+
+## Smoke test executado no CI
+
+A matriz de seis configurações foi executada no commit `de1df494773d65f97cbcc70b73d94f5daf67f111`, com uma época, seed 42 e fixture sintético CC0-1.0:
+
+- 6 documentos únicos, 559 bytes; 398 alvos de treino por época e 86 alvos de teste.
+- GCC 13.3.0, Linux x86-64, AMD EPYC 7763 (runner de CI).
+- G1: BPB de teste entre 7,9658 e 8,8871; perplexidade por byte entre 250,0 e 473,5.
+- Baseline softmax-256 unigram: 4,9958 BPB em todas as configurações.
+- Delta de G1 contra o baseline: +2,9700 a +3,8913 BPB; o baseline venceu nas seis configurações.
+- Normas médias pré-clipping: 2,3850 a 2,7250; máximas: 2,9841 a 4,1492.
+- Desvio-padrão global dos parâmetros após treino: aproximadamente 0,2943 a 0,2951; os 29 parâmetros do segmentador permaneceram em zero, pois ainda não participam do B0.
+- Throughput efetivo observado: aproximadamente 184 mil a 262 mil alvos/s.
+- Latência de avaliação: aproximadamente 1.445 a 1.485 ns por byte-alvo.
+- Pico RSS: 4.694.016 bytes na campanha.
+
+O resultado confirma que o relatório novo contém métricas finitas e os grupos de parâmetros esperados. Também repete o resultado negativo: no fixture, o baseline unigram superou a G1 em todas as configurações. Uma época e seis documentos sintéticos não permitem inferir qualidade de linguagem ou escolher hiperparâmetros para uso real.
+
+Artefato JSONL: [g1-benchmark-smoke — execução 43531348078](https://github.com/korczaktech/Morok-AI/actions/runs/43531348078/artifacts/14087108497).
+
+Validação do código no mesmo commit:
+- [CI GCC/Clang Debug/Release — sucesso](https://github.com/korczaktech/Morok-AI/actions/runs/43531348078).
+- [ASan/UBSan — sucesso](https://github.com/korczaktech/Morok-AI/actions/runs/43531347891).
+
 ## Critérios de aceitação da implementação
 
 - Estatísticas numéricas determinísticas e rejeição de NaN/Inf.
