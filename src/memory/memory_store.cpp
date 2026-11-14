@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <mutex>
 #include <cctype>
 #include <cstdint>
 #include <string>
@@ -157,6 +158,7 @@ struct MemoryStore::Impl {
     sqlite3* db{};
     MemoryLimits limits{};
     bool fts{false};
+    mutable std::recursive_mutex mutex;
 };
 
 MemoryStore::MemoryStore() : impl_(std::make_unique<Impl>()) {}
@@ -165,6 +167,7 @@ MemoryStore::MemoryStore(MemoryStore&&) noexcept = default;
 MemoryStore& MemoryStore::operator=(MemoryStore&&) noexcept = default;
 
 Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) {
+    std::lock_guard lock(impl_->mutex);
     if (database_path.empty() || limits.max_record_bytes == 0 ||
         limits.max_results == 0 || limits.max_context_bytes == 0 ||
         limits.max_database_bytes < 4096U || limits.busy_timeout_ms == 0 ||
@@ -239,9 +242,11 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
     return Status::success();
 }
 
-bool MemoryStore::is_open() const noexcept { return impl_ && impl_->db != nullptr; }
+bool MemoryStore::is_open() const noexcept {
+    std::lock_guard lock(impl_->mutex); return impl_ && impl_->db != nullptr; }
 
 Status MemoryStore::close() noexcept {
+    std::lock_guard lock(impl_->mutex);
     if (!impl_ || impl_->db == nullptr) return Status::success();
     const int rc = sqlite3_close(impl_->db);
     if (rc != SQLITE_OK) return Status::failure(db_error(impl_->db, "close"));
@@ -250,11 +255,13 @@ Status MemoryStore::close() noexcept {
     return Status::success();
 }
 
-bool MemoryStore::fts5_available() const noexcept { return impl_ && impl_->fts; }
+bool MemoryStore::fts5_available() const noexcept {
+    std::lock_guard lock(impl_->mutex); return impl_ && impl_->fts; }
 
 Result<common::MemoryId> MemoryStore::store(
     const MemoryInput& input,
     const std::optional<common::RequestId>& request_id) {
+    std::lock_guard lock(impl_->mutex);
     if (!is_open()) return Result<common::MemoryId>::failure(Error::make(
         ErrorCode::internal_error, "memory store is not open", "memory", "store"));
     const auto total_bytes = input.title.size_bytes() + input.body.size_bytes() +
@@ -318,6 +325,7 @@ Result<common::MemoryId> MemoryStore::store(
 
 Result<MemoryRecord> MemoryStore::retrieve(
     const common::SessionId& session_id, const common::MemoryId& memory_id) {
+    std::lock_guard lock(impl_->mutex);
     if (!is_open()) return Result<MemoryRecord>::failure(Error::make(
         ErrorCode::internal_error, "memory store is not open", "memory", "retrieve"));
     const std::string sql = std::string("SELECT ") + record_columns +
@@ -336,6 +344,7 @@ Result<MemoryRecord> MemoryStore::retrieve(
 }
 
 Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) {
+    std::lock_guard lock(impl_->mutex);
     if (!is_open()) return Result<std::vector<MemoryRecord>>::failure(Error::make(
         ErrorCode::internal_error, "memory store is not open", "memory", "search"));
     if (query.text.empty() || query.session_id.is_nil())
@@ -424,6 +433,7 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
 Status MemoryStore::promote(
     const common::SessionId& session_id, const common::MemoryId& memory_id,
     MemoryKind target_kind) {
+    std::lock_guard lock(impl_->mutex);
     if (target_kind != MemoryKind::episodic && target_kind != MemoryKind::semantic)
         return Status::failure(Error::make(ErrorCode::invalid_argument,
             "promotion target must be episodic or semantic", "memory", "promote"));
@@ -462,6 +472,7 @@ Status MemoryStore::promote(
 Status MemoryStore::update_metadata(
     const common::SessionId& session_id, const common::MemoryId& memory_id,
     Sensitivity sensitivity, std::optional<common::Timestamp> expires_at) {
+    std::lock_guard lock(impl_->mutex);
     if (!is_open()) return Status::failure(Error::make(
         ErrorCode::internal_error, "memory store is not open", "memory", "update_metadata"));
     if (static_cast<int>(sensitivity) > 2)
@@ -510,6 +521,7 @@ Status MemoryStore::update_metadata(
 Status MemoryStore::erase(const common::SessionId& session_id,
     const common::MemoryId& memory_id, std::string actor,
     const std::optional<common::RequestId>& request_id) {
+    std::lock_guard lock(impl_->mutex);
     if (!is_open()) return Status::failure(Error::make(
         ErrorCode::internal_error, "memory store is not open", "memory", "erase"));
     if (actor.empty()) return Status::failure(Error::make(
@@ -549,6 +561,7 @@ Status MemoryStore::erase(const common::SessionId& session_id,
 }
 
 Result<std::size_t> MemoryStore::clear_working(const common::SessionId& session_id) {
+    std::lock_guard lock(impl_->mutex);
     if (!is_open()) return Result<std::size_t>::failure(Error::make(
         ErrorCode::internal_error, "memory store is not open", "memory", "clear_working"));
     const auto begin = exec(impl_->db, "BEGIN IMMEDIATE", "begin_clear_working");
@@ -575,6 +588,7 @@ Result<std::size_t> MemoryStore::clear_working(const common::SessionId& session_
 }
 
 Result<std::size_t> MemoryStore::prune_expired(common::Timestamp now) {
+    std::lock_guard lock(impl_->mutex);
     if (!is_open()) return Result<std::size_t>::failure(Error::make(
         ErrorCode::internal_error, "memory store is not open", "memory", "prune_expired"));
     const auto begin=exec(impl_->db,"BEGIN IMMEDIATE","begin_prune");
@@ -595,6 +609,7 @@ Result<std::size_t> MemoryStore::prune_expired(common::Timestamp now) {
 }
 
 Status MemoryStore::backup_to(const std::string& destination_path) {
+    std::lock_guard lock(impl_->mutex);
     if(!is_open())return Status::failure(Error::make(ErrorCode::internal_error,"memory store is not open","memory","backup"));
     if(destination_path.empty())return Status::failure(Error::make(ErrorCode::invalid_argument,"backup path is empty","memory","backup"));
     sqlite3* destination=nullptr;
@@ -611,6 +626,7 @@ Status MemoryStore::backup_to(const std::string& destination_path) {
 }
 
 Status MemoryStore::integrity_check() {
+    std::lock_guard lock(impl_->mutex);
     if (!is_open()) return Status::failure(Error::make(ErrorCode::internal_error,
         "memory store is not open", "memory", "integrity"));
     Statement statement(impl_->db, "PRAGMA integrity_check");
