@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "experiment_id": "YYYYMMDD-topic-seedset",
+  "title": "Describe the experiment question",
+  "status": "planned",
+  "hypothesis": {
+    "statement": "A falsifiable statement",
+    "null_or_refutation": "What observation would refute the hypothesis"
+  },
+  "design": {
+    "family": "g1-benchmark",
+    "primary_metric": "bits_per_byte",
+    "secondary_metrics": [
+      "training_seconds",
+      "target_bytes_per_second",
+      "peak_rss_bytes"
+    ],
+    "independent_variables": [],
+    "controlled_variables": [],
+    "decision_rule": "Define before execution"
+  },
+  "data": {
+    "dataset_name": "REPLACE_WITH_DATASET",
+    "source": "REPLACE_WITH_VERIFIABLE_SOURCE",
+    "license": "REPLACE_WITH_ACTUAL_LICENSE",
+    "raw_sha256": "REPLACE_WITH_64_HEX_SHA256",
+    "processed_sha256": "REPLACE_WITH_64_HEX_SHA256",
+    "split_policy": "document-level; train/validation/test disjoint",
+    "split_manifest_sha256": "REPLACE_WITH_64_HEX_SHA256",
+    "preprocessing": [],
+    "private_data_in_repository": false
+  },
+  "code": {
+    "repository": "https://github.com/korczaktech/Morok-AI",
+    "commit": "REPLACE_WITH_FULL_GIT_SHA",
+    "model_generation": "G1",
+    "compiler": "REPLACE_WITH_COMPILER_AND_VERSION",
+    "build_type": "Release",
+    "build_flags": "REPLACE_WITH_EFFECTIVE_FLAGS"
+  },
+  "environment": {
+    "os": "REPLACE_WITH_OS_AND_VERSION",
+    "architecture": "REPLACE_WITH_ARCHITECTURE",
+    "cpu": "REPLACE_WITH_CPU",
+    "physical_memory_bytes": 0,
+    "process_memory_limit_bytes": 0,
+    "cmake_version": "REPLACE_WITH_VERSION"
+  },
+  "training": {
+    "seeds": [],
+    "epochs": 0,
+    "batch_or_sequence_configuration": {},
+    "optimizer": "REPLACE_WITH_OPTIMIZER",
+    "learning_rate": 0.0,
+    "bptt_steps": 0,
+    "checkpoint_selection": "validation_only"
+  },
+  "execution": {
+    "started_at_utc": null,
+    "finished_at_utc": null,
+    "exit_code": null,
+    "command": "REPLACE_WITH_EXACT_COMMAND",
+    "stdout_artifact": null,
+    "stderr_artifact": null,
+    "report_artifact": null,
+    "artifact_sha256": null,
+    "deviations": []
+  },
+  "results": {
+    "runs": [],
+    "aggregate": null,
+    "interpretation": "Not evaluated",
+    "limitations": []
+  },
+  "review": {
+    "reviewed_by": null,
+    "reviewed_at_utc": null,
+    "conclusion": "not_executed"
+  }
+}
