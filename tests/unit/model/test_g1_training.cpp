@@ -77,6 +77,17 @@ void deterministic_resume(){
  std::filesystem::remove_all(root);
 }
 
+void invalid_bptt_window(){
+ morok::model::G1TrainingConfig c;
+ c.truncation_length=morok::model::kG1MaxBpttTruncationLength+1;
+ morok::model::G1Parameters p;
+ morok::model::initialize_g1_parameters(p,42);
+ bool failed=false;
+ try{(void)morok::model::train_g1_corpus(c,p);}
+ catch(const std::invalid_argument&){failed=true;}
+ req(failed,"training must reject a BPTT window above the documented memory bound");
+}
+
 void invalid_utf8(){
  auto root=std::filesystem::temp_directory_path()/"morok-g1-invalid-test";std::filesystem::remove_all(root);std::filesystem::create_directories(root);
  try{
@@ -87,4 +98,4 @@ void invalid_utf8(){
  }catch(...){std::filesystem::remove_all(root);throw;}std::filesystem::remove_all(root);
 }
 }
-int main(){try{pipeline();incremental_state_continuity();deterministic_resume();invalid_utf8();std::cout<<"G1 training tests passed\n";return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+int main(){try{pipeline();incremental_state_continuity();deterministic_resume();invalid_bptt_window();invalid_utf8();std::cout<<"G1 training tests passed\n";return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
