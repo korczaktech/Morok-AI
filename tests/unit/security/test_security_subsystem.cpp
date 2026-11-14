@@ -102,6 +102,10 @@ int main() {
     auto publish_approval = security_system.approve_confirmation(
         principal, *publish_ticket.value_if(), publish_action, true);
     assert(publish_approval);
+    auto duplicate_approval = security_system.approve_confirmation(
+        principal, *publish_ticket.value_if(), publish_action, true);
+    assert(!duplicate_approval &&
+           duplicate_approval.error_if()->code == common::ErrorCode::confirmation_required);
     const tools::ToolArguments tampered_arguments{
         {"message", std::string("different message")}};
     auto tampered_publish = security_system.invoke_tool(
