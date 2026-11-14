@@ -32,7 +32,9 @@ enum class Operation {
     concatenate
 };
 
-enum class FailurePolicy { abort_plan, continue_independent };\n\nenum class Comparator {
+enum class FailurePolicy { abort_plan, continue_independent };
+
+enum class Comparator {
     equal,
     not_equal,
     less,
@@ -66,6 +68,7 @@ struct ReasoningTask final {
     std::vector<Condition> preconditions;
     std::vector<ReasoningStep> steps;
     std::size_t step_budget{32};
+    FailurePolicy failure_policy{FailurePolicy::abort_plan};
 };
 
 struct ReasoningConfig final {
@@ -84,12 +87,15 @@ struct ReasoningPlan final {
     std::vector<Condition> preconditions;
     std::vector<ReasoningStep> ordered_steps;
     std::size_t dependency_depth{0};
+    FailurePolicy failure_policy{FailurePolicy::abort_plan};
 };
 
 struct ReasoningResult final {
     std::map<std::string, Value> values;
     std::vector<std::string> completed_steps;
     std::vector<std::string> recovered_steps;
+    std::vector<std::string> failed_steps;
+    std::vector<std::string> skipped_steps;
     std::size_t steps_executed{0};
 };
 
