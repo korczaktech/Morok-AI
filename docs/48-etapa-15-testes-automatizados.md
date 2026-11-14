@@ -67,6 +67,18 @@ cmake --build build-fuzz --parallel 2
 
 A etapa adiciona cobertura automatizada, mas não prova ausência de defeitos. O fuzzing de CI usa um orçamento limitado de execuções por commit; campanhas longas e corpus de regressão ampliado continuam apropriados para execução periódica. Os diretórios de aceitação e suporte permanecem preparados para cenários adicionais, sem serem apresentados como cobertura já existente.
 
-## Critério de conclusão
+## Validação concluída
 
-A etapa estará validada quando CI GCC/Clang Debug/Release, ASan/UBSan e o workflow libFuzzer estiverem aprovados no commit que contém as alterações, e os testes de integração, propriedades e regressão estiverem registrados e executados pelo CTest.
+No commit `08e7abeb0bf46a395f01f5f8ab748278fda02f7e`:
+
+- CI GCC/Clang Debug/Release: aprovado. Os quatro perfis executaram os 32 testes CTest; GCC Release também executou o smoke test ponta a ponta das aplicações e benchmark.
+- ASan/UBSan: build e suíte CTest aprovados.
+- libFuzzer: os três alvos foram compilados e executaram 2.000 iterações cada, usando corpora com sementes válidas e entradas de texto.
+- Os novos testes de propriedades, integração e regressão passaram em todos os perfis CTest.
+
+Execuções verificadas:
+- [CI GCC/Clang Debug/Release](https://github.com/korczaktech/Morok-AI/actions/runs/43547075197)
+- [Sanitizers ASan/UBSan](https://github.com/korczaktech/Morok-AI/actions/runs/43547075205)
+- [Fuzzing libFuzzer](https://github.com/korczaktech/Morok-AI/actions/runs/43547075183)
+
+A suíte não prova ausência de defeitos nem qualidade linguística do modelo; ela estabelece cobertura automatizada reproduzível para os contratos e fluxos descritos.
