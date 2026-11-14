@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
                     << "\"learning_rate\":" << config.optimizer.learning_rate << ','
                     << "\"architecture_parameter_count\":" << parameter_stats.architecture_parameter_count << ','
                     << "\"b0_updated_parameter_count\":" << parameter_stats.b0_updated_parameter_count << ','
-                    << "\"segmenter_parameters_updated\":false,"
+                    << "\"eos_parameters_updated\":true,"
                     << "\"parameters_finite\":" << (parameter_stats.all_finite ? "true" : "false") << ','
                     << "\"parameter_mean\":" << parameter_stats.all.mean << ','
                     << "\"parameter_stddev\":" << parameter_stats.all.standard_deviation << ','
@@ -178,8 +178,8 @@ int main(int argc, char** argv) {
                     << "\"slow_parameter_stddev\":" << parameter_stats.slow.standard_deviation << ','
                     << "\"prediction_parameter_mean\":" << parameter_stats.prediction.mean << ','
                     << "\"prediction_parameter_stddev\":" << parameter_stats.prediction.standard_deviation << ','
-                    << "\"segmenter_parameter_mean\":" << parameter_stats.eos.mean << ','
-                    << "\"segmenter_parameter_stddev\":" << parameter_stats.eos.standard_deviation << ','
+                    << "\"eos_parameter_mean\":" << parameter_stats.eos.mean << ','
+                    << "\"eos_parameter_stddev\":" << parameter_stats.eos.standard_deviation << ','
                     << "\"training_byte_perplexity\":" << std::exp2(training_bpb) << ','
                     << "\"validation_byte_perplexity\":" << std::exp2(report.best_validation_bpb) << ','
                     << "\"test_byte_perplexity\":" << std::exp2(report.test_bpb) << ','
