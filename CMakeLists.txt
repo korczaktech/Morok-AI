@@ -24,6 +24,7 @@ add_library(morok_core STATIC
     src/common/utf8_text.cpp
     src/memory/memory_store.cpp
     src/lang/language_subsystem.cpp
+    src/comm/communication_subsystem.cpp
     src/model/parameters/g1_parameters.cpp
     src/model/g1_forward.cpp
     src/model/learn/g1_bptt.cpp
