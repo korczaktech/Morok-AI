@@ -17,6 +17,10 @@
 namespace morok::reason {
 namespace {
 
+constexpr std::size_t kMaxInitialValues = 256;
+constexpr std::size_t kMaxConditionsPerScope = 64;
+constexpr std::size_t kMaxDependenciesPerStep = 32;
+
 common::Error make_error(common::ErrorCode code, std::string message,
                           std::string stage,
                           const core::RequestContext* request = nullptr) {
@@ -324,7 +328,10 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
         task.objective.size() > config_.max_objective_bytes ||
         task.steps.empty() || task.step_budget == 0 ||
         !valid_failure_policy(task.failure_policy) ||
-        task.steps.size() > std::min(task.step_budget, config_.max_steps)) {
+        task.steps.size() > std::min(task.step_budget, config_.max_steps) ||
+        authorized_context.size() > kMaxInitialValues ||
+        task.initial_values.size() > kMaxInitialValues - authorized_context.size() ||
+        task.preconditions.size() > kMaxConditionsPerScope) {
         return fail_result<ReasoningPlan>(common::ErrorCode::resource_limit,
             "task objective, step count, or execution budget is invalid",
             "plan", &request);
@@ -368,6 +375,9 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
                 !producer_by_key.emplace(step.output, i).second ||
                 !valid_operation(step.operation) ||
                 step.inputs.size() != required_inputs(step.operation) ||
+                step.dependencies.size() > kMaxDependenciesPerStep ||
+                step.preconditions.size() > kMaxConditionsPerScope ||
+                step.postconditions.size() > kMaxConditionsPerScope ||
                 (step.operation == Operation::assign &&
                  !valid_value(step.literal, config_.max_value_bytes)) ||
                 (step.fallback &&
@@ -504,6 +514,12 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
         // must still treat plans as request-scoped values and never persist trust.
         std::unordered_map<std::string, std::size_t> step_by_id;
         std::unordered_map<std::string, std::size_t> producer_by_key;
+        if (plan.initial_values.size() > kMaxInitialValues ||
+            plan.preconditions.size() > kMaxConditionsPerScope) {
+            return fail_result<ReasoningResult>(common::ErrorCode::resource_limit,
+                "reasoning plan exceeds value or condition count limits",
+                "execute.preflight", &request);
+        }
         for (const auto& [key, value] : plan.initial_values) {
             if (!valid_name(key) || !valid_value(value, config_.max_value_bytes))
                 return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
@@ -523,6 +539,9 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
             if (!valid_name(step.id) || !valid_name(step.output) ||
                 !valid_operation(step.operation) ||
                 step.inputs.size() != required_inputs(step.operation) ||
+                step.dependencies.size() > kMaxDependenciesPerStep ||
+                step.preconditions.size() > kMaxConditionsPerScope ||
+                step.postconditions.size() > kMaxConditionsPerScope ||
                 !step_by_id.emplace(step.id, i).second ||
                 plan.initial_values.contains(step.output) ||
                 !producer_by_key.emplace(step.output, i).second ||
