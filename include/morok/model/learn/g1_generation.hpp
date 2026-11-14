@@ -20,6 +20,7 @@ struct G1GenerationConfig {
     std::size_t repetition_window{64};
     double eos_threshold{0.75};
     std::size_t min_new_bytes{1};
+    bool printable_only{false};
 };
 
 struct G1GenerationReport {
