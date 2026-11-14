@@ -1,12 +1,15 @@
 #include "morok/model/learn/g1_generation.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace morok::model {
 namespace {
@@ -60,6 +63,11 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
                                const G1GenerationConfig& config) {
     if (config.max_new_bytes == 0 || config.max_new_bytes > 65536)
         throw std::invalid_argument("max_new_bytes precisa estar entre 1 e 65536");
+    if (!std::isfinite(config.temperature) || config.temperature < 0.0 ||
+        !std::isfinite(config.repetition_penalty) || config.repetition_penalty < 0.0 ||
+        (config.temperature > 0.0 && config.top_k == 1 && config.repetition_penalty == 0.0)) {
+        throw std::invalid_argument("configuração de amostragem inválida");
+    }
 
     G1State recurrent{};
     for (const char raw_byte : prompt.string()) {
@@ -71,12 +79,17 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
     generated.reserve(config.max_new_bytes);
     std::size_t evaluations = 0;
     Utf8State utf8{};
+    std::mt19937_64 random(config.seed);
 
     for (std::size_t position = 0; position < config.max_new_bytes; ++position) {
         const std::size_t remaining_after = config.max_new_bytes - position - 1;
-        double best_loss = std::numeric_limits<double>::infinity();
-        int best_byte = -1;
-        Utf8State best_utf8{};
+        struct Candidate {
+            std::uint8_t byte;
+            double loss;
+            Utf8State utf8;
+        };
+        std::vector<Candidate> candidates;
+        candidates.reserve(256);
 
         for (unsigned int candidate = 0; candidate <= 255; ++candidate) {
             Utf8State candidate_state = utf8;
@@ -85,22 +98,47 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
             if (candidate_state.remaining > remaining_after)
                 continue;
 
-            const auto score = evaluate_g1_next_byte(
-                parameters, recurrent, static_cast<std::uint8_t>(candidate));
+            const auto byte = static_cast<std::uint8_t>(candidate);
+            const auto score = evaluate_g1_next_byte(parameters, recurrent, byte);
             ++evaluations;
             if (!std::isfinite(score.negative_log_likelihood_nats))
                 throw std::domain_error("G1 produziu perda não finita durante geração");
-            if (score.negative_log_likelihood_nats < best_loss) {
-                best_loss = score.negative_log_likelihood_nats;
-                best_byte = static_cast<int>(candidate);
-                best_utf8 = candidate_state;
+
+            double adjusted_loss = score.negative_log_likelihood_nats;
+            if (config.repetition_penalty > 0.0 && byte >= 0x20 && byte <= 0x7E) {
+                const auto begin = generated.size() > config.repetition_window
+                    ? generated.size() - config.repetition_window : 0U;
+                for (std::size_t i = begin; i < generated.size(); ++i) {
+                    if (static_cast<std::uint8_t>(static_cast<unsigned char>(generated[i])) == byte)
+                        adjusted_loss += config.repetition_penalty;
+                }
             }
+            candidates.push_back(Candidate{byte, adjusted_loss, candidate_state});
         }
 
-        if (best_byte < 0) break;
-        const auto byte = static_cast<std::uint8_t>(best_byte);
+        if (candidates.empty()) break;
+        std::sort(candidates.begin(), candidates.end(),
+                  [](const Candidate& left, const Candidate& right) {
+                      if (left.loss != right.loss) return left.loss < right.loss;
+                      return left.byte < right.byte;
+                  });
+        if (config.top_k > 0 && candidates.size() > config.top_k)
+            candidates.resize(config.top_k);
+
+        std::size_t selected = 0;
+        if (config.temperature > 0.0 && candidates.size() > 1) {
+            const double minimum_loss = candidates.front().loss;
+            std::vector<double> weights;
+            weights.reserve(candidates.size());
+            for (const auto& candidate : candidates)
+                weights.push_back(std::exp(-(candidate.loss - minimum_loss) / config.temperature));
+            std::discrete_distribution<std::size_t> distribution(weights.begin(), weights.end());
+            selected = distribution(random);
+        }
+
+        const auto byte = candidates[selected].byte;
         generated.push_back(static_cast<char>(byte));
-        utf8 = best_utf8;
+        utf8 = candidates[selected].utf8;
         advance_g1_state(parameters, recurrent, byte);
     }
 
