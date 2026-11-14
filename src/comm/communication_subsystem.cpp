@@ -187,12 +187,17 @@ common::Status CommunicationSubsystem::append_control_message(
     auto message = make_message(found->second, request, role, text.string());
     if (!message) return common::Status::failure(*message.error_if());
     message.value_if()->tool_name = std::move(tool_name);
-    Conversation staged = found->second;
-    const auto capacity = append_locked(staged, std::move(*message.value_if()));
-    if (!capacity) return capacity;
-    const auto observed = language_.observe(request, text);
-    if (!observed) return observed;
-    found->second = std::move(staged);
+    try {
+        Conversation staged = found->second;
+        const auto capacity = append_locked(staged, std::move(*message.value_if()));
+        if (!capacity) return capacity;
+        const auto observed = language_.observe(request, text);
+        if (!observed) return observed;
+        found->second = std::move(staged);
+    } catch (const std::bad_alloc&) {
+        return failure(common::ErrorCode::out_of_memory,
+                       "could not stage control message", "message.append");
+    }
     return common::Status::success();
 }
 
@@ -309,18 +314,19 @@ common::Result<Message> CommunicationSubsystem::send_message(
 
     auto user = make_message(snapshot, request, MessageRole::user, text.string());
     if (!user) { release(); return user; }
+    Conversation staged_user = snapshot;
+    const auto user_capacity = append_locked(staged_user, *user.value_if());
+    if (!user_capacity) { release(); return common::Result<Message>::failure(*user_capacity.error_if()); }
+    const auto observed = language_.observe(request, text);
+    if (!observed) { release(); return common::Result<Message>::failure(*observed.error_if()); }
     {
         std::lock_guard lock(mutex_);
         auto found = conversations_.find(key);
         if (found == conversations_.end()) { in_flight_.erase(key); return common::Result<Message>::failure(
             common::Error::make(common::ErrorCode::invalid_argument,
                 "conversation was closed", "comm", "message.send")); }
-        const auto capacity = append_locked(found->second, *user.value_if());
-        if (!capacity) { in_flight_.erase(key); return common::Result<Message>::failure(*capacity.error_if()); }
+        found->second = std::move(staged_user);
     }
-
-    const auto observed = language_.observe(request, text);
-    if (!observed) { release(); return common::Result<Message>::failure(*observed.error_if()); }
     auto generated = language_.generate(request, max_new_bytes);
     if (!generated) {
         if (stream) {
@@ -335,11 +341,38 @@ common::Result<Message> CommunicationSubsystem::send_message(
     }
 
     auto assistant = make_message(snapshot, request, MessageRole::assistant,
-        generated.value_if()->text.string(), MessageState::complete);
+        generated.value_if()->text.string(), MessageState::streaming);
     if (!assistant) { release(); return assistant; }
+    {
+        std::lock_guard lock(mutex_);
+        auto found = conversations_.find(key);
+        if (found == conversations_.end()) { in_flight_.erase(key); return common::Result<Message>::failure(
+            common::Error::make(common::ErrorCode::invalid_argument,
+                "conversation closed before response commit", "comm", "message.send")); }
+        const auto appended = append_locked(found->second, *assistant.value_if());
+        if (!appended) { in_flight_.erase(key); return common::Result<Message>::failure(*appended.error_if()); }
+    }
+    const auto update_state = [this, &key, &assistant](MessageState state) {
+        std::lock_guard lock(mutex_);
+        auto found = conversations_.find(key);
+        if (found != conversations_.end()) {
+            for (auto it = found->second.messages.rbegin();
+                 it != found->second.messages.rend(); ++it) {
+                if (it->id == assistant.value_if()->id) {
+                    it->state = state;
+                    break;
+                }
+            }
+        }
+        assistant.value_if()->state = state;
+    };
     auto status = emit(stream, StreamEventKind::message_started,
         snapshot, assistant.value_if()->id, {}, 0);
-    if (!status) { release(); return common::Result<Message>::failure(*status.error_if()); }
+    if (!status) {
+        update_state(MessageState::failed);
+        release();
+        return common::Result<Message>::failure(*status.error_if());
+    }
 
     const auto output = generated.value_if()->text.view();
     std::size_t offset = 0;
@@ -348,6 +381,7 @@ common::Result<Message> CommunicationSubsystem::send_message(
         if (request.is_cancelled()) {
             (void)emit(stream, StreamEventKind::message_cancelled,
                 snapshot, assistant.value_if()->id, {}, sequence);
+            update_state(MessageState::cancelled);
             release();
             return common::Result<Message>::failure(common::Error::make(
                 common::ErrorCode::cancelled,
@@ -358,23 +392,32 @@ common::Result<Message> CommunicationSubsystem::send_message(
         status = emit(stream, StreamEventKind::text_delta, snapshot,
             assistant.value_if()->id, std::string(output.substr(offset, end - offset)),
             sequence++);
-        if (!status) { release(); return common::Result<Message>::failure(*status.error_if()); }
+        if (!status) {
+            update_state(MessageState::failed);
+            release();
+            return common::Result<Message>::failure(*status.error_if());
+        }
         offset = end;
+        if (request.is_cancelled()) {
+            (void)emit(stream, StreamEventKind::message_cancelled,
+                snapshot, assistant.value_if()->id, {}, sequence);
+            update_state(MessageState::cancelled);
+            release();
+            return common::Result<Message>::failure(common::Error::make(
+                common::ErrorCode::cancelled,
+                "request was cancelled while delivering the response",
+                "comm", "message.stream"));
+        }
     }
     status = emit(stream, StreamEventKind::message_completed,
         snapshot, assistant.value_if()->id, {}, sequence);
-    if (!status) { release(); return common::Result<Message>::failure(*status.error_if()); }
-
-    {
-        std::lock_guard lock(mutex_);
-        auto found = conversations_.find(key);
-        if (found == conversations_.end()) { in_flight_.erase(key); return common::Result<Message>::failure(
-            common::Error::make(common::ErrorCode::invalid_argument,
-                "conversation closed before response commit", "comm", "message.send")); }
-        status = append_locked(found->second, *assistant.value_if());
-        in_flight_.erase(key);
+    if (!status) {
+        update_state(MessageState::failed);
+        release();
+        return common::Result<Message>::failure(*status.error_if());
     }
-    if (!status) return common::Result<Message>::failure(*status.error_if());
+    update_state(MessageState::complete);
+    release();
     return assistant;
 }
 
