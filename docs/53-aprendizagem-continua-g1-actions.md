@@ -22,11 +22,11 @@ O checkpoint e o contador de épocas são transportados pelo artifact `morok-g1-
 
 ## Dados e avaliação atual
 
-Os 12 arquivos em `tests/fixtures/continual/` agora contêm exatamente um par pergunta/resposta por documento. Isso torna cada fim de documento um limite de resposta para o treinamento EOS. As perguntas variam em torno da cor do céu; o conjunto é pequeno, criado manualmente para um experimento estreito, e não representa a distribuição da língua portuguesa.
+Os documentos `doc-*.txt` em `tests/fixtures/continual/` contêm um par pergunta/resposta por documento. Isso torna cada fim de documento um limite de resposta para o treinamento EOS. O corpus começou com 12 exemplos sobre o céu e recebeu exemplos factuais adicionais em outros tópicos; continua sendo um conjunto pequeno e controlado, não uma amostra representativa da língua portuguesa.
 
 A métrica principal do treinador é a perda de predição do próximo byte (BPB) em treino/validação/teste. Ela mede qualidade estatística de predição no corpus, não compreensão semântica.
 
-Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. O script `scripts/evaluate-g1-qa.py` também avalia quatro perguntas inéditas em `tests/fixtures/continual-eval/cases.json`, registrando exact match e token F1. Ela **não** encerra o treinamento, não cria marcador de sucesso e não altera o estado do workflow para `goal_reached`.
+Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. O script `scripts/evaluate-g1-qa.py` também avalia oito perguntas reservadas em `tests/fixtures/continual-eval/cases.json`, com paráfrases e tópicos factuais distintos, registrando exact match e token F1. Ela **não** encerra o treinamento, não cria marcador de sucesso e não altera o estado do workflow para `goal_reached`.
 
 O estado final possível do orçamento é `budget_exhausted`. Isso significa somente que o limite de épocas foi atingido. O status da avaliação semântica permanece `not_established` até existir um conjunto independente de perguntas e respostas, com critérios de aceitação que não sejam uma simples busca por substring.
 
