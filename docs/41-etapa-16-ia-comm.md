@@ -9,7 +9,7 @@ Implementar a camada de comunicação da Morok AI G1 sobre IA-CORE e IA-LANG. IA
 - Message: identificador opaco próprio, ConversationId, SessionId, RequestId, papel, conteúdo UTF-8, instante, estado e nome da ferramenta quando o papel for tool.
 - Conversation: identificador próprio, sessão IA-CORE/IA-LANG, timestamps, histórico ordenado e estado de fechamento.
 - CommunicationSubsystem: cria e fecha conversas, cria RequestContext associado à conversa, aceita mensagens de controle, recebe mensagens do usuário, chama IA-LANG, mantém histórico e entrega eventos.
-- MessageFormatter: preserva texto UTF-8 e apresenta erros tipados sem transformar conteúdo inválido silenciosamente.
+- MessageFormatter: formata mensagens individuais, transcrições com rótulos de papel e erros tipados sem transformar conteúdo inválido silenciosamente.
 - StreamEvent: eventos message_started, text_delta, message_completed, message_cancelled e error.
 - StreamCallback: consumidor síncrono dos eventos; falhas do consumidor são propagadas como Status.
 
@@ -21,7 +21,7 @@ IDs de mensagem e conversa são tipos distintos (MessageId e ConversationId), ge
 2. O chamador obtém um RequestContext vinculado à conversa; o chamador pode fornecer CancellationToken.
 3. Mensagens system e tool podem ser adicionadas como mensagens de controle. Exigem RequestContext da mesma sessão; mensagens tool exigem nome não vazio e mensagens system não aceitam nome de ferramenta.
 4. Mensagem user é validada como Utf8Text, limitada em bytes e registrada no histórico.
-5. IA-COMM encaminha o conteúdo a IA-LANG::observe e solicita IA-LANG::generate.
+5. IA-COMM encaminha a transcrição com rótulos de papel a IA-LANG::observe, adiciona o marcador Assistant e solicita IA-LANG::generate.
 6. A resposta assistant recebe MessageId e RequestId próprios, é entregue pelos eventos e registrada no histórico.
 7. Encerrar a conversa fecha a sessão IA-LANG/IA-CORE. O encerramento do Runtime fecha conversas antes de encerrar IA-LANG, respeitando a ordem inversa das dependências.
 
@@ -81,12 +81,12 @@ O teste comm.communication_subsystem cobre:
 5. validação do nome da ferramenta;
 6. envio de texto UTF-8 e geração IA-LANG;
 7. correlação por RequestId e identificadores distintos;
-8. eventos de streaming e fragmentos UTF-8 válidos;
-9. histórico ordenado;
-10. rejeição de requisição cancelada;
-11. rejeição de papel inválido na API de mensagens de controle;
-12. fechamento da conversa e sessão;
-13. rejeição de histórico após fechamento.
+8. eventos de streaming e fragmentos UTF-8 válidos;\n9. formatação de transcrição e erros;
+10. histórico ordenado;
+11. cancelamento antes e durante a entrega;
+12. rejeição de papel inválido e falha do consumidor de streaming;
+13. fechamento da conversa e sessão;
+14. rejeição de histórico após fechamento.
 
 ## Fora do escopo / limitações explícitas
 
