@@ -302,6 +302,8 @@ common::Result<std::string> ToolSubsystem::invoke(
     const ToolArguments& arguments, const ToolAccessPolicy& policy,
     bool user_confirmed) {
     ToolDefinition definition;
+    bool denied = false;
+    bool confirmation_missing = false;
     {
         std::lock_guard lock(mutex_);
         if (!initialized_) {
@@ -314,23 +316,26 @@ common::Result<std::string> ToolSubsystem::invoke(
                 "tool is not registered", "discovery", &request);
         }
         definition = found->second;
-        if (!authorized(definition, policy)) {
-            (void)audit(ToolAuditEventType::denied, definition, request,
-                        "authorization denied");
-            return result_failure<std::string>(common::ErrorCode::permission_denied,
-                "tool is not authorized for this request", "authorization", &request);
+        denied = !authorized(definition, policy);
+        confirmation_missing = definition.requires_confirmation && !user_confirmed;
+        if (!denied && !confirmation_missing) {
+            if (active_executions_ >= config_.max_concurrent_executions) {
+                return result_failure<std::string>(common::ErrorCode::resource_limit,
+                    "concurrent tool execution limit reached", "execution", &request);
+            }
+            ++active_executions_;
         }
-        if (active_executions_ >= config_.max_concurrent_executions) {
-            return result_failure<std::string>(common::ErrorCode::resource_limit,
-                "concurrent tool execution limit reached", "execution", &request);
-        }
-        if (definition.requires_confirmation && !user_confirmed) {
-            (void)audit(ToolAuditEventType::confirmation_required, definition, request,
-                        "explicit user confirmation required");
-            return result_failure<std::string>(common::ErrorCode::confirmation_required,
-                "tool requires explicit user confirmation", "authorization", &request);
-        }
-        ++active_executions_;
+    }
+    if (denied) {
+        (void)audit(ToolAuditEventType::denied, definition, request, "authorization denied");
+        return result_failure<std::string>(common::ErrorCode::permission_denied,
+            "tool is not authorized for this request", "authorization", &request);
+    }
+    if (confirmation_missing) {
+        (void)audit(ToolAuditEventType::confirmation_required, definition, request,
+                    "explicit user confirmation required");
+        return result_failure<std::string>(common::ErrorCode::confirmation_required,
+            "tool requires explicit user confirmation", "authorization", &request);
     }
 
     const auto release_slot = [this]() {
