@@ -51,6 +51,10 @@ int main() {
     assert(retrieved);
     assert(retrieved.value_if()->body.view() == body.value_if()->view());
     assert(retrieved.value_if()->source_id == "conversation:turn-1");
+    assert(store.close());
+    assert(store.open(database));
+    auto persisted = store.retrieve(session, *id.value_if());
+    assert(persisted && persisted.value_if()->body.view() == body.value_if()->view());
 
     memory::SearchQuery search{
         session, *query_text.value_if(), 20, 4096, std::nullopt};
@@ -79,6 +83,7 @@ int main() {
 
     const auto id_roundtrip = common::MemoryId::from_string(id.value_if()->to_string());
     assert(id_roundtrip && *id_roundtrip.value_if() == *id.value_if());
+    assert(!common::MemoryId::from_string("not-a-valid-uuid"));
 
     search.session_id = other_session;
     auto isolated = store.search(search);
