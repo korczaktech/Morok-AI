@@ -38,7 +38,7 @@ Operações numéricas rejeitam operandos incompatíveis, divisão por zero e re
 6. Calcular profundidade do grafo e rejeitar planos fora dos limites.
 7. Vincular o plano ao SessionId e RequestId que o originaram.
 
-Limites máximos desta versão: 32 etapas, profundidade de dependência 8, objetivo 512 bytes, valor individual 4 KiB e uma tentativa de recuperação por etapa. Os limites são configuráveis para valores menores; a inicialização rejeita qualquer configuração que tente ampliar esses tetos. O tamanho de valores escalares é medido pelo tipo armazenado (double ou bool), não pelo tamanho interno do std::variant.
+Limites máximos desta versão: 32 etapas, profundidade de dependência 8, até 256 valores iniciais/autorizados, até 64 condições por escopo, até 32 dependências explícitas por etapa, objetivo 512 bytes, valor individual 4 KiB e uma tentativa de recuperação por etapa. Os limites são configuráveis para valores menores; a inicialização rejeita qualquer configuração que tente ampliar esses tetos. O tamanho de valores escalares é medido pelo tipo armazenado (double ou bool), não pelo tamanho interno do std::variant.
 
 ## Execução
 
@@ -89,7 +89,8 @@ O teste reason.reasoning_subsystem cobre:
 14. rejeição de dependências inexistentes e ordem topológica adulterada;
 15. rejeição de assinaturas de operandos alteradas após o planejamento;
 16. tetos rígidos de configuração para valor e objetivo;
-17. medição correta do tamanho de valores escalares em configurações menores.
+17. medição correta do tamanho de valores escalares em configurações menores;
+18. limites de quantidade de valores e condições para conter crescimento de estruturas de tarefa.
 
 ## Limitações explícitas
 
