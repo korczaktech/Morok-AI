@@ -111,8 +111,18 @@ jobs:
               print(0)
           PY
           )"
+          stored_manifest_version="$(python3 - artifacts/continual-g1/status.json <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          try:
+              print(json.loads(Path(sys.argv[1]).read_text()).get("corpus_manifest_version", 0))
+          except (OSError, ValueError):
+              print(0)
+          PY
+          )"
           compatible=true
-          if [[ "$stored_arch" != "$expected_arch" || "$stored_corpus_sha" != "$current_corpus_sha" || "$stored_corpus_documents" != "$current_corpus_documents" ]]; then
+          if [[ "$stored_arch" != "$expected_arch" || "$stored_corpus_sha" != "$current_corpus_sha" || "$stored_corpus_documents" != "$current_corpus_documents" || "$stored_manifest_version" != "2" ]]; then
             echo "Discarding incompatible architecture/corpus state."
             rm -f artifacts/continual-g1/*
             compatible=false
