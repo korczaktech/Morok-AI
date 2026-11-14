@@ -18,7 +18,10 @@ void test_empty_prompt_and_bounded_valid_output() {
     auto empty_result = common::Utf8Text::from_utf8("");
     require(empty_result.has_value(), "empty prompt is valid UTF-8");
     common::Utf8Text prompt = std::move(*empty_result.value_if());
-    const auto report = model::generate_g1(parameters, prompt, {32});
+    model::G1GenerationConfig config;
+    config.max_new_bytes = 32;
+    config.eos_threshold = 0.99; // Verify the hard byte cap independently of learned EOS.
+    const auto report = model::generate_g1(parameters, prompt, config);
     require(report.generated_bytes == 32, "generation must respect byte limit");
     require(report.continuation.size_bytes() == 32, "reported UTF-8 bytes must match");
     require(report.candidate_evaluations >= 32, "valid candidates must be scored");
@@ -33,8 +36,11 @@ void test_prompt_is_context_and_generation_is_deterministic() {
     auto prompt_result = common::Utf8Text::from_utf8("Olá, Morok!");
     require(prompt_result.has_value(), "UTF-8 prompt must validate");
     auto prompt = std::move(*prompt_result.value_if());
-    const auto first = model::generate_g1(parameters, prompt, {24});
-    const auto second = model::generate_g1(parameters, prompt, {24});
+    model::G1GenerationConfig config;
+    config.max_new_bytes = 24;
+    config.eos_threshold = 0.99;
+    const auto first = model::generate_g1(parameters, prompt, config);
+    const auto second = model::generate_g1(parameters, prompt, config);
     require(first.continuation.string() == second.continuation.string(),
             "greedy generation must be deterministic");
     require(first.generated_bytes <= 24, "generation cannot exceed its limit");
@@ -46,7 +52,10 @@ void test_multibyte_utf8_is_never_truncated() {
     auto prompt_result = common::Utf8Text::from_utf8("ação");
     require(prompt_result.has_value(), "multibyte UTF-8 prompt must validate");
     auto prompt = std::move(*prompt_result.value_if());
-    const auto report = model::generate_g1(parameters, prompt, {1});
+    model::G1GenerationConfig config;
+    config.max_new_bytes = 1;
+    config.eos_threshold = 0.99;
+    const auto report = model::generate_g1(parameters, prompt, config);
     require(report.generated_bytes == 1, "one-byte generation must remain possible");
     require(common::Utf8Text::from_utf8(report.continuation.string()).has_value(),
             "one-byte generation must remain valid UTF-8");
@@ -66,7 +75,12 @@ void test_inference_checkpoint_round_trip() {
     auto prompt_result = common::Utf8Text::from_utf8("Morok");
     require(prompt_result.has_value(), "integration prompt must be valid");
     const auto generated = model::generate_g1(
-        loaded.parameters, *prompt_result.value_if(), {12});
+        loaded.parameters, *prompt_result.value_if(), [] {
+            model::G1GenerationConfig config;
+            config.max_new_bytes = 12;
+            config.eos_threshold = 0.99;
+            return config;
+        }());
     require(common::Utf8Text::from_utf8(generated.continuation.string()).has_value(),
             "checkpoint-backed generation must return valid UTF-8");
     std::error_code ignored;
