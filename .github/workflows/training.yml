@@ -69,9 +69,47 @@ jobs:
 
           # Ignore legacy lexical goal markers: they did not prove semantic learning.
           rm -f artifacts/continual-g1/goal-reached.txt
-          if grep -q '"status": "budget_exhausted"' artifacts/continual-g1/status.json 2>/dev/null; then
+          expected_arch="RLAH-G1-fastslow-d11-bit8-eos"
+          current_corpus_sha="$(python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          digest = hashlib.sha256()
+          for path in sorted(Path("tests/fixtures/continual").glob("doc-*.txt")):
+              digest.update(path.name.encode("utf-8"))
+              digest.update(path.read_bytes())
+          print(digest.hexdigest())
+          PY
+          )"
+          stored_arch="$(python3 - artifacts/continual-g1/status.json <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          try:
+              print(json.loads(Path(sys.argv[1]).read_text()).get("architecture_id", ""))
+          except (OSError, ValueError):
+              print("")
+          PY
+          )"
+          stored_corpus_sha="$(python3 - artifacts/continual-g1/status.json <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          try:
+              print(json.loads(Path(sys.argv[1]).read_text()).get("corpus_sha256", ""))
+          except (OSError, ValueError):
+              print("")
+          PY
+          )"
+          compatible=true
+          if [[ "$stored_arch" != "$expected_arch" || "$stored_corpus_sha" != "$current_corpus_sha" ]]; then
+            echo "Discarding incompatible architecture/corpus state."
+            rm -f artifacts/continual-g1/*
+            compatible=false
+          fi
+
+          if [[ "$compatible" == "true" ]] && grep -q '"status": "budget_exhausted"' artifacts/continual-g1/status.json 2>/dev/null; then
             echo "stop=true" >> "$GITHUB_OUTPUT"
-            echo "A terminal state was restored; scheduled cycles will do no more training."
+            echo "A compatible terminal state was restored; scheduled cycles will do no more training."
           else
             echo "stop=false" >> "$GITHUB_OUTPUT"
           fi
