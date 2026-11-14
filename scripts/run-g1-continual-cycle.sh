@@ -59,7 +59,7 @@ fi
 
 if [[ -s "$checkpoint" && "$checkpoint_compatible" != "true" ]]; then
   echo "Discarding incompatible checkpoint and its dependent training state."
-  rm -f "$checkpoint" "$best_model" "$metrics" "$summary" "$generated" "$epoch_file" "$status_file" "$qa_report"
+  rm -f "$checkpoint" "$best_model" "$metrics" "$summary" "$generated" "$epoch_file" "$status_file"
 fi
 
 completed_epochs=0
