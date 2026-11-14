@@ -10,7 +10,7 @@ Implementar o subsistema que coordena experimentos da G1 fora do caminho de infe
 - Política configurável para habilitar/desabilitar treinamento e limitar épocas, documentos e tamanho máximo de documento.
 - Execução síncrona e serializada: no máximo um experimento ativo por instância.
 - Recebe RequestContext, configuração de experimento, corpus autorizado e parâmetros iniciais.
-- Valida limites e parâmetros iniciais finitos antes de iniciar.
+- Valida limites e parâmetros iniciais finitos antes de iniciar. Limita BPTT a 128 bytes por bloco para manter o uso de memória previsível.
 - Treina uma cópia privada dos parâmetros; o objeto de parâmetros fornecido pelo chamador permanece inalterado.
 - Reutiliza train_g1_corpus, incluindo split determinístico, deduplicação, AdamW/SGD, BPTT, early stopping, métricas, checkpoints e exportação opcional do melhor artefato.
 - Revalida finitude e calcula estatísticas dos parâmetros do candidato antes de devolvê-lo.
@@ -29,7 +29,7 @@ Implementar o subsistema que coordena experimentos da G1 fora do caminho de infe
 
 ## Cancelamento: limite conhecido do pipeline
 
-O subsistema combina o cancelamento do RequestContext com um callback opcional do chamador e o propaga ao treinador. O pipeline consulta o callback durante a varredura do corpus, antes de cada documento/época, durante blocos BPTT e durante avaliações de validação/teste. Ao cancelar, a execução retorna CANCELLED e o candidato privado não é publicado. Checkpoints e linhas de log gravados antes do cancelamento podem permanecer no disco; retomada continua sujeita à compatibilidade normal do checkpoint.
+O subsistema combina o cancelamento do RequestContext com um callback opcional do chamador e o propaga ao treinador. O pipeline consulta o callback durante a varredura do corpus, antes de cada documento/época, durante blocos BPTT e durante avaliações de validação/teste. Ao cancelar, a execução retorna CANCELLED e o candidato privado não é publicado. Checkpoints, logs e um arquivo best_model já exportado no instante anterior à observação do cancelamento podem permanecer no disco; a API não retorna o candidato e a retomada continua sujeita à compatibilidade normal do checkpoint.
 
 ## Arquivos
 
@@ -49,7 +49,7 @@ learn.learning_subsystem cobre lifecycle IA-CORE, treinamento de corpus temporá
 - Sem scheduler concorrente, fila persistente ou execução em background.
 - Sem promoção automática do candidato para IA-LANG.
 - Sem validação automática de licença/proveniência do corpus; a autorização é responsabilidade do chamador.
-- Cancelamento é cooperativo entre documentos/blocos e leituras; uma operação de sistema de arquivos já bloqueada não pode ser interrompida à força.
+- Cancelamento é cooperativo entre descoberta de arquivos, leituras, documentos, blocos BPTT e avaliações; uma operação de sistema de arquivos já bloqueada não pode ser interrompida à força.
 - Métricas de qualidade continuam limitadas ao BPB; não demonstram compreensão ou qualidade conversacional.
 - Segmentador adaptativo de 29 parâmetros continua fora do caminho B0 de treinamento.
 
