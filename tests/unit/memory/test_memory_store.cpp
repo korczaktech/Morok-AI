@@ -56,6 +56,10 @@ int main() {
     auto results = store.search(search);
     assert(results);
     assert(results.value_if()->size() == 1);
+    search.max_context_bytes = 1;
+    auto bounded_context = store.search(search);
+    assert(bounded_context && bounded_context.value_if()->empty());
+    search.max_context_bytes = 4096;
 
     assert(store.update_metadata(session, *id.value_if(),
         memory::Sensitivity::sensitive, std::nullopt));
