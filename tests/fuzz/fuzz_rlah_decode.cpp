@@ -34,7 +34,7 @@ bool decode_hex_seed(const std::uint8_t* data, std::size_t size,
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
                                       std::size_t size) {
     std::vector<std::uint8_t> input;
-    if (!decode_hex_seed(data, size, input))
+    if (!decode_hex_seed(data, size, input) && size != 0)
         input.assign(data, data + size);
     std::vector<std::uint8_t> decoded;
     std::string error;
