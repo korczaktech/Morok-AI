@@ -5,6 +5,7 @@ option(MOROK_BUILD_TESTS "Build automated tests" ON)
 option(MOROK_BUILD_APPS "Build user-facing applications" ON)
 option(MOROK_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(MOROK_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
+option(MOROK_BUILD_FUZZERS "Build libFuzzer parser and decoder targets (Clang only)" OFF)
 option(MOROK_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -120,4 +121,20 @@ if(MOROK_BUILD_APPS)
     endif()
     install(TARGETS morok_core ARCHIVE DESTINATION lib)
     install(DIRECTORY include/ DESTINATION include)
+endif()
+
+if(MOROK_BUILD_FUZZERS)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        message(FATAL_ERROR "MOROK_BUILD_FUZZERS requires Clang/libFuzzer.")
+    endif()
+    target_compile_options(morok_core PRIVATE
+        -fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer)
+    foreach(_fuzz_target IN ITEMS utf8 rlah_decode checkpoint)
+        add_executable(morok_fuzz_${_fuzz_target} tests/fuzz/fuzz_${_fuzz_target}.cpp)
+        target_link_libraries(morok_fuzz_${_fuzz_target} PRIVATE Morok::Core morok_build_options)
+        target_compile_options(morok_fuzz_${_fuzz_target} PRIVATE
+            -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
+        target_link_options(morok_fuzz_${_fuzz_target} PRIVATE
+            -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
+    endforeach()
 endif()
