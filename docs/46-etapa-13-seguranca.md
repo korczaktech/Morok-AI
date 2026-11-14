@@ -20,7 +20,7 @@
 
 A camada de segurança mantém grants individuais com sujeito, sessão, nome da ferramenta e capacidade. A função `tool_policy` produz uma política com pares exatos. Quando `exact_grants` está preenchido, IA-TOOLS ignora a combinação cartesiana dos vetores legados e exige correspondência simultânea de nome e capacidade.
 
-O composition root deve obter a política por `SecuritySubsystem::tool_policy` e passá-la ao IA-TOOLS. Não aceitar políticas construídas a partir de texto do modelo, documentos, memória ou argumentos do usuário. A aplicação deve impedir que componentes não confiáveis chamem diretamente APIs de concessão/revogação.
+O composition root deve preferir `SecuritySubsystem::invoke_tool`, que valida principal e sessão, obtém a política de pares exatos, descobre a ferramenta e só então a invoca. Não aceitar políticas construídas a partir de texto do modelo, documentos, memória ou argumentos do usuário. A aplicação deve impedir que componentes não confiáveis chamem diretamente APIs de concessão/revogação ou `ToolSubsystem::invoke`.
 
 ## Confirmação humana
 
@@ -29,14 +29,14 @@ O fluxo é:
 2. `request_confirmation` emite ticket de curta duração.
 3. A interface apresenta a ação concreta ao usuário, sem permitir que texto gerado pelo modelo altere os campos.
 4. Somente o controlador confiável da interface chama `approve_confirmation` após uma ação humana explícita.
-5. `consume_confirmation` valida principal, sessão, ticket, expiração e igualdade exata da ação; o ticket é consumido uma única vez.
-6. O host só então sinaliza a confirmação ao executor de ferramenta.
+5. `SecuritySubsystem::invoke_tool` valida principal, sessão, ticket, expiração, ação e serialização canônica dos argumentos; o ticket é consumido uma única vez.
+6. O wrapper só invoca IA-TOOLS depois que todas as verificações forem aprovadas.
 
 Confirmações não são reutilizáveis para outro destino, operação, ferramenta, sessão, usuário ou conjunto de argumentos. Uma aprovação não concede capacidade: autorização e confirmação são verificações independentes.
 
 ## Fronteiras de confiança e prompt injection
 
-`classify_content` preserva a origem dos dados. Somente conteúdo explicitamente classificado como configuração confiável pode ser considerado fonte de política. Texto do usuário, documentos, páginas externas, memória, saída do modelo e saída de ferramentas são dados não confiáveis.
+`classify_content` preserva a origem dos dados e produz apenas rótulos não confiáveis. Não há função pública para transformar conteúdo externo em configuração confiável. Configuração de segurança é fornecida pelo host por um caminho separado, validado e protegido por controle de acesso. Texto do usuário, documentos, páginas externas, memória, saída do modelo e saída de ferramentas são dados não confiáveis.
 
 A classificação não neutraliza prompt injection por si só. O orquestrador deve manter instruções e dados separados, não executar comandos encontrados em conteúdo externo e não permitir que esses conteúdos alterem grants, configuração ou confirmações.
 
@@ -57,4 +57,4 @@ Esses controles não devem ser anunciados como sandbox, proteção criptográfic
 
 ## Testes
 
-O teste `security.security_subsystem` cobre lifecycle, negação por padrão, grants por sessão, geração de política, prevenção de escalada por combinação de capacidades, revogação, classificação de origem, confirmação humana, vínculo à ação exata, vínculo à sessão, rejeição, consumo único e auditoria.
+O teste `security.security_subsystem` cobre lifecycle, negação por padrão, grants por sessão, geração de política, prevenção de escalada por combinação de capacidades, revogação, classificação de origem, confirmação humana, vínculo à ação e aos argumentos exatos, vínculo à sessão, rejeição, consumo único, falha de auditoria em modo fail-closed e execução protegida pelo wrapper.
