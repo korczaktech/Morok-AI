@@ -43,7 +43,6 @@ CommunicationSubsystem::CommunicationSubsystem(
 common::Status CommunicationSubsystem::validate_limits(
     const core::RuntimeConfig& config) const {
     if (limits_.max_conversations == 0 ||
-        limits_.max_conversations > config.max_sessions ||
         limits_.max_messages_per_conversation == 0 ||
         limits_.max_message_bytes == 0 ||
         limits_.max_history_bytes < limits_.max_message_bytes ||
@@ -118,7 +117,7 @@ CommunicationSubsystem::create_conversation() {
     Conversation conversation{id, *session.value_if(), now, now, {}, false};
     try {
         std::lock_guard lock(mutex_);
-        if (!initialized_ || conversations_.size() >= limits_.max_conversations) {
+        if (!initialized_ || conversations_.size() >= max_conversations_) {
             (void)language_.close_session(sessions_, *session.value_if());
             return common::Result<common::ConversationId>::failure(
                 common::Error::make(common::ErrorCode::resource_limit,
