@@ -75,3 +75,15 @@ O artifact de cada execução contém, quando produzidos:
 - [ ] Ampliar corpus natural, diversificado e licenciado.
 - [ ] Criar avaliação semântica independente com revisão humana.
 - [ ] Validar em hardware físico com 4 GB de RAM.
+
+## Decodificação da G1
+
+A API de geração agora aceita controles de decodificação:
+
+- `temperature = 0`: preserva a escolha gulosa determinística anterior;
+- `temperature > 0`: amostra entre candidatos conforme a distribuição de perdas do modelo;
+- `top_k`: limita a amostragem aos candidatos com menor perda; zero considera todos os candidatos UTF-8 válidos;
+- `seed`: torna a amostragem reproduzível;
+- `repetition_penalty` e `repetition_window`: acrescentam custo a bytes ASCII imprimíveis repetidos na janela recente.
+
+Esses controles mudam a estratégia de decodificação, não os pesos nem a capacidade aprendida. Eles não criam EOS: a geração continua limitada por bytes. A penalidade de repetição é heurística e não deve ser interpretada como correção semântica. A interface CLI ainda usa o modo guloso padrão; a configuração avançada está disponível na API C++.
