@@ -1,0 +1,102 @@
+#include "morok/common/utf8_text.hpp"
+#include "morok/core/configuration.hpp"
+#include "morok/core/runtime.hpp"
+#include "morok/core/session_registry.hpp"
+#include "morok/lang/language_subsystem.hpp"
+#include "morok/comm/session_manager.hpp"
+#include "morok/model/parameters/g1_parameters.hpp"
+
+#include <cassert>
+#include <string>
+#include <vector>
+
+int main() {
+    using namespace morok;
+
+    model::G1Parameters parameters;
+    model::initialize_g1_parameters(parameters, 2026);
+    core::RuntimeConfig config;
+    config.max_sessions = 2;
+    config.resources.max_generation_bytes = 16;
+
+    core::SessionRegistry sessions(2);
+    lang::LanguageSubsystem language(parameters);
+    comm::CommunicationSubsystem communication(sessions, language);
+    core::Runtime runtime(config);
+    assert(runtime.initialize(
+        {language.initializer(), communication.initializer()},
+        {communication.shutdown_callback(), language.shutdown_callback()}));
+    assert(communication.initialized());
+
+    auto conversation = communication.create_conversation();
+    assert(conversation);
+    assert(communication.active_conversations() == 1);
+    auto request = communication.create_request_context(*conversation.value_if());
+    assert(request);
+
+    auto system_text = common::Utf8Text::from_utf8("Você é a Morok AI.");
+    auto tool_text = common::Utf8Text::from_utf8("resultado controlado");
+    auto user_text = common::Utf8Text::from_utf8("Olá, Morok!");
+    assert(system_text && tool_text && user_text);
+    assert(communication.append_control_message(
+        *request.value_if(), *conversation.value_if(),
+        comm::MessageRole::system, *system_text.value_if()));
+    assert(communication.append_control_message(
+        *request.value_if(), *conversation.value_if(),
+        comm::MessageRole::tool, *tool_text.value_if(), "fixture"));
+
+    std::vector<comm::StreamEventKind> events;
+    std::string streamed;
+    auto response = communication.send_message(
+        *request.value_if(), *conversation.value_if(),
+        *user_text.value_if(), 12,
+        [&](const comm::StreamEvent& event) {
+            events.push_back(event.kind);
+            if (event.kind == comm::StreamEventKind::text_delta) {
+                assert(common::Utf8Text::from_utf8(event.text));
+                streamed += event.text;
+            }
+            return common::Status::success();
+        });
+    assert(response);
+    assert(response.value_if()->role == comm::MessageRole::assistant);
+    assert(response.value_if()->request_id == request.value_if()->request_id());
+    assert(common::Utf8Text::from_utf8(streamed));
+    assert(streamed == response.value_if()->content);
+    assert(!events.empty());
+    assert(events.front() == comm::StreamEventKind::message_started);
+    assert(events.back() == comm::StreamEventKind::message_completed);
+
+    auto history = communication.history(*conversation.value_if());
+    assert(history);
+    assert(history.value_if()->size() == 4);
+    assert((*history.value_if())[0].role == comm::MessageRole::system);
+    assert((*history.value_if())[1].role == comm::MessageRole::tool);
+    assert((*history.value_if())[1].tool_name == "fixture");
+    assert((*history.value_if())[2].role == comm::MessageRole::user);
+    assert((*history.value_if())[3].role == comm::MessageRole::assistant);
+
+    core::CancellationSource cancelled_source;
+    assert(cancelled_source.cancel());
+    auto cancelled_request = communication.create_request_context(
+        *conversation.value_if(), cancelled_source.token());
+    assert(cancelled_request);
+    auto cancelled = communication.send_message(
+        *cancelled_request.value_if(), *conversation.value_if(),
+        *user_text.value_if(), 4);
+    assert(!cancelled);
+    assert(cancelled.error_if()->code == common::ErrorCode::cancelled);
+
+    auto invalid_role = communication.append_control_message(
+        *request.value_if(), *conversation.value_if(),
+        comm::MessageRole::assistant, *tool_text.value_if());
+    assert(!invalid_role);
+    assert(communication.close_conversation(*conversation.value_if()));
+    assert(communication.active_conversations() == 0);
+    assert(sessions.size() == 0);
+    assert(!communication.history(*conversation.value_if()));
+    assert(runtime.shutdown());
+    assert(!communication.initialized());
+    assert(!language.initialized());
+    return 0;
+}
