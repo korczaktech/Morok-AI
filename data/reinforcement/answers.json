@@ -736,6 +736,180 @@
           "trainable_parameters": 1000
         }
       }
+    },
+    {
+      "episode": 19,
+      "source": "oracle_demonstration",
+      "demonstration_version": 4,
+      "question_id": "sky_is_blue",
+      "prompt": "Pergunta: O céu é azul?\nResponda de forma direta:\nResposta: ",
+      "answer": "Sim.",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "known_target_demonstration_for_policy_warm_start",
+      "timestamp_utc": "2026-11-14T22:49:21.939349+00:00",
+      "model_sha256_before": "b30f3158408cff4b9962c69d789efcab46395fa694187f1d293a8344e30a2cd0",
+      "model_sha256_after": "d003cb878267573a265127c0a3b1953668a8b07fe5c3b824d21f7bef65a33286",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "optimizer_steps": 1000,
+        "report": {
+          "reward": 1,
+          "target_bytes": 4,
+          "gradient_norm_first": 2.6656,
+          "gradient_norm_last": 1.39637,
+          "parameter_delta_l2": 0.618017,
+          "optimizer_steps": 1000,
+          "optimizer_step": 1000,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 20,
+      "source": "oracle_demonstration",
+      "demonstration_version": 4,
+      "question_id": "mountains_high_or_low",
+      "prompt": "Pergunta: As montanhas são altas ou baixas?\nResponda de forma direta:\nResposta: ",
+      "answer": "Altas.",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "known_target_demonstration_for_policy_warm_start",
+      "timestamp_utc": "2026-11-14T22:49:22.045894+00:00",
+      "model_sha256_before": "d003cb878267573a265127c0a3b1953668a8b07fe5c3b824d21f7bef65a33286",
+      "model_sha256_after": "69f209bc7ea70dbea12bea0ea5e469530468b10fb9c499a3ee3d51bc576be323",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "optimizer_steps": 1000,
+        "report": {
+          "reward": 1,
+          "target_bytes": 6,
+          "gradient_norm_first": 1.32214,
+          "gradient_norm_last": 0.8222,
+          "parameter_delta_l2": 0.61548,
+          "optimizer_steps": 1000,
+          "optimizer_step": 1000,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 21,
+      "source": "oracle_demonstration",
+      "demonstration_version": 4,
+      "question_id": "grass_color",
+      "prompt": "Pergunta: Que cor é a grama?\nResponda de forma direta:\nResposta: ",
+      "answer": "Verde.",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "known_target_demonstration_for_policy_warm_start",
+      "timestamp_utc": "2026-11-14T22:49:22.144106+00:00",
+      "model_sha256_before": "69f209bc7ea70dbea12bea0ea5e469530468b10fb9c499a3ee3d51bc576be323",
+      "model_sha256_after": "e38a370ca38b3a713ca12c4dda1afa4973623a30485dd09829fd69189a164506",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "optimizer_steps": 1000,
+        "report": {
+          "reward": 1,
+          "target_bytes": 6,
+          "gradient_norm_first": 2.3168,
+          "gradient_norm_last": 0.973477,
+          "parameter_delta_l2": 0.611784,
+          "optimizer_steps": 1000,
+          "optimizer_step": 1000,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 22,
+      "source": "model_generated",
+      "question_id": "sky_is_blue",
+      "prompt": "Pergunta: O céu é azul?\nResponda de forma direta:\nResposta: ",
+      "answer": "Sm,.Revdevde..Rarde..Rarde.*Revtde.2Sm,,,Dde..Ra",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T22:49:22.148931+00:00",
+      "model_sha256_before": "e38a370ca38b3a713ca12c4dda1afa4973623a30485dd09829fd69189a164506",
+      "model_sha256_after": "092747804f93ab948c6a33479d5c4e114cae0f451c47bdbc8a7e2db44bf2b374",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.1778,
+          "gradient_norm_last": 1.1778,
+          "parameter_delta_l2": 2.49958e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 23,
+      "source": "model_generated",
+      "question_id": "mountains_high_or_low",
+      "prompt": "Pergunta: As montanhas são altas ou baixas?\nResponda de forma direta:\nResposta: ",
+      "answer": "Sm,.Revdevde..Rarde..Rarde.*Revtde.2Sm,,,Dde..Ra",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T22:49:22.154833+00:00",
+      "model_sha256_before": "092747804f93ab948c6a33479d5c4e114cae0f451c47bdbc8a7e2db44bf2b374",
+      "model_sha256_after": "d8a30fb36b18f4f4f4b6922954097ce7cd05fe103a65f0bea0e00c259c2baa0d",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.1783,
+          "gradient_norm_last": 1.1783,
+          "parameter_delta_l2": 2.49977e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 24,
+      "source": "model_generated",
+      "question_id": "grass_color",
+      "prompt": "Pergunta: Que cor é a grama?\nResponda de forma direta:\nResposta: ",
+      "answer": "Sm,.Revdevde..Rarde..Rarde.*Revtde.2Sm,,,Dde..Ra",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T22:49:22.160627+00:00",
+      "model_sha256_before": "d8a30fb36b18f4f4f4b6922954097ce7cd05fe103a65f0bea0e00c259c2baa0d",
+      "model_sha256_after": "18b6d11fca9762eb765b9c849a3c9565e24c5d1ee23713c8e9819ecd65e244a7",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.17894,
+          "gradient_norm_last": 1.17894,
+          "parameter_delta_l2": 2.49997e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
     }
   ],
   "oracle_demonstrations_applied": true,
