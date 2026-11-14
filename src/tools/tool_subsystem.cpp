@@ -367,7 +367,7 @@ common::Result<std::string> ToolSubsystem::invoke(
     }
 
     const auto deadline = std::chrono::steady_clock::now() +
-        std::chrono::milliseconds(definition.timeout_ms);
+        std::chrono::milliseconds(static_cast<std::chrono::milliseconds::rep>(definition.timeout_ms));
     ToolExecutionContext context{
         request.session_id(), request.request_id(), [&request] { return request.is_cancelled(); }, deadline};
 
