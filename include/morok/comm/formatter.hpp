@@ -33,7 +33,7 @@ public:
             }
             transcript += ": ";
             transcript += message.content;
-            transcript.push_back('\\n');
+            transcript.push_back('\n');
         }
         return common::Utf8Text::from_utf8(transcript);
     }
