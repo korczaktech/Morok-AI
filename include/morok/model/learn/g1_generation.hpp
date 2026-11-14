@@ -17,6 +17,8 @@ struct G1GenerationConfig {
     // Add this many nats per recent occurrence of a printable ASCII byte.
     double repetition_penalty{0.0};
     std::size_t repetition_window{64};
+    double eos_threshold{0.5};
+    std::size_t min_new_bytes{1};
 };
 
 struct G1GenerationReport {
@@ -24,10 +26,11 @@ struct G1GenerationReport {
     std::size_t candidate_evaluations{0};
     std::size_t generated_bytes{0};
     bool reached_byte_limit{false};
+    bool stopped_by_eos{false};
 };
 
-// Greedy autoregressive decoding constrained to valid UTF-8 byte transitions.
-// G1 has no EOS token: generation is bounded by max_new_bytes.
+// Autoregressive decoding with a learned stop head and UTF-8-safe byte transitions.
+// max_new_bytes remains a hard safety bound.
 [[nodiscard]] G1GenerationReport generate_g1(
     const G1Parameters& parameters,
     const common::Utf8Text& prompt,
