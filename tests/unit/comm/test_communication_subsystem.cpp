@@ -104,6 +104,17 @@ int main() {
     assert(!cross_session);
     assert(cross_session.error_if()->code == common::ErrorCode::invalid_argument);
 
+    core::CancellationSource pre_cancel_source;
+    assert(pre_cancel_source.cancel());
+    auto pre_cancel_request = communication.create_request_context(
+        *conversation.value_if(), pre_cancel_source.token());
+    assert(pre_cancel_request);
+    auto pre_cancelled = communication.send_message(
+        *pre_cancel_request.value_if(), *conversation.value_if(),
+        *user_text.value_if(), 4);
+    assert(!pre_cancelled);
+    assert(pre_cancelled.error_if()->code == common::ErrorCode::cancelled);
+
     core::CancellationSource cancelled_source;
     auto cancelled_request = communication.create_request_context(
         *conversation.value_if(), cancelled_source.token());
