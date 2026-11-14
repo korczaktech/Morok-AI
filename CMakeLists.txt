@@ -74,7 +74,7 @@ if(MOROK_BUILD_APPS)
     set_target_properties(morok_train_cli PROPERTIES OUTPUT_NAME "morok-train")
     morok_enable_sanitizers(morok_train_cli)
 
-    if(UNIX)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_executable(morok_server apps/morok-server/main.cpp)
         target_link_libraries(morok_server PRIVATE Morok::Core morok_build_options)
         set_target_properties(morok_server PROPERTIES OUTPUT_NAME "morok-server")
@@ -115,7 +115,7 @@ if(MOROK_BUILD_APPS)
     install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
         morok_train morok_benchmark morok_generate morok_complete
         RUNTIME DESTINATION bin)
-    if(UNIX)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
     endif()
     install(TARGETS morok_core ARCHIVE DESTINATION lib)
