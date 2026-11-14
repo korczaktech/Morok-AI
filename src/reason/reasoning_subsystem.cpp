@@ -58,6 +58,30 @@ std::size_t value_bytes(const Value& value) {
     return sizeof(value);
 }
 
+bool valid_value(const Value& value, std::size_t maximum_bytes) {
+    if (value_bytes(value) > maximum_bytes) return false;
+    if (const auto* number = std::get_if<double>(&value))
+        return std::isfinite(*number);
+    if (const auto* text = std::get_if<std::string>(&value))
+        return static_cast<bool>(common::Utf8Text::from_utf8(*text));
+    return true;
+}
+
+bool valid_operation(Operation operation) {
+    switch (operation) {
+    case Operation::assign: case Operation::add: case Operation::subtract:
+    case Operation::multiply: case Operation::divide: case Operation::equal:
+    case Operation::less: case Operation::logical_and: case Operation::logical_or:
+    case Operation::logical_not: case Operation::concatenate: return true;
+    }
+    return false;
+}
+
+bool valid_failure_policy(FailurePolicy policy) {
+    return policy == FailurePolicy::abort_plan ||
+           policy == FailurePolicy::continue_independent;
+}
+
 bool numeric(const Value& value) {
     const auto* number = std::get_if<double>(&value);
     return number && std::isfinite(*number);
@@ -226,9 +250,15 @@ std::size_t required_inputs(Operation operation) {
 }
 
 bool valid_condition(const Condition& condition) {
-    return valid_name(condition.key) &&
-        (!std::holds_alternative<double>(condition.expected) ||
-         std::isfinite(std::get<double>(condition.expected)));
+    const bool comparator_valid = condition.comparator == Comparator::equal ||
+        condition.comparator == Comparator::not_equal ||
+        condition.comparator == Comparator::less ||
+        condition.comparator == Comparator::less_equal ||
+        condition.comparator == Comparator::greater ||
+        condition.comparator == Comparator::greater_equal ||
+        condition.comparator == Comparator::truthy;
+    return valid_name(condition.key) && comparator_valid &&
+        valid_value(condition.expected, 4096);
 }
 
 } // namespace
@@ -282,6 +312,7 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
     if (!objective_text || task.objective.empty() ||
         task.objective.size() > config_.max_objective_bytes ||
         task.steps.empty() || task.step_budget == 0 ||
+        !valid_failure_policy(task.failure_policy) ||
         task.steps.size() > std::min(task.step_budget, config_.max_steps)) {
         return fail_result<ReasoningPlan>(common::ErrorCode::resource_limit,
             "task objective, step count, or execution budget is invalid",
@@ -292,16 +323,14 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
         ReasoningPlan plan{request.session_id(), request.request_id(),
             task.objective, {}, task.preconditions, {}, 0, task.failure_policy};
         for (const auto& [key, value] : authorized_context) {
-            if (!valid_name(key) || value_bytes(value) > config_.max_value_bytes ||
-                (std::holds_alternative<double>(value) && !numeric(value)))
+            if (!valid_name(key) || !valid_value(value, config_.max_value_bytes))
                 return fail_result<ReasoningPlan>(common::ErrorCode::invalid_argument,
                     "authorized context contains an invalid key or value",
                     "plan", &request);
             plan.initial_values.emplace(key, value);
         }
         for (const auto& [key, value] : task.initial_values) {
-            if (!valid_name(key) || value_bytes(value) > config_.max_value_bytes ||
-                (std::holds_alternative<double>(value) && !numeric(value)) ||
+            if (!valid_name(key) || !valid_value(value, config_.max_value_bytes) ||
                 plan.initial_values.contains(key))
                 return fail_result<ReasoningPlan>(common::ErrorCode::invalid_argument,
                     "task initial values contain an invalid or duplicate key",
@@ -325,20 +354,18 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
                 !step_by_id.emplace(step.id, i).second ||
                 plan.initial_values.contains(step.output) ||
                 !producer_by_key.emplace(step.output, i).second ||
+                !valid_operation(step.operation) ||
+                !valid_operation(step.operation) ||
                 step.inputs.size() != required_inputs(step.operation)) {
                 return fail_result<ReasoningPlan>(common::ErrorCode::invalid_argument,
                     "step identifier, output, or operation signature is invalid",
                     "plan", &request);
             }
             if (step.operation == Operation::assign &&
-                value_bytes(step.literal) > config_.max_value_bytes)
+                !valid_value(step.literal, config_.max_value_bytes))
                 return fail_result<ReasoningPlan>(common::ErrorCode::input_too_large,
                     "literal exceeds IA-REAS value limit", "plan", &request);
-            if (std::holds_alternative<double>(step.literal) && !numeric(step.literal))
-                return fail_result<ReasoningPlan>(common::ErrorCode::invalid_argument,
-                    "step literal must be finite", "plan", &request);
-            if (step.fallback && (value_bytes(*step.fallback) > config_.max_value_bytes ||
-                (std::holds_alternative<double>(*step.fallback) && !numeric(*step.fallback))))
+            if (step.fallback && !valid_value(*step.fallback, config_.max_value_bytes))
                 return fail_result<ReasoningPlan>(common::ErrorCode::invalid_argument,
                     "step fallback is invalid", "plan", &request);
             for (const auto& condition : step.preconditions)
@@ -445,6 +472,7 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
     const auto objective_text = common::Utf8Text::from_utf8(plan.objective);
     if (!objective_text || plan.objective.empty() ||
         plan.objective.size() > config_.max_objective_bytes ||
+        !valid_failure_policy(plan.failure_policy) ||
         plan.ordered_steps.empty() || plan.ordered_steps.size() > config_.max_steps ||
         plan.dependency_depth == 0 ||
         plan.dependency_depth > config_.max_dependency_depth)
@@ -522,7 +550,7 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
                 }
                 return common::Result<ReasoningResult>::failure(*candidate.error_if());
             }
-            if (value_bytes(*candidate.value_if()) > config_.max_value_bytes)
+            if (!valid_value(*candidate.value_if(), config_.max_value_bytes))
                 return fail_result<ReasoningResult>(common::ErrorCode::resource_limit,
                     "step result exceeds IA-REAS value limit", "execute", &request);
 
