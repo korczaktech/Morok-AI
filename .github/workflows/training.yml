@@ -8,6 +8,12 @@ on:
       - "scripts/run-g1-continual-cycle.sh"
       - "tests/fixtures/continual/**"
       - "docs/53-aprendizagem-continua-g1-actions.md"
+      - "CMakeLists.txt"
+      - "tests/CMakeLists.txt"
+      - "tests/**"
+      - "apps/**"
+      - "include/morok/model/learn/**"
+      - "src/model/learn/**"
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
