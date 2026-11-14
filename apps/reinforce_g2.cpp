@@ -1,10 +1,10 @@
 #include "morok/common/utf8_text.hpp"
 #include "morok/model/g1_forward.hpp"
 #include "morok/model/learn/g1_bptt.hpp"
-#include "morok/model/learn/g1_checkpoint.hpp"
 #include "morok/model/learn/g2_checkpoint.hpp"
 #include "morok/model/learn/optimizer.hpp"
 #include "morok/model/parameters/g2_parameters.hpp"
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <fstream>
