@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Treinar a G1 para responder a exatamente três perguntas controladas:
+Treinar a G1 para responder a exatamente três perguntas controladas, usando os enunciados curtos originais como contexto:
 
 1. "O céu é azul?" — conceito esperado: sim ou azul.
 2. "As montanhas são altas ou baixas?" — conceito esperado: altas.
