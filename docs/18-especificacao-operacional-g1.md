@@ -168,7 +168,7 @@ Padrão de geração da G1:
 - máximo configurável de 256 bytes por chamada, como limite inicial;
 - estado fast/slow isolado por sessão;
 - estado reinicializado em zero para nova sessão;
-- não há token EOS dedicado na G1; a parada ocorre pelo limite configurado ou por sequência de parada fornecida pelo chamador;
+- a cabeça EOS aprendida prevê a parada após fronteiras de sequência/documento; max_new_bytes permanece como limite rígido de segurança;
 - amostragem só após baseline estável: logit dividido por temperatura T, com T inicial de teste 0,8; gerador pseudoaleatório com semente explícita;
 - sem top-p, penalidade de repetição ou heurísticas de chat na G1.
 
