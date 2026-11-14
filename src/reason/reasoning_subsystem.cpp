@@ -6,6 +6,7 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <new>
 #include <queue>
 #include <set>
 #include <string_view>
@@ -339,6 +340,7 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
         }
         for (const auto& condition : task.preconditions) {
             if (!valid_condition(condition) ||
+                !valid_value(condition.expected, config_.max_value_bytes) ||
                 !plan.initial_values.contains(condition.key))
                 return fail_result<ReasoningPlan>(common::ErrorCode::invalid_argument,
                     "task precondition must reference an authorized initial value",
@@ -356,7 +358,11 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
                 !producer_by_key.emplace(step.output, i).second ||
                 !valid_operation(step.operation) ||
                 !valid_operation(step.operation) ||
-                step.inputs.size() != required_inputs(step.operation)) {
+                step.inputs.size() != required_inputs(step.operation) ||
+                (step.operation == Operation::assign &&
+                 !valid_value(step.literal, config_.max_value_bytes)) ||
+                (step.fallback &&
+                 !valid_value(*step.fallback, config_.max_value_bytes))) {
                 return fail_result<ReasoningPlan>(common::ErrorCode::invalid_argument,
                     "step identifier, output, or operation signature is invalid",
                     "plan", &request);
@@ -369,11 +375,14 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
                 return fail_result<ReasoningPlan>(common::ErrorCode::invalid_argument,
                     "step fallback is invalid", "plan", &request);
             for (const auto& condition : step.preconditions)
-                if (!valid_condition(condition))
+                if (!valid_condition(condition) ||
+                    !valid_value(condition.expected, config_.max_value_bytes))
                     return fail_result<ReasoningPlan>(common::ErrorCode::invalid_argument,
                         "step precondition is invalid", "plan", &request);
             for (const auto& condition : step.postconditions)
-                if (!valid_condition(condition) || condition.key != step.output)
+                if (!valid_condition(condition) ||
+                    !valid_value(condition.expected, config_.max_value_bytes) ||
+                    condition.key != step.output)
                     return fail_result<ReasoningPlan>(common::ErrorCode::invalid_argument,
                         "step postconditions must validate that step output", "plan", &request);
         }
@@ -482,6 +491,19 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
     try {
         ReasoningResult result;
         result.values = plan.initial_values;
+        for (const auto& [key, value] : result.values) {
+            if (!valid_name(key) || !valid_value(value, config_.max_value_bytes))
+                return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                    "reasoning plan contains an invalid initial value",
+                    "execute", &request);
+        }
+        for (const auto& condition : plan.preconditions) {
+            if (!valid_condition(condition) ||
+                !valid_value(condition.expected, config_.max_value_bytes))
+                return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                    "reasoning plan contains an invalid task precondition",
+                    "execute", &request);
+        }
         const auto preconditions = check_conditions(
             plan.preconditions, result.values, request, "task.preconditions");
         if (!preconditions)
@@ -500,6 +522,29 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
                     "reasoning plan contains duplicate or malformed steps",
                     "execute", &request);
             }
+            for (const auto& input : step.inputs)
+                if (!valid_name(input))
+                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                        "reasoning plan contains an invalid input name",
+                        "execute", &request);
+            for (const auto& dependency : step.dependencies)
+                if (!valid_name(dependency))
+                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                        "reasoning plan contains an invalid dependency name",
+                        "execute", &request);
+            for (const auto& condition : step.preconditions)
+                if (!valid_condition(condition) ||
+                    !valid_value(condition.expected, config_.max_value_bytes))
+                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                        "reasoning plan contains an invalid step precondition",
+                        "execute", &request);
+            for (const auto& condition : step.postconditions)
+                if (!valid_condition(condition) ||
+                    !valid_value(condition.expected, config_.max_value_bytes) ||
+                    condition.key != step.output)
+                    return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                        "reasoning plan contains an invalid step postcondition",
+                        "execute", &request);
             if (request.is_cancelled())
                 return fail_result<ReasoningResult>(common::ErrorCode::cancelled,
                     "reasoning execution was cancelled between steps",
