@@ -1,5 +1,7 @@
 #include "morok/security/security_subsystem.hpp"
 
+#include "morok/common/utf8_text.hpp"
+
 #include <algorithm>
 #include <charconv>
 #include <cmath>
@@ -24,6 +26,15 @@ common::Result<T> result_failure(common::ErrorCode code, std::string message,
                                   std::string stage) {
     return common::Result<T>::failure(make_error(
         code, std::move(message), std::move(stage)));
+}
+
+bool safe_display_text(const std::string& value, std::size_t max_bytes) {
+    if (value.empty() || value.size() > max_bytes ||
+        !common::Utf8Text::from_utf8(value)) return false;
+    for (const unsigned char character : value) {
+        if (character < 0x20U || character == 0x7fU) return false;
+    }
+    return true;
 }
 
 bool valid_tool_capability(tools::ToolCapability capability) noexcept {
@@ -103,15 +114,15 @@ common::Status SecuritySubsystem::shutdown() noexcept {
 }
 
 bool SecuritySubsystem::valid_principal(const SecurityPrincipal& principal) noexcept {
-    return !principal.subject_id.empty() && principal.subject_id.size() <= 128 &&
+    return safe_display_text(principal.subject_id, 128) &&
            !principal.session_id.is_nil();
 }
 
 bool SecuritySubsystem::valid_action(const SecurityAction& action) noexcept {
-    return !action.tool_name.empty() && action.tool_name.size() <= 64 &&
-           !action.operation.empty() && action.operation.size() <= 128 &&
-           !action.target.empty() && action.target.size() <= 512 &&
-           !action.effect_summary.empty() && action.effect_summary.size() <= 1024 &&
+    return safe_display_text(action.tool_name, 64) &&
+           safe_display_text(action.operation, 128) &&
+           safe_display_text(action.target, 512) &&
+           safe_display_text(action.effect_summary, 1024) &&
            action.arguments_binding.size() <= 65536 &&
            action.arguments_binding.rfind("args-v1;", 0) == 0;
 }
