@@ -36,8 +36,7 @@ A arquitetura armazena exatamente 1.000 parâmetros FP32. O caminho de treinamen
 
 Essa distinção é registrada em `status.json`:
 - `architecture_parameters: 1000`;
-- `trainable_parameters: 971` para o caminho B0;
-- os 29 parâmetros do segmentador permanecem uma etapa de treinamento separada ainda não integrada ao loop contínuo.
+- `trainable_parameters: 1000` para o caminho B0, incluindo a cabeça EOS.
 
 O limite arquitetural de 1.000 é preservado. Mais épocas não aumentam a capacidade estrutural do modelo.
 
@@ -56,7 +55,7 @@ O artifact de cada execução contém, quando produzidos:
 
 - 1.000 parâmetros arquiteturais são uma capacidade muito pequena para linguagem geral.
 - A entrada e a saída são processadas byte a byte; o estado recorrente é pequeno.
-- A geração atual é gulosa e não possui token EOS treinado, podendo repetir bytes e preencher o limite de saída.
+- A geração tem uma cabeça EOS aprendida a partir de fronteiras de documentos, além do limite rígido de bytes. A qualidade do critério de parada depende da representatividade dos documentos de treinamento.
 - O corpus é pequeno e o modelo pode memorizar exemplos e prompt.
 - A métrica BPB não substitui avaliação semântica.
 - O critério lexical `azul` é diagnóstico, não evidência de compreensão.
@@ -70,7 +69,7 @@ O artifact de cada execução contém, quando produzidos:
 - [x] Métricas de predição de bytes e geração pós-treinamento.
 - [x] Limite total de épocas.
 - [x] Busca lexical rebaixada a diagnóstico, sem declarar sucesso semântico.
-- [ ] Treinar os 29 parâmetros do segmentador em etapa integrada e verificável.
+- [x] Treinar os 29 parâmetros da cabeça EOS em exemplos de continuação e fim de documento.
 - [ ] Implementar geração com amostragem controlada e critério de parada treinado.
 - [ ] Ampliar corpus natural, diversificado e licenciado.
 - [ ] Criar avaliação semântica independente com revisão humana.
