@@ -96,6 +96,10 @@ printf '%s\n' "$target_epochs" > "$epoch_file"
 "$generate_bin" "$best_model" "$corpus/prompt.txt" "$generated" 128
 test -s "$generated"
 
+qa_report="$state_dir/qa-evaluation.json"
+python3 scripts/evaluate-g1-qa.py "$best_model" "$qa_report"
+test -s "$qa_report"
+
 # This is a diagnostic only. A lexical match is not semantic understanding
 # and must never stop training or mark the model as having learned the task.
 lexical_match=false
@@ -141,6 +145,7 @@ status = {
     "maximum_epochs": int(os.environ["MOROK_MAX_EPOCHS"]),
     "trainable_parameters": 1000,
     "architecture_id": "RLAH-G1-fastslow-d11-bit8-eos",
+    "qa_evaluation": "token-overlap diagnostic only; semantic acceptance not established",
     "architecture_parameters": 1000,
     "corpus_documents": len(files),
     "corpus_sha256": digest.hexdigest(),
