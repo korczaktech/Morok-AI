@@ -53,8 +53,8 @@ void print_usage() {
     std::cerr
         << "uso: morok_generate <checkpoint> <prompt.txt> <saida.txt> [max_bytes]"
         << " [--temperature n] [--top-k n] [--seed n]"
-        << " [--repetition-penalty n] [--repetition-window n]\\n"
-        << "temperature 0 mantém geração gulosa; valor positivo ativa amostragem.\\n";
+        << " [--repetition-penalty n] [--repetition-window n]\n"
+        << "temperature 0 mantém geração gulosa; valor positivo ativa amostragem.\n";
 }
 } // namespace
 
@@ -98,13 +98,13 @@ int main(int argc, char** argv) {
 
         const auto report = morok::model::generate_g1(checkpoint.parameters, prompt, config);
         write_text(argv[3], report.continuation.string());
-        std::cout << "{\\"generated_bytes\\":" << report.generated_bytes
-                  << ",\\"candidate_evaluations\\":" << report.candidate_evaluations
-                  << ",\\"reached_byte_limit\\":"
-                  << (report.reached_byte_limit ? "true" : "false") << "}\\n";
+        std::cout << "{\"generated_bytes\":" << report.generated_bytes
+                  << ",\"candidate_evaluations\":" << report.candidate_evaluations
+                  << ",\"reached_byte_limit\":"
+                  << (report.reached_byte_limit ? "true" : "false") << "}\n";
         return 0;
     } catch (const std::exception& error) {
-        std::cerr << "morok_generate: " << error.what() << '\\n';
+        std::cerr << "morok_generate: " << error.what() << '\n';
         return 1;
     }
 }
