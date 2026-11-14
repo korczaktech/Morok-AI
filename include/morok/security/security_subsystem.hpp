@@ -14,6 +14,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace morok::security {
 
@@ -141,6 +142,14 @@ public:
     [[nodiscard]] common::Status consume_confirmation(
         const SecurityPrincipal& principal, const ConfirmationGrant& grant,
         const SecurityAction& action);
+    [[nodiscard]] common::Result<std::string> invoke_tool(
+        tools::ToolSubsystem& tool_subsystem,
+        const core::RequestContext& request,
+        const SecurityPrincipal& principal,
+        const std::string& tool_name,
+        const tools::ToolArguments& arguments,
+        const SecurityAction* action = nullptr,
+        const ConfirmationGrant* confirmation = nullptr);
 
     [[nodiscard]] core::Runtime::Initializer initializer();
     [[nodiscard]] core::Runtime::Shutdown shutdown_callback();
