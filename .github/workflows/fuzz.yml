@@ -1,0 +1,27 @@
+name: Fuzzing
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  libfuzzer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Clang and build tools
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-rt-dev cmake ninja-build libsqlite3-dev
+      - name: Configure fuzz targets
+        env:
+          CXX: clang++
+        run: cmake -S . -B build-fuzz -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMOROK_BUILD_TESTS=OFF -DMOROK_BUILD_APPS=OFF -DMOROK_BUILD_FUZZERS=ON
+      - name: Build fuzz targets
+        run: cmake --build build-fuzz --parallel 2
+      - name: Fuzz strict UTF-8 validation
+        run: ./build-fuzz/morok_fuzz_utf8 -max_len=65536 -runs=2000 tests/fixtures/benchmark
+      - name: Fuzz RLAH decoder
+        run: ./build-fuzz/morok_fuzz_rlah_decode -max_len=65536 -runs=2000 tests/fixtures/benchmark
+      - name: Fuzz checkpoint parser
+        run: ./build-fuzz/morok_fuzz_checkpoint -max_len=65536 -runs=2000 tests/fixtures/benchmark
