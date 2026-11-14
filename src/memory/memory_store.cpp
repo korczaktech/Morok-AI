@@ -63,7 +63,7 @@ void bind_text(sqlite3_stmt* stmt, int index, std::string_view value) {
         if (!query.empty()) query += " AND ";
         query += '"';
         for (const char ch : token) {
-            if (ch == '"') query += "\\\"\\\"";
+            if (ch == '"') query += "\"\"";
             else query += ch;
         }
         query += '"';
