@@ -93,6 +93,9 @@ int main() {
 
     auto second_conversation = communication.create_conversation();
     assert(second_conversation);
+    auto over_capacity = communication.create_conversation();
+    assert(!over_capacity);
+    assert(over_capacity.error_if()->code == common::ErrorCode::resource_limit);
     auto second_request = communication.create_request_context(*second_conversation.value_if());
     assert(second_request);
     auto cross_session = communication.send_message(
