@@ -79,6 +79,7 @@ O arquivo de backup contém dados persistentes e deve receber as mesmas permiss�
 ## Arquivos
 
 - `include/morok/memory/memory_store.hpp`
+- `include/morok/memory/memory_subsystem.hpp`: adaptador de lifecycle IA-CORE e encerramento de sessão
 - `src/memory/memory_store.cpp`
 - `tests/unit/memory/test_memory_store.cpp`
 - `CMakeLists.txt`: dependência SQLite3 e inclusão da implementação
@@ -98,11 +99,12 @@ O teste automatizado cobre:
 9. expiração e pruning;
 10. exclusão e evento de auditoria persistente;
 11. integridade SQLite;
-12. backup consistente.
+12. backup consistente;
+13. inicialização do IA-MEM com RuntimeConfig e limpeza da memória de trabalho antes de encerrar a sessão no SessionRegistry.
 
 ## Limitações explícitas
 
-- O composition root ainda precisa conectar a limpeza de memória de trabalho ao encerramento de sessões do IA-CORE.
+- O adaptador `MemorySubsystem` já conecta a inicialização ao `RuntimeConfig` e oferece `close_session`, que limpa memória de trabalho antes de fechar o `SessionRegistry`; o composition root ainda precisa registrar esse adaptador como callback de inicialização/encerramento do Runtime.
 - Não há embeddings nem busca semântica vetorial; a memória semântica é uma classificação de registros explícitos, pesquisável lexicalmente.
 - O FTS5 depende da build de SQLite; quando ausente, a implementação declara `fts5_available() == false` e usa busca literal LIKE.
 - O backup é exportação de snapshot; restauração operacional e rotação automática ainda não fazem parte desta etapa.
@@ -111,4 +113,4 @@ O teste automatizado cobre:
 
 ## Critério de conclusão
 
-IA-MEM G1 possui armazenamento SQLite transacional, três tipos de memória, promoção explícita, busca textual limitada, isolamento por sessão, proveniência, retenção, exclusão auditável, backup e verificação de integridade, com teste automatizado registrado no CTest. A etapa não afirma integração automática com um servidor ou composition root ainda inexistente.
+IA-MEM G1 possui armazenamento SQLite transacional, três tipos de memória, promoção explícita, busca textual limitada, isolamento por sessão, proveniência, retenção, exclusão auditável, backup e verificação de integridade, com teste automatizado registrado no CTest, incluindo o adaptador de sessão IA-CORE. A etapa não afirma integração automática com um servidor ou composition root ainda inexistente.
