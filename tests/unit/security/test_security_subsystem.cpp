@@ -211,6 +211,14 @@ int main() {
     assert(saw_denial && saw_grant && saw_confirmation && saw_consumed &&
            saw_session_closed);
 
+    security::SecurityConfig excessive_limits;
+    excessive_limits.max_grants = 4097;
+    security::SecuritySubsystem excessive_security(
+        excessive_limits, [](const security::SecurityAuditRecord&) {
+            return common::Status::success();
+        });
+    assert(!excessive_security.initialize(core::RuntimeConfig{}));
+
     security::SecuritySubsystem missing_audit;
     assert(!missing_audit.initialize(core::RuntimeConfig{}));
 
