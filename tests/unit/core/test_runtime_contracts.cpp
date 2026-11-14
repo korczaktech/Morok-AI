@@ -93,9 +93,10 @@ int main() {
     assert(shut_down == 2);
     assert(runtime.shutdown());
 
-    int rollback_count = 0;
+    std::vector<int> rollback_order;
     core::Runtime failing_runtime(core::RuntimeConfig{});
     const std::vector<core::Runtime::Initializer> failing_initializers{
+        [](const core::RuntimeConfig&) { return common::Status::success(); },
         [](const core::RuntimeConfig&) { return common::Status::success(); },
         [](const core::RuntimeConfig&) {
             return common::Status::failure(common::Error::make(
@@ -103,13 +104,22 @@ int main() {
                 "controlled failure", "test", "initialize"));
         }};
     const std::vector<core::Runtime::Shutdown> rollback_actions{
-        [&] { ++rollback_count; }};
+        [&] { rollback_order.push_back(1); },
+        [&] { rollback_order.push_back(2); },
+        [&] { rollback_order.push_back(3); }};
     assert(!failing_runtime.initialize(failing_initializers, rollback_actions));
     assert(failing_runtime.state() == core::LifecycleState::failed);
     assert(!failing_runtime.accepts_requests());
-    assert(rollback_count == 1);
+    assert((rollback_order == std::vector<int>{2, 1}));
     assert(failing_runtime.shutdown());
     assert(failing_runtime.state() == core::LifecycleState::stopped);
+
+    core::Runtime mismatched_runtime(core::RuntimeConfig{});
+    const std::vector<core::Runtime::Initializer> one_initializer{
+        [](const core::RuntimeConfig&) { return common::Status::success(); }};
+    assert(!mismatched_runtime.initialize(one_initializer));
+    assert(mismatched_runtime.state() == core::LifecycleState::failed);
+    assert(mismatched_runtime.shutdown());
 
     return 0;
 }
