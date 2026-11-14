@@ -44,3 +44,8 @@ Registro, esquemas, permissões, execução controlada, isolamento, auditoria e 
 ## 3.9 Critérios de validação
 
 Cada subsistema terá testes unitários, integração e critérios de maturidade separados. Implementação não implica validação.
+
+
+## 3.10 Camada transversal de segurança
+
+A segurança é transversal aos sete subsistemas e não constitui um oitavo subsistema cognitivo. A implementação inicial reside em `morok::security::SecuritySubsystem`: grants explícitos por sessão/ferramenta/capacidade, política de negação por padrão, confirmações humanas de uso único e classificação de origem de conteúdo. IA-TOOLS consome a política gerada pelo host. Consulte [Segurança e permissões](22-seguranca-e-permissoes.md) e [Etapa 13 — Segurança](46-etapa-13-seguranca.md).
