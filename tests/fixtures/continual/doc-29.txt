@@ -1,0 +1,2 @@
+Pergunta: Pinguins são aves?
+Resposta: Sim. Pinguins são aves, embora não consigam voar.
