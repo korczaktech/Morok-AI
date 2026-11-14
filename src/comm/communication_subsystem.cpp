@@ -43,7 +43,7 @@ CommunicationSubsystem::CommunicationSubsystem(
 
 common::Status CommunicationSubsystem::validate_limits(
     const core::RuntimeConfig& config) const {
-    if (limits_.max_conversations == 0 ||
+    if (config.max_sessions == 0 || limits_.max_conversations == 0 ||
         limits_.max_messages_per_conversation == 0 ||
         limits_.max_message_bytes == 0 ||
         limits_.max_history_bytes < limits_.max_message_bytes ||
