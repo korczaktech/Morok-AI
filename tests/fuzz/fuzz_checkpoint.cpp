@@ -6,6 +6,31 @@
 #include <fstream>
 #include <span>
 #include <stdexcept>
+#include <vector>
+
+namespace {
+bool decode_hex_seed(const std::uint8_t* data, std::size_t size,
+                     std::vector<std::uint8_t>& output) {
+    if (size < 4 || data[0] != 'H' || data[1] != 'E' ||
+        data[2] != 'X' || data[3] != ':') return false;
+    if ((size - 4) % 2 != 0) return false;
+    auto nibble = [](std::uint8_t value) -> int {
+        if (value >= '0' && value <= '9') return value - '0';
+        if (value >= 'a' && value <= 'f') return value - 'a' + 10;
+        if (value >= 'A' && value <= 'F') return value - 'A' + 10;
+        return -1;
+    };
+    output.clear();
+    output.reserve((size - 4) / 2);
+    for (std::size_t i = 4; i < size; i += 2) {
+        const int high = nibble(data[i]);
+        const int low = nibble(data[i + 1]);
+        if (high < 0 || low < 0) { output.clear(); return false; }
+        output.push_back(static_cast<std::uint8_t>((high << 4) | low));
+    }
+    return true;
+}
+} // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
                                       std::size_t size) {
@@ -13,7 +38,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
     if (size > kMaximumInput) return 0;
 
     std::vector<std::uint8_t> input;
-    if (!decode_hex_seed(data, size, input))
+    if (!decode_hex_seed(data, size, input) && size != 0)
         input.assign(data, data + size);
     if (input.size() > kMaximumInput) return 0;
     const auto path = std::filesystem::temp_directory_path() /
