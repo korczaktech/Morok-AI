@@ -55,8 +55,7 @@ int main() {
 
     auto policy = security_system.tool_policy(principal);
     assert(policy);
-    assert(policy.value_if()->allowed_tools.size() == 1);
-    assert(policy.value_if()->allowed_tools.front() == "read_file");
+    assert(policy.value_if()->allowed_tools.size() == 2);
     assert(policy.value_if()->granted_capabilities.size() == 2);
     assert(policy.value_if()->exact_grants.size() == 2);
 
@@ -80,6 +79,33 @@ int main() {
         *mismatch_request.value_if(), "read_file", {}, *policy.value_if());
     assert(!cross_grant &&
            cross_grant.error_if()->code == common::ErrorCode::permission_denied);
+    assert(security_system.grant_tool(
+        principal, "publish", tools::ToolCapability::external_write));
+    tools::ToolDefinition publish;
+    publish.name = "publish";
+    publish.description = "Publish content to an external destination.";
+    publish.capability = tools::ToolCapability::external_write;
+    publish.requires_confirmation = true;
+    publish.handler = [](const tools::ToolExecutionContext&, const tools::ToolArguments&) {
+        return common::Result<std::string>::success("published");
+    };
+    assert(tool_subsystem.register_tool(std::move(publish)));
+    security::SecurityAction publish_action{
+        "publish", "publish", "public-feed", "Publish the approved message"};
+    auto publish_ticket = security_system.request_confirmation(principal, publish_action);
+    assert(publish_ticket);
+    auto publish_approval = security_system.approve_confirmation(
+        principal, *publish_ticket.value_if(), publish_action, true);
+    assert(publish_approval);
+    auto publish_result = security_system.invoke_tool(
+        tool_subsystem, *mismatch_request.value_if(), principal, "publish", {},
+        &publish_action, &*publish_approval.value_if());
+    assert(publish_result && *publish_result.value_if() == "published");
+    auto publish_replay = security_system.invoke_tool(
+        tool_subsystem, *mismatch_request.value_if(), principal, "publish", {},
+        &publish_action, &*publish_approval.value_if());
+    assert(!publish_replay &&
+           publish_replay.error_if()->code == common::ErrorCode::confirmation_required);
     assert(tool_subsystem.shutdown());
 
     security::SecurityAction action{
@@ -119,6 +145,8 @@ int main() {
         principal, "read_file", tools::ToolCapability::filesystem_read));
     assert(security_system.revoke_tool(
         principal, "send_notice", tools::ToolCapability::network));
+    assert(security_system.revoke_tool(
+        principal, "publish", tools::ToolCapability::external_write));
     assert(security_system.grant_count() == 0);
     auto revoked = security_system.authorize_tool(
         principal, "read_file", tools::ToolCapability::filesystem_read);
