@@ -1,6 +1,13 @@
 name: G1 Continual Learning
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/g1-continual-learning.yml"
+      - "scripts/run-g1-continual-cycle.sh"
+      - "tests/fixtures/continual/**"
+      - "docs/53-aprendizagem-continua-g1-actions.md"
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
