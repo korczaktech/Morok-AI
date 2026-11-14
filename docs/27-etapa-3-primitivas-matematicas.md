@@ -5,16 +5,17 @@
 ## Escopo implementado
 
 - Matriz row-major com dimensões explícitas, acesso verificado e armazenamento contíguo.
+- Validação de dimensões positivas e detecção de overflow em `rows * columns` antes da alocação.
 - Multiplicação matriz-vetor com validação dimensional.
 - Sigmoid estável por ramos, evitando calcular `exp(-x)` para entradas negativas extremas.
 - Tanh via biblioteca matemática padrão.
-- Softplus estável: `max(x, 0) + log1p(exp(-abs(x)))`.
-- Binary cross-entropy com logits, sem sigmoid separado e sem logaritmos de probabilidades arredondadas.
-- Log-sum-exp com deslocamento pelo máximo.
+- Softplus estável: `max(x, 0) + log1p(exp(-abs(x)) )`.
+- Binary cross-entropy com logits, sem sigmoid separado e sem logaritmos de probabilidades arredondadas; logits e alvos não finitos são rejeitados.
+- Log-sum-exp com deslocamento pelo máximo e rejeição explícita de NaN.
 - Softmax estável e rejeição de logits não finitos.
 - Norma global de gradientes usando `hypot` e clipping in-place.
 - Inicialização Xavier/Glorot uniforme e ortogonal determinística por semente explícita.
-- Testes de extremos numéricos, normalização, dimensões, clipping, determinismo e ortogonalidade em matrizes quadradas e retangulares.
+- Testes de extremos numéricos, normalização, dimensões inválidas, overflow de alocação, clipping, determinismo e ortogonalidade em matrizes quadradas e retangulares.
 
 ## Precisão
 
@@ -44,8 +45,8 @@ Cada inicializador recebe uma semente explícita e instancia seu próprio gerado
 - [x] Operação matriz-vetor e validação de dimensões.
 - [x] Norma e clipping global de gradientes.
 - [x] Inicializações determinísticas Xavier e ortogonal.
-- [x] Testes automatizados cobrindo os casos acima.
-- [ ] CI GCC/Clang em Debug e Release aprovado para o commit desta etapa.
-- [ ] ASan/UBSan executado em ambiente compatível.
+- [x] Testes automatizados cobrindo os casos acima, incluindo dimensões nulas, overflow de tamanho e logits não finitos.
+- [ ] CI GCC/Clang em Debug e Release aprovado para o commit final desta revisão.
+- [ ] ASan/UBSan executado em ambiente compatível para o commit final desta revisão.
 
-Os dois últimos itens dependem da execução real dos workflows; não são marcados como aprovados apenas porque os arquivos foram adicionados.
+A CI padrão está definida em `.github/workflows/ci.yml`; a execução ASan/UBSan está em `.github/workflows/sanitizers.yml`. Os dois últimos itens dependem da conclusão bem-sucedida dos workflows no commit final; não são marcados como aprovados apenas porque os arquivos foram adicionados.
