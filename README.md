@@ -75,6 +75,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 45. [Etapa 13 — Segurança](docs/46-etapa-13-seguranca.md)
 46. [Etapa 14 — Aplicações executáveis (roteiro de 20 etapas)](docs/47-etapa-14-aplicacoes-executaveis.md)
 47. [Etapa 15 — Testes automatizados](docs/48-etapa-15-testes-automatizados.md)
+48. [Etapa 16 — Documentação e experimentos](docs/49-etapa-16-documentacao-experimentos.md)
 
 ## Estado atual
 
@@ -83,6 +84,8 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 14 — Aplicações executáveis: CLI unificada, conversor UTF-8 de corpus, treinamento, avaliação BPB, benchmark, geração offline e servidor HTTP local com composição de lifecycle IA-CORE implementados. CI GCC/Clang Debug/Release aprovado; Sanitizers ASan/UBSan aprovado; smoke test ponta a ponta de conversão, treino, inspeção, geração, avaliação e HTTP aprovado. Consulte [Etapa 14 — Aplicações executáveis](docs/47-etapa-14-aplicacoes-executaveis.md).
 
 - Etapa 15 — Testes automatizados: camadas unitária, integração, propriedades, regressão e fuzzing adicionadas. Inclui pipeline treinamento → checkpoint → geração, invariantes determinísticos de parâmetros/UTF-8/G1/RLAH, regressão de rollback do IA-CORE e harnesses libFuzzer para UTF-8, RLAH e checkpoints. CI GCC/Clang Debug/Release aprovado com 32/32 testes em cada perfil; ASan/UBSan e três campanhas libFuzzer de 2.000 iterações aprovados no commit `08e7abeb`. Consulte [Etapa 15 — Testes automatizados](docs/48-etapa-15-testes-automatizados.md).
+
+- Etapa 16 — Documentação e experimentos: protocolo reproduzível, manifesto JSON, proveniência/licenças/hashes de corpus, critérios de análise, estrutura para ablações e escala de geração e índice de resultados implementados. O smoke test sintético anterior está documentado com resultado negativo da G1 frente ao baseline unigram. Campanha real/licenciada e medição em hardware físico de 4 GB permanecem pendentes. Consulte [Etapa 16 — Documentação e experimentos](docs/49-etapa-16-documentacao-experimentos.md).
 
 - Etapa 12 — IA-TOOLS: registro, descoberta, esquema tipado, allowlist, grants de capacidade, confirmação de efeitos colaterais, validação UTF-8 e de tipos, limites de concorrência/entrada/saída/tempo, captura de exceções, auditoria injetável e lifecycle IA-CORE implementados. Teste `tools.tool_subsystem` registrado no CTest. Isolamento de processo/OS e interrupção forçada de handlers não fazem parte desta versão; handlers devem ser código confiável. Consulte [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md).
 
@@ -110,8 +113,9 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 ## Próximas etapas
 
 1. Executar campanha de benchmark com corpus real/licenciado e múltiplas sementes em hardware de referência.
-2. Analisar estabilidade, qualidade linguística, BPB, latência, throughput e limite de RAM de 4 GB.
-3. Implementar segmentação reversível e integrar os subsistemas gradualmente.
+2. Medir inferência e memória em hardware físico de referência com limite de 4 GB.
+3. Executar ablações controladas e experimentos de escala de geração, registrando resultados e limitações.
+4. Implementar segmentação reversível e integrar os subsistemas gradualmente.
 
 ## Princípio de engenharia
 
