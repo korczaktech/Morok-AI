@@ -12,4 +12,4 @@ Este workflow aplica reforço exclusivamente à G2. A G2 possui dois especialist
 
 ## Limitações
 
-O sinal de recompensa é aplicado como gradiente de escore aproximado sobre a sequência observada; não é um estimador REINFORCE completo com baseline. O avaliador lexical é restrito às três perguntas controladas e não mede compreensão geral. Checkpoints preservam os pesos, mas o estado do otimizador é reinicializado em cada processo de reforço. Resultados de treinamento não devem ser interpretados como prova de competência linguística.
+A recompensa agora respeita o sentido do otimizador: recompensa positiva aplica descida do gradiente da perda da sequência observada; recompensa negativa inverte o gradiente para desencorajar essa sequência. Isso é uma aproximação reward-weighted BPTT, não um estimador REINFORCE completo com baseline. O avaliador lexical é restrito às três perguntas controladas e não mede compreensão geral. Checkpoints preservam os pesos, mas o estado do otimizador é reinicializado em cada processo de reforço. Resultados de treinamento não devem ser interpretados como prova de competência linguística.
