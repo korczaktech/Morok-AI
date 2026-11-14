@@ -138,6 +138,15 @@ void bind_text(sqlite3_stmt* stmt, int index, std::string_view value) {
     return Result<MemoryRecord>::success(std::move(record));
 }
 
+struct SearchDeadline final {
+    std::chrono::steady_clock::time_point expires;
+};
+
+int interrupt_search(void* context) {
+    const auto* deadline = static_cast<const SearchDeadline*>(context);
+    return std::chrono::steady_clock::now() >= deadline->expires ? 1 : 0;
+}
+
 constexpr const char* record_columns =
     "m.id,m.session_id,m.kind,m.source,m.title,m.body,m.source_id,"
     "m.sensitivity,m.created_at,m.expires_at";
@@ -374,7 +383,13 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
 
     std::vector<MemoryRecord> records;
     std::size_t used_bytes = 0;
-    while (sqlite3_step(statement.get()) == SQLITE_ROW) {
+    const SearchDeadline deadline{
+        std::chrono::steady_clock::now() +
+        std::chrono::milliseconds(impl_->limits.search_timeout_ms)};
+    sqlite3_progress_handler(impl_->db, 1000, interrupt_search,
+                             const_cast<SearchDeadline*>(&deadline));
+    int step_result = SQLITE_OK;
+    while ((step_result = sqlite3_step(statement.get())) == SQLITE_ROW) {
         const auto title_bytes = static_cast<std::size_t>(
             std::max(0, sqlite3_column_bytes(statement.get(), 4)));
         const auto body_bytes = static_cast<std::size_t>(
@@ -382,9 +397,20 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
         const auto record_bytes = title_bytes + body_bytes;
         if (record_bytes > context_limit - std::min(used_bytes, context_limit)) continue;
         auto record = read_record(statement.get());
-        if (!record) return Result<std::vector<MemoryRecord>>::failure(*record.error_if());
+        if (!record) {
+            sqlite3_progress_handler(impl_->db, 0, nullptr, nullptr);
+            return Result<std::vector<MemoryRecord>>::failure(*record.error_if());
+        }
         used_bytes += record_bytes;
         records.push_back(std::move(*record.value_if()));
+    }
+    sqlite3_progress_handler(impl_->db, 0, nullptr, nullptr);
+    if (step_result != SQLITE_DONE) {
+        if (step_result == SQLITE_INTERRUPT)
+            return Result<std::vector<MemoryRecord>>::failure(Error::make(
+                ErrorCode::tool_timeout, "memory search exceeded its time budget",
+                "memory", "search"));
+        return Result<std::vector<MemoryRecord>>::failure(db_error(impl_->db, "search"));
     }
     return Result<std::vector<MemoryRecord>>::success(std::move(records));
 }
