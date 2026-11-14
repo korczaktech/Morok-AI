@@ -193,8 +193,10 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
 
     const char* schema =
         "PRAGMA foreign_keys=ON;"
+        "PRAGMA page_size=4096;"
         "PRAGMA journal_mode=WAL;"
         "PRAGMA synchronous=FULL;"
+        "BEGIN IMMEDIATE;"
         "CREATE TABLE IF NOT EXISTS schema_migrations("
         " version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL);"
         "CREATE TABLE IF NOT EXISTS memories("
@@ -209,10 +211,12 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
         " request_id TEXT, actor TEXT NOT NULL, action TEXT NOT NULL, occurred_at INTEGER NOT NULL,"
         " outcome TEXT NOT NULL);"
         "CREATE INDEX IF NOT EXISTS idx_memory_audit_session ON memory_audit(session_id,occurred_at);"
-        "INSERT OR IGNORE INTO schema_migrations(version,applied_at) VALUES(1,unixepoch());";
+        "INSERT OR IGNORE INTO schema_migrations(version,applied_at) VALUES(1,unixepoch());"
+        "COMMIT;";
     const auto schema_result = exec(db, schema, "schema_migration");
     if (!schema_result) {
         const auto error = *schema_result.error_if();
+        (void)exec(db, "ROLLBACK", "rollback_schema");
         (void)close();
         return Status::failure(error);
     }
@@ -256,7 +260,9 @@ Result<common::MemoryId> MemoryStore::store(
     const auto total_bytes = input.title.size_bytes() + input.body.size_bytes() +
         input.source_id.size();
     if (total_bytes > impl_->limits.max_record_bytes || input.body.empty() ||
-        input.session_id.is_nil() || input.source_id.empty()) {
+        input.session_id.is_nil() || input.source_id.empty() ||
+        static_cast<int>(input.kind) > 2 || static_cast<int>(input.source) > 4 ||
+        static_cast<int>(input.sensitivity) > 2) {
         return Result<common::MemoryId>::failure(Error::make(
             total_bytes > impl_->limits.max_record_bytes ? ErrorCode::input_too_large
                                                          : ErrorCode::invalid_argument,
@@ -383,11 +389,11 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
 
     std::vector<MemoryRecord> records;
     std::size_t used_bytes = 0;
-    const SearchDeadline deadline{
+    SearchDeadline deadline{
         std::chrono::steady_clock::now() +
         std::chrono::milliseconds(impl_->limits.search_timeout_ms)};
     sqlite3_progress_handler(impl_->db, 1000, interrupt_search,
-                             const_cast<SearchDeadline*>(&deadline));
+                             &deadline);
     int step_result = SQLITE_OK;
     while ((step_result = sqlite3_step(statement.get())) == SQLITE_ROW) {
         const auto title_bytes = static_cast<std::size_t>(
@@ -418,7 +424,7 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
 Status MemoryStore::promote(
     const common::SessionId& session_id, const common::MemoryId& memory_id,
     MemoryKind target_kind) {
-    if (target_kind == MemoryKind::working)
+    if (target_kind != MemoryKind::episodic && target_kind != MemoryKind::semantic)
         return Status::failure(Error::make(ErrorCode::invalid_argument,
             "promotion target must be episodic or semantic", "memory", "promote"));
     if (!is_open()) return Status::failure(Error::make(
