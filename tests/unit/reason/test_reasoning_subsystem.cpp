@@ -253,6 +253,27 @@ int main() {
     assert(std::get<double>(compact_result.value_if()->values.at("number")) == 3.5);
     assert(compact_value_limit.shutdown());
 
+    ReasoningTask too_many_values;
+    too_many_values.objective = "limitar quantidade de valores";
+    for (int i = 0; i < 257; ++i)
+        too_many_values.initial_values.emplace(
+            "value_" + std::to_string(i), Value{static_cast<double>(i)});
+    too_many_values.steps.push_back(step("finish", "finished", Operation::assign));
+    auto value_count_plan = reasoning.create_plan(request, too_many_values);
+    assert(!value_count_plan);
+    assert(value_count_plan.error_if()->code == ErrorCode::resource_limit);
+
+    ReasoningTask too_many_conditions;
+    too_many_conditions.objective = "limitar quantidade de precondicoes";
+    too_many_conditions.initial_values.emplace("ready", Value{true});
+    for (int i = 0; i < 65; ++i)
+        too_many_conditions.preconditions.push_back(
+            Condition{"ready", Comparator::truthy, Value{true}});
+    too_many_conditions.steps.push_back(step("finish", "finished", Operation::assign));
+    auto condition_count_plan = reasoning.create_plan(request, too_many_conditions);
+    assert(!condition_count_plan);
+    assert(condition_count_plan.error_if()->code == ErrorCode::resource_limit);
+
     ReasoningTask cycle_task;
     cycle_task.objective = "detectar ciclo";
     cycle_task.steps.push_back(step("first", "first_value", Operation::logical_not,
