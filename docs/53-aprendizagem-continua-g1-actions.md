@@ -32,7 +32,7 @@ O estado final possível do orçamento é `budget_exhausted`. Isso significa som
 
 ## Contagem de parâmetros
 
-A arquitetura armazena exatamente 1.000 parâmetros FP32. O caminho de treinamento B0 atualiza 971 parâmetros. Os 29 parâmetros `v` e `theta_len` pertencem ao pontuador de segmentação e estão fora do otimizador B0; portanto, não devem ser descritos como atualizados pelo treinamento de linguagem atual.
+A arquitetura armazena exatamente 1.000 parâmetros FP32. O caminho de treinamento B0 atualiza os 1.000 parâmetros. Os 29 parâmetros `v` e `theta_len` formam a cabeça EOS e recebem gradientes de continuação e fim de documento.
 
 Essa distinção é registrada em `status.json`:
 - `architecture_parameters: 1000`;
@@ -70,22 +70,23 @@ O artifact de cada execução contém, quando produzidos:
 - [x] Limite total de épocas.
 - [x] Busca lexical rebaixada a diagnóstico, sem declarar sucesso semântico.
 - [x] Treinar os 29 parâmetros da cabeça EOS em exemplos de continuação e fim de documento.
-- [ ] Implementar geração com amostragem controlada e critério de parada treinado.
+- [x] Implementar geração com amostragem controlada e critério de parada treinado.
 - [ ] Ampliar corpus natural, diversificado e licenciado.
 - [ ] Criar avaliação semântica independente com revisão humana.
 - [ ] Validar em hardware físico com 4 GB de RAM.
 
 ## Decodificação da G1
 
-A API de geração agora aceita controles de decodificação:
+A API de geração agora aceita controles de decodificação e parada:
 
 - `temperature = 0`: preserva a escolha gulosa determinística anterior;
 - `temperature > 0`: amostra entre candidatos conforme a distribuição de perdas do modelo;
 - `top_k`: limita a amostragem aos candidatos com menor perda; zero considera todos os candidatos UTF-8 válidos;
 - `seed`: torna a amostragem reproduzível;
-- `repetition_penalty` e `repetition_window`: acrescentam custo a bytes ASCII imprimíveis repetidos na janela recente.
+- `repetition_penalty` e `repetition_window`: acrescentam custo a bytes ASCII imprimíveis repetidos na janela recente;
+- `eos_threshold` e `min_new_bytes`: controlam o limiar de parada aprendido e o mínimo de bytes gerados.
 
-Esses controles mudam a estratégia de decodificação, não os pesos nem a capacidade aprendida. Eles não criam EOS: a geração continua limitada por bytes. A penalidade de repetição é heurística e não deve ser interpretada como correção semântica. A CLI `morok_generate` também expõe essas opções: `--temperature`, `--top-k`, `--seed`, `--repetition-penalty` e `--repetition-window`. O argumento posicional opcional `max_bytes` continua compatível com a interface anterior.
+Esses controles mudam a estratégia de decodificação, não aumentam a capacidade aprendida. A penalidade de repetição é heurística e não deve ser interpretada como correção semântica. A CLI `morok_generate` também expõe `--temperature`, `--top-k`, `--seed`, `--repetition-penalty`, `--repetition-window`, `--eos-threshold` e `--min-new-bytes`. O argumento posicional opcional `max_bytes` continua compatível com a interface anterior.
 
 ## EOS aprendido
 
