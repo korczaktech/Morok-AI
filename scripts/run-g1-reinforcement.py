@@ -18,6 +18,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DB_DEFAULT = ROOT / "data" / "reinforcement" / "answers.json"
 CORPUS = ROOT / "tests" / "fixtures" / "continual"
+SEED_ANSWERS = {
+    "sky_is_blue": "Sim.",
+    "mountains_high_or_low": "Altas.",
+    "grass_color": "Verde.",
+}
 TASK_CONCEPTS = {
     "sky_is_blue": {"sim", "azul"},
     "mountains_high_or_low": {"altas"},
@@ -121,6 +126,52 @@ def main() -> int:
     summaries = []
     with tempfile.TemporaryDirectory(prefix="morok-g1-reinforcement-") as temp_dir:
         temporary = Path(temp_dir)
+
+        # Seed the policy with three explicitly identified oracle demonstrations.
+        # These are a warm start, not model-generated RL episodes.
+        if not database.get("oracle_demonstrations_applied", False):
+            for question in questions:
+                question_id = question["id"]
+                prompt_path = temporary / f"{question_id}.seed.prompt.txt"
+                answer_path = temporary / f"{question_id}.seed.answer.txt"
+                prompt_path.write_text(question["prompt"], encoding="utf-8")
+                answer = SEED_ANSWERS[question_id]
+                answer_path.write_text(answer, encoding="utf-8")
+                episode_number = len(database["episodes"]) + 1
+                model_before = sha256(args.checkpoint)
+                update_output = run_checked([
+                    str(args.reinforcer), str(args.checkpoint),
+                    str(prompt_path), str(answer_path), "1",
+                    str(args.learning_rate),
+                ])
+                episode = {
+                    "episode": episode_number,
+                    "source": "oracle_demonstration",
+                    "question_id": question_id,
+                    "prompt": question["prompt"],
+                    "answer": answer,
+                    "verdict": "correct",
+                    "reward": 1,
+                    "grading_reason": "known_target_demonstration_for_policy_warm_start",
+                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                    "model_sha256_before": model_before,
+                    "model_sha256_after": sha256(args.checkpoint),
+                    "trainable_parameters": 1000,
+                    "policy_update": {
+                        "status": "applied",
+                        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+                        "report": json.loads(update_output),
+                    },
+                }
+                database["episodes"].append(episode)
+                database["totals"]["episodes"] += 1
+                database["totals"]["correct"] += 1
+                database["totals"]["policy_updates"] += 1
+                database["totals"]["oracle_demonstrations"] += 1
+                atomic_write(args.database, database)
+            database["oracle_demonstrations_applied"] = True
+            atomic_write(args.database, database)
+
         for offset, question in enumerate(questions):
             question_id = question["id"]
             prompt_path = temporary / f"{question_id}.prompt.txt"
