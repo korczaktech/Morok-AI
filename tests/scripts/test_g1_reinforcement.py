@@ -45,7 +45,7 @@ class ReinforcementGraderTests(unittest.TestCase):
 
     def test_attempt_report_shows_only_number_answer_and_verdict(self):
         lines = format_attempt_results([
-            {"attempt": 1, "answer": "Sim.\\n", "verdict": "correct"},
+            {"attempt": 1, "answer": "Sim.\n", "verdict": "correct"},
             {"attempt": 2, "answer": "Não sei.", "verdict": "incorrect"},
         ])
         self.assertEqual(lines, [
