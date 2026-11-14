@@ -34,6 +34,7 @@ jobs:
           test -x build/install/bin/morok-convert
           test -x build/install/bin/morok-train
           test -x build/install/bin/morok-evaluate
+          test -x build/install/bin/morok-reinforce
           test -x build/install/bin/morok-server
       - name: Application end-to-end smoke test
         if: matrix.compiler == 'g++' && matrix.build_type == 'Release'
