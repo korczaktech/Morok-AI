@@ -41,6 +41,7 @@ private:
 };
 
 [[nodiscard]] TrustLabel classify_content(ContentOrigin origin, std::string source_id = {});
+[[nodiscard]] std::string bind_tool_arguments(const tools::ToolArguments& arguments);
 
 struct SecurityPrincipal final {
     std::string subject_id;
@@ -52,6 +53,7 @@ struct SecurityAction final {
     std::string operation;
     std::string target;
     std::string effect_summary;
+    std::string arguments_binding;
 };
 
 struct SecurityGrant final {
