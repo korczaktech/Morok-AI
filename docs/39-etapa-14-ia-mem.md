@@ -16,6 +16,7 @@ A promoção de memória de trabalho para episódica ou semântica é explícita
 
 O banco usa SQLite com:
 - WAL e synchronous=FULL;
+- cache SQLite limitado a 8 MiB, mmap desativado e temporários em disco;
 - conexão FULLMUTEX e busy timeout;
 - migração inicial numerada em transação;
 - tabelas `memories`, `memory_audit` e `schema_migrations`;
@@ -68,7 +69,7 @@ O limite de resultados/contexto também é aplicado na camada C++, independentem
 - `erase` exige ator e SessionId, registra evento de exclusão na mesma transação que remove o registro.
 - Triggers FTS removem o conteúdo correspondente do índice quando o registro é apagado.
 
-O encerramento de uma sessão deve usar `MemorySubsystem::close_session(registry, session_id)`: o adaptador limpa a memória de trabalho e só então remove a sessão do `SessionRegistry`. O composition root deve registrar `initializer()` e `shutdown_callback()` no Runtime.
+O encerramento de uma sessão deve usar `MemorySubsystem::close_session(registry, session_id)`: o adaptador limpa a memória de trabalho e só então remove a sessão do `SessionRegistry`. O composition root deve registrar `initializer()` e `shutdown_callback()` no Runtime. O adaptador mantém a conexão SQLite sincronizada e expõe o acesso ao `MemoryStore` para os outros subsistemas.
 
 ## Backup e integridade
 
@@ -92,15 +93,17 @@ O teste automatizado cobre:
 2. armazenamento e recuperação com proveniência;
 3. parsing e round-trip de MemoryId;
 4. busca textual e limite de contexto;
-5. isolamento entre duas sessões;
-6. ocultação de memórias sensíveis na busca;
-7. promoção de memória de trabalho;
-8. limpeza de memória de trabalho sem remover memórias promovidas;
-9. expiração e pruning;
-10. exclusão e evento de auditoria persistente;
-11. integridade SQLite;
-12. backup consistente;
-13. inicialização do IA-MEM com RuntimeConfig e limpeza da memória de trabalho antes de encerrar a sessão no SessionRegistry.
+5. persistência após fechar e reabrir o banco;
+6. isolamento entre duas sessões;
+7. ocultação de memórias sensíveis na busca;
+8. promoção de memória de trabalho;
+9. limpeza de memória de trabalho sem remover memórias promovidas;
+10. expiração e pruning;
+11. exclusão e evento de auditoria persistente;
+12. integridade SQLite;
+13. backup consistente;
+14. inicialização do IA-MEM com RuntimeConfig e limpeza da memória de trabalho antes de encerrar a sessão no SessionRegistry;
+15. cancelamento de buscas já canceladas.
 
 ## Limitações explícitas
 
