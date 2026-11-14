@@ -108,3 +108,8 @@ add_executable(morok_test_learning_subsystem unit/learn/test_learning_subsystem.
 target_link_libraries(morok_test_learning_subsystem PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_learning_subsystem)
 add_test(NAME learn.learning_subsystem COMMAND morok_test_learning_subsystem)
+
+add_executable(morok_test_rlah_segmenter unit/lang/test_rlah_segmenter.cpp)
+target_link_libraries(morok_test_rlah_segmenter PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_rlah_segmenter)
+add_test(NAME lang.rlah_segmenter COMMAND morok_test_rlah_segmenter)

@@ -24,6 +24,7 @@ add_library(morok_core STATIC
     src/common/utf8_text.cpp
     src/memory/memory_store.cpp
     src/lang/language_subsystem.cpp
+    src/lang/rlah/segmenter.cpp
     src/comm/communication_subsystem.cpp
     src/reason/reasoning_subsystem.cpp
     src/learn/learning_subsystem.cpp
