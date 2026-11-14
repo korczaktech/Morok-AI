@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "description": "Held-out Portuguese prompts for the narrow sky-color task. Token-overlap metrics are diagnostic only and are not semantic acceptance.",
+  "cases": [
+    {
+      "id": "heldout-01",
+      "prompt": "Pergunta: Qual tonalidade o céu costuma apresentar durante o dia?\nResposta: ",
+      "reference": "azul"
+    },
+    {
+      "id": "heldout-02",
+      "prompt": "Pergunta: Em um dia de tempo bom, que cor normalmente vemos no alto?\nResposta: ",
+      "reference": "azul"
+    },
+    {
+      "id": "heldout-03",
+      "prompt": "Pergunta: Se o céu está limpo, qual cor é comum observar?\nResposta: ",
+      "reference": "azul"
+    },
+    {
+      "id": "heldout-04",
+      "prompt": "Pergunta: O céu diurno tende a parecer de qual cor?\nResposta: ",
+      "reference": "azul"
+    }
+  ]
+}
