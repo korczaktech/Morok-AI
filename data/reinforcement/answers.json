@@ -48,10 +48,10 @@
     }
   ],
   "totals": {
-    "episodes": 151,
+    "episodes": 154,
     "correct": 21,
-    "incorrect": 130,
-    "policy_updates": 151,
+    "incorrect": 133,
+    "policy_updates": 154,
     "skipped_updates": 0,
     "oracle_demonstrations": 21
   },
@@ -4692,6 +4692,99 @@
           "gradient_norm_first": 1.38293,
           "gradient_norm_last": 1.38293,
           "parameter_delta_l2": 2.50013e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 152,
+      "episode_id": "43653938398:1:generated:1:sky_is_blue",
+      "run_id": "43653938398",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "sky_is_blue",
+      "prompt": "O céu é azul?\nResposta: ",
+      "answer": "Smlde..Ras..Ras..Ras..RAmterde..Ras..S,,Alte..Ra",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T23:35:50.484626+00:00",
+      "model_sha256_before": "19508dac85c60c5205b24c6347dfb33e2f7086e3f4e432735db21a279d962056",
+      "model_sha256_after": "46b2af533a9f34c843d215c522d435a6ea4a71249f6bd0429f8a6bd9c0942307",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.38299,
+          "gradient_norm_last": 1.38299,
+          "parameter_delta_l2": 2.50039e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 153,
+      "episode_id": "43653938398:1:generated:2:mountains_high_or_low",
+      "run_id": "43653938398",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "mountains_high_or_low",
+      "prompt": "As montanhas são altas ou baixas?\nResposta: ",
+      "answer": "Smlde..Ras..Ras..Ras..RAmterde..Ras..S,,Alte..Ra",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T23:35:50.500893+00:00",
+      "model_sha256_before": "46b2af533a9f34c843d215c522d435a6ea4a71249f6bd0429f8a6bd9c0942307",
+      "model_sha256_after": "b8e17f6c2dc76271030de1fd81276f5269ef69a1b63af2bc7882634a6d884302",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.38481,
+          "gradient_norm_last": 1.38481,
+          "parameter_delta_l2": 2.50186e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 154,
+      "episode_id": "43653938398:1:generated:3:grass_color",
+      "run_id": "43653938398",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "grass_color",
+      "prompt": "Que cor é a grama?\nResposta: ",
+      "answer": "Smlde..Ras..Ras..Ras..RAmterde..Ras..S,,Alte..Ra",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T23:35:50.515720+00:00",
+      "model_sha256_before": "b8e17f6c2dc76271030de1fd81276f5269ef69a1b63af2bc7882634a6d884302",
+      "model_sha256_after": "4d03db9a1b6fe07737eaf95a2d672bdd3287b1952b83a6b52c48f9d8d902639f",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.38355,
+          "gradient_norm_last": 1.38355,
+          "parameter_delta_l2": 2.49974e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
