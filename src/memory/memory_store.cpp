@@ -205,17 +205,15 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
         "CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5("
         "title,body,content='memories',content_rowid='rowid');"
         "CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN "
-        "INSERT INTO memories_fts(rowid,title,body) VALUES(new.rowid,new.title,new.body); END;"
+        "INSERT INTO memories_fts(rowid,title,body) SELECT new.rowid,new.title,new.body WHERE new.sensitivity<2; END;"
         "CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN "
-        "INSERT INTO memories_fts(memories_fts,rowid,title,body) VALUES('delete',old.rowid,old.title,old.body); END;"
+        "INSERT INTO memories_fts(memories_fts,rowid,title,body) SELECT 'delete',old.rowid,old.title,old.body WHERE old.sensitivity<2; END;"
         "CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN "
-        "INSERT INTO memories_fts(memories_fts,rowid,title,body) VALUES('delete',old.rowid,old.title,old.body);"
-        "INSERT INTO memories_fts(rowid,title,body) VALUES(new.rowid,new.title,new.body); END;";
+        "INSERT INTO memories_fts(memories_fts,rowid,title,body) SELECT 'delete',old.rowid,old.title,old.body WHERE old.sensitivity<2;"
+        "INSERT INTO memories_fts(rowid,title,body) SELECT new.rowid,new.title,new.body WHERE new.sensitivity<2; END;";
     if (exec(db, fts_schema, "fts5_setup")) {
         impl_->fts = true;
-        (void)exec(db, "INSERT INTO memories_fts(memories_fts) VALUES('rebuild');",
-                   "fts5_rebuild");
-    } else {
+     } else {
         impl_->fts = false;
     }
     return Status::success();
@@ -338,7 +336,7 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
             " AND (m.expires_at IS NULL OR m.expires_at>?)";
     } else {
         sql = std::string("SELECT ") + record_columns +
-            " FROM memories m WHERE m.session_id=? AND (m.title LIKE ? OR m.body LIKE ?)"
+            " FROM memories m WHERE m.session_id=? AND m.sensitivity<2 AND (m.title LIKE ? OR m.body LIKE ?)"
             " AND (m.expires_at IS NULL OR m.expires_at>?)";
     }
     if (query.kind) sql += " AND m.kind=?";
@@ -382,6 +380,30 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
         records.push_back(std::move(*record.value_if()));
     }
     return Result<std::vector<MemoryRecord>>::success(std::move(records));
+}
+
+Status MemoryStore::update_metadata(
+    const common::SessionId& session_id, const common::MemoryId& memory_id,
+    Sensitivity sensitivity, std::optional<common::Timestamp> expires_at) {
+    if (!is_open()) return Status::failure(Error::make(
+        ErrorCode::internal_error, "memory store is not open", "memory", "update_metadata"));
+    if (static_cast<int>(sensitivity) > 2)
+        return Status::failure(Error::make(ErrorCode::invalid_argument,
+            "invalid sensitivity value", "memory", "update_metadata"));
+    Statement statement(impl_->db,
+        "UPDATE memories SET sensitivity=?,expires_at=? WHERE id=? AND session_id=?");
+    if (!statement) return Status::failure(db_error(impl_->db, "prepare_update_metadata"));
+    sqlite3_bind_int(statement.get(), 1, static_cast<int>(sensitivity));
+    if (expires_at) sqlite3_bind_int64(statement.get(), 2, expires_at->unix_nanoseconds());
+    else sqlite3_bind_null(statement.get(), 2);
+    bind_text(statement.get(), 3, memory_id.to_string());
+    bind_text(statement.get(), 4, session_id.to_string());
+    if (sqlite3_step(statement.get()) != SQLITE_DONE)
+        return Status::failure(db_error(impl_->db, "update_metadata"));
+    if (sqlite3_changes(impl_->db) == 0)
+        return Status::failure(Error::make(ErrorCode::invalid_argument,
+            "memory not found in this session", "memory", "update_metadata"));
+    return Status::success();
 }
 
 Status MemoryStore::erase(const common::SessionId& session_id,
