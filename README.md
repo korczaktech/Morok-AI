@@ -131,6 +131,9 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 Toda hipótese deve ser testável. Uma otimização só será considerada válida quando comparada com uma referência simples, usando dados, hardware e condições equivalentes.
 
 
-## Aprendizado por reforço da G1
+## Aprendizado por reforço
 
-O workflow [reinforcement](.github/workflows/reinforcement.yml) executa um ciclo a cada 15 minutos e trabalha com três perguntas: se o céu é azul, se as montanhas são altas ou baixas e qual é a cor da grama. Cada resposta é classificada como `correct` ou `incorrect`, recebe recompensa +1 ou -1 e é registrada em [answers.json](data/reinforcement/answers.json). O executável `morok-reinforce` aplica uma atualização reward-weighted aos 1.000 parâmetros da G1. Os checkpoints são preservados como artifacts do Actions; o histórico JSON é versionado diretamente na `main`. O avaliador é lexical e o gradiente é uma aproximação REINFORCE baseada no BPTT byte-level, não uma prova de compreensão semântica. O workflow anterior [training](.github/workflows/training.yml) foi mantido apenas para execução manual e não disputa mais o checkpoint automaticamente. Consulte [Experimento de aprendizado por reforço da G1](docs/54-aprendizado-por-reforco-g1.md).
+- **[Reinforcement-G1](.github/workflows/reinforcement-g1.yml):** atualiza os 1.000 parâmetros da G1, com histórico em [answers.json](data/reinforcement/answers.json), checkpoint e artefatos próprios. Usa três perguntas controladas, avaliador lexical e gradiente reward-weighted baseado em BPTT; isso não demonstra compreensão semântica geral. Consulte [Experimento G1](docs/54-aprendizado-por-reforco-g1.md).
+- **[Reinforcement-G2](.github/workflows/reinforcement-g2.yml):** atualiza os dois especialistas independentes da G2, totalizando 2.000 parâmetros. Mantém banco de feedback, checkpoint e artefatos isolados em relação à G1. Cada especialista recebe sua própria atualização BPTT ponderada pela recompensa. O avaliador também é lexical e restrito às perguntas controladas. Consulte [Experimento G2](docs/56-aprendizado-por-reforco-g2.md).
+
+Os dois workflows são independentes. O workflow anterior [training](.github/workflows/training.yml) continua disponível apenas para execução manual.
