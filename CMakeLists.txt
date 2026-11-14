@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 project(MorokAI VERSION 0.1.0 DESCRIPTION "Morok AI" LANGUAGES CXX)
 
 option(MOROK_BUILD_TESTS "Build automated tests" ON)
+option(MOROK_BUILD_APPS "Build user-facing applications" ON)
 option(MOROK_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(MOROK_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
 option(MOROK_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
@@ -51,6 +52,44 @@ target_include_directories(morok_core
 target_link_libraries(morok_core PRIVATE morok_build_options SQLite::SQLite3)
 target_compile_definitions(morok_core PUBLIC MOROK_VERSION_STRING="${PROJECT_VERSION}")
 morok_enable_sanitizers(morok_core)
+
+if(MOROK_BUILD_APPS)
+    add_executable(morok_cli apps/morok-cli/main.cpp)
+    target_link_libraries(morok_cli PRIVATE Morok::Core morok_build_options)
+    set_target_properties(morok_cli PROPERTIES OUTPUT_NAME "morok-cli")
+    morok_enable_sanitizers(morok_cli)
+
+    add_executable(morok_convert apps/morok-convert/main.cpp)
+    target_link_libraries(morok_convert PRIVATE Morok::Core morok_build_options)
+    set_target_properties(morok_convert PROPERTIES OUTPUT_NAME "morok-convert")
+    morok_enable_sanitizers(morok_convert)
+
+    add_executable(morok_evaluate apps/morok-evaluate/main.cpp)
+    target_link_libraries(morok_evaluate PRIVATE Morok::Core morok_build_options)
+    set_target_properties(morok_evaluate PROPERTIES OUTPUT_NAME "morok-evaluate")
+    morok_enable_sanitizers(morok_evaluate)
+
+    add_executable(morok_train_cli apps/train_g1.cpp)
+    target_link_libraries(morok_train_cli PRIVATE Morok::Core morok_build_options)
+    set_target_properties(morok_train_cli PROPERTIES OUTPUT_NAME "morok-train")
+    morok_enable_sanitizers(morok_train_cli)
+
+    if(UNIX)
+        add_executable(morok_server apps/morok-server/main.cpp)
+        target_link_libraries(morok_server PRIVATE Morok::Core morok_build_options)
+        set_target_properties(morok_server PROPERTIES OUTPUT_NAME "morok-server")
+        morok_enable_sanitizers(morok_server)
+    endif()
+
+    install(TARGETS morok_cli morok_convert morok_evaluate morok_train
+        morok_benchmark morok_generate morok_complete
+        RUNTIME DESTINATION bin)
+    if(UNIX)
+        install(TARGETS morok_server RUNTIME DESTINATION bin)
+    endif()
+    install(TARGETS morok_core ARCHIVE DESTINATION lib)
+    install(DIRECTORY include/ DESTINATION include)
+endif()
 
 if(MOROK_BUILD_TESTS)
     include(CTest)
