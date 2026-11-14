@@ -500,6 +500,8 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
     try {
         // A ReasoningPlan is a public value type and may have been modified after
         // create_plan(). Reconstruct its dependency graph before executing anything.
+        // This is a validation boundary, not a cryptographic signature: callers
+        // must still treat plans as request-scoped values and never persist trust.
         std::unordered_map<std::string, std::size_t> step_by_id;
         std::unordered_map<std::string, std::size_t> producer_by_key;
         for (const auto& [key, value] : plan.initial_values) {
