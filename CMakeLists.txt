@@ -33,7 +33,9 @@ add_library(morok_core STATIC
     src/security/security_subsystem.cpp
     src/learn/learning_subsystem.cpp
     src/model/parameters/g1_parameters.cpp
+    src/model/parameters/g2_parameters.cpp
     src/model/g1_forward.cpp
+    src/model/g2_forward.cpp
     src/model/learn/g1_bptt.cpp
     src/model/learn/optimizer.cpp
     src/model/learn/g1_training.cpp
@@ -41,6 +43,9 @@ add_library(morok_core STATIC
     src/model/learn/g1_benchmark.cpp
     src/model/learn/g1_evaluation.cpp
     src/model/learn/g1_generation.cpp
+    src/model/learn/g2_checkpoint.cpp
+    src/model/learn/g2_training.cpp
+    src/model/learn/g2_generation.cpp
 )
 add_library(Morok::Core ALIAS morok_core)
 
@@ -130,6 +135,7 @@ endif()
 if(MOROK_BUILD_APPS)
     install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
         morok_train morok_benchmark morok_generate morok_reinforce morok_complete
+        morok_train_g2 morok_generate_g2
         RUNTIME DESTINATION bin)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
