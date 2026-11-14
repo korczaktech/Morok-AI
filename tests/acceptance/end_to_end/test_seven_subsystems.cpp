@@ -107,9 +107,6 @@ int main() {
             std::get<std::string>(args.at("text")));
     };
     assert(tools.register_tool(std::move(echo)));
-    tools::ToolAccessPolicy tool_policy;
-    tool_policy.allowed_tools = {"acceptance_echo"};
-    tool_policy.granted_capabilities = {tools::ToolCapability::read_only};
     auto tool_result = security.invoke_tool(
         tools, *request.value_if(), principal, "acceptance_echo",
         {{"text", std::string("tool-ok")}});
