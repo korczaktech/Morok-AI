@@ -62,7 +62,10 @@ def main():
  if summary:
   with open(summary,"a",encoding="utf-8") as f:
    f.write("## Reinforcement-G2 results\n\n| # | Pergunta | Resposta | Resultado |\n|---:|---|---|---|\n")
-   for x in results:f.write(f"| {x['attempt']} | {x['question_id']} | {x['answer'].replace('|','\\|').replace(chr(10),' ')} | {'correto' if x['verdict']=='correct' else 'errado'} |\n")
+   for x in results:
+    escaped=x["answer"].replace("|","\\\\|").replace("\\n"," ").replace("\\r"," ")
+    verdict="correto" if x["verdict"]=="correct" else "errado"
+    f.write(f"| {x['attempt']} | {x['question_id']} | {escaped} | {verdict} |\\n")
  print(json.dumps(report,ensure_ascii=False,indent=2))
 if __name__=="__main__":
  try:main()
