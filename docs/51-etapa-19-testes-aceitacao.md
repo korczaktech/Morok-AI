@@ -28,14 +28,14 @@ O fixture é exclusivamente um corpus técnico sintético de teste; seu resultad
 
 Arquivo: `tests/acceptance/end_to_end/test_seven_subsystems.cpp`.
 
-Inicializa no mesmo IA-CORE Runtime IA-MEM, IA-LANG, IA-REAS, IA-TOOLS, IA-SECURITY, IA-COMM e IA-LEARN. Depois:
+Inicializa IA-CORE Runtime com os seis subsistemas cognitivos IA-MEM, IA-LANG, IA-REAS, IA-TOOLS, IA-COMM e IA-LEARN, além da camada complementar IA-SECURITY. Depois:
 
 - confirma que os sete subsistemas estão ativos;
 - cria conversa, sessão e RequestContext correlacionado;
 - grava, recupera e pesquisa uma memória associada à sessão;
 - cria e executa um plano IA-REAS determinístico;
-- registra e invoca uma ferramenta permitida;
-- consulta IA-SECURITY para verificar grants da sessão;
+- registra e invoca uma ferramenta permitida através do wrapper de autorização IA-SECURITY;
+- executa um experimento real de uma época via IA-LEARN e verifica RequestId, relatório, finitude do candidato e isolamento dos parâmetros originais;
 - envia mensagem por IA-COMM e IA-LANG e verifica resposta/histórico;
 - limpa memória de trabalho e estado de segurança da sessão;
 - encerra conversa e runtime e verifica estado final de todos os subsistemas.
