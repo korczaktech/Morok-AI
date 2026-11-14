@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "name": "Morok G1 Reinforcement Feedback Database",
+  "description": "Append-only record of generated answers, automatic task verdicts and signed rewards for the three-question reinforcement experiment.",
+  "policy": {
+    "algorithm": "reward-weighted REINFORCE surrogate using the G1 byte-level BPTT score gradient",
+    "positive_reward": 1,
+    "negative_reward": -1,
+    "trainable_parameters": 1000,
+    "labels": [
+      "correct",
+      "incorrect"
+    ],
+    "note": "A verdict is computed by a narrow lexical grader for this controlled task. It is not a general semantic judge."
+  },
+  "questions": [
+    {
+      "id": "sky_is_blue",
+      "prompt": "Pergunta: O céu é azul?\nResponda de forma direta:\nResposta: ",
+      "expected_concepts": [
+        "sim",
+        "azul"
+      ],
+      "required_any": [
+        "sim",
+        "azul"
+      ]
+    },
+    {
+      "id": "mountains_high_or_low",
+      "prompt": "Pergunta: As montanhas são altas ou baixas?\nResponda de forma direta:\nResposta: ",
+      "expected_concepts": [
+        "altas"
+      ],
+      "required_any": [
+        "altas"
+      ]
+    },
+    {
+      "id": "grass_color",
+      "prompt": "Pergunta: Que cor é a grama?\nResponda de forma direta:\nResposta: ",
+      "expected_concepts": [
+        "verde"
+      ],
+      "required_any": [
+        "verde"
+      ]
+    }
+  ],
+  "totals": {
+    "episodes": 0,
+    "correct": 0,
+    "incorrect": 0,
+    "policy_updates": 0,
+    "skipped_updates": 0
+  },
+  "episodes": []
+}
