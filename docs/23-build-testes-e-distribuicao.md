@@ -64,12 +64,13 @@ Não usar -Ofast inicialmente, pois pode alterar semântica de operações de po
 
 ## 23.4 Estratégia de testes
 
-- Unitários: funções matemáticas, UTF-8, hashing, serialização, contagem de parâmetros.
-- Integração: modelo + treinador, IA-LANG + modelo, IA-MEM + busca.
-- Aceitação: testes do documento 18.
-- Fuzzing: parser de checkpoint, UTF-8 e estruturas de agrupamento.
+- Unitários: funções matemáticas, UTF-8, hashing, serialização, contagem de parâmetros e contratos dos subsistemas.
+- Integração: treinamento → checkpoint → carregamento → geração, além dos pipelines dos subsistemas.
+- Propriedades: invariantes determinísticos para parâmetros, UTF-8, estados da G1 e codec RLAH.
+- Aceitação: cenários do documento 18 e fluxos executáveis das aplicações.
+- Fuzzing: libFuzzer/Clang para parser de checkpoint, UTF-8 e decoder RLAH.
 - Sanitizers: AddressSanitizer e UndefinedBehaviorSanitizer em Debug quando disponíveis.
-- Regressão: fixtures determinísticas e logits de referência.
+- Regressão: fixtures determinísticas, rollback de lifecycle e casos reproduzidos de fuzzing.
 
 ## 23.5 CI
 
@@ -82,7 +83,7 @@ Cada alteração deve executar:
 6. verificação de inventário;
 7. testes de serialização/checkpoint.
 
-Benchmarks não bloqueiam cada commit inicialmente, mas serão executados em releases e alterações do núcleo. Não aceitar teste que apenas compile sem validar resultado.
+Benchmarks não bloqueiam cada commit inicialmente, mas serão executados em releases e alterações do núcleo. O workflow de fuzzing executa campanhas curtas por commit; campanhas longas devem ser periódicas. Não aceitar teste que apenas compile sem validar resultado.
 
 ## 23.6 Observabilidade
 
