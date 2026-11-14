@@ -24,7 +24,7 @@ int main() {
 
     auto title = common::Utf8Text::from_utf8("Projeto Morok");
     auto body = common::Utf8Text::from_utf8("Memória episódica sobre treinamento e arquitetura.");
-    auto query_text = common::Utf8Text::from_utf8("treinamento arquitetura");
+    auto query_text = common::Utf8Text::from_utf8("treinamento");
     auto working_title = common::Utf8Text::from_utf8("Estado temporário");
     auto working_body = common::Utf8Text::from_utf8("Rascunho da sessão ativa.");
     assert(title && body && query_text && working_title && working_body);
