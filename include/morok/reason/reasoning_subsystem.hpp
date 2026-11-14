@@ -32,7 +32,7 @@ enum class Operation {
     concatenate
 };
 
-enum class Comparator {
+enum class FailurePolicy { abort_plan, continue_independent };\n\nenum class Comparator {
     equal,
     not_equal,
     less,
