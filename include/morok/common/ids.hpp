@@ -13,6 +13,8 @@ class Result;
 struct SessionIdTag final {};
 struct MemoryIdTag final {};
 struct RequestIdTag final {};
+struct MessageIdTag final {};
+struct ConversationIdTag final {};
 
 template <typename Tag>
 class BasicId final {
@@ -36,5 +38,7 @@ private:
 using SessionId = BasicId<SessionIdTag>;
 using MemoryId = BasicId<MemoryIdTag>;
 using RequestId = BasicId<RequestIdTag>;
+using MessageId = BasicId<MessageIdTag>;
+using ConversationId = BasicId<ConversationIdTag>;
 
 } // namespace morok::common
