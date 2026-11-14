@@ -65,8 +65,9 @@ int main() {
     std::uint64_t updates = 0;
     for (const auto& epoch : report.epochs) updates += epoch.optimizer_updates;
     assert(updates > 0);
-    assert(std::any_of(parameters.flatten().begin(), parameters.flatten().end(),
-        [](float value) { return !std::isfinite(value); }) == false);
+    const auto trained_values = parameters.flatten();
+    assert(std::all_of(trained_values.begin(), trained_values.end(),
+        [](float value) { return std::isfinite(value); }));
     assert(parameters.flatten() != initial);
     assert(fs::is_regular_file(checkpoint));
     assert(fs::is_regular_file(best));
