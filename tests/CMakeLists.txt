@@ -113,3 +113,8 @@ add_executable(morok_test_rlah_segmenter unit/lang/test_rlah_segmenter.cpp)
 target_link_libraries(morok_test_rlah_segmenter PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_rlah_segmenter)
 add_test(NAME lang.rlah_segmenter COMMAND morok_test_rlah_segmenter)
+
+add_executable(morok_test_tool_subsystem unit/tools/test_tool_subsystem.cpp)
+target_link_libraries(morok_test_tool_subsystem PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_tool_subsystem)
+add_test(NAME tools.tool_subsystem COMMAND morok_test_tool_subsystem)
