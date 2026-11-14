@@ -28,6 +28,7 @@ void pipeline(){
   req(std::isfinite(r.epochs[0].mean_gradient_norm)&&std::isfinite(r.epochs[0].max_gradient_norm),"gradient norm diagnostics must be finite");
   req(r.epochs[0].max_gradient_norm>=r.epochs[0].mean_gradient_norm,"maximum gradient norm must bound the mean");
   req(std::isfinite(r.epochs[0].wall_seconds)&&r.epochs[0].wall_seconds>=0.0,"epoch wall time must be finite and non-negative");
+  req(std::isfinite(r.epochs[0].wall_seconds)&&r.epochs[0].wall_seconds>=0.0,"epoch wall time must be finite and non-negative");
  }catch(...){std::filesystem::remove_all(root);throw;}std::filesystem::remove_all(root);
 }
 
