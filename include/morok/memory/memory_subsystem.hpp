@@ -5,6 +5,7 @@
 #include "morok/core/runtime.hpp"
 #include "morok/memory/memory_store.hpp"
 
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -17,6 +18,7 @@ public:
         : database_path_(std::move(database_path)), limits_(limits) {}
 
     [[nodiscard]] common::Status initialize(const core::RuntimeConfig& config) {
+        std::lock_guard lock(mutex_);
         if (initialized_) return common::Status::failure(common::Error::make(
             common::ErrorCode::invalid_argument,
             "IA-MEM is already initialized", "memory", "initialize"));
@@ -35,6 +37,7 @@ public:
     }
 
     [[nodiscard]] common::Status shutdown() noexcept {
+        std::lock_guard lock(mutex_);
         if (!initialized_) return common::Status::success();
         const auto result = store_.close();
         if (result) initialized_ = false;
@@ -44,6 +47,7 @@ public:
     [[nodiscard]] common::Status close_session(
         core::SessionRegistry& sessions,
         const common::SessionId& session_id) {
+        std::lock_guard lock(mutex_);
         if (!initialized_ || !sessions.contains(session_id))
             return common::Status::failure(common::Error::make(
                 common::ErrorCode::invalid_argument,
@@ -61,7 +65,10 @@ public:
         return [this] { (void)shutdown(); };
     }
 
-    [[nodiscard]] bool initialized() const noexcept { return initialized_; }
+    [[nodiscard]] bool initialized() const noexcept {
+        std::lock_guard lock(mutex_);
+        return initialized_;
+    }
     [[nodiscard]] MemoryStore& store() noexcept { return store_; }
     [[nodiscard]] const MemoryStore& store() const noexcept { return store_; }
 
@@ -69,6 +76,7 @@ private:
     std::string database_path_;
     MemoryLimits limits_;
     MemoryStore store_;
+    mutable std::mutex mutex_;
     bool initialized_{false};
 };
 
