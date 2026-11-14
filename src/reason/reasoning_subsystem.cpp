@@ -1,7 +1,10 @@
 #include "morok/reason/reasoning_subsystem.hpp"
 
+#include "morok/common/utf8_text.hpp"
+
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <queue>
 #include <set>
@@ -268,16 +271,16 @@ common::Status ReasoningSubsystem::shutdown() noexcept {
 common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
     const core::RequestContext& request, const ReasoningTask& task,
     const std::map<std::string, Value>& authorized_context) const {
-    {
-        std::lock_guard lock(mutex_);
-        if (!initialized_)
-            return fail_result<ReasoningPlan>(common::ErrorCode::model_not_loaded,
-                "IA-REAS is not initialized", "plan", &request);
-    }
+    std::unique_lock lock(mutex_);
+    if (!initialized_)
+        return fail_result<ReasoningPlan>(common::ErrorCode::model_not_loaded,
+            "IA-REAS is not initialized", "plan", &request);
     if (request.is_cancelled())
         return fail_result<ReasoningPlan>(common::ErrorCode::cancelled,
             "planning request was cancelled", "plan", &request);
-    if (task.objective.empty() || task.objective.size() > config_.max_objective_bytes ||
+    const auto objective_text = common::Utf8Text::from_utf8(task.objective);
+    if (!objective_text || task.objective.empty() ||
+        task.objective.size() > config_.max_objective_bytes ||
         task.steps.empty() || task.step_budget == 0 ||
         task.steps.size() > std::min(task.step_budget, config_.max_steps)) {
         return fail_result<ReasoningPlan>(common::ErrorCode::resource_limit,
@@ -421,12 +424,10 @@ common::Result<ReasoningPlan> ReasoningSubsystem::create_plan(
 
 common::Result<ReasoningResult> ReasoningSubsystem::execute(
     const core::RequestContext& request, const ReasoningPlan& plan) const {
-    {
-        std::lock_guard lock(mutex_);
-        if (!initialized_)
-            return fail_result<ReasoningResult>(common::ErrorCode::model_not_loaded,
-                "IA-REAS is not initialized", "execute", &request);
-    }
+    std::unique_lock lock(mutex_);
+    if (!initialized_)
+        return fail_result<ReasoningResult>(common::ErrorCode::model_not_loaded,
+            "IA-REAS is not initialized", "execute", &request);
     if (request.is_cancelled())
         return fail_result<ReasoningResult>(common::ErrorCode::cancelled,
             "reasoning execution was cancelled", "execute", &request);
@@ -435,7 +436,10 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
         return fail_result<ReasoningResult>(common::ErrorCode::permission_denied,
             "reasoning plan belongs to a different request or session",
             "execute", &request);
-    if (plan.ordered_steps.empty() || plan.ordered_steps.size() > config_.max_steps ||
+    const auto objective_text = common::Utf8Text::from_utf8(plan.objective);
+    if (!objective_text || plan.objective.empty() ||
+        plan.objective.size() > config_.max_objective_bytes ||
+        plan.ordered_steps.empty() || plan.ordered_steps.size() > config_.max_steps ||
         plan.dependency_depth == 0 ||
         plan.dependency_depth > config_.max_dependency_depth)
         return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
@@ -450,7 +454,17 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
             return common::Result<ReasoningResult>::failure(*preconditions.error_if());
 
         std::unordered_set<std::string> completed;
+        std::unordered_set<std::string> output_keys;
         for (const auto& step : plan.ordered_steps) {
+            if (!valid_name(step.id) || !valid_name(step.output) ||
+                !completed.insert(step.id).second || !output_keys.insert(step.output).second ||
+                result.values.contains(step.output) ||
+                step.inputs.size() != required_inputs(step.operation)) {
+                return fail_result<ReasoningResult>(common::ErrorCode::invalid_argument,
+                    "reasoning plan contains duplicate or malformed steps",
+                    "execute", &request);
+            }
+            completed.erase(step.id);
             if (request.is_cancelled())
                 return fail_result<ReasoningResult>(common::ErrorCode::cancelled,
                     "reasoning execution was cancelled between steps",
@@ -495,6 +509,10 @@ common::Result<ReasoningResult> ReasoningSubsystem::execute(
             completed.insert(step.id);
             ++result.steps_executed;
         }
+        if (request.is_cancelled())
+            return fail_result<ReasoningResult>(common::ErrorCode::cancelled,
+                "reasoning execution was cancelled after the final step",
+                "execute", &request);
         return common::Result<ReasoningResult>::success(std::move(result));
     } catch (const std::bad_alloc&) {
         return fail_result<ReasoningResult>(common::ErrorCode::out_of_memory,
