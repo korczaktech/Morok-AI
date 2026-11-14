@@ -159,6 +159,7 @@ struct MemoryStore::Impl {
     MemoryLimits limits{};
     bool fts{false};
     mutable std::recursive_mutex mutex;
+    ~Impl() { if (db != nullptr) (void)sqlite3_close_v2(db); }
 };
 
 MemoryStore::MemoryStore() : impl_(std::make_unique<Impl>()) {}
@@ -167,6 +168,7 @@ MemoryStore::MemoryStore(MemoryStore&&) noexcept = default;
 MemoryStore& MemoryStore::operator=(MemoryStore&&) noexcept = default;
 
 Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) {
+    if (!impl_) impl_ = std::make_unique<Impl>();
     std::lock_guard lock(impl_->mutex);
     if (database_path.empty() || limits.max_record_bytes == 0 ||
         limits.max_results == 0 || limits.max_context_bytes == 0 ||
@@ -243,9 +245,13 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
 }
 
 bool MemoryStore::is_open() const noexcept {
-    std::lock_guard lock(impl_->mutex); return impl_ && impl_->db != nullptr; }
+    if (!impl_) return false;
+    std::lock_guard lock(impl_->mutex);
+    return impl_->db != nullptr;
+}
 
 Status MemoryStore::close() noexcept {
+    if (!impl_) return Status::success();
     std::lock_guard lock(impl_->mutex);
     if (!impl_ || impl_->db == nullptr) return Status::success();
     const int rc = sqlite3_close(impl_->db);
@@ -256,7 +262,10 @@ Status MemoryStore::close() noexcept {
 }
 
 bool MemoryStore::fts5_available() const noexcept {
-    std::lock_guard lock(impl_->mutex); return impl_ && impl_->fts; }
+    if (!impl_) return false;
+    std::lock_guard lock(impl_->mutex);
+    return impl_->fts;
+}
 
 Result<common::MemoryId> MemoryStore::store(
     const MemoryInput& input,
