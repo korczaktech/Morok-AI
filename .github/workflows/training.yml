@@ -6,7 +6,9 @@ on:
     paths:
       - ".github/workflows/training.yml"
       - "scripts/run-g1-continual-cycle.sh"
+      - "scripts/evaluate-g1-qa.py"
       - "tests/fixtures/continual/**"
+      - "tests/fixtures/continual-eval/**"
       - "docs/53-aprendizagem-continua-g1-actions.md"
       - "CMakeLists.txt"
       - "tests/CMakeLists.txt"
