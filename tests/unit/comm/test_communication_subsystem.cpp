@@ -25,7 +25,7 @@ int main() {
     core::Runtime runtime(config);
     assert(runtime.initialize(
         {language.initializer(), communication.initializer()},
-        {communication.shutdown_callback(), language.shutdown_callback()}));
+        {language.shutdown_callback(), communication.shutdown_callback()}));
     assert(communication.initialized());
 
     auto conversation = communication.create_conversation();
