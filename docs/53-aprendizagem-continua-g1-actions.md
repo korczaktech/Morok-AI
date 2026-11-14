@@ -22,11 +22,11 @@ O checkpoint e o contador de épocas são transportados pelo artifact `morok-g1-
 
 ## Dados e avaliação atual
 
-Os arquivos em `tests/fixtures/continual/` contêm paráfrases humanas de uma pergunta e respostas curtas. O conjunto é pequeno, foi criado para teste técnico e não representa a distribuição da língua portuguesa.
+Os 12 arquivos em `tests/fixtures/continual/` agora contêm exatamente um par pergunta/resposta por documento. Isso torna cada fim de documento um limite de resposta para o treinamento EOS. As perguntas variam em torno da cor do céu; o conjunto é pequeno, criado manualmente para um experimento estreito, e não representa a distribuição da língua portuguesa.
 
 A métrica principal do treinador é a perda de predição do próximo byte (BPB) em treino/validação/teste. Ela mede qualidade estatística de predição no corpus, não compreensão semântica.
 
-Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. A presença do token `azul` é registrada apenas como diagnóstico lexical. Ela **não** encerra o treinamento, não cria marcador de sucesso e não altera o estado do workflow para `goal_reached`.
+Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. O script `scripts/evaluate-g1-qa.py` também avalia quatro perguntas inéditas em `tests/fixtures/continual-eval/cases.json`, registrando exact match e token F1. Ela **não** encerra o treinamento, não cria marcador de sucesso e não altera o estado do workflow para `goal_reached`.
 
 O estado final possível do orçamento é `budget_exhausted`. Isso significa somente que o limite de épocas foi atingido. O status da avaliação semântica permanece `not_established` até existir um conjunto independente de perguntas e respostas, com critérios de aceitação que não sejam uma simples busca por substring.
 
@@ -49,7 +49,8 @@ O artifact de cada execução contém, quando produzidos:
 - `metrics.jsonl` e `cycle-summary.jsonl`: métricas e resumo;
 - `generated.txt`: continuação gerada;
 - `completed-epochs.txt`: contador acumulado;
-- `status.json`: estado, hash do corpus, diagnóstico lexical e limitações.
+- `status.json`: estado, hash do corpus, diagnóstico lexical e limitações;
+- `qa-evaluation.json`: resultados lexicais das perguntas reservadas para avaliação.
 
 ## Limites conhecidos
 
@@ -66,13 +67,13 @@ O artifact de cada execução contém, quando produzidos:
 - [x] Workflow agendado e execução manual.
 - [x] Checkpoint transportado entre execuções por artifact.
 - [x] Retomada com orçamento incremental de épocas.
-- [x] Métricas de predição de bytes e geração pós-treinamento.
+- [x] Métricas de predição de bytes, geração pós-treinamento e diagnóstico lexical em perguntas reservadas.
 - [x] Limite total de épocas.
 - [x] Busca lexical rebaixada a diagnóstico, sem declarar sucesso semântico.
 - [x] Treinar os 29 parâmetros da cabeça EOS em exemplos de continuação e fim de documento.
 - [x] Implementar geração com amostragem controlada e critério de parada treinado.
 - [ ] Ampliar corpus natural, diversificado e licenciado.
-- [ ] Criar avaliação semântica independente com revisão humana.
+- [ ] Criar avaliação semântica independente com revisão humana; o atual exact match/token F1 é somente lexical.
 - [ ] Validar em hardware físico com 4 GB de RAM.
 
 ## Decodificação da G1
