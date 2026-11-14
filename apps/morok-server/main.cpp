@@ -352,7 +352,7 @@ int main(int argc, char** argv) {
     }
     try {
         unsigned long port = 8080;
-        if (argc == 3) port = std::stoul(argv[2]);
+        if (argc >= 3) port = std::stoul(argv[2]);
         if (port == 0 || port > 65535) throw std::invalid_argument("port must be 1..65535");
         const auto checkpoint = morok::model::load_g1_checkpoint(argv[1]);
         const std::string memory_path = argc == 4 ? argv[3] : "morok-server-memory.sqlite";
