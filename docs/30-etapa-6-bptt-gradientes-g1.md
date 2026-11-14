@@ -23,7 +23,7 @@
 
 Para uma sequência de bytes b0,...,bN-1, o modelo consome b(i-1), atualiza fast/slow e prevê bi, para i=1,...,N-1. Portanto há exatamente N-1 bytes-alvo. O estado inicial representa o estado imediatamente anterior ao consumo de b0; pode ser zero ou um estado finito transportado pelo chamador.
 
-Cada bloco contém no máximo B bytes-alvo. Ao mudar de bloco, o estado numérico final é preservado, mas o gradiente do estado é zerado: não existe caminho de derivada entre blocos. Isso implementa truncamento real, sem reinicializar o contexto forward.
+Cada bloco contém no máximo B bytes-alvo, com B limitado a 128 por chamada para manter a memória temporária sob controle. Ao mudar de bloco, o estado numérico final é preservado, mas o gradiente do estado é zerado: não existe caminho de derivada entre blocos. Isso implementa truncamento real, sem reinicializar o contexto forward.
 
 O estado retornado fica após consumir o byte de contexto do último alvo, isto é, imediatamente antes do consumo do último byte-alvo da sequência. O chamador deve reutilizar esse estado e sobrepor o último byte-alvo como primeiro byte de contexto da janela seguinte. Essa convenção evita repetir a perda do byte sobreposto.
 
@@ -50,7 +50,7 @@ A derivada atravessa o cast FP32 como straight-through identity. Isso é uma apr
 
 - `G1Gradients`: vetor double com 1.000 posições na ordem canônica do inventário; inclui norma global.
 - `G1BpttResult`: perda média em nats por byte-alvo, quantidade de alvos, gradientes e estado final.
-- `compute_g1_bptt_gradients(parameters, bytes, truncation_length, initial_state)`: calcula forward e backward de uma sequência. Exige pelo menos dois bytes, truncation_length positivo, parâmetros finitos e estado inicial finito.
+- `compute_g1_bptt_gradients(parameters, bytes, truncation_length, initial_state)`: calcula forward e backward de uma sequência. Exige pelo menos dois bytes, truncation_length entre 1 e 128, parâmetros finitos e estado inicial finito. O pipeline de treinamento valida o mesmo limite antes de reservar o buffer de janela.
 
 A função não altera parâmetros nem estado externo. Não aplica clipping, atualizador, weight decay ou scheduler.
 
@@ -60,7 +60,7 @@ A função não altera parâmetros nem estado externo. Não aplica clipping, atu
 - [x] Perda e todos os gradientes finitos.
 - [x] Gradientes dos 29 parâmetros do segmentador iguais a zero.
 - [x] Perda forward e estado final invariantes aos tamanhos de janela 1, 2 e sequência inteira.
-- [x] Janela SIZE_MAX sem overflow aritmético.
+- [x] Janela máxima de 128 alvos aceita; valores acima do limite, inclusive SIZE_MAX, rejeitados antes de alocar.
 - [x] Comparação independente da perda com o caminho de produção `advance_g1_state` + `evaluate_g1_next_byte`.
 - [x] Diferenças finitas centrais cobrindo um parâmetro de cada tensor treinável.
 - [x] Diferenças finitas com estado inicial fast/slow não nulo.
