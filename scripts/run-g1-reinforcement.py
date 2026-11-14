@@ -195,6 +195,7 @@ def main() -> int:
             verdict, reward, reason = grade(question_id, answer)
             episode = {
                 "episode": episode_number,
+                "source": "model_generated",
                 "question_id": question_id,
                 "prompt": question["prompt"],
                 "answer": answer,
