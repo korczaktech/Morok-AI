@@ -3,6 +3,7 @@
 #include "morok/memory/memory_store.hpp"
 #include "morok/memory/memory_subsystem.hpp"
 #include "morok/core/configuration.hpp"
+#include "morok/core/cancellation.hpp"
 #include "morok/core/session_registry.hpp"
 
 #include <sqlite3.h>
@@ -60,6 +61,13 @@ int main() {
     auto bounded_context = store.search(search);
     assert(bounded_context && bounded_context.value_if()->empty());
     search.max_context_bytes = 4096;
+    core::CancellationSource cancelled_search;
+    assert(cancelled_search.cancel());
+    search.cancellation = cancelled_search.token();
+    auto cancelled_result = store.search(search);
+    assert(!cancelled_result);
+    assert(cancelled_result.error_if()->code == common::ErrorCode::cancelled);
+    search.cancellation = core::CancellationToken{};
 
     assert(store.update_metadata(session, *id.value_if(),
         memory::Sensitivity::sensitive, std::nullopt));
