@@ -48,12 +48,12 @@
     }
   ],
   "totals": {
-    "episodes": 39,
-    "correct": 18,
-    "incorrect": 21,
-    "policy_updates": 39,
+    "episodes": 45,
+    "correct": 21,
+    "incorrect": 24,
+    "policy_updates": 45,
     "skipped_updates": 0,
-    "oracle_demonstrations": 18
+    "oracle_demonstrations": 21
   },
   "episodes": [
     {
@@ -1216,8 +1216,203 @@
           "trainable_parameters": 1000
         }
       }
+    },
+    {
+      "episode": 40,
+      "episode_id": "43650403052:1:oracle:sky_is_blue:v6",
+      "run_id": "43650403052",
+      "run_attempt": 1,
+      "source": "oracle_demonstration",
+      "demonstration_version": 6,
+      "question_id": "sky_is_blue",
+      "prompt": "O céu é azul?\nResposta: ",
+      "answer": "Sim.",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "known_target_demonstration_for_interleaved_policy_warm_start",
+      "timestamp_utc": "2026-11-14T22:54:36.807668+00:00",
+      "model_sha256_before": "50da170d234f072caac66c150c2eea3e9f4001e5a174f200322b7ccbb8f8b1ee",
+      "model_sha256_after": "2f20c5ed164c35df3ad1f57f2b47e75536dec20d9c1337879a093b6bbeb9b85c",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "optimizer_steps": 1000,
+        "optimizer_batches": 100,
+        "report": {
+          "reward": 1,
+          "target_bytes": 4,
+          "optimizer_steps": 1000,
+          "optimizer_batches": 100,
+          "parameter_path_length_l2": 0.62499781,
+          "gradient_norm_first": 2.2619,
+          "gradient_norm_last": 1.37059,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 41,
+      "episode_id": "43650403052:1:oracle:mountains_high_or_low:v6",
+      "run_id": "43650403052",
+      "run_attempt": 1,
+      "source": "oracle_demonstration",
+      "demonstration_version": 6,
+      "question_id": "mountains_high_or_low",
+      "prompt": "As montanhas são altas ou baixas?\nResposta: ",
+      "answer": "Altas.",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "known_target_demonstration_for_interleaved_policy_warm_start",
+      "timestamp_utc": "2026-11-14T22:54:36.809470+00:00",
+      "model_sha256_before": "50da170d234f072caac66c150c2eea3e9f4001e5a174f200322b7ccbb8f8b1ee",
+      "model_sha256_after": "2f20c5ed164c35df3ad1f57f2b47e75536dec20d9c1337879a093b6bbeb9b85c",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "optimizer_steps": 1000,
+        "optimizer_batches": 100,
+        "report": {
+          "reward": 1,
+          "target_bytes": 6,
+          "optimizer_steps": 1000,
+          "optimizer_batches": 100,
+          "parameter_path_length_l2": 0.6249997599999999,
+          "gradient_norm_first": 1.36189,
+          "gradient_norm_last": 0.928021,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 42,
+      "episode_id": "43650403052:1:oracle:grass_color:v6",
+      "run_id": "43650403052",
+      "run_attempt": 1,
+      "source": "oracle_demonstration",
+      "demonstration_version": 6,
+      "question_id": "grass_color",
+      "prompt": "Que cor é a grama?\nResposta: ",
+      "answer": "Verde.",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "known_target_demonstration_for_interleaved_policy_warm_start",
+      "timestamp_utc": "2026-11-14T22:54:36.810872+00:00",
+      "model_sha256_before": "50da170d234f072caac66c150c2eea3e9f4001e5a174f200322b7ccbb8f8b1ee",
+      "model_sha256_after": "2f20c5ed164c35df3ad1f57f2b47e75536dec20d9c1337879a093b6bbeb9b85c",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "optimizer_steps": 1000,
+        "optimizer_batches": 100,
+        "report": {
+          "reward": 1,
+          "target_bytes": 6,
+          "optimizer_steps": 1000,
+          "optimizer_batches": 100,
+          "parameter_path_length_l2": 0.6249989499999999,
+          "gradient_norm_first": 0.938979,
+          "gradient_norm_last": 1.40626,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 43,
+      "episode_id": "43650403052:1:generated:sky_is_blue",
+      "run_id": "43650403052",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "sky_is_blue",
+      "prompt": "O céu é azul?\nResposta: ",
+      "answer": "Smlde..Ras..Ras..Ras..Ras*.Sm,,,Alte..Ras..Ras..",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T22:54:36.817950+00:00",
+      "model_sha256_before": "2f20c5ed164c35df3ad1f57f2b47e75536dec20d9c1337879a093b6bbeb9b85c",
+      "model_sha256_after": "63e7c7f35e64ce77460b67c940141542a2b19b1013aceada84ac3c8e102d0591",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.5839,
+          "gradient_norm_last": 1.5839,
+          "parameter_delta_l2": 2.5011e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 44,
+      "episode_id": "43650403052:1:generated:mountains_high_or_low",
+      "run_id": "43650403052",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "mountains_high_or_low",
+      "prompt": "As montanhas são altas ou baixas?\nResposta: ",
+      "answer": "Smlde..Ras..Ras..Ras..Ras*.Sm,,,Alte..Ras..Ras..",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T22:54:36.827707+00:00",
+      "model_sha256_before": "63e7c7f35e64ce77460b67c940141542a2b19b1013aceada84ac3c8e102d0591",
+      "model_sha256_after": "8d5546b73c46317a755eaf109f082fcd221ec1ca75977c65b438e6dc9e306131",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.58517,
+          "gradient_norm_last": 1.58517,
+          "parameter_delta_l2": 2.49974e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 45,
+      "episode_id": "43650403052:1:generated:grass_color",
+      "run_id": "43650403052",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "grass_color",
+      "prompt": "Que cor é a grama?\nResposta: ",
+      "answer": "Smlde..Ras..Ras..Ras..RAmterde..Ras..S,,Alte..Ra",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T22:54:36.837508+00:00",
+      "model_sha256_before": "8d5546b73c46317a755eaf109f082fcd221ec1ca75977c65b438e6dc9e306131",
+      "model_sha256_after": "e76963451dc9f903f4d2e9d766557aecb56b90b0f7b256c2396ef4014e57ee6e",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.37699,
+          "gradient_norm_last": 1.37699,
+          "parameter_delta_l2": 2.49992e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
     }
   ],
   "oracle_demonstrations_applied": true,
-  "oracle_demonstration_version": 5
+  "oracle_demonstration_version": 6
 }
