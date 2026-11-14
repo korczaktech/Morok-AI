@@ -1,0 +1,5 @@
+Pergunta: Que cor é o céu?
+Resposta: O céu é azul.
+
+Pergunta: Que cor é o céu?
+Resposta: Azul.
