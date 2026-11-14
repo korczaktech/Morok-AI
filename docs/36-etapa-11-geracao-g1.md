@@ -43,7 +43,7 @@ Defina outro limite em bytes:
   ./prompt.txt ./continuacao.txt 512
 ```
 
-A CLI grava JSON resumido no stdout com bytes gerados, quantidade de avaliações de candidatos e indicação de limite atingido. Erros de arquivo, checkpoint, limite ou UTF-8 retornam código diferente de zero.
+A CLI grava JSON resumido no stdout com bytes gerados, quantidade de avaliações de candidatos e indicação de limite atingido ou parada EOS. Erros de arquivo, checkpoint, limite ou UTF-8 retornam código diferente de zero.
 
 ## Contrato de geração
 
@@ -52,8 +52,8 @@ A CLI grava JSON resumido no stdout com bytes gerados, quantidade de avaliaçõe
 3. A avaliação do byte candidato não altera o estado recorrente.
 4. O byte escolhido é então consumido uma única vez pelo estado.
 5. A continuação sempre termina em fronteira válida UTF-8.
-6. A G1 não possui token EOS. A parada é pelo limite de bytes ou por ausência de candidato admissível.
-7. Não há amostragem, temperatura, top-k, top-p, repetição penalizada nem streaming nesta etapa; o decodificador é greedy e determinístico.
+6. A cabeça EOS aprendida decide quando encerrar a continuação; o limite de bytes continua sendo um teto rígido. A parada só é verificada em fronteiras UTF-8 completas.
+7. A API suporta temperatura, top-k, seed, penalidade de repetição e limiar EOS; temperatura zero preserva a geração gulosa determinística. Top-p e streaming token-a-token continuam fora do escopo.
 
 ## Testes
 
