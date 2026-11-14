@@ -102,3 +102,14 @@ jobs:
           path: artifacts/continual-g1/
           if-no-files-found: warn
           retention-days: 90
+
+      - name: Display generated response
+        if: always()
+        shell: bash
+        run: |
+          generated="artifacts/continual-g1/generated.txt"
+          if [[ ! -f "$generated" ]]; then
+            echo "::error::generated.txt was not found; there is no generated response to display."
+            exit 1
+          fi
+          cat "$generated"
