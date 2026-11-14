@@ -64,7 +64,9 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
     if (config.max_new_bytes == 0 || config.max_new_bytes > 65536)
         throw std::invalid_argument("max_new_bytes precisa estar entre 1 e 65536");
     if (!std::isfinite(config.temperature) || config.temperature < 0.0 ||
-        !std::isfinite(config.repetition_penalty) || config.repetition_penalty < 0.0) {
+        !std::isfinite(config.repetition_penalty) || config.repetition_penalty < 0.0 ||
+        !std::isfinite(config.eos_threshold) || config.eos_threshold <= 0.0 ||
+        config.eos_threshold >= 1.0 || config.min_new_bytes > config.max_new_bytes) {
         throw std::invalid_argument("configuração de amostragem inválida");
     }
 
@@ -80,7 +82,26 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
     Utf8State utf8{};
     std::mt19937_64 random(config.seed);
 
+    bool stopped_by_eos = false;
     for (std::size_t position = 0; position < config.max_new_bytes; ++position) {
+        if (generated.size() >= config.min_new_bytes) {
+            std::size_t bucket = 0;
+            std::size_t length = prompt.size_bytes() + generated.size();
+            while (length > 1 && bucket < 6) { length >>= 1U; ++bucket; }
+            double stop_logit = parameters.theta_len[bucket];
+            for (std::size_t i = 0; i < kG1CombinedStateDimension; ++i) {
+                const double activation = i < kG1FastStateDimension
+                    ? recurrent.fast[i] : recurrent.slow[i - kG1FastStateDimension];
+                stop_logit += static_cast<double>(parameters.v[i]) * activation;
+            }
+            const double stop_probability = stop_logit >= 0.0
+                ? 1.0 / (1.0 + std::exp(-stop_logit))
+                : std::exp(stop_logit) / (1.0 + std::exp(stop_logit));
+            if (stop_probability >= config.eos_threshold) {
+                stopped_by_eos = true;
+                break;
+            }
+        }
         const std::size_t remaining_after = config.max_new_bytes - position - 1;
         struct Candidate {
             std::uint8_t byte;
@@ -144,7 +165,8 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
     auto valid = common::Utf8Text::from_utf8(generated);
     if (!valid) throw std::logic_error("decoder UTF-8 gerou uma sequência inválida");
     G1GenerationReport report{std::move(*valid.value_if()), evaluations, generated.size(),
-                              generated.size() == config.max_new_bytes};
+                              generated.size() == config.max_new_bytes && !stopped_by_eos,
+                              stopped_by_eos};
     return report;
 }
 
