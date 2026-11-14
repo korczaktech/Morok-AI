@@ -23,6 +23,14 @@ status_file="$state_dir/status.json"
 
 mkdir -p "$state_dir"
 
+# EOS changed the meaning of the final 29 model parameters. Never resume an
+# older checkpoint whose architecture identifier predates the EOS head.
+expected_arch="RLAH-G1-fastslow-d11-bit8-eos"
+if [[ -s "$checkpoint" ]] && ! grep -q "$expected_arch" "$status_file" 2>/dev/null; then
+  echo "Discarding incompatible pre-EOS checkpoint and restarting from deterministic initialization."
+  rm -f "$checkpoint" "$best_model" "$metrics" "$summary" "$generated" "$epoch_file" "$status_file"
+fi
+
 completed_epochs=0
 if [[ -f "$epoch_file" ]]; then
   read -r completed_epochs < "$epoch_file"
@@ -111,7 +119,8 @@ status = {
     "status": os.environ["MOROK_STATE"],
     "completed_epochs": int(os.environ["MOROK_EPOCHS"]),
     "maximum_epochs": int(os.environ["MOROK_MAX_EPOCHS"]),
-    "trainable_parameters": 971,
+    "trainable_parameters": 1000,
+    "architecture_id": "RLAH-G1-fastslow-d11-bit8-eos",
     "architecture_parameters": 1000,
     "corpus_documents": len(files),
     "corpus_sha256": digest.hexdigest(),
@@ -125,7 +134,7 @@ status = {
     },
     "limitations": [
         "The curated fixture contains a small set of authored Portuguese paraphrases.",
-        "The 29 segmenter parameters are in the architecture inventory but are not updated by B0 training.",
+        "The 29 EOS-head parameters are updated by continuation and document-boundary objectives.",
         "The model may memorize the fixed prompt and corpus.",
         "A valid UTF-8 continuation and a lexical match do not prove semantic correctness."
     ]
