@@ -46,7 +46,68 @@ void split(std::vector<Doc>&d,std::uint64_t seed){std::vector<std::size_t>ix(d.s
 struct Eval{double bpb;std::uint64_t count;};
 Eval evaluate(const std::vector<Doc>&docs,Split which,const G1Parameters&p,const std::function<bool()>&cancel){if(cancel&&cancel())throw std::runtime_error("training cancelled");double nats=0;std::uint64_t count=0;std::array<char,kRead>b{};for(const auto&d:docs)if(d.split==which){if(cancel&&cancel())throw std::runtime_error("training cancelled");std::ifstream f(d.path,std::ios::binary);if(!f)throw std::runtime_error("cannot reopen "+d.path.string());G1State state{};bool has=false;std::uint8_t prev=0;while(f){f.read(b.data(),b.size());auto n=static_cast<std::size_t>(f.gcount());if(cancel&&cancel())throw std::runtime_error("training cancelled");for(std::size_t i=0;i<n;++i){auto x=static_cast<std::uint8_t>(static_cast<unsigned char>(b[i]));if(has){advance_g1_state(p,state,prev);nats+=evaluate_g1_next_byte(p,state,x).negative_log_likelihood_nats;++count;}prev=x;has=true;}}if(!f.eof())throw std::runtime_error("evaluation I/O error");}if(!count)throw std::runtime_error("evaluation split has no next-byte targets");return{nats/(static_cast<double>(count)*kLn2),count};}
 struct Totals{double nats{};std::uint64_t targets{},updates{};double norm{},norm_sum{},max_norm{};std::uint64_t norm_count{};};
-void train_doc(const Doc&d,const G1TrainingConfig&c,G1Parameters&p,G1OptimizerState&o,Totals&t,std::size_t&high,std::size_t&zero){if(c.cancellation_requested&&c.cancellation_requested())throw std::runtime_error("training cancelled");std::ifstream f(d.path,std::ios::binary);if(!f)throw std::runtime_error("cannot reopen "+d.path.string());std::vector<std::uint8_t>w;w.reserve(c.truncation_length+1);char ch;while(w.size()<c.truncation_length+1&&f.get(ch))w.push_back(static_cast<std::uint8_t>(static_cast<unsigned char>(ch)));G1State state{};while(w.size()>=2){if(c.cancellation_requested&&c.cancellation_requested())throw std::runtime_error("training cancelled");auto r=compute_g1_bptt_gradients(p,w,c.truncation_length,state);auto step=apply_g1_optimizer_step(p,r.gradients,c.optimizer,o);t.nats+=r.mean_loss_nats*r.target_byte_count;t.targets+=r.target_byte_count;++t.updates;t.norm=step.gradient_norm_before_clipping;t.norm_sum+=t.norm;t.max_norm=std::max(t.max_norm,t.norm);++t.norm_count;high=step.gradient_norm_before_clipping>100?high+1:0;zero=step.gradient_norm_before_clipping==0?zero+1:0;if(high>=10)throw std::runtime_error("gradient norm exceeded 100 for 10 updates");if(zero>=100)throw std::runtime_error("gradient norm was zero for 100 updates");state=r.final_state;if(w.size()<c.truncation_length+1)break;const auto overlap=w.back();w.clear();w.push_back(overlap);while(w.size()<c.truncation_length+1&&f.get(ch))w.push_back(static_cast<std::uint8_t>(static_cast<unsigned char>(ch)));}if(!f.eof())throw std::runtime_error("training I/O error");}
+void train_doc(const Doc& d, const G1TrainingConfig& c, G1Parameters& p,
+               G1OptimizerState& o, Totals& t, std::size_t& high,
+               std::size_t& zero) {
+    if (c.cancellation_requested && c.cancellation_requested())
+        throw std::runtime_error("training cancelled");
+    std::ifstream f(d.path, std::ios::binary);
+    if (!f) throw std::runtime_error("cannot reopen " + d.path.string());
+
+    std::vector<std::uint8_t> window;
+    window.reserve(c.truncation_length + 1);
+    char ch;
+    while (window.size() < c.truncation_length + 1 && f.get(ch))
+        window.push_back(static_cast<std::uint8_t>(static_cast<unsigned char>(ch)));
+
+    G1State state{};
+    std::size_t context_offset = 0;
+    while (window.size() >= 2) {
+        if (c.cancellation_requested && c.cancellation_requested())
+            throw std::runtime_error("training cancelled");
+        auto result = compute_g1_bptt_gradients(
+            p, window, c.truncation_length, state, context_offset);
+        const auto step = apply_g1_optimizer_step(p, result.gradients, c.optimizer, o);
+        t.nats += result.mean_loss_nats * result.target_byte_count;
+        t.targets += result.target_byte_count;
+        ++t.updates;
+        t.norm = step.gradient_norm_before_clipping;
+        t.norm_sum += t.norm;
+        t.max_norm = std::max(t.max_norm, t.norm);
+        ++t.norm_count;
+        high = step.gradient_norm_before_clipping > 100 ? high + 1 : 0;
+        zero = step.gradient_norm_before_clipping == 0 ? zero + 1 : 0;
+        if (high >= 10) throw std::runtime_error("gradient norm exceeded 100 for 10 updates");
+        if (zero >= 100) throw std::runtime_error("gradient norm was zero for 100 updates");
+        state = result.final_state;
+
+        if (window.size() < c.truncation_length + 1) break;
+        const auto overlap = window.back();
+        context_offset += window.size() - 1;
+        window.clear();
+        window.push_back(overlap);
+        while (window.size() < c.truncation_length + 1 && f.get(ch))
+            window.push_back(static_cast<std::uint8_t>(static_cast<unsigned char>(ch)));
+    }
+    if (!f.eof()) throw std::runtime_error("training I/O error");
+    if (window.empty()) throw std::runtime_error("empty training document");
+
+    // Consume the final byte and train a positive stop target at the true
+    // document boundary. Earlier contexts were trained as "continue" by BPTT.
+    advance_g1_state(p, state, window.back());
+    const auto eos = compute_g1_eos_gradients(p, state,
+        static_cast<std::size_t>(d.size), true);
+    const auto eos_step = apply_g1_optimizer_step(p, eos.gradients, c.optimizer, o);
+    ++t.updates;
+    t.norm = eos_step.gradient_norm_before_clipping;
+    t.norm_sum += t.norm;
+    t.max_norm = std::max(t.max_norm, t.norm);
+    ++t.norm_count;
+    high = eos_step.gradient_norm_before_clipping > 100 ? high + 1 : 0;
+    zero = eos_step.gradient_norm_before_clipping == 0 ? zero + 1 : 0;
+    if (high >= 10) throw std::runtime_error("gradient norm exceeded 100 for 10 updates");
+    if (zero >= 100) throw std::runtime_error("gradient norm was zero for 100 updates");
+}
 void append_jsonl(const std::filesystem::path& path, const std::string& line) {
     if (path.empty()) return;
     {
