@@ -77,7 +77,7 @@
           "target_bytes": 4,
           "gradient_norm": 3.10982,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 2.49911e-05,
+          "parameter_delta_l2": 0.0000249911,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -104,7 +104,7 @@
           "target_bytes": 6,
           "gradient_norm": 1.87259,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 2.49854e-05,
+          "parameter_delta_l2": 0.0000249854,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -131,7 +131,7 @@
           "target_bytes": 6,
           "gradient_norm": 2.2998,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 2.50081e-05,
+          "parameter_delta_l2": 0.0000250081,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -157,7 +157,7 @@
           "target_bytes": 48,
           "gradient_norm": 0.838229,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 2.50076e-05,
+          "parameter_delta_l2": 0.0000250076,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -183,7 +183,7 @@
           "target_bytes": 35,
           "gradient_norm": 1.13052,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 2.49976e-05,
+          "parameter_delta_l2": 0.0000249976,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
@@ -209,12 +209,13 @@
           "target_bytes": 48,
           "gradient_norm": 1.03885,
           "applied_gradient_norm": 0.25,
-          "parameter_delta_l2": 2.50202e-05,
+          "parameter_delta_l2": 0.0000250202,
           "optimizer_step": 1,
           "trainable_parameters": 1000
         }
       }
     }
   ],
-  "oracle_demonstrations_applied": true
+  "oracle_demonstrations_applied": true,
+  "oracle_demonstration_version": 1
 }
