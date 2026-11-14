@@ -125,6 +125,11 @@ morok_enable_sanitizers(morok_test_security_subsystem)
 add_test(NAME security.security_subsystem COMMAND morok_test_security_subsystem)
 
 if(MOROK_BUILD_APPS)
+    add_executable(morok_test_application_runtime unit/apps/test_application_runtime.cpp)
+    target_link_libraries(morok_test_application_runtime PRIVATE Morok::Core morok_build_options)
+    morok_enable_sanitizers(morok_test_application_runtime)
+    add_test(NAME apps.application_runtime COMMAND morok_test_application_runtime)
+
     add_test(NAME apps.cli_help COMMAND morok_cli --help)
     add_test(NAME apps.cli_version COMMAND morok_cli version)
     add_test(NAME apps.cli_unknown_command
