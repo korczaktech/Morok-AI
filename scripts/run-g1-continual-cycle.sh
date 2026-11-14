@@ -26,6 +26,7 @@ mkdir -p "$state_dir"
 # EOS changed the meaning of the final 29 model parameters. Never resume an
 # older checkpoint whose architecture identifier predates the EOS head.
 expected_arch="RLAH-G1-fastslow-d11-bit8-eos"
+expected_corpus_manifest_version="2"
 current_corpus_sha="$(python3 - <<'PY'
 import hashlib
 from pathlib import Path
@@ -43,7 +44,7 @@ if [[ -e "$checkpoint" || -e "$epoch_file" || -e "$status_file" ]]; then
 fi
 checkpoint_compatible=false
 if [[ "$state_exists" == "true" && -s "$checkpoint" ]]; then
-  if python3 - "$status_file" "$expected_arch" "$current_corpus_sha" "$current_corpus_documents" <<'PY'
+  if python3 - "$status_file" "$expected_arch" "$current_corpus_sha" "$current_corpus_documents" "$expected_corpus_manifest_version" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -55,6 +56,7 @@ compatible = (
     status.get("architecture_id") == sys.argv[2]
     and status.get("corpus_sha256") == sys.argv[3]
     and str(status.get("corpus_documents", 0)) == sys.argv[4]
+    and str(status.get("corpus_manifest_version", 0)) == sys.argv[5]
 )
 raise SystemExit(0 if compatible else 1)
 PY
@@ -162,6 +164,7 @@ status = {
     "maximum_epochs": int(os.environ["MOROK_MAX_EPOCHS"]),
     "trainable_parameters": 1000,
     "architecture_id": "RLAH-G1-fastslow-d11-bit8-eos",
+    "corpus_manifest_version": 2,
     "qa_evaluation": "token-overlap diagnostic only; semantic acceptance not established",
     "architecture_parameters": 1000,
     "corpus_documents": len(files),
