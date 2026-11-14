@@ -169,11 +169,33 @@ int main() {
         principal, "read_file", tools::ToolCapability::filesystem_read);
     assert(!revoked && revoked.error_if()->code == common::ErrorCode::permission_denied);
 
+    // Closing a session must revoke all of its grants and invalidate
+    // outstanding confirmation tickets before the session can be reused.
+    assert(security_system.grant_tool(
+        principal, "temporary_tool", tools::ToolCapability::filesystem_read));
+    security::SecurityAction pending_action{
+        "temporary_tool", "read", "session-resource", "Read a session resource",
+        security::bind_tool_arguments({})};
+    auto pending_ticket = security_system.request_confirmation(principal, pending_action);
+    assert(pending_ticket && security_system.pending_confirmations() == 1);
+    assert(security_system.close_session(principal));
+    assert(security_system.grant_count() == 0);
+    assert(security_system.pending_confirmations() == 0);
+    auto closed_session_access = security_system.authorize_tool(
+        principal, "temporary_tool", tools::ToolCapability::filesystem_read);
+    assert(!closed_session_access &&
+           closed_session_access.error_if()->code == common::ErrorCode::permission_denied);
+    auto closed_ticket = security_system.approve_confirmation(
+        principal, *pending_ticket.value_if(), pending_action, true);
+    assert(!closed_ticket &&
+           closed_ticket.error_if()->code == common::ErrorCode::confirmation_required);
+
     assert(!events.empty());
     bool saw_denial = false;
     bool saw_grant = false;
     bool saw_confirmation = false;
     bool saw_consumed = false;
+    bool saw_session_closed = false;
     for (const auto& event : events) {
         saw_denial = saw_denial ||
             event.type == security::SecurityEventType::authorization_denied;
@@ -183,8 +205,11 @@ int main() {
             event.type == security::SecurityEventType::confirmation_approved;
         saw_consumed = saw_consumed ||
             event.type == security::SecurityEventType::confirmation_consumed;
+        saw_session_closed = saw_session_closed ||
+            event.type == security::SecurityEventType::session_closed;
     }
-    assert(saw_denial && saw_grant && saw_confirmation && saw_consumed);
+    assert(saw_denial && saw_grant && saw_confirmation && saw_consumed &&
+           saw_session_closed);
 
     security::SecuritySubsystem missing_audit;
     assert(!missing_audit.initialize(core::RuntimeConfig{}));
