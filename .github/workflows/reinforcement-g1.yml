@@ -1,0 +1,89 @@
+name: Reinforcement-G1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/reinforcement-g1.yml"
+      - "CMakeLists.txt"
+      - "tests/CMakeLists.txt"
+      - "tests/scripts/test_g1_reinforcement.py"
+      - "apps/reinforce_g1.cpp"
+      - "scripts/run-g1-reinforcement.py"
+      - "docs/54-aprendizado-por-reforco-g1.md"
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      attempts:
+        description: "Quantidade total de respostas que a IA deve tentar gerar (1 a 100)"
+        required: true
+        type: number
+        default: 10
+
+concurrency:
+  group: morok-g1-reinforcement
+  cancel-in-progress: false
+permissions:
+  contents: write
+  actions: read
+jobs:
+  reinforcement-g1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Restore previous G1 reinforcement model
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts/reinforcement-g1
+          previous_run="$(gh run list --workflow reinforcement-g1.yml --branch main --status success --json databaseId --limit 1 --jq '.[0].databaseId // empty')"
+          if [[ -n "$previous_run" ]]; then
+            gh run download "$previous_run" --name morok-g1-reinforcement-state --dir artifacts/reinforcement-g1 || { echo "::warning::No prior G1 artifact; bootstrap will run."; rm -f artifacts/reinforcement-g1/*; }
+          fi
+          rm -f artifacts/reinforcement-g1/attempt-results.txt
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libsqlite3-dev python3
+      - name: Configure Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Run G1 reinforcement attempts
+        run: |
+          python3 scripts/run-g1-reinforcement.py \
+            --checkpoint artifacts/reinforcement-g1/model.morokckp \
+            --database data/reinforcement/answers.json \
+            --trainer build/morok-train --generator build/morok_generate \
+            --reinforcer build/morok-reinforce --bootstrap-epochs 8 \
+            --learning-rate 0.0001 \
+            --attempts "${{ github.event_name == 'workflow_dispatch' && inputs.attempts || 3 }}" \
+            --results-file artifacts/reinforcement-g1/attempt-results.txt
+      - name: Commit G1 feedback history to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/reinforcement/answers.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record G1 reinforcement answers and rewards"
+            git fetch origin main && git rebase origin/main && git push origin HEAD:main
+          fi
+      - name: Publish G1 reinforcement state
+        uses: actions/upload-artifact@v4
+        with:
+          name: morok-g1-reinforcement-state
+          path: artifacts/reinforcement-g1/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Display attempt results
+        if: always()
+        run: |
+          results="artifacts/reinforcement-g1/attempt-results.txt"
+          if [[ -f "$results" ]]; then cat "$results"; else echo "No attempt results were produced."; fi
