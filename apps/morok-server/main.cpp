@@ -406,8 +406,16 @@ int main(int argc, char** argv) {
             (void)runtime.shutdown();
             throw std::runtime_error("listen failed");
         }
-        std::signal(SIGINT, stop_server);
-        std::signal(SIGTERM, stop_server);
+        struct sigaction signal_action {};
+        signal_action.sa_handler = stop_server;
+        sigemptyset(&signal_action.sa_mask);
+        signal_action.sa_flags = 0;
+        if (::sigaction(SIGINT, &signal_action, nullptr) != 0 ||
+            ::sigaction(SIGTERM, &signal_action, nullptr) != 0) {
+            ::close(server);
+            (void)runtime.shutdown();
+            throw std::runtime_error("could not install shutdown signal handlers");
+        }
         std::cout << "Morok local server listening on http://127.0.0.1:"
                   << port << " (Ctrl+C to stop)\n";
         while (running) {
