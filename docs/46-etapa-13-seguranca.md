@@ -9,7 +9,7 @@
 - Grants explícitos por par exato (ferramenta + capacidade), sem permissões globais implícitas.
 - Revogação de grants e isolamento entre sessões.
 - Geração de ToolAccessPolicy a partir de grants mantidos pelo host.
-- Confirmações humanas com ticket opaco, prazo de validade, vínculo ao principal/sessão/ação exata e consumo único.
+- Confirmações humanas com ticket opaco, prazo de validade, vínculo ao principal/sessão/ação e serialização canônica exata dos argumentos, com consumo único.
 - Auditoria de concessão, revogação, negação e ciclo de confirmação; metadados sem argumentos, destinos completos ou conteúdo sensível.
 - Limites de quantidade de grants e confirmações pendentes.
 - Classificação imutável de conteúdo por origem: entrada do usuário, documento externo, memória recuperada, saída do modelo e saída de ferramenta. Todos esses rótulos são sempre não confiáveis; não existe API pública para um conteúdo se declarar configuração confiável.
@@ -32,7 +32,7 @@ O fluxo é:
 5. `consume_confirmation` valida principal, sessão, ticket, expiração e igualdade exata da ação; o ticket é consumido uma única vez.
 6. O host só então sinaliza a confirmação ao executor de ferramenta.
 
-Confirmações não são reutilizáveis para outro destino, operação, ferramenta, sessão ou usuário. Uma aprovação não concede capacidade: autorização e confirmação são verificações independentes.
+Confirmações não são reutilizáveis para outro destino, operação, ferramenta, sessão, usuário ou conjunto de argumentos. Uma aprovação não concede capacidade: autorização e confirmação são verificações independentes.
 
 ## Fronteiras de confiança e prompt injection
 
