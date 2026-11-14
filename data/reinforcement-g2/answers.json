@@ -52,12 +52,112 @@
     }
   ],
   "totals": {
-    "episodes": 0,
+    "episodes": 3,
     "correct": 0,
-    "incorrect": 0,
-    "policy_updates": 0,
+    "incorrect": 3,
+    "policy_updates": 3,
     "skipped_updates": 0,
     "oracle_demonstrations": 0
   },
-  "episodes": []
+  "episodes": [
+    {
+      "episode": 1,
+      "episode_id": "43654763719:1:1:sky_is_blue",
+      "run_id": "43654763719",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "sky_is_blue",
+      "prompt": "O céu é azul?\\nResposta: ",
+      "answer": "eeeeeeeeeeaeeeeeaeeeeaeeeeaeeeeaeeeaeeeaeeeaeeea",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T23:46:23.323465+00:00",
+      "model_sha256_before": "6d33d7c5cec5430a0bf10418a7d7e1ff62f3bb239f23f5133373545a08337f7b8e68ceec8f590c4357ecd100c3a1aefd8637291601332c9483e30bfca3b05cce",
+      "model_sha256_after": "279f0a0d03ae16f59aed488c691c5253b610ebdf5394f1dec00847e0cfdca560469c95e7a8364ea348972a3b215bc3cbec7f2aa015a065de34ffd251975c92a4",
+      "trainable_parameters": 2000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_gradient_on_both_experts",
+        "report": {
+          "generation": "G2",
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 3.89783,
+          "gradient_norm_last": 3.89783,
+          "parameter_delta_l2": 3.53508e-05,
+          "optimizer_steps_per_expert": 1,
+          "expert_a_optimizer_step": 1,
+          "expert_b_optimizer_step": 1,
+          "trainable_parameters": 2000
+        }
+      }
+    },
+    {
+      "episode": 2,
+      "episode_id": "43654763719:1:2:mountains_high_or_low",
+      "run_id": "43654763719",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "mountains_high_or_low",
+      "prompt": "As montanhas são altas ou baixas?\\nResposta: ",
+      "answer": "eeeeeeaeeeeeaeeeeaeeeeaeeeeaeeeeaeeeaeeeaeeeaeee",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T23:46:23.337748+00:00",
+      "model_sha256_before": "279f0a0d03ae16f59aed488c691c5253b610ebdf5394f1dec00847e0cfdca560469c95e7a8364ea348972a3b215bc3cbec7f2aa015a065de34ffd251975c92a4",
+      "model_sha256_after": "9768173a88dc959fbcd2c0937ec410756f451eeadcb13c30ed80ffd873bcd018fa0382c598611c60ad66a6208544c0e43d8f7ff893fd9522c673b5bcc3dcf9c2",
+      "trainable_parameters": 2000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_gradient_on_both_experts",
+        "report": {
+          "generation": "G2",
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 3.8899,
+          "gradient_norm_last": 3.8899,
+          "parameter_delta_l2": 3.53578e-05,
+          "optimizer_steps_per_expert": 1,
+          "expert_a_optimizer_step": 1,
+          "expert_b_optimizer_step": 1,
+          "trainable_parameters": 2000
+        }
+      }
+    },
+    {
+      "episode": 3,
+      "episode_id": "43654763719:1:3:grass_color",
+      "run_id": "43654763719",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "grass_color",
+      "prompt": "Que cor é a grama?\\nResposta: ",
+      "answer": "eeeeeeeaeeeeeaeeeeeaeeeeaeeeeaeeeeaeeeaeeeaeeeae",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-14T23:46:23.351030+00:00",
+      "model_sha256_before": "9768173a88dc959fbcd2c0937ec410756f451eeadcb13c30ed80ffd873bcd018fa0382c598611c60ad66a6208544c0e43d8f7ff893fd9522c673b5bcc3dcf9c2",
+      "model_sha256_after": "1fafe118aa135520c69ed1b6097a9ffae410d8227194112f3780827c0e08761a162c6efe25ebf62ffe5a40637bf2a31f0589d97958129f49fb7886448cbad32a",
+      "trainable_parameters": 2000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_gradient_on_both_experts",
+        "report": {
+          "generation": "G2",
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 3.88734,
+          "gradient_norm_last": 3.88734,
+          "parameter_delta_l2": 3.53535e-05,
+          "optimizer_steps_per_expert": 1,
+          "expert_a_optimizer_step": 1,
+          "expert_b_optimizer_step": 1,
+          "trainable_parameters": 2000
+        }
+      }
+    }
+  ]
 }
