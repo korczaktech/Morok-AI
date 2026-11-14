@@ -74,7 +74,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 
 ## Estado atual
 
-- Etapa 13 — Segurança: SecuritySubsystem com negação por padrão, grants exatos por sujeito/sessão/ferramenta/capacidade, revogação, política para IA-TOOLS, confirmações humanas de uso único vinculadas à ação, classificação de origem e auditoria sem conteúdo sensível. Teste `security.security_subsystem` registrado no CTest. Sandbox de processo/OS, criptografia em repouso e detecção completa de prompt injection não estão implementadas. Consulte [Etapa 13 — Segurança](docs/46-etapa-13-seguranca.md).
+- Etapa 13 — Segurança: SecuritySubsystem com negação por padrão, grants exatos por sujeito/sessão/ferramenta/capacidade, revogação, política para IA-TOOLS, confirmações humanas de uso único vinculadas à ação e aos argumentos exatos, wrapper seguro de execução IA-TOOLS, classificação imutável de origem e auditoria sem conteúdo sensível. Teste `security.security_subsystem` registrado no CTest. Sandbox de processo/OS, criptografia em repouso e detecção completa de prompt injection não estão implementadas. Consulte [Etapa 13 — Segurança](docs/46-etapa-13-seguranca.md).
 
 - Etapa 12 — IA-TOOLS: registro, descoberta, esquema tipado, allowlist, grants de capacidade, confirmação de efeitos colaterais, validação UTF-8 e de tipos, limites de concorrência/entrada/saída/tempo, captura de exceções, auditoria injetável e lifecycle IA-CORE implementados. Teste `tools.tool_subsystem` registrado no CTest. Isolamento de processo/OS e interrupção forçada de handlers não fazem parte desta versão; handlers devem ser código confiável. Consulte [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md).
 
