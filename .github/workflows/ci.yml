@@ -32,10 +32,18 @@ jobs:
           test -x build/install/bin/morok-train
           test -x build/install/bin/morok-evaluate
           test -x build/install/bin/morok-server
-      - name: Local server end-to-end smoke test
+      - name: Application end-to-end smoke test
         if: matrix.compiler == 'g++' && matrix.build_type == 'Release'
         run: |
-          ./build/morok-train tests/fixtures/benchmark 1 42 --checkpoint build/server-smoke.morok
+          ./build/morok-convert tests/fixtures/benchmark build/converted-corpus
+          ./build/morok-train build/converted-corpus 1 42 --checkpoint build/server-smoke.morok
+          ./build/morok-cli inspect build/server-smoke.morok > build/checkpoint-inspection.json
+          ./build/morok-cli generate build/server-smoke.morok tests/fixtures/benchmark/doc-01.txt build/cli-generated.txt 8
+          ./build/morok_generate build/server-smoke.morok tests/fixtures/benchmark/doc-01.txt build/offline-generated.txt 8
+          ./build/morok-evaluate build/server-smoke.morok build/converted-corpus > build/evaluation.json
+          test -s build/cli-generated.txt
+          test -s build/offline-generated.txt
+          grep -q '"bits_per_byte":' build/evaluation.json
           ./build/morok-server build/server-smoke.morok 18080 build/server-smoke.sqlite > build/server-smoke.log 2>&1 &
           server_pid=$!
           trap 'status=$?; cat build/server-smoke.log; kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; exit "$status"' EXIT
