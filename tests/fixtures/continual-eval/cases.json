@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "description": "Held-out Portuguese prompts for the narrow sky-color task. Token-overlap metrics are diagnostic only and are not semantic acceptance.",
+  "version": 2,
+  "description": "Perguntas em português reservadas para avaliação fora do corpus de treinamento. Exact match e token F1 medem sobreposição lexical, não compreensão semântica.",
   "cases": [
     {
       "id": "heldout-01",
@@ -24,23 +24,83 @@
     },
     {
       "id": "heldout-05",
-      "prompt": "Pergunta: Por que temos dia e noite?\nResposta: ",
-      "reference": "A rotação da Terra faz diferentes regiões alternarem entre dia e noite."
+      "prompt": "Pergunta: Qual é a cor comum da vegetação rasteira dos gramados?\nResposta: ",
+      "reference": "verde"
     },
     {
       "id": "heldout-06",
-      "prompt": "Pergunta: Qual é o planeta de maior tamanho do Sistema Solar?\nResposta: ",
-      "reference": "Júpiter é o maior planeta do Sistema Solar."
+      "prompt": "Pergunta: Como podemos definir uma montanha?\nResposta: ",
+      "reference": "elevação natural do terreno"
     },
     {
       "id": "heldout-07",
-      "prompt": "Pergunta: Como se chama a passagem do pólen entre partes reprodutivas das plantas?\nResposta: ",
-      "reference": "Polinização é a transferência de pólen entre estruturas reprodutivas das plantas."
+      "prompt": "Pergunta: O Sol pertence a que tipo de astro?\nResposta: ",
+      "reference": "estrela"
     },
     {
       "id": "heldout-08",
-      "prompt": "Pergunta: Em que estado físico a água fica quando congela?\nResposta: ",
-      "reference": "Gelo é água em estado sólido."
+      "prompt": "Pergunta: Quais elementos formam uma molécula de água?\nResposta: ",
+      "reference": "hidrogênio e oxigênio"
+    },
+    {
+      "id": "heldout-09",
+      "prompt": "Pergunta: Qual é o nome do planeta em que vivemos?\nResposta: ",
+      "reference": "Terra"
+    },
+    {
+      "id": "heldout-10",
+      "prompt": "Pergunta: Como chamamos o corpo celeste natural que orbita a Terra?\nResposta: ",
+      "reference": "Lua"
+    },
+    {
+      "id": "heldout-11",
+      "prompt": "Pergunta: Quais partículas formam muitas nuvens?\nResposta: ",
+      "reference": "gotículas de água e cristais de gelo"
+    },
+    {
+      "id": "heldout-12",
+      "prompt": "Pergunta: Que tipo de água encontramos em grande quantidade nos oceanos?\nResposta: ",
+      "reference": "água salgada"
+    },
+    {
+      "id": "heldout-13",
+      "prompt": "Pergunta: Qual processo permite que plantas usem energia da luz?\nResposta: ",
+      "reference": "fotossíntese"
+    },
+    {
+      "id": "heldout-14",
+      "prompt": "Pergunta: Baleias pertencem a qual grupo de animais?\nResposta: ",
+      "reference": "mamíferos"
+    },
+    {
+      "id": "heldout-15",
+      "prompt": "Pergunta: Os pinguins são peixes ou aves?\nResposta: ",
+      "reference": "aves"
+    },
+    {
+      "id": "heldout-16",
+      "prompt": "Pergunta: Qual é a função principal do coração no corpo?\nResposta: ",
+      "reference": "bombear sangue"
+    },
+    {
+      "id": "heldout-17",
+      "prompt": "Pergunta: Quantos segmentos de reta formam um triângulo?\nResposta: ",
+      "reference": "três lados"
+    },
+    {
+      "id": "heldout-18",
+      "prompt": "Pergunta: Qual movimento da Terra explica a alternância entre dia e noite?\nResposta: ",
+      "reference": "rotação"
+    },
+    {
+      "id": "heldout-19",
+      "prompt": "Pergunta: Qual planeta ocupa o primeiro lugar em tamanho no Sistema Solar?\nResposta: ",
+      "reference": "Júpiter"
+    },
+    {
+      "id": "heldout-20",
+      "prompt": "Pergunta: Como se chama a água congelada?\nResposta: ",
+      "reference": "gelo"
     }
   ]
 }
