@@ -124,7 +124,8 @@ int main() {
     auto history = communication.history(*conversation.value_if());
     assert(history && history.value_if()->size() >= 2);
 
-    assert(memory.close_session(sessions, session));
+    auto cleared_working = memory.store().clear_working(session);
+    assert(cleared_working);
     assert(security.close_session(principal));
     assert(communication.close_conversation(*conversation.value_if()));
     assert(sessions.size() == 0);
