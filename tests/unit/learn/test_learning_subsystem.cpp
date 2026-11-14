@@ -44,6 +44,16 @@ int main() {
     assert(trained.value_if()->parameter_evaluation.all_finite);
     assert(trained.value_if()->request_id == request.request_id().to_string());
     assert(initial.flatten() == original);
+    std::size_t cancellation_polls = 0;
+    auto interrupted_experiment = experiment;
+    interrupted_experiment.cancellation_requested = [&cancellation_polls] {
+        return ++cancellation_polls >= 4;
+    };
+    auto interrupted = learning.run_experiment(request, interrupted_experiment, initial);
+    assert(!interrupted);
+    assert(interrupted.error_if()->code == common::ErrorCode::cancelled);
+    assert(initial.flatten() == original);
+
     CancellationSource cancelled;
     assert(cancelled.cancel());
     auto cancelled_request_result = core::RequestContext::create(*session.value_if(), cancelled.token());
