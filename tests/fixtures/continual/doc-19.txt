@@ -1,0 +1,2 @@
+Pergunta: O que é a Lua?
+Resposta: A Lua é o satélite natural da Terra.
