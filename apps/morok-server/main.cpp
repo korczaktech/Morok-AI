@@ -2,6 +2,15 @@
 #include "morok/common/utf8_text.hpp"
 #include "morok/model/learn/g1_checkpoint.hpp"
 #include "morok/model/learn/g1_generation.hpp"
+#include "morok/core/runtime.hpp"
+#include "morok/core/session_registry.hpp"
+#include "morok/memory/memory_subsystem.hpp"
+#include "morok/lang/language_subsystem.hpp"
+#include "morok/reason/reasoning_subsystem.hpp"
+#include "morok/tools/tool_subsystem.hpp"
+#include "morok/security/security_subsystem.hpp"
+#include "morok/comm/session_manager.hpp"
+#include "morok/learn/learning_subsystem.hpp"
 
 #include <algorithm>
 #include <arpa/inet.h>
@@ -170,7 +179,7 @@ void respond(int client, int status, std::string_view reason, std::string body) 
     (void)send_all(client, header.str());
     (void)send_all(client, body);
 }
-void handle_client(int client, const morok::model::G1Parameters& parameters) {
+void handle_client(int client, morok::comm::CommunicationSubsystem& communication) {
     std::string request;
     char buffer[4096];
     std::size_t header_end = std::string::npos;
@@ -204,7 +213,7 @@ void handle_client(int client, const morok::model::G1Parameters& parameters) {
                 std::string(morok::common::version()) + "\"}");
         return;
     }
-    if (method != "POST" || target != "/v1/generate") {
+    if (method != "POST" || (target != "/v1/chat" && target != "/v1/generate")) {
         respond(client, 404, "Not Found", "{\"error\":\"route not found\"}");
         return;
     }
@@ -254,20 +263,30 @@ void handle_client(int client, const morok::model::G1Parameters& parameters) {
         const auto prompt_text = extract_prompt(body);
         const auto prompt = morok::common::Utf8Text::from_utf8(prompt_text);
         const auto max_bytes = extract_max_bytes(body);
-        const auto result = morok::model::generate_g1(
-            parameters, *prompt.value_if(), {max_bytes});
+        auto conversation = communication.create_conversation();
+        if (!conversation) throw std::runtime_error(conversation.error_if()->message);
+        const auto conversation_id = *conversation.value_if();
+        auto request_context = communication.create_request_context(conversation_id);
+        if (!request_context) {
+            (void)communication.close_conversation(conversation_id);
+            throw std::runtime_error(request_context.error_if()->message);
+        }
+        const auto result = communication.send_message(
+            *request_context.value_if(), conversation_id, *prompt.value_if(), max_bytes);
+        (void)communication.close_conversation(conversation_id);
+        if (!result) throw std::runtime_error(result.error_if()->message);
         respond(client, 200, "OK",
-            "{\"continuation\":\"" + escape_json(result.continuation.string()) +
-            "\",\"generated_bytes\":" + std::to_string(result.generated_bytes) +
-            ",\"candidate_evaluations\":" + std::to_string(result.candidate_evaluations) + "}");
+            "{\"response\":\"" + escape_json(result.value_if()->content) +
+            "\",\"request_id\":\"" + result.value_if()->request_id.to_string() +
+            "\"}");
     } catch (const std::exception& error) {
         respond(client, 400, "Bad Request", "{\"error\":\"" + escape_json(error.what()) + "\"}");
     }
 }
 }
 int main(int argc, char** argv) {
-    if (argc < 2 || argc > 3) {
-        std::cerr << "usage: morok-server <checkpoint.morok> [port=8080]\n"
+    if (argc < 2 || argc > 4) {
+        std::cerr << "usage: morok-server <checkpoint.morok> [port=8080] [memory.sqlite]\n"
                   << "Binds only to 127.0.0.1; development server without TLS/authentication.\n";
         return 2;
     }
@@ -276,8 +295,36 @@ int main(int argc, char** argv) {
         if (argc == 3) port = std::stoul(argv[2]);
         if (port == 0 || port > 65535) throw std::invalid_argument("port must be 1..65535");
         const auto checkpoint = morok::model::load_g1_checkpoint(argv[1]);
+        const std::string memory_path = argc == 4 ? argv[3] : "morok-server-memory.sqlite";
+        morok::core::RuntimeConfig runtime_config;
+        runtime_config.runtime_name = "morok-server";
+        runtime_config.max_sessions = 16;
+        morok::core::SessionRegistry sessions(runtime_config.max_sessions);
+        morok::memory::MemorySubsystem memory(memory_path);
+        morok::lang::LanguageSubsystem language(checkpoint.parameters);
+        morok::reason::ReasoningSubsystem reasoning;
+        morok::tools::ToolAuditSink tool_audit = [](const morok::tools::ToolAuditRecord&) {
+            return morok::common::Status::success();
+        };
+        morok::security::SecurityAuditSink security_audit = [](const morok::security::SecurityAuditRecord&) {
+            return morok::common::Status::success();
+        };
+        morok::tools::ToolSubsystem tools({}, std::move(tool_audit));
+        morok::security::SecuritySubsystem security({}, std::move(security_audit));
+        morok::comm::CommunicationSubsystem communication(sessions, language);
+        morok::learn::LearningSubsystem learning;
+        morok::core::Runtime runtime(runtime_config);
+        const auto initialized = runtime.initialize(
+            {memory.initializer(), language.initializer(), reasoning.initializer(),
+             tools.initializer(), security.initializer(), communication.initializer(),
+             learning.initializer()},
+            {memory.shutdown_callback(), language.shutdown_callback(),
+             reasoning.shutdown_callback(), tools.shutdown_callback(),
+             security.shutdown_callback(), communication.shutdown_callback(),
+             learning.shutdown_callback()});
+        if (!initialized) throw std::runtime_error(initialized.error_if()->message);
         const int server = ::socket(AF_INET, SOCK_STREAM, 0);
-        if (server < 0) throw std::runtime_error("socket creation failed");
+        if (server < 0) { (void)runtime.shutdown(); throw std::runtime_error("socket creation failed"); }
         int reuse = 1;
         (void)::setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
         sockaddr_in address{};
@@ -286,10 +333,12 @@ int main(int argc, char** argv) {
         address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         if (::bind(server, reinterpret_cast<sockaddr*>(&address), sizeof(address)) < 0) {
             ::close(server);
+            (void)runtime.shutdown();
             throw std::runtime_error("bind to 127.0.0.1 failed");
         }
         if (::listen(server, 16) < 0) {
             ::close(server);
+            (void)runtime.shutdown();
             throw std::runtime_error("listen failed");
         }
         std::signal(SIGINT, stop_server);
@@ -304,10 +353,11 @@ int main(int argc, char** argv) {
                 if (!running) break;
                 continue;
             }
-            handle_client(client, checkpoint.parameters);
+            handle_client(client, communication);
             ::close(client);
         }
         ::close(server);
+        (void)runtime.shutdown();
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "morok-server: " << error.what() << '\n';
