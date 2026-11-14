@@ -31,6 +31,7 @@
 #include <string>
 #include <string_view>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 namespace {
@@ -193,7 +194,7 @@ std::string escape_json(std::string_view value) {
 }
 bool send_all(int socket, std::string_view data) {
     while (!data.empty()) {
-        const auto sent = ::send(socket, data.data(), data.size(), 0);
+        const auto sent = ::send(socket, data.data(), data.size(), MSG_NOSIGNAL);
         if (sent <= 0) return false;
         data.remove_prefix(static_cast<std::size_t>(sent));
     }
@@ -417,6 +418,11 @@ int main(int argc, char** argv) {
                 if (!running) break;
                 continue;
             }
+            const timeval client_timeout{5, 0};
+            (void)::setsockopt(client, SOL_SOCKET, SO_RCVTIMEO,
+                               &client_timeout, sizeof(client_timeout));
+            (void)::setsockopt(client, SOL_SOCKET, SO_SNDTIMEO,
+                               &client_timeout, sizeof(client_timeout));
             handle_client(client, communication);
             ::close(client);
         }
