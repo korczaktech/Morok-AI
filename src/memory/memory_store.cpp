@@ -368,6 +368,9 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
     std::lock_guard lock(impl_->mutex);
     if (!is_open()) return Result<std::vector<MemoryRecord>>::failure(Error::make(
         ErrorCode::internal_error, "memory store is not open", "memory", "search"));
+    if (query.cancellation.is_cancelled())
+        return Result<std::vector<MemoryRecord>>::failure(Error::make(
+            ErrorCode::cancelled, "memory search was cancelled", "memory", "search"));
     if (query.text.empty() || query.session_id.is_nil())
         return Result<std::vector<MemoryRecord>>::failure(Error::make(
             ErrorCode::invalid_argument, "search text and session are required",
