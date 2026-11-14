@@ -63,10 +63,10 @@ void test_deterministic_initialization_and_biases() {
             "triangular prediction coefficients must start at zero");
     require(std::all_of(first.v.begin(), first.v.end(),
                         [](float value) { return value == 0.0F; }),
-            "segmenter weights must start at zero");
+            "EOS head weights must start at zero");
     require(std::all_of(first.theta_len.begin(), first.theta_len.end(),
-                        [](float value) { return value == 0.0F; }),
-            "segmenter length biases must start at zero");
+                        [](float value) { return value == -4.0F; }),
+            "EOS length biases must start with a continuation prior");
 }
 
 void test_all_parameters_are_finite_and_xavier_bounded() {
