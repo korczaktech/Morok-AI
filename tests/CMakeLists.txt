@@ -96,3 +96,10 @@ add_executable(morok_test_communication_subsystem
 target_link_libraries(morok_test_communication_subsystem PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_communication_subsystem)
 add_test(NAME comm.communication_subsystem COMMAND morok_test_communication_subsystem)
+
+add_executable(morok_test_reasoning_subsystem
+    unit/reason/test_reasoning_subsystem.cpp
+)
+target_link_libraries(morok_test_reasoning_subsystem PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_reasoning_subsystem)
+add_test(NAME reason.reasoning_subsystem COMMAND morok_test_reasoning_subsystem)
