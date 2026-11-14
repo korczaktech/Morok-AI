@@ -364,7 +364,7 @@ common::Result<std::string> ToolSubsystem::invoke(
     const auto deadline = std::chrono::steady_clock::now() +
         std::chrono::milliseconds(definition.timeout_ms);
     ToolExecutionContext context{
-        request.session_id(), request.request_id(), {}, deadline};
+        request.session_id(), request.request_id(), [&request] { return request.is_cancelled(); }, deadline};
 
     common::Result<std::string> result = result_failure<std::string>(
         common::ErrorCode::tool_failure, "tool handler did not return", "execution", &request);
