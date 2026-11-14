@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <string>
+#include <utility>
 #include <vector>
 
 int main() {
@@ -41,7 +42,9 @@ int main() {
 
     assert(security_system.grant_tool(
         principal, "read_file", tools::ToolCapability::filesystem_read));
-    assert(security_system.grant_count() == 1);
+    assert(security_system.grant_tool(
+        principal, "send_notice", tools::ToolCapability::network));
+    assert(security_system.grant_count() == 2);
     assert(security_system.authorize_tool(
         principal, "read_file", tools::ToolCapability::filesystem_read));
     auto isolated = security_system.authorize_tool(
@@ -52,9 +55,30 @@ int main() {
     assert(policy);
     assert(policy.value_if()->allowed_tools.size() == 1);
     assert(policy.value_if()->allowed_tools.front() == "read_file");
-    assert(policy.value_if()->granted_capabilities.size() == 1);
-    assert(policy.value_if()->granted_capabilities.front() ==
-           tools::ToolCapability::filesystem_read);
+    assert(policy.value_if()->granted_capabilities.size() == 2);
+    assert(policy.value_if()->exact_grants.size() == 2);
+
+    // A pair-based policy must not accidentally grant the Cartesian product
+    // of tool names and capabilities.
+    tools::ToolSubsystem tool_subsystem({}, [](const tools::ToolAuditRecord&) {
+        return common::Status::success();
+    });
+    assert(tool_subsystem.initialize(core::RuntimeConfig{}));
+    tools::ToolDefinition mismatched;
+    mismatched.name = "read_file";
+    mismatched.description = "Capability mismatch regression test.";
+    mismatched.capability = tools::ToolCapability::network;
+    mismatched.handler = [](const tools::ToolExecutionContext&, const tools::ToolArguments&) {
+        return common::Result<std::string>::success("should not run");
+    };
+    assert(tool_subsystem.register_tool(std::move(mismatched)));
+    auto mismatch_request = core::RequestContext::create(*session.value_if());
+    assert(mismatch_request);
+    auto cross_grant = tool_subsystem.invoke(
+        *mismatch_request.value_if(), "read_file", {}, *policy.value_if());
+    assert(!cross_grant &&
+           cross_grant.error_if()->code == common::ErrorCode::permission_denied);
+    assert(tool_subsystem.shutdown());
 
     security::SecurityAction action{
         "read_file", "read", "/workspace/report.txt", "Read one report file"};
@@ -91,6 +115,8 @@ int main() {
 
     assert(security_system.revoke_tool(
         principal, "read_file", tools::ToolCapability::filesystem_read));
+    assert(security_system.revoke_tool(
+        principal, "send_notice", tools::ToolCapability::network));
     assert(security_system.grant_count() == 0);
     auto revoked = security_system.authorize_tool(
         principal, "read_file", tools::ToolCapability::filesystem_read);
