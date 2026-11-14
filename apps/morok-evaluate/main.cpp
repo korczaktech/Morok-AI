@@ -17,6 +17,7 @@ namespace fs = std::filesystem;
 namespace {
 constexpr std::uint64_t kMaxCorpusBytes = 1ULL << 30U;
 constexpr std::uint64_t kMaxFileBytes = 64ULL << 20U;
+constexpr std::size_t kMaxDocuments = 100000;
 std::string read_document(const fs::path& path, std::uint64_t& total) {
     const auto size = fs::file_size(path);
     if (size > kMaxFileBytes || total + size > kMaxCorpusBytes)
@@ -42,8 +43,11 @@ int main(int argc, char** argv) {
         for (const auto& entry : fs::recursive_directory_iterator(
                  root, fs::directory_options::skip_permission_denied)) {
             const auto status = entry.symlink_status();
-            if (fs::is_regular_file(status) && entry.path().extension() == ".txt")
+            if (fs::is_regular_file(status) && entry.path().extension() == ".txt") {
+                if (documents.size() >= kMaxDocuments)
+                    throw std::runtime_error("corpus exceeds 100000 documents");
                 documents.push_back(entry.path());
+            }
         }
         std::sort(documents.begin(), documents.end());
         if (documents.empty()) throw std::runtime_error("corpus contains no .txt documents");
