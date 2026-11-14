@@ -254,14 +254,15 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
         "CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN "
         "DELETE FROM memories_fts WHERE rowid=old.rowid AND old.sensitivity<2;"
         "INSERT INTO memories_fts(rowid,title,body) SELECT new.rowid,new.title,new.body WHERE new.sensitivity<2; END;";
-    if (exec(db, fts_schema, "fts5_setup")) {
-        impl_->fts = true;
-        (void)exec(db,
+    const auto fts_result = exec(db, fts_schema, "fts5_setup");
+    if (fts_result) {
+        const auto backfill = exec(db,
             "INSERT INTO memories_fts(rowid,title,body) "
             "SELECT m.rowid,m.title,m.body FROM memories m "
             "WHERE m.sensitivity<2 AND m.rowid NOT IN (SELECT rowid FROM memories_fts);",
             "fts5_backfill");
-     } else {
+        impl_->fts = static_cast<bool>(backfill);
+    } else {
         impl_->fts = false;
     }
     return Status::success();
