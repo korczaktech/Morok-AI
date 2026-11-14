@@ -22,6 +22,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Restore state from the latest successful cycle
+        id: restore
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -42,21 +43,34 @@ jobs:
             echo "No previous successful cycle; starting from deterministic initialization."
           fi
 
+          if [[ -f artifacts/continual-g1/goal-reached.txt ]] || \
+             grep -q '"status": "budget_exhausted"' artifacts/continual-g1/status.json 2>/dev/null; then
+            echo "stop=true" >> "$GITHUB_OUTPUT"
+            echo "A terminal state was restored; scheduled cycles will do no more training."
+          else
+            echo "stop=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install build tools
+        if: steps.restore.outputs.stop != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build libsqlite3-dev
 
       - name: Configure Release
+        if: steps.restore.outputs.stop != 'true'
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
 
       - name: Build
+        if: steps.restore.outputs.stop != 'true'
         run: cmake --build build --parallel 2
 
       - name: Run tests
+        if: steps.restore.outputs.stop != 'true'
         run: ctest --test-dir build --output-on-failure
 
       - name: Train, evaluate target and save resumable state
+        if: steps.restore.outputs.stop != 'true'
         env:
           MOROK_EPOCHS_PER_CYCLE: "10"
           MOROK_MAX_TOTAL_EPOCHS: "500"
@@ -65,7 +79,7 @@ jobs:
         run: bash scripts/run-g1-continual-cycle.sh artifacts/continual-g1
 
       - name: Publish resumable state and evaluation
-        if: always()
+        if: always() && steps.restore.outputs.stop != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: morok-g1-continual-state
