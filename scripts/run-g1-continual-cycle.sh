@@ -20,14 +20,8 @@ summary="$state_dir/cycle-summary.jsonl"
 generated="$state_dir/generated.txt"
 epoch_file="$state_dir/completed-epochs.txt"
 status_file="$state_dir/status.json"
-goal_file="$state_dir/goal-reached.txt"
 
 mkdir -p "$state_dir"
-
-if [[ -f "$goal_file" ]]; then
-  echo "The target response was already reached; no additional training is needed."
-  exit 0
-fi
 
 completed_epochs=0
 if [[ -f "$epoch_file" ]]; then
@@ -43,7 +37,7 @@ epochs_per_cycle="${MOROK_EPOCHS_PER_CYCLE:-10}"
 if (( completed_epochs >= max_total_epochs )); then
   printf '{"status":"budget_exhausted","completed_epochs":%d,"max_total_epochs":%d}\n' \
     "$completed_epochs" "$max_total_epochs" > "$status_file"
-  echo "Training budget exhausted without reaching the target."
+  echo "Training budget exhausted; no semantic success was established."
   exit 0
 fi
 
@@ -74,6 +68,9 @@ printf '%s\n' "$target_epochs" > "$epoch_file"
 "$generate_bin" "$best_model" "$corpus/prompt.txt" "$generated" 128
 test -s "$generated"
 
+# This is a diagnostic only. A lexical match is not semantic understanding
+# and must never stop training or mark the model as having learned the task.
+lexical_match=false
 if python3 - "$generated" <<'PY'
 from pathlib import Path
 import re
@@ -81,24 +78,22 @@ import sys
 
 text = Path(sys.argv[1]).read_bytes().decode("utf-8", errors="strict")
 normalized = " ".join(text.casefold().split())
-# Narrow lexical gate only; this does not establish semantic correctness.
 positive = re.search(r"(?<![a-zà-ÿ])azul(?![a-zà-ÿ])", normalized) is not None
 negated = re.search(r"\b(?:nao|não)\b.{0,24}\bazul\b", normalized) is not None
 raise SystemExit(0 if positive and not negated else 1)
 PY
 then
-  printf 'accepted_at_epoch=%s\ncriterion=generated continuation contains the expected token "azul"\n' \
-    "$target_epochs" > "$goal_file"
-  state="goal_reached"
+  lexical_match=true
+fi
+
+if (( target_epochs >= max_total_epochs )); then
+  state="budget_exhausted"
 else
   state="training"
 fi
 
-if [[ "$state" != "goal_reached" ]] && (( target_epochs >= max_total_epochs )); then
-  state="budget_exhausted"
-fi
-
 export MOROK_STATE="$state" MOROK_EPOCHS="$target_epochs" MOROK_MAX_EPOCHS="$max_total_epochs"
+export MOROK_LEXICAL_MATCH="$lexical_match"
 python3 - "$state_dir" <<'PY'
 import hashlib
 import json
@@ -116,27 +111,30 @@ status = {
     "status": os.environ["MOROK_STATE"],
     "completed_epochs": int(os.environ["MOROK_EPOCHS"]),
     "maximum_epochs": int(os.environ["MOROK_MAX_EPOCHS"]),
-    "trainable_parameters": 1000,
+    "trainable_parameters": 971,
+    "architecture_parameters": 1000,
     "corpus_documents": len(files),
     "corpus_sha256": digest.hexdigest(),
+    "diagnostics": {
+        "contains_expected_lexical_answer": os.environ["MOROK_LEXICAL_MATCH"] == "true",
+        "interpretation": "lexical smoke check only; not semantic understanding"
+    },
     "acceptance": {
-        "criterion": "generated continuation contains the token azul and no nearby negation",
-        "scope": "lexical smoke check only; not a semantic evaluation"
+        "status": "not_established",
+        "reason": "No held-out semantic evaluation is implemented; lexical matching cannot establish understanding."
     },
     "limitations": [
         "The curated fixture contains a small set of authored Portuguese paraphrases.",
-        "A lexical match does not prove that the model understands the question.",
-        "The workflow cannot enumerate all possible synonyms or paraphrases.",
-        "The model may memorize the fixed prompt and corpus."
+        "The 29 segmenter parameters are in the architecture inventory but are not updated by B0 training.",
+        "The model may memorize the fixed prompt and corpus.",
+        "A valid UTF-8 continuation and a lexical match do not prove semantic correctness."
     ]
 }
 (out / "status.json").write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n")
 PY
 
-if [[ "$state" == "goal_reached" ]]; then
-  echo "The narrow lexical acceptance criterion was reached."
-elif [[ "$state" == "budget_exhausted" ]]; then
-  echo "Maximum epoch budget reached without satisfying the target."
+if [[ "$state" == "budget_exhausted" ]]; then
+  echo "Maximum epoch budget reached. Semantic success was not established."
 else
   echo "Cycle completed; the next scheduled run will resume from the saved checkpoint."
 fi
