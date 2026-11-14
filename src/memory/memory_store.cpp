@@ -78,6 +78,18 @@ void bind_text(sqlite3_stmt* stmt, int index, std::string_view value) {
     return query;
 }
 
+[[nodiscard]] std::string literal_like_pattern(std::string_view input) {
+    std::string pattern;
+    pattern.reserve(input.size() + 2U);
+    pattern.push_back('%');
+    for (const char ch : input) {
+        if (ch == '%' || ch == '_' || ch == '\\') pattern.push_back('\\');
+        pattern.push_back(ch);
+    }
+    pattern.push_back('%');
+    return pattern;
+}
+
 [[nodiscard]] Status exec(sqlite3* db, const char* sql, std::string stage) {
     char* message = nullptr;
     if (sqlite3_exec(db, sql, nullptr, nullptr, &message) == SQLITE_OK)
@@ -216,7 +228,7 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
         " request_id TEXT, actor TEXT NOT NULL, action TEXT NOT NULL, occurred_at INTEGER NOT NULL,"
         " outcome TEXT NOT NULL);"
         "CREATE INDEX IF NOT EXISTS idx_memory_audit_session ON memory_audit(session_id,occurred_at);"
-        "INSERT OR IGNORE INTO schema_migrations(version,applied_at) VALUES(1,unixepoch());"
+        "INSERT OR IGNORE INTO schema_migrations(version,applied_at) VALUES(1,CAST(strftime('%s','now') AS INTEGER));"
         "COMMIT;";
     const auto schema_result = exec(db, schema, "schema_migration");
     if (!schema_result) {
@@ -376,7 +388,7 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
             " AND (m.expires_at IS NULL OR m.expires_at>?)";
     } else {
         sql = std::string("SELECT ") + record_columns +
-            " FROM memories m WHERE m.session_id=? AND m.sensitivity<2 AND (m.title LIKE ? OR m.body LIKE ?)"
+            " FROM memories m WHERE m.session_id=? AND m.sensitivity<2 AND (m.title LIKE ? ESCAPE '\\' OR m.body LIKE ? ESCAPE '\\')"
             " AND (m.expires_at IS NULL OR m.expires_at>?)";
     }
     if (query.kind) sql += " AND m.kind=?";
@@ -395,7 +407,7 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
         bind_text(statement.get(), bind_index++, query.session_id.to_string());
     } else {
         bind_text(statement.get(), bind_index++, query.session_id.to_string());
-        const std::string pattern = "%" + std::string(query.text.view()) + "%";
+        const std::string pattern = literal_like_pattern(query.text.view());
         bind_text(statement.get(), bind_index++, pattern);
         bind_text(statement.get(), bind_index++, pattern);
     }
