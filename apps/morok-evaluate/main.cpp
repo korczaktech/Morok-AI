@@ -57,6 +57,9 @@ int main(int argc, char** argv) {
             if (!valid) throw std::runtime_error("invalid UTF-8 in " + path.string());
             if (raw.size() < 2) continue;
             morok::model::G1State state{};
+            morok::model::advance_g1_state(
+                checkpoint.parameters, state,
+                static_cast<std::uint8_t>(static_cast<unsigned char>(raw.front())));
             for (std::size_t i = 1; i < raw.size(); ++i) {
                 const auto score = morok::model::evaluate_g1_next_byte(
                     checkpoint.parameters, state,
@@ -65,7 +68,7 @@ int main(int argc, char** argv) {
                 ++targets;
                 morok::model::advance_g1_state(
                     checkpoint.parameters, state,
-                    static_cast<std::uint8_t>(static_cast<unsigned char>(raw[i - 1])));
+                    static_cast<std::uint8_t>(static_cast<unsigned char>(raw[i])));
             }
             ++evaluated_documents;
         }
