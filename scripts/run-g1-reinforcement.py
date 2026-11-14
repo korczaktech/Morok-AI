@@ -129,9 +129,15 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="morok-g1-reinforcement-") as temp_dir:
         temporary = Path(temp_dir)
 
-        # Seed the policy with three explicitly identified oracle demonstrations.
-        # These are a warm start, not model-generated RL episodes.
-        if int(database.get("oracle_demonstration_version", 0)) < 5:
+        # Warm-start all three tasks in round-robin batches to reduce
+        # catastrophic forgetting between the shared-policy question contexts.
+        if int(database.get("oracle_demonstration_version", 0)) < 6:
+            seed_paths = {}
+            seed_answers = {}
+            model_before = {}
+            path_lengths = {question["id"]: 0.0 for question in questions}
+            first_reports = {}
+            last_reports = {}
             for question in questions:
                 question_id = question["id"]
                 prompt_path = temporary / f"{question_id}.seed.prompt.txt"
@@ -139,35 +145,63 @@ def main() -> int:
                 prompt_path.write_text(question["prompt"], encoding="utf-8")
                 answer = SEED_ANSWERS[question_id]
                 answer_path.write_text(answer, encoding="utf-8")
+                seed_paths[question_id] = (prompt_path, answer_path)
+                seed_answers[question_id] = answer
+                model_before[question_id] = sha256(args.checkpoint)
+
+            # 100 rounds × 10 small updates per question; tasks are interleaved.
+            for batch in range(100):
+                for question in questions:
+                    question_id = question["id"]
+                    prompt_path, answer_path = seed_paths[question_id]
+                    update_output = run_checked([
+                        str(args.reinforcer), str(args.checkpoint),
+                        str(prompt_path), str(answer_path), "1",
+                        "0.0025", "10",
+                    ])
+                    report = json.loads(update_output)
+                    if batch == 0:
+                        first_reports[question_id] = report
+                    last_reports[question_id] = report
+                    path_lengths[question_id] += report["parameter_delta_l2"]
+
+            for question in questions:
+                question_id = question["id"]
+                answer = seed_answers[question_id]
                 episode_number = len(database["episodes"]) + 1
-                model_before = sha256(args.checkpoint)
-                update_output = run_checked([
-                    str(args.reinforcer), str(args.checkpoint),
-                    str(prompt_path), str(answer_path), "1",
-                    "0.0025", "1000",
-                ])
+                report = {
+                    "reward": 1,
+                    "target_bytes": len(answer.encode("utf-8")),
+                    "optimizer_steps": 1000,
+                    "optimizer_batches": 100,
+                    "parameter_path_length_l2": path_lengths[question_id],
+                    "gradient_norm_first": first_reports[question_id]["gradient_norm_first"],
+                    "gradient_norm_last": last_reports[question_id]["gradient_norm_last"],
+                    "trainable_parameters": 1000,
+                }
                 episode = {
                     "episode": episode_number,
-                    "episode_id": f"{run_id}:{run_attempt}:oracle:{question_id}:v5",
+                    "episode_id": f"{run_id}:{run_attempt}:oracle:{question_id}:v6",
                     "run_id": run_id,
                     "run_attempt": int(run_attempt),
                     "source": "oracle_demonstration",
-                    "demonstration_version": 5,
+                    "demonstration_version": 6,
                     "question_id": question_id,
                     "prompt": question["prompt"],
                     "answer": answer,
                     "verdict": "correct",
                     "reward": 1,
-                    "grading_reason": "known_target_demonstration_for_policy_warm_start",
+                    "grading_reason": "known_target_demonstration_for_interleaved_policy_warm_start",
                     "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-                    "model_sha256_before": model_before,
+                    "model_sha256_before": model_before[question_id],
                     "model_sha256_after": sha256(args.checkpoint),
                     "trainable_parameters": 1000,
                     "policy_update": {
                         "status": "applied",
                         "algorithm": "reward_weighted_bptt_score_function_surrogate",
                         "optimizer_steps": 1000,
-                        "report": json.loads(update_output),
+                        "optimizer_batches": 100,
+                        "report": report,
                     },
                 }
                 database["episodes"].append(episode)
@@ -177,7 +211,7 @@ def main() -> int:
                 database["totals"]["oracle_demonstrations"] += 1
                 atomic_write(args.database, database)
             database["oracle_demonstrations_applied"] = True
-            database["oracle_demonstration_version"] = 5
+            database["oracle_demonstration_version"] = 6
             atomic_write(args.database, database)
 
         for offset, question in enumerate(questions):
