@@ -190,6 +190,7 @@ def main() -> int:
                 "--repetition-window", "24",
                 "--eos-threshold", "0.75",
                 "--min-new-bytes", "2",
+                "--printable-only",
             ])
             answer = answer_path.read_text(encoding="utf-8")
             verdict, reward, reason = grade(question_id, answer)
