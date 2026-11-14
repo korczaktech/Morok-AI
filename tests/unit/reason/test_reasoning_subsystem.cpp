@@ -93,6 +93,42 @@ int main() {
     assert(std::get<bool>(result.value_if()->values.at("is_larger")));
     assert(std::get<std::string>(result.value_if()->values.at("joined")) == "morok ai");
 
+    // Plans are mutable value objects: execution must reject tampering before
+    // evaluating any step, rather than trusting create_plan() as a boundary.
+    auto invalid_operation_plan = *plan.value_if();
+    invalid_operation_plan.ordered_steps.front().operation =
+        static_cast<Operation>(999);
+    auto invalid_operation_result = reasoning.execute(request, invalid_operation_plan);
+    assert(!invalid_operation_result);
+    assert(invalid_operation_result.error_if()->code == ErrorCode::invalid_argument);
+
+    ReasoningTask chained_task;
+    chained_task.objective = "validar ordem topológica no executor";
+    chained_task.initial_values.emplace("seed", Value{2.0});
+    chained_task.steps.push_back(step("first", "first_value", Operation::add,
+                                      {"seed", "seed"}));
+    chained_task.steps.push_back(step("second", "second_value", Operation::multiply,
+                                      {"first_value", "seed"}));
+    auto chained_plan = reasoning.create_plan(request, chained_task);
+    assert(chained_plan);
+    auto reordered_plan = *chained_plan.value_if();
+    std::swap(reordered_plan.ordered_steps[0], reordered_plan.ordered_steps[1]);
+    auto reordered_result = reasoning.execute(request, reordered_plan);
+    assert(!reordered_result);
+    assert(reordered_result.error_if()->code == ErrorCode::invalid_argument);
+
+    auto missing_dependency_plan = *chained_plan.value_if();
+    missing_dependency_plan.ordered_steps.back().dependencies.clear();
+    auto missing_dependency_result = reasoning.execute(request, missing_dependency_plan);
+    assert(!missing_dependency_result);
+    assert(missing_dependency_result.error_if()->code == ErrorCode::invalid_argument);
+
+    auto malformed_signature_plan = *chained_plan.value_if();
+    malformed_signature_plan.ordered_steps.front().inputs.pop_back();
+    auto malformed_signature_result = reasoning.execute(request, malformed_signature_plan);
+    assert(!malformed_signature_result);
+    assert(malformed_signature_result.error_if()->code == ErrorCode::invalid_argument);
+
     ReasoningTask fallback_task;
     fallback_task.objective = "recuperar divisão inválida";
     fallback_task.initial_values.emplace("numerator", Value{8.0});
@@ -190,6 +226,32 @@ int main() {
     auto rejected_configuration = invalid_configuration.initialize(RuntimeConfig{});
     assert(!rejected_configuration);
     assert(rejected_configuration.error_if()->code == ErrorCode::resource_limit);
+
+    ReasoningSubsystem oversized_value_limit(
+        ReasoningConfig{32, 8, 4097, 512, 1});
+    auto rejected_value_limit = oversized_value_limit.initialize(RuntimeConfig{});
+    assert(!rejected_value_limit);
+    assert(rejected_value_limit.error_if()->code == ErrorCode::resource_limit);
+
+    ReasoningSubsystem oversized_objective_limit(
+        ReasoningConfig{32, 8, 4096, 513, 1});
+    auto rejected_objective_limit = oversized_objective_limit.initialize(RuntimeConfig{});
+    assert(!rejected_objective_limit);
+    assert(rejected_objective_limit.error_if()->code == ErrorCode::resource_limit);
+
+    ReasoningSubsystem compact_value_limit(
+        ReasoningConfig{32, 8, 8, 512, 1});
+    assert(compact_value_limit.initialize(RuntimeConfig{}));
+    ReasoningTask compact_task;
+    compact_task.objective = "valores escalares respeitam tamanho real";
+    compact_task.steps.push_back(step("number", "number", Operation::assign));
+    compact_task.steps.back().literal = Value{3.5};
+    auto compact_plan = compact_value_limit.create_plan(request, compact_task);
+    assert(compact_plan);
+    auto compact_result = compact_value_limit.execute(request, *compact_plan.value_if());
+    assert(compact_result);
+    assert(std::get<double>(compact_result.value_if()->values.at("number")) == 3.5);
+    assert(compact_value_limit.shutdown());
 
     ReasoningTask cycle_task;
     cycle_task.objective = "detectar ciclo";
