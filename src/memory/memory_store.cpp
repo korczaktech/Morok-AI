@@ -71,9 +71,10 @@ void bind_text(sqlite3_stmt* stmt, int index, std::string_view value) {
         query += '"';
         token.clear();
     };
-    for (const unsigned char ch : input) {
+    for (const char raw : input) {
+        const auto ch = static_cast<unsigned char>(raw);
         if (std::isspace(ch) != 0) flush();
-        else token += static_cast<char>(ch);
+        else token += raw;
     }
     flush();
     return query;
@@ -378,9 +379,14 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
     if (query.cancellation.is_cancelled())
         return Result<std::vector<MemoryRecord>>::failure(Error::make(
             ErrorCode::cancelled, "memory search was cancelled", "memory", "search"));
-    if (query.text.empty() || query.session_id.is_nil() || query.text.size_bytes() > 4096U)
+    if (query.text.empty() || query.session_id.is_nil() ||
+        (query.kind && static_cast<int>(*query.kind) > 2))
         return Result<std::vector<MemoryRecord>>::failure(Error::make(
-            ErrorCode::invalid_argument, "search text and session are required",
+            ErrorCode::invalid_argument, "search text, session, or memory type is invalid",
+            "memory", "search"));
+    if (query.text.size_bytes() > 4096U)
+        return Result<std::vector<MemoryRecord>>::failure(Error::make(
+            ErrorCode::input_too_large, "search query exceeds 4 KiB",
             "memory", "search"));
     const auto limit = std::min(query.limit, impl_->limits.max_results);
     const auto context_limit = std::min(query.max_context_bytes,
