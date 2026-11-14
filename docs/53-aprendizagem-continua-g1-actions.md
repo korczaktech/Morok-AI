@@ -86,4 +86,4 @@ A API de geração agora aceita controles de decodificação:
 - `seed`: torna a amostragem reproduzível;
 - `repetition_penalty` e `repetition_window`: acrescentam custo a bytes ASCII imprimíveis repetidos na janela recente.
 
-Esses controles mudam a estratégia de decodificação, não os pesos nem a capacidade aprendida. Eles não criam EOS: a geração continua limitada por bytes. A penalidade de repetição é heurística e não deve ser interpretada como correção semântica. A interface CLI ainda usa o modo guloso padrão; a configuração avançada está disponível na API C++.
+Esses controles mudam a estratégia de decodificação, não os pesos nem a capacidade aprendida. Eles não criam EOS: a geração continua limitada por bytes. A penalidade de repetição é heurística e não deve ser interpretada como correção semântica. A CLI `morok_generate` também expõe essas opções: `--temperature`, `--top-k`, `--seed`, `--repetition-penalty` e `--repetition-window`. O argumento posicional opcional `max_bytes` continua compatível com a interface anterior.
