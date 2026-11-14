@@ -5,7 +5,10 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <map>
 #include <string>
+#include <utility>
+#include <vector>
 #include <variant>
 
 namespace {
@@ -226,7 +229,7 @@ int main() {
     invalid_postcondition.steps.push_back(step("set", "answer", Operation::assign));
     invalid_postcondition.steps.back().literal = Value{true};
     invalid_postcondition.steps.back().postconditions.push_back(
-        Condition{"answer", Comparator::truthy, Value{false}});
+        Condition{"answer", Comparator::equal, Value{false}});
     auto post_plan = reasoning.create_plan(request, invalid_postcondition);
     assert(post_plan);
     auto post_result = reasoning.execute(request, *post_plan.value_if());
