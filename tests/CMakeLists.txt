@@ -71,3 +71,8 @@ add_executable(morok_test_g1_evaluation unit/model/test_g1_evaluation.cpp)
 target_link_libraries(morok_test_g1_evaluation PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_g1_evaluation)
 add_test(NAME model.g1_evaluation COMMAND morok_test_g1_evaluation)
+
+add_executable(morok_test_runtime_contracts unit/core/test_runtime_contracts.cpp)
+target_link_libraries(morok_test_runtime_contracts PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_runtime_contracts)
+add_test(NAME core.runtime_contracts COMMAND morok_test_runtime_contracts)
