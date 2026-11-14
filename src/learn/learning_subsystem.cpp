@@ -77,7 +77,11 @@ common::Result<LearningRunResult> LearningSubsystem::run_experiment(
     const core::RequestContext& request,
     const model::G1TrainingConfig& experiment,
     const model::G1Parameters& initial_parameters) {
-    std::unique_lock lock(mutex_);
+    std::unique_lock lock(mutex_, std::try_to_lock);
+    if (!lock.owns_lock())
+        return failure<LearningRunResult>(error(
+            common::ErrorCode::resource_limit,
+            "another IA-LEARN operation holds the subsystem lock", "schedule", &request));
     if (!initialized_)
         return failure<LearningRunResult>(error(
             common::ErrorCode::model_not_loaded,
