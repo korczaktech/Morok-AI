@@ -216,6 +216,9 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 add_test(NAME reinforcement.feedback_database
     COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tests/scripts/test_g1_reinforcement.py)
 set_tests_properties(reinforcement.feedback_database PROPERTIES LABELS "reinforcement;python" TIMEOUT 30)
+add_test(NAME reinforcement.g2_feedback_database
+    COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tests/scripts/test_g2_reinforcement.py)
+set_tests_properties(reinforcement.g2_feedback_database PROPERTIES LABELS "reinforcement;g2;python" TIMEOUT 30)
 
 get_property(_morok_tests DIRECTORY PROPERTY TESTS)
 set_tests_properties(${_morok_tests} PROPERTIES TIMEOUT 120)
