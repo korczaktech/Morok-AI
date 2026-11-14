@@ -32,6 +32,24 @@ jobs:
           test -x build/install/bin/morok-train
           test -x build/install/bin/morok-evaluate
           test -x build/install/bin/morok-server
+      - name: Local server end-to-end smoke test
+        if: matrix.compiler == 'g++' && matrix.build_type == 'Release'
+        run: |
+          ./build/morok-train tests/fixtures/benchmark 1 42 --checkpoint build/server-smoke.morok
+          ./build/morok-server build/server-smoke.morok 18080 build/server-smoke.sqlite > build/server-smoke.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:18080/health > build/server-health.json; then
+              break
+            fi
+            sleep 1
+          done
+          grep -q '"status":"ok"' build/server-health.json
+          curl --silent --show-error --fail -X POST http://127.0.0.1:18080/v1/chat \
+            -H 'Content-Type: application/json' \
+            -d '{"prompt":"hello","max_new_bytes":4}' > build/server-response.json
+          grep -q '"response":' build/server-response.json
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Benchmark smoke test
