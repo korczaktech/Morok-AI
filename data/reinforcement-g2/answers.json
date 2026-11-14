@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "name": "Morok G2 Reinforcement Feedback Database",
+  "description": "Isolated feedback episodes and signed rewards for G2's two independent experts.",
+  "policy": {
+    "algorithm": "reward-weighted BPTT score-gradient surrogate applied independently to both G2 experts",
+    "positive_reward": 1,
+    "negative_reward": -1,
+    "trainable_parameters": 2000,
+    "experts": {
+      "expert_a": 1000,
+      "expert_b": 1000
+    },
+    "labels": [
+      "correct",
+      "incorrect"
+    ],
+    "note": "Controlled lexical grader; not a general semantic judge."
+  },
+  "questions": [
+    {
+      "id": "sky_is_blue",
+      "prompt": "O céu é azul?\\nResposta: ",
+      "expected_concepts": [
+        "sim",
+        "azul"
+      ],
+      "required_any": [
+        "sim",
+        "azul"
+      ]
+    },
+    {
+      "id": "mountains_high_or_low",
+      "prompt": "As montanhas são altas ou baixas?\\nResposta: ",
+      "expected_concepts": [
+        "altas"
+      ],
+      "required_any": [
+        "altas"
+      ]
+    },
+    {
+      "id": "grass_color",
+      "prompt": "Que cor é a grama?\\nResposta: ",
+      "expected_concepts": [
+        "verde"
+      ],
+      "required_any": [
+        "verde"
+      ]
+    }
+  ],
+  "totals": {
+    "episodes": 0,
+    "correct": 0,
+    "incorrect": 0,
+    "policy_updates": 0,
+    "skipped_updates": 0,
+    "oracle_demonstrations": 0
+  },
+  "episodes": []
+}
