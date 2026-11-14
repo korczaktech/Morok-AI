@@ -59,8 +59,9 @@ jobs:
             echo "No previous successful cycle; starting from deterministic initialization."
           fi
 
-          if [[ -f artifacts/continual-g1/goal-reached.txt ]] || \
-             grep -q '"status": "budget_exhausted"' artifacts/continual-g1/status.json 2>/dev/null; then
+          # Ignore legacy lexical goal markers: they did not prove semantic learning.
+          rm -f artifacts/continual-g1/goal-reached.txt
+          if grep -q '"status": "budget_exhausted"' artifacts/continual-g1/status.json 2>/dev/null; then
             echo "stop=true" >> "$GITHUB_OUTPUT"
             echo "A terminal state was restored; scheduled cycles will do no more training."
           else
