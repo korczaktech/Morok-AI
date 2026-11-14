@@ -4,6 +4,7 @@
 #include "morok/model/learn/g1_evaluation.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
