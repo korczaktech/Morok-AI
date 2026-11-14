@@ -19,6 +19,7 @@ struct G1EpochMetrics {
  std::uint64_t training_target_bytes{0}, optimizer_updates{0};
  double training_bpb{0}, validation_bpb{0}, last_gradient_norm{0};
  double mean_gradient_norm{0}, max_gradient_norm{0};
+ double wall_seconds{0};
 };
 struct G1TrainingReport {
  std::size_t discovered_documents{0}, unique_documents{0};
