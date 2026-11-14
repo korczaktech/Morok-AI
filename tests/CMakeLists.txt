@@ -27,6 +27,11 @@ target_link_libraries(morok_test_g2 PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_g2)
 add_test(NAME model.g2 COMMAND morok_test_g2)
 
+add_executable(morok_test_g2_reinforcement unit/model/test_g2_reinforcement.cpp)
+target_link_libraries(morok_test_g2_reinforcement PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_g2_reinforcement)
+add_test(NAME model.g2_reinforcement COMMAND morok_test_g2_reinforcement)
+
 add_executable(morok_test_g1_parameters
     unit/model/test_g1_parameters.cpp
 )
@@ -151,7 +156,7 @@ if(MOROK_BUILD_APPS)
     add_test(NAME apps.reinforce_usage COMMAND morok_reinforce)
     add_test(NAME apps.train_g2_usage COMMAND morok_train_g2)
     add_test(NAME apps.reinforce_g2_usage COMMAND morok_reinforce_g2)
-    add_test(NAME apps.generate_g2_usage COMMAND morok_generate_g2)
+        add_test(NAME apps.generate_g2_usage COMMAND morok_generate_g2)
     set_tests_properties(apps.convert_usage apps.evaluate_usage apps.train_usage apps.reinforce_usage apps.train_g2_usage apps.generate_g2_usage apps.reinforce_g2_usage
         PROPERTIES WILL_FAIL TRUE)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
