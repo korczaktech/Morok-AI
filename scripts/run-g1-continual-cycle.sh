@@ -36,9 +36,10 @@ for path in sorted(Path("tests/fixtures/continual").glob("doc-*.txt")):
 print(digest.hexdigest())
 PY
 )"
+current_corpus_documents="$(find "$corpus" -maxdepth 1 -type f -name 'doc-*.txt' | wc -l | tr -d ' ')"
 checkpoint_compatible=false
 if [[ -s "$checkpoint" ]]; then
-  if python3 - "$status_file" "$expected_arch" "$current_corpus_sha" <<'PY'
+  if python3 - "$status_file" "$expected_arch" "$current_corpus_sha" "$current_corpus_documents" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -49,6 +50,7 @@ except (OSError, ValueError):
 compatible = (
     status.get("architecture_id") == sys.argv[2]
     and status.get("corpus_sha256") == sys.argv[3]
+    and str(status.get("corpus_documents", 0)) == sys.argv[4]
 )
 raise SystemExit(0 if compatible else 1)
 PY
@@ -57,7 +59,7 @@ PY
   fi
 fi
 
-if [[ -s "$checkpoint" && "$checkpoint_compatible" != "true" ]]; then
+if [[ ( -s "$checkpoint" || -e "$epoch_file" || -e "$status_file" ) && "$checkpoint_compatible" != "true" ]]; then
   echo "Discarding incompatible checkpoint and its dependent training state."
   rm -f "$checkpoint" "$best_model" "$metrics" "$summary" "$generated" "$epoch_file" "$status_file"
 fi
@@ -104,7 +106,7 @@ test -s "$best_model"
 test -s "$metrics"
 printf '%s\n' "$target_epochs" > "$epoch_file"
 
-"$generate_bin" "$best_model" "$corpus/prompt.txt" "$generated" 128
+"$generate_bin" "$best_model" "tests/fixtures/continual-prompt.txt" "$generated" 128 --repetition-penalty 0.5 --repetition-window 64 --eos-threshold 0.75 --min-new-bytes 8
 test -s "$generated"
 
 qa_report="$state_dir/qa-evaluation.json"
