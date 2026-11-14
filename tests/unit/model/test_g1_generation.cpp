@@ -73,6 +73,37 @@ void test_inference_checkpoint_round_trip() {
     std::filesystem::remove(path, ignored);
 }
 
+void test_sampling_is_seeded_and_top_k_one_is_greedy() {
+    using namespace morok;
+    model::G1Parameters parameters{};
+    auto prompt_result = common::Utf8Text::from_utf8("Morok");
+    require(prompt_result.has_value(), "sampling prompt must be valid UTF-8");
+    const auto& prompt = *prompt_result.value_if();
+
+    model::G1GenerationConfig sampled;
+    sampled.max_new_bytes = 48;
+    sampled.temperature = 0.8;
+    sampled.seed = 1234;
+    const auto first = model::generate_g1(parameters, prompt, sampled);
+    const auto second = model::generate_g1(parameters, prompt, sampled);
+    require(first.continuation.string() == second.continuation.string(),
+            "sampling must be reproducible for the same seed");
+
+    sampled.seed = 9876;
+    const auto third = model::generate_g1(parameters, prompt, sampled);
+    require(first.continuation.string() != third.continuation.string(),
+            "different seeds should produce different samples for a uniform model");
+
+    model::G1GenerationConfig greedy;
+    greedy.max_new_bytes = 48;
+    const auto baseline = model::generate_g1(parameters, prompt, greedy);
+    sampled.seed = 1234;
+    sampled.top_k = 1;
+    const auto top_one = model::generate_g1(parameters, prompt, sampled);
+    require(top_one.continuation.string() == baseline.continuation.string(),
+            "top-k one must reduce sampling to greedy selection");
+}
+
 void test_invalid_limits_rejected() {
     using namespace morok;
     model::G1Parameters parameters{};
