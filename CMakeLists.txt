@@ -28,6 +28,7 @@ add_library(morok_core STATIC
     src/comm/communication_subsystem.cpp
     src/reason/reasoning_subsystem.cpp
     src/tools/tool_subsystem.cpp
+    src/security/security_subsystem.cpp
     src/learn/learning_subsystem.cpp
     src/model/parameters/g1_parameters.cpp
     src/model/g1_forward.cpp
