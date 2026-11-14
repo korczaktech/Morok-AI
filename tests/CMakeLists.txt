@@ -170,5 +170,26 @@ morok_enable_sanitizers(morok_test_runtime_rollback)
 add_test(NAME regression.runtime_rollback COMMAND morok_test_runtime_rollback)
 set_tests_properties(regression.runtime_rollback PROPERTIES LABELS "regression;core" TIMEOUT 30)
 
+# Stage 19: acceptance coverage across the G1 artifact flow and seven subsystems.
+add_executable(morok_acceptance_g1 acceptance/g1/test_g1_acceptance.cpp)
+target_link_libraries(morok_acceptance_g1 PRIVATE Morok::Core morok_build_options)
+target_compile_definitions(morok_acceptance_g1 PRIVATE
+    MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+morok_enable_sanitizers(morok_acceptance_g1)
+add_test(NAME acceptance.g1_training_checkpoint_generation
+    COMMAND morok_acceptance_g1)
+set_tests_properties(acceptance.g1_training_checkpoint_generation
+    PROPERTIES LABELS "acceptance;g1" TIMEOUT 180)
+
+add_executable(morok_acceptance_seven_subsystems
+    acceptance/end_to_end/test_seven_subsystems.cpp)
+target_link_libraries(morok_acceptance_seven_subsystems
+    PRIVATE Morok::Core morok_build_options SQLite::SQLite3)
+morok_enable_sanitizers(morok_acceptance_seven_subsystems)
+add_test(NAME acceptance.seven_subsystems
+    COMMAND morok_acceptance_seven_subsystems)
+set_tests_properties(acceptance.seven_subsystems
+    PROPERTIES LABELS "acceptance;subsystems" TIMEOUT 120)
+
 get_property(_morok_tests DIRECTORY PROPERTY TESTS)
 set_tests_properties(${_morok_tests} PROPERTIES TIMEOUT 120)
