@@ -4,6 +4,7 @@
 #include "morok/core/session_registry.hpp"
 #include "morok/lang/language_subsystem.hpp"
 #include "morok/comm/session_manager.hpp"
+#include "morok/comm/formatter.hpp"
 #include "morok/model/parameters/g1_parameters.hpp"
 
 #include <cassert>
@@ -76,6 +77,13 @@ int main() {
     assert((*history.value_if())[1].tool_name == "fixture");
     assert((*history.value_if())[2].role == comm::MessageRole::user);
     assert((*history.value_if())[3].role == comm::MessageRole::assistant);
+    auto transcript = comm::MessageFormatter::format_transcript(*history.value_if());
+    assert(transcript);
+    assert(transcript.value_if()->view().find("Tool[fixture]:") != std::string_view::npos);
+    auto formatted_error = comm::MessageFormatter::format_error(common::Error::make(
+        common::ErrorCode::cancelled, "request cancelled", "test", "format"));
+    assert(formatted_error);
+    assert(formatted_error.value_if()->view().find("Erro [") == 0);
 
     auto second_conversation = communication.create_conversation();
     assert(second_conversation);
