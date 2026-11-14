@@ -25,7 +25,7 @@ IDs de mensagem e conversa são tipos distintos (MessageId e ConversationId), ge
 6. A resposta assistant recebe MessageId e RequestId próprios, é entregue pelos eventos e registrada no histórico.
 7. Encerrar a conversa fecha a sessão IA-LANG/IA-CORE. O encerramento do Runtime fecha conversas antes de encerrar IA-LANG, respeitando a ordem inversa das dependências.
 
-A G1 não possui token EOS. O tamanho de geração continua limitado pelo contrato IA-LANG/G1. IA-COMM não altera a saída do modelo nem promete coerência linguística.
+A cabeça EOS aprendida pode encerrar a geração antes do limite de bytes; IA-COMM respeita esse término e mantém o limite rígido de segurança. IA-COMM não altera a saída do modelo nem promete coerência linguística.
 
 ## Streaming
 
