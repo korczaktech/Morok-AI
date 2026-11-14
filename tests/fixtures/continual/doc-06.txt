@@ -1,5 +1,2 @@
-Pergunta: Que cor é o céu?
-Resposta: Em condições comuns durante o dia, o céu parece azul.
-
-Pergunta: Que cor é o céu?
-Resposta: Azul é a cor que geralmente associamos ao céu diurno.
+Pergunta: Qual cor normalmente associamos ao céu?
+Resposta: Normalmente, vemos o céu azul.
