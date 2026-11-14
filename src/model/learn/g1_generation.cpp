@@ -112,6 +112,9 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
         candidates.reserve(256);
 
         for (unsigned int candidate = 0; candidate <= 255; ++candidate) {
+            if (config.printable_only && utf8.remaining == 0 &&
+                (candidate < 0x20U || candidate == 0x7FU))
+                continue;
             Utf8State candidate_state = utf8;
             if (!advance_utf8(candidate_state, static_cast<std::uint8_t>(candidate)))
                 continue;
