@@ -104,6 +104,22 @@ void test_sampling_is_seeded_and_top_k_one_is_greedy() {
             "top-k one must reduce sampling to greedy selection");
 }
 
+void test_learned_eos_stops_generation() {
+    using namespace morok;
+    model::G1Parameters parameters{};
+    parameters.theta_len.fill(20.0F);
+    auto prompt_result = common::Utf8Text::from_utf8("Pergunta: teste");
+    require(prompt_result.has_value(), "EOS prompt must be valid UTF-8");
+    model::G1GenerationConfig config;
+    config.max_new_bytes = 32;
+    config.min_new_bytes = 1;
+    config.eos_threshold = 0.5;
+    const auto report = model::generate_g1(parameters, *prompt_result.value_if(), config);
+    require(report.stopped_by_eos, "high learned stop bias must terminate generation");
+    require(!report.reached_byte_limit && report.generated_bytes == 1,
+            "EOS termination must be distinct from reaching the hard byte cap");
+}
+
 void test_invalid_limits_rejected() {
     using namespace morok;
     model::G1Parameters parameters{};
@@ -127,6 +143,7 @@ int main() {
         test_multibyte_utf8_is_never_truncated();
         test_inference_checkpoint_round_trip();
         test_sampling_is_seeded_and_top_k_one_is_greedy();
+        test_learned_eos_stops_generation();
         test_invalid_limits_rejected();
     } catch (const std::exception& error) {
         std::cerr << "G1 generation test failed: " << error.what() << '\n';
