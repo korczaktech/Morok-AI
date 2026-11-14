@@ -16,10 +16,10 @@ inline constexpr std::size_t kG1CombinedStateDimension = 22;
 inline constexpr std::size_t kG1FastParameterCount = 506;
 inline constexpr std::size_t kG1SlowParameterCount = 253;
 inline constexpr std::size_t kG1PredictionParameterCount = 212;
-inline constexpr std::size_t kG1SegmenterParameterCount = 29;
+inline constexpr std::size_t kG1EosParameterCount = 29;
 inline constexpr std::size_t kG1ParameterCount =
     kG1FastParameterCount + kG1SlowParameterCount +
-    kG1PredictionParameterCount + kG1SegmenterParameterCount;
+    kG1PredictionParameterCount + kG1EosParameterCount;
 
 static_assert(kG1ParameterCount == 1000);
 
