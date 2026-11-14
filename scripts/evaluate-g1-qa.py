@@ -55,6 +55,7 @@ def main() -> int:
             prompt.write_text(case["prompt"], encoding="utf-8")
             process = subprocess.run(
                 [str(generator), str(checkpoint), str(prompt), str(output), "160",
+                 "--repetition-penalty", "0.5", "--repetition-window", "64",
                  "--eos-threshold", "0.75", "--min-new-bytes", "1"],
                 check=False, capture_output=True, text=True, encoding="utf-8"
             )
