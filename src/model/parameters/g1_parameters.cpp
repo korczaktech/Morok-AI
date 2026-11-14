@@ -123,7 +123,7 @@ void initialize_g1_parameters(G1Parameters& parameters, std::uint64_t seed) {
     parameters.c.fill(0.0F);
     parameters.A.fill(0.0F);
     parameters.v.fill(0.0F);
-    parameters.theta_len.fill(0.0F);
+    parameters.theta_len.fill(-4.0F);
 }
 
 } // namespace morok::model
