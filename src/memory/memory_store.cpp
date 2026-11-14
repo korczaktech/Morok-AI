@@ -178,8 +178,6 @@ struct MemoryStore::Impl {
 
 MemoryStore::MemoryStore() : impl_(std::make_unique<Impl>()) {}
 MemoryStore::~MemoryStore() { (void)close(); }
-MemoryStore::MemoryStore(MemoryStore&&) noexcept = default;
-MemoryStore& MemoryStore::operator=(MemoryStore&&) noexcept = default;
 
 Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) {
     if (!impl_) impl_ = std::make_unique<Impl>();
