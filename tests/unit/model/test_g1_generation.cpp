@@ -126,6 +126,7 @@ int main() {
         test_prompt_is_context_and_generation_is_deterministic();
         test_multibyte_utf8_is_never_truncated();
         test_inference_checkpoint_round_trip();
+        test_sampling_is_seeded_and_top_k_one_is_greedy();
         test_invalid_limits_rejected();
     } catch (const std::exception& error) {
         std::cerr << "G1 generation test failed: " << error.what() << '\n';
