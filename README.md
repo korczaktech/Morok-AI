@@ -26,6 +26,8 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 
 ## Documentação
 
+**Nota sobre a numeração:** a sequência operacional da G1 (por exemplo, Etapa 14 — IA-MEM em `docs/39-etapa-14-ia-mem.md`) é distinta do roteiro de 20 etapas do projeto. Neste último, a Etapa 14 é Aplicações executáveis (`docs/47-etapa-14-aplicacoes-executaveis.md`).
+
 1. [Visão geral e princípios](docs/01-visao-geral.md)
 2. [Arquitetura geral](docs/02-arquitetura-geral.md)
 3. [Sete subsistemas](docs/03-subsistemas.md)
