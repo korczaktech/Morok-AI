@@ -43,6 +43,11 @@ target_link_libraries(morok_test_g1_bptt PRIVATE Morok::Core morok_build_options
 morok_enable_sanitizers(morok_test_g1_bptt)
 add_test(NAME model.g1_bptt COMMAND morok_test_g1_bptt)
 
+add_executable(morok_test_g1_reinforcement unit/model/test_g1_reinforcement.cpp)
+target_link_libraries(morok_test_g1_reinforcement PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_g1_reinforcement)
+add_test(NAME model.g1_reinforcement COMMAND morok_test_g1_reinforcement)
+
 add_executable(morok_test_g1_optimizer
     unit/model/test_g1_optimizer.cpp
 )
