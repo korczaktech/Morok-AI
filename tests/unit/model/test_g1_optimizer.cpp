@@ -37,7 +37,7 @@ void test_weight_decay_mask() {
     using namespace morok::model;
     for (std::size_t i = 0; i < 1000; ++i) {
         const bool expected = i < 484 || (i >= 506 && i < 748) ||
-            (i >= 759 && i < 935) || (i >= 943 && i < 971);
+            (i >= 759 && i < 935) || (i >= 943 && i < 971) || (i >= 971 && i < 993);
         require(g1_parameter_uses_weight_decay(i) == expected,
                 "weight-decay mask does not match canonical parameter groups");
     }
@@ -63,8 +63,8 @@ void test_adamw_update_and_bias_exclusion() {
             "AdamW must decouple weight decay for matrices");
     require(parameters.b_a[0] == 2.0F && parameters.theta_len[0] == 2.0F,
             "AdamW must not decay biases");
-    require(parameters.v[0] == 2.0F,
-            "the segmenter must remain outside the B0 optimizer update");
+    require(parameters.v[0] < 2.0F && parameters.v[0] > 1.999F,
+            "EOS head weights must receive weight decay");
     const auto& adam = std::get<G1AdamWState>(state);
     require(adam.step == 1 && adam.first_moment[0] == 0.0F &&
             adam.second_moment[0] == 0.0F,
@@ -140,7 +140,7 @@ void test_optimizer_state_isolation_and_mismatch() {
     require(rejected, "SGD must reject AdamW state");
 }
 
-void test_optimizer_rejects_segmenter_gradients() {
+void test_optimizer_updates_all_1000_parameters() {
     using namespace morok::model;
     G1Parameters parameters{};
     G1Gradients gradients{};
@@ -148,12 +148,10 @@ void test_optimizer_rejects_segmenter_gradients() {
     auto config = G1OptimizerConfig::adamw();
     auto state = make_g1_optimizer_state(config.kind);
     const auto before = parameters.flatten();
-    bool rejected = false;
-    try { (void)apply_g1_optimizer_step(parameters, gradients, config, state); }
-    catch (const std::invalid_argument&) { rejected = true; }
-    require(rejected && parameters.flatten() == before &&
-            std::get<G1AdamWState>(state).step == 0,
-            "B0 optimizer must reject gradients for the separate segmenter");
+    const auto result = apply_g1_optimizer_step(parameters, gradients, config, state);
+    require(result.step == 1 && parameters.flatten() != before &&
+            parameters.theta_len[6] < before[999],
+            "the optimizer must update the final EOS bias and all 1000 slots");
 }
 
 void test_invalid_gradient_is_transactional() {
@@ -211,7 +209,7 @@ int main() {
         test_adamw_bias_correction_and_clipping();
         test_sgd_momentum_and_decay_policy();
         test_optimizer_state_isolation_and_mismatch();
-        test_optimizer_rejects_segmenter_gradients();
+        test_optimizer_updates_all_1000_parameters();
         test_invalid_gradient_is_transactional();
         test_invalid_config_and_overflow_are_transactional();
         std::cout << "G1 optimizer tests passed\n";
