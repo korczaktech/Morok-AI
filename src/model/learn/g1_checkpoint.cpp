@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <type_traits>
+#include <vector>
 namespace morok::model { namespace {
 using Bytes=std::vector<std::byte>;
 constexpr std::array<char,8> magic{'M','O','R','O','K','C','K','P'};
@@ -22,7 +23,37 @@ float getf(std::span<const std::byte>b,std::size_t&p){float x=std::bit_cast<floa
 void append(Bytes&b,std::span<const std::byte>x){b.insert(b.end(),x.begin(),x.end());}
 bool valid_utf8(const std::string&s){unsigned left=0;std::uint32_t cp=0,min=0;for(unsigned char b:s){if(!left){if(b<=0x7f)continue;if(b>=0xc2&&b<=0xdf){left=1;cp=b&31;min=0x80;continue;}if(b>=0xe0&&b<=0xef){left=2;cp=b&15;min=0x800;continue;}if(b>=0xf0&&b<=0xf4){left=3;cp=b&7;min=0x10000;continue;}return false;}if((b&0xc0)!=0x80)return false;cp=(cp<<6)|(b&63);if(--left==0&&(cp<min||(cp>=0xd800&&cp<=0xdfff)||cp>0x10ffff))return false;}return left==0;}
 void sync_path(const std::filesystem::path&p,bool directory){const int fd=::open(p.c_str(),directory?O_RDONLY|O_DIRECTORY:O_WRONLY);if(fd<0)throw std::runtime_error("open for fsync failed: "+std::string(std::strerror(errno)));const int rc=::fsync(fd);const int saved=errno;::close(fd);if(rc!=0)throw std::runtime_error("fsync failed: "+std::string(std::strerror(saved)));}
-void write_all(const std::filesystem::path&p,std::span<const std::byte>b){auto tmp=p;tmp+=".tmp";{std::ofstream f(tmp,std::ios::binary|std::ios::trunc);if(!f)throw std::runtime_error("não foi possível criar checkpoint temporário");f.write(reinterpret_cast<const char*>(b.data()),static_cast<std::streamsize>(b.size()));f.flush();if(!f)throw std::runtime_error("falha ao gravar checkpoint");}try{sync_path(tmp,false);std::error_code ec;std::filesystem::rename(tmp,p,ec);if(ec)throw std::runtime_error("falha no rename atômico do checkpoint: "+ec.message());auto parent=p.parent_path();if(parent.empty())parent=".";sync_path(parent,true);}catch(...){std::error_code ignored;std::filesystem::remove(tmp,ignored);throw;}}
+void write_all(const std::filesystem::path&p,std::span<const std::byte>b){
+ auto temporary=p.string()+".tmp.XXXXXX";
+ std::vector<char> name(temporary.begin(),temporary.end());
+ name.push_back('\0');
+ int fd=::mkstemp(name.data());
+ if(fd<0)throw std::runtime_error("não foi possível criar checkpoint temporário");
+ try{
+  if(::fcntl(fd,F_SETFD,FD_CLOEXEC)<0)throw std::runtime_error("não foi possível proteger descritor temporário");
+  std::size_t offset=0;
+  while(offset<b.size()){
+   const auto written=::write(fd,b.data()+offset,b.size()-offset);
+   if(written<0&&errno==EINTR)continue;
+   if(written<=0)throw std::runtime_error("falha ao gravar checkpoint temporário");
+   offset+=static_cast<std::size_t>(written);
+  }
+  if(::fsync(fd)!=0)throw std::runtime_error("fsync do checkpoint temporário falhou");
+  const int close_result=::close(fd);
+  fd=-1;
+  if(close_result!=0)throw std::runtime_error("fechamento do checkpoint temporário falhou");
+  std::error_code ec;
+  std::filesystem::rename(std::filesystem::path(name.data()),p,ec);
+  if(ec)throw std::runtime_error("falha no rename atômico do checkpoint: "+ec.message());
+  auto parent=p.parent_path();
+  if(parent.empty())parent=".";
+  sync_path(parent,true);
+ }catch(...){
+  if(fd>=0)::close(fd);
+  ::unlink(name.data());
+  throw;
+ }
+}
 }
 std::uint32_t g1_crc32(std::span<const std::byte>d)noexcept{std::uint32_t c=0xffffffffU;for(auto v:d){c^=std::to_integer<std::uint8_t>(v);for(int i=0;i<8;++i)c=(c>>1U)^(0xedb88320U&(0U-(c&1U)));}return c^0xffffffffU;}
 void save_g1_checkpoint(const std::filesystem::path&path,const G1Checkpoint&c){
