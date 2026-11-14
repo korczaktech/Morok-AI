@@ -110,11 +110,16 @@ morok_enable_sanitizers(morok_complete)
 add_executable(morok_generate apps/generate_g1.cpp)
 target_link_libraries(morok_generate PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_generate)
+
+add_executable(morok_reinforce apps/reinforce_g1.cpp)
+target_link_libraries(morok_reinforce PRIVATE Morok::Core morok_build_options)
+set_target_properties(morok_reinforce PROPERTIES OUTPUT_NAME "morok-reinforce")
+morok_enable_sanitizers(morok_reinforce)
 endif()
 
 if(MOROK_BUILD_APPS)
     install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
-        morok_train morok_benchmark morok_generate morok_complete
+        morok_train morok_benchmark morok_generate morok_reinforce morok_complete
         RUNTIME DESTINATION bin)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
