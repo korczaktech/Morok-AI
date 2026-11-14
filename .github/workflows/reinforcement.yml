@@ -86,8 +86,8 @@ jobs:
             --generator build/morok_generate \
             --reinforcer build/morok-reinforce \
             --bootstrap-epochs 8 \
-            --learning-rate 0.0001 \\
-            --attempts "${{ github.event_name == 'workflow_dispatch' && inputs.attempts || 3 }}" \\
+            --learning-rate 0.0001 \
+            --attempts "${{ github.event_name == 'workflow_dispatch' && inputs.attempts || 3 }}" \
             --results-file artifacts/reinforcement/attempt-results.txt
 
       - name: Commit answer and reward history to main
