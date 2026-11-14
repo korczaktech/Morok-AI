@@ -1,6 +1,16 @@
 name: reinforcement
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/reinforcement.yml"
+      - "CMakeLists.txt"
+      - "tests/CMakeLists.txt"
+      - "tests/scripts/test_g1_reinforcement.py"
+      - "apps/reinforce_g1.cpp"
+      - "scripts/run-g1-reinforcement.py"
+      - "docs/54-aprendizado-por-reforco-g1.md"
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
