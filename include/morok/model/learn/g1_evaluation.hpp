@@ -19,13 +19,13 @@ struct G1DistributionStats {
 
 struct G1ParameterEvaluation {
     std::size_t architecture_parameter_count{kG1ParameterCount};
-    std::size_t b0_updated_parameter_count{kG1ParameterCount - kG1SegmenterParameterCount};
+    std::size_t b0_updated_parameter_count{kG1ParameterCount};
     bool all_finite{true};
     G1DistributionStats all{};
     G1DistributionStats fast{};
     G1DistributionStats slow{};
     G1DistributionStats prediction{};
-    G1DistributionStats segmenter{};
+    G1DistributionStats eos{};
 };
 
 struct G1LossMetrics {
