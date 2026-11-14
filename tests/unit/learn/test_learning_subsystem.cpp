@@ -54,7 +54,7 @@ int main() {
     assert(interrupted.error_if()->code == common::ErrorCode::cancelled);
     assert(initial.flatten() == original);
 
-    CancellationSource cancelled;
+    core::CancellationSource cancelled;
     assert(cancelled.cancel());
     auto cancelled_request_result = core::RequestContext::create(*session.value_if(), cancelled.token());
     assert(cancelled_request_result);
