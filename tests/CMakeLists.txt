@@ -89,3 +89,10 @@ add_executable(morok_test_language_subsystem unit/lang/test_language_subsystem.c
 target_link_libraries(morok_test_language_subsystem PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_test_language_subsystem)
 add_test(NAME lang.language_subsystem COMMAND morok_test_language_subsystem)
+
+add_executable(morok_test_communication_subsystem
+    unit/comm/test_communication_subsystem.cpp
+)
+target_link_libraries(morok_test_communication_subsystem PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_communication_subsystem)
+add_test(NAME comm.communication_subsystem COMMAND morok_test_communication_subsystem)
