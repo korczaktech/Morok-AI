@@ -173,6 +173,9 @@ common::Status CommunicationSubsystem::append_control_message(
         return failure(common::ErrorCode::input_too_large,
                        "control message metadata or content exceeds its limit",
                        "message.append");
+    if (request.is_cancelled())
+        return failure(common::ErrorCode::cancelled,
+                       "request was cancelled", "message.append");
     std::lock_guard lock(mutex_);
     const auto found = conversations_.find(conversation_id.to_string());
     if (!initialized_ || found == conversations_.end() ||
@@ -184,7 +187,13 @@ common::Status CommunicationSubsystem::append_control_message(
     auto message = make_message(found->second, request, role, text.string());
     if (!message) return common::Status::failure(*message.error_if());
     message.value_if()->tool_name = std::move(tool_name);
-    return append_locked(found->second, std::move(*message.value_if()));
+    Conversation staged = found->second;
+    const auto capacity = append_locked(staged, std::move(*message.value_if()));
+    if (!capacity) return capacity;
+    const auto observed = language_.observe(request, text);
+    if (!observed) return observed;
+    found->second = std::move(staged);
+    return common::Status::success();
 }
 
 common::Status CommunicationSubsystem::close_conversation(
