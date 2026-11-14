@@ -8,7 +8,7 @@ O workflow não pretende enumerar todos os sinônimos ou paráfrases possíveis.
 
 ## Agendamento e continuidade
 
-O workflow `.github/workflows/g1-continual-learning.yml`:
+O workflow `.github/workflows/training.yml`:
 
 - executa a cada 15 minutos por `schedule`;
 - também aceita execução manual por `workflow_dispatch`;
