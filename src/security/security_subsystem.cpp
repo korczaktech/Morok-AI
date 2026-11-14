@@ -37,12 +37,7 @@ bool valid_tool_capability(tools::ToolCapability capability) noexcept {
 } // namespace
 
 TrustLabel classify_content(ContentOrigin origin, std::string source_id) {
-    return TrustLabel{origin, std::move(source_id),
-                      origin != ContentOrigin::trusted_configuration};
-}
-
-bool may_supply_security_policy(const TrustLabel& label) noexcept {
-    return label.origin == ContentOrigin::trusted_configuration && !label.untrusted;
+    return TrustLabel(origin, std::move(source_id));
 }
 
 SecuritySubsystem::SecuritySubsystem(SecurityConfig config, SecurityAuditSink audit_sink)
