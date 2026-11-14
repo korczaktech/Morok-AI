@@ -84,8 +84,11 @@ SecuritySubsystem::SecuritySubsystem(SecurityConfig config, SecurityAuditSink au
 common::Status SecuritySubsystem::validate_config(const core::RuntimeConfig& config) const {
     const auto runtime_valid = config.validate();
     if (!runtime_valid) return runtime_valid;
-    if (config_.max_grants == 0 || config_.max_pending_confirmations == 0 ||
+    if (config_.max_grants == 0 || config_.max_grants > 4096 ||
+        config_.max_pending_confirmations == 0 ||
+        config_.max_pending_confirmations > 1024 ||
         config_.confirmation_ttl <= std::chrono::seconds::zero() ||
+        config_.confirmation_ttl > std::chrono::hours(1) ||
         (config_.require_audit_sink && !audit_sink_)) {
         return failure(common::ErrorCode::invalid_argument,
             "invalid security limits or mandatory audit sink is missing", "configuration");
