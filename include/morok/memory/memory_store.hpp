@@ -22,7 +22,9 @@ struct MemoryLimits final {
     std::size_t max_record_bytes{64U * 1024U};
     std::size_t max_results{20};
     std::size_t max_context_bytes{4U * 1024U};
+    std::size_t max_database_bytes{256U * 1024U * 1024U};
     std::uint32_t busy_timeout_ms{100};
+    std::uint32_t search_timeout_ms{100};
 };
 
 struct MemoryInput final {
@@ -83,6 +85,11 @@ public:
 
     [[nodiscard]] common::Result<std::vector<MemoryRecord>> search(
         const SearchQuery& query);
+
+    [[nodiscard]] common::Status promote(
+        const common::SessionId& session_id,
+        const common::MemoryId& memory_id,
+        MemoryKind target_kind = MemoryKind::episodic);
 
     [[nodiscard]] common::Status update_metadata(
         const common::SessionId& session_id,
