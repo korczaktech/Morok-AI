@@ -133,7 +133,7 @@ common::Result<LearningRunResult> LearningSubsystem::run_experiment(
         result.report = std::move(report);
         result.candidate_parameters = std::move(candidate);
         result.parameter_evaluation = std::move(evaluation);
-        result.request_id = request.request_id();
+        result.request_id = request.request_id().to_string();
         return common::Result<LearningRunResult>::success(std::move(result));
     } catch (const std::bad_alloc&) {
         return failure<LearningRunResult>(error(
