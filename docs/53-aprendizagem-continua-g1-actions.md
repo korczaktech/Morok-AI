@@ -86,3 +86,13 @@ A API de geração agora aceita controles de decodificação:
 - `repetition_penalty` e `repetition_window`: acrescentam custo a bytes ASCII imprimíveis repetidos na janela recente.
 
 Esses controles mudam a estratégia de decodificação, não os pesos nem a capacidade aprendida. Eles não criam EOS: a geração continua limitada por bytes. A penalidade de repetição é heurística e não deve ser interpretada como correção semântica. A CLI `morok_generate` também expõe essas opções: `--temperature`, `--top-k`, `--seed`, `--repetition-penalty` e `--repetition-window`. O argumento posicional opcional `max_bytes` continua compatível com a interface anterior.
+
+## EOS aprendido
+
+Os 29 parâmetros finais do inventário agora são uma cabeça de parada:
+- 22 pesos aplicados ao estado recorrente combinado;
+- sete vieses selecionados por faixa logarítmica de comprimento.
+
+Durante BPTT, cada contexto que possui um próximo byte recebe o rótulo "continuar". Depois do último byte de cada documento de treinamento, o loop consome esse byte e aplica um rótulo positivo de parada. A cabeça EOS é atualizada pelo mesmo otimizador dos demais parâmetros. A inferência consulta a probabilidade de parada depois do comprimento mínimo e somente em fronteiras completas de caracteres UTF-8.
+
+O identificador de arquitetura do checkpoint mudou para `RLAH-G1-fastslow-d11-bit8-eos`. O ciclo contínuo descarta checkpoints anteriores sem esse identificador e reinicia deterministicamente, pois os 29 valores mudaram de semântica. Checkpoints antigos não são compatíveis com essa versão.
