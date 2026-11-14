@@ -214,20 +214,25 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
     const std::string page_limit = "PRAGMA max_page_count=" + std::to_string(max_pages) + ";";
     const auto page_limit_result = exec(db, page_limit.c_str(), "page_limit");
     if (!page_limit_result) { const auto error = *page_limit_result.error_if(); (void)close(); return Status::failure(error); }
+    bool page_limit_query_failed = false;
+    bool database_exceeds_limit = false;
     {
         Statement page_limit_check(db, "PRAGMA max_page_count");
         if (!page_limit_check || sqlite3_step(page_limit_check.get()) != SQLITE_ROW) {
-            const auto error = db_error(db, "verify_page_limit");
-            (void)close();
-            return Status::failure(error);
+            page_limit_query_failed = true;
+        } else {
+            database_exceeds_limit =
+                sqlite3_column_int64(page_limit_check.get(), 0) > max_pages;
         }
-        if (sqlite3_column_int64(page_limit_check.get(), 0) > max_pages) {
-            (void)close();
-            return Status::failure(Error::make(
-                ErrorCode::resource_limit,
+    }
+    if (page_limit_query_failed || database_exceeds_limit) {
+        const auto error = database_exceeds_limit
+            ? Error::make(ErrorCode::resource_limit,
                 "existing memory database exceeds the configured storage budget",
-                "memory", "page_limit"));
-        }
+                "memory", "page_limit")
+            : db_error(db, "verify_page_limit");
+        (void)close();
+        return Status::failure(error);
     }
 
     const char* schema =
