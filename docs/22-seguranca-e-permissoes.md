@@ -12,9 +12,8 @@ A IA deve operar com privilégio mínimo. Texto gerado, memória recuperada e co
 - Entrada do usuário: conteúdo não confiável.
 - Documentos e páginas externas: conteúdo não confiável.
 - Memória recuperada: dados com proveniência, não comandos.
-- Saída do modelo: conteúdo não confiável.
-- Ferramentas: capacidades isoladas e explicitamente autorizadas.
-- Configuração do sistema: fonte confiável somente após validação e controle de acesso.
+- Saída do modelo e de ferramentas: conteúdo não confiável.
+- Configuração do sistema: fonte confiável somente após validação e controle de acesso; não é representada como conteúdo externo rotulado.
 
 ## 22.3 Permissões
 
@@ -65,7 +64,7 @@ Não fornecer shell irrestrito na primeira versão.
 
 ## 22.7 Resistência a prompt injection
 
-A camada fornece rótulos de origem para conteúdo, mas a separação entre instruções e dados continua sendo responsabilidade do orquestrador. Classificação de origem não é detecção semântica completa nem prova criptográfica de proveniência.
+A camada fornece rótulos imutáveis para conteúdo externo e todos os rótulos são não confiáveis. A configuração confiável permanece fora desse fluxo e é controlada pelo host. A separação entre instruções e dados continua sendo responsabilidade do orquestrador. Classificação de origem não é detecção semântica completa nem prova criptográfica de proveniência.
 
 
 Instruções contidas em documentos, páginas, resultados de busca ou memória não podem alterar políticas, permissões ou configuração. O conteúdo deve ser marcado por origem e tratado como dado. A decisão de chamar ferramenta pertence ao orquestrador com verificação de política.
