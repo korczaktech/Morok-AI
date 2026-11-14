@@ -1,3 +1,6 @@
+# Keep assert-based test checks active in optimized Release test binaries.
+add_compile_options($<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-UNDEBUG>)
+
 add_executable(morok_test_build_info
     unit/common/test_build_info.cpp
 )
