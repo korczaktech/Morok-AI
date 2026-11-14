@@ -129,14 +129,11 @@ int main() {
                 huge_window.final_state.slow == full.final_state.slow,
                 "maximum truncation length changed the final state");
 
-        // Selected central-difference checks cover all trainable tensor families.
         for (const std::size_t index : std::array<std::size_t, 12>{
                  0, 121, 242, 363, 484, 495, 506, 627, 748, 759, 935, 943}) {
             finite_difference_check(parameters, bytes, full.gradients, index, bytes.size());
         }
 
-        // Non-zero incoming state is part of the public API and must participate
-        // in both forward evaluation and the recurrent derivative.
         G1State nonzero_state{};
         for (std::size_t i = 0; i < kG1InputDimension; ++i) {
             nonzero_state.fast[i] = static_cast<float>(0.03 * static_cast<double>(i + 1));
@@ -181,11 +178,8 @@ int main() {
         } catch (const std::domain_error&) { rejected = true; }
         require(rejected, "BPTT must reject a non-finite initial slow state");
 
-        auto invalid_parameters = parameters.flatten();
-        invalid_parameters[0] = std::numeric_limits<float>::quiet_NaN();
-        G1Parameters bad_parameters{};
-        require(bad_parameters.assign(invalid_parameters),
-                "parameter assignment unexpectedly rejected test NaN");
+        G1Parameters bad_parameters = parameters;
+        bad_parameters.W_ax[0] = std::numeric_limits<float>::quiet_NaN();
         rejected = false;
         try {
             (void)compute_g1_bptt_gradients(bad_parameters, bytes, 2);
