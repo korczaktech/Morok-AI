@@ -9,7 +9,7 @@
 | Estado rápido | W_ax, W_ah, W_cx, W_ch (11×11), b_a, b_c (11) | 506 |
 | Estado lento | W_gh, W_gs (11×11), b_g (11) | 253 |
 | Cabeça binária | O (8×22), c (8), A triangular estrita (28) | 212 |
-| Pontuador de segmentação | v (22), theta_len (7) | 29 |
+| Cabeça EOS | v (22), theta_len (7) | 29 |
 | **Total** | | **1.000** |
 
 O inventário é verificado por constantes `constexpr` e `static_assert`. A camada matemática não acrescenta parâmetros.
@@ -19,7 +19,7 @@ O inventário é verificado por constantes `constexpr` e `static_assert`. A cama
 - Todos os parâmetros são armazenados em `float` (IEEE-754 binary32).
 - As formas são representadas por `std::array<float, N>` com tamanhos fixos.
 - O vetor achatado é uma representação de transferência/carga, não a fonte da semântica dos tensores.
-- A contagem inclui todos os pesos e vieses treináveis, inclusive os 29 parâmetros do pontuador de segmentação.
+- A contagem inclui todos os pesos e vieses treináveis, inclusive os 29 parâmetros da cabeça EOS.
 - Não inclui estados recorrentes, gradientes, momentos do otimizador, buffers ou metadados.
 
 ## Ordem canônica
@@ -38,8 +38,8 @@ A ordem de `flatten()` e `assign()` é exatamente:
 10. O (176)
 11. c (8)
 12. A (28), triangular por linhas conforme especificação da cabeça
-13. v (22)
-14. theta_len (7)
+13. v (22), pesos da cabeça EOS
+14. theta_len (7), vieses por faixa de comprimento
 
 Matrizes são armazenadas row-major. Os offsets canônicos são 0, 121, 242, 363, 484, 495, 506, 627, 748, 759, 935, 943, 971 e 993; o vetor termina no offset 1000.
 
@@ -51,7 +51,7 @@ A função `initialize_g1_parameters(parameters, seed)` zera primeiro a estrutur
 - Ortogonal com ganho 1: W_ah, W_ch, W_gh e W_gs.
 - b_a e b_c: zero.
 - b_g: +1, conforme o baseline operacional G1.
-- c, A, v e theta_len: zero.
+- c e v: zero; theta_len: -4, prior inicial para continuar.
 
 A rotina reaproveita os inicializadores matemáticos da Etapa 3 e converte explicitamente os resultados para FP32.
 
