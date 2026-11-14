@@ -27,7 +27,7 @@ struct LearningRunResult final {
     model::G1TrainingReport report{};
     model::G1Parameters candidate_parameters{};
     model::G1ParameterEvaluation parameter_evaluation{};
-    common::RequestId request_id{};
+    std::string request_id{};
 };
 
 class LearningSubsystem final {
