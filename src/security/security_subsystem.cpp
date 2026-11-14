@@ -436,6 +436,56 @@ common::Status SecuritySubsystem::consume_confirmation(
                    "confirmation was not consumed", "confirmation");
 }
 
+common::Result<std::string> SecuritySubsystem::invoke_tool(
+    tools::ToolSubsystem& tool_subsystem,
+    const core::RequestContext& request,
+    const SecurityPrincipal& principal,
+    const std::string& tool_name,
+    const tools::ToolArguments& arguments,
+    const SecurityAction* action,
+    const ConfirmationGrant* confirmation) {
+    if (!valid_principal(principal) || !(principal.session_id == request.session_id())) {
+        return result_failure<std::string>(
+            common::ErrorCode::permission_denied,
+            "request session does not match authenticated principal", "authorization");
+    }
+    const auto policy = tool_policy(principal);
+    if (!policy) {
+        return common::Result<std::string>::failure(*policy.error_if());
+    }
+    const auto visible = tool_subsystem.discover(request, *policy.value_if());
+    if (!visible) {
+        return common::Result<std::string>::failure(*visible.error_if());
+    }
+    const auto descriptor = std::find_if(
+        visible.value_if()->begin(), visible.value_if()->end(),
+        [&](const tools::ToolDescriptor& candidate) {
+            return candidate.name == tool_name;
+        });
+    if (descriptor == visible.value_if()->end()) {
+        return result_failure<std::string>(
+            common::ErrorCode::permission_denied,
+            "tool is not available to this principal", "authorization");
+    }
+
+    bool confirmed = false;
+    if (descriptor->requires_confirmation) {
+        if (!action || !confirmation || action->tool_name != tool_name) {
+            return result_failure<std::string>(
+                common::ErrorCode::confirmation_required,
+                "tool invocation requires a matching human confirmation grant",
+                "confirmation");
+        }
+        const auto consumed = consume_confirmation(principal, *confirmation, *action);
+        if (!consumed) {
+            return common::Result<std::string>::failure(*consumed.error_if());
+        }
+        confirmed = true;
+    }
+    return tool_subsystem.invoke(
+        request, tool_name, arguments, *policy.value_if(), confirmed);
+}
+
 core::Runtime::Initializer SecuritySubsystem::initializer() {
     return [this](const core::RuntimeConfig& config) { return initialize(config); };
 }
