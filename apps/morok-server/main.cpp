@@ -110,35 +110,63 @@ std::string json_string(std::string_view value, std::size_t& pos) {
     }
     throw std::runtime_error("unterminated JSON string");
 }
-std::string extract_prompt(std::string_view body) {
-    const auto key = body.find("\"prompt\"");
-    if (key == std::string_view::npos) throw std::runtime_error("missing prompt field");
-    auto pos = body.find(':', key + 8);
-    if (pos == std::string_view::npos) throw std::runtime_error("invalid prompt field");
-    ++pos;
-    while (pos < body.size() && std::isspace(static_cast<unsigned char>(body[pos]))) ++pos;
-    auto result = json_string(body, pos);
-    if (!morok::common::Utf8Text::from_utf8(result))
-        throw std::runtime_error("prompt must be valid UTF-8");
-    return result;
+struct GenerateRequest final {
+    std::string prompt;
+    std::size_t max_new_bytes{256};
+};
+void skip_space(std::string_view value, std::size_t& pos) {
+    while (pos < value.size() && std::isspace(static_cast<unsigned char>(value[pos]))) ++pos;
 }
-std::size_t extract_max_bytes(std::string_view body) {
-    const auto key = body.find("\"max_new_bytes\"");
-    if (key == std::string_view::npos) return 256;
-    auto pos = body.find(':', key + 15);
-    if (pos == std::string_view::npos) throw std::runtime_error("invalid max_new_bytes");
-    ++pos;
-    while (pos < body.size() && std::isspace(static_cast<unsigned char>(body[pos]))) ++pos;
-    std::size_t value = 0;
-    const auto start = pos;
-    while (pos < body.size() && body[pos] >= '0' && body[pos] <= '9') {
-        const auto digit = static_cast<std::size_t>(body[pos++] - '0');
-        if (value > 256U / 10U) throw std::runtime_error("max_new_bytes out of range");
-        value = value * 10U + digit;
+GenerateRequest parse_generate_request(std::string_view body) {
+    std::size_t pos = 0;
+    skip_space(body, pos);
+    if (pos >= body.size() || body[pos++] != '{')
+        throw std::runtime_error("request body must be a JSON object");
+    GenerateRequest request;
+    bool has_prompt = false;
+    bool has_max_bytes = false;
+    skip_space(body, pos);
+    if (pos < body.size() && body[pos] == '}')
+        throw std::runtime_error("prompt is required");
+    while (pos < body.size()) {
+        skip_space(body, pos);
+        const auto key = json_string(body, pos);
+        skip_space(body, pos);
+        if (pos >= body.size() || body[pos++] != ':')
+            throw std::runtime_error("expected colon after JSON property");
+        skip_space(body, pos);
+        if (key == "prompt") {
+            if (has_prompt) throw std::runtime_error("duplicate prompt property");
+            request.prompt = json_string(body, pos);
+            has_prompt = true;
+        } else if (key == "max_new_bytes") {
+            if (has_max_bytes) throw std::runtime_error("duplicate max_new_bytes property");
+            const auto first = pos;
+            std::size_t number = 0;
+            while (pos < body.size() && body[pos] >= '0' && body[pos] <= '9') {
+                const auto digit = static_cast<std::size_t>(body[pos++] - '0');
+                if (number > 256U / 10U)
+                    throw std::runtime_error("max_new_bytes must be between 1 and 256");
+                number = number * 10U + digit;
+            }
+            if (first == pos || number == 0 || number > 256)
+                throw std::runtime_error("max_new_bytes must be an integer between 1 and 256");
+            request.max_new_bytes = number;
+            has_max_bytes = true;
+        } else {
+            throw std::runtime_error("unsupported JSON property: " + key);
+        }
+        skip_space(body, pos);
+        if (pos >= body.size()) throw std::runtime_error("unterminated JSON object");
+        if (body[pos] == '}') { ++pos; break; }
+        if (body[pos++] != ',') throw std::runtime_error("expected comma in JSON object");
     }
-    if (pos == start || value == 0 || value > 256)
-        throw std::runtime_error("max_new_bytes must be between 1 and 256");
-    return value;
+    skip_space(body, pos);
+    if (pos != body.size()) throw std::runtime_error("trailing data after JSON object");
+    if (!has_prompt) throw std::runtime_error("prompt is required");
+    if (!morok::common::Utf8Text::from_utf8(request.prompt))
+        throw std::runtime_error("prompt must be valid UTF-8");
+    return request;
 }
 std::string escape_json(std::string_view value) {
     std::string result;
@@ -261,9 +289,9 @@ void handle_client(int client, morok::comm::CommunicationSubsystem& communicatio
     }
     try {
         const auto body = std::string_view(request).substr(header_end + 4, content_length);
-        const auto prompt_text = extract_prompt(body);
-        const auto prompt = morok::common::Utf8Text::from_utf8(prompt_text);
-        const auto max_bytes = extract_max_bytes(body);
+        const auto parsed = parse_generate_request(body);
+        const auto prompt = morok::common::Utf8Text::from_utf8(parsed.prompt);
+        const auto max_bytes = parsed.max_new_bytes;
         auto conversation = communication.create_conversation();
         if (!conversation) throw std::runtime_error(conversation.error_if()->message);
         const auto conversation_id = *conversation.value_if();
