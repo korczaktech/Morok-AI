@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <cctype>
 #include <cstdint>
+#include <csignal>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -177,11 +178,12 @@ void handle_client(int client, const morok::model::G1Parameters& parameters) {
         const auto count = ::recv(client, buffer, sizeof(buffer), 0);
         if (count <= 0) return;
         request.append(buffer, static_cast<std::size_t>(count));
-        if (request.size() > kMaxHeaderBytes) {
+        header_end = request.find("\r\n\r\n");
+        if ((header_end == std::string::npos && request.size() > kMaxHeaderBytes) ||
+            (header_end != std::string::npos && header_end > kMaxHeaderBytes)) {
             respond(client, 431, "Request Header Fields Too Large", "{\"error\":\"headers too large\"}");
             return;
         }
-        header_end = request.find("\r\n\r\n");
     }
     const auto first_end = request.find("\r\n");
     if (first_end == std::string::npos) {
@@ -230,7 +232,11 @@ void handle_client(int client, const morok::model::G1Parameters& parameters) {
         respond(client, 413, "Payload Too Large", "{\"error\":\"body must be between 1 and 65536 bytes\"}");
         return;
     }
-    request.resize(header_end + 4);
+    const auto initial_body_bytes = request.size() - (header_end + 4);
+    if (initial_body_bytes > content_length) {
+        respond(client, 400, "Bad Request", "{\"error\":\"unexpected trailing request bytes\"}");
+        return;
+    }
     while (request.size() - (header_end + 4) < content_length) {
         const auto count = ::recv(client, buffer, sizeof(buffer), 0);
         if (count <= 0) {
