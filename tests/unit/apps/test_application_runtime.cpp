@@ -55,6 +55,17 @@ int main() {
     assert(conversation);
     auto request = communication.create_request_context(*conversation.value_if());
     assert(request);
+    const morok::security::SecurityPrincipal principal{
+        "integration-test", request.value_if()->session_id()};
+    assert(security.grant_tool(
+        principal, "temporary_read", morok::tools::ToolCapability::filesystem_read));
+    const morok::security::SecurityAction action{
+        "temporary_read", "read", "temporary-resource", "Read one temporary resource",
+        morok::security::bind_tool_arguments({})};
+    auto ticket = security.request_confirmation(principal, action);
+    assert(ticket);
+    auto policy = security.tool_policy(principal);
+    assert(policy && policy.value_if()->exact_grants.size() == 1);
     auto prompt = morok::common::Utf8Text::from_utf8("test");
     assert(prompt);
     auto response = communication.send_message(
@@ -64,6 +75,11 @@ int main() {
     assert(response.value_if()->content.size() <= 4);
     assert(communication.close_conversation(*conversation.value_if()));
     assert(sessions.size() == 0);
+    assert(security.close_session(principal));
+    assert(security.grant_count() == 0);
+    assert(security.pending_confirmations() == 0);
+    auto closed_policy = security.tool_policy(principal);
+    assert(closed_policy && closed_policy.value_if()->exact_grants.empty());
 
     assert(runtime.shutdown());
     assert(runtime.state() == morok::core::LifecycleState::stopped);
