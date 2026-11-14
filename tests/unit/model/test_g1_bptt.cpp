@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <span>
 #include <stdexcept>
 #include <vector>
@@ -17,15 +18,18 @@ void require(bool condition, const char* message) {
 
 double loss_only(const morok::model::G1Parameters& p,
                  const std::vector<std::uint8_t>& bytes,
-                 std::size_t truncation) {
-    return morok::model::compute_g1_bptt_gradients(p, bytes, truncation).mean_loss_nats;
+                 std::size_t truncation,
+                 const morok::model::G1State& initial_state = {}) {
+    return morok::model::compute_g1_bptt_gradients(
+        p, bytes, truncation, initial_state).mean_loss_nats;
 }
 
 void finite_difference_check(const morok::model::G1Parameters& original,
                              const std::vector<std::uint8_t>& bytes,
                              const morok::model::G1Gradients& analytic,
                              std::size_t index,
-                             std::size_t truncation) {
+                             std::size_t truncation,
+                             const morok::model::G1State& initial_state = {}) {
     auto plus = original.flatten();
     auto minus = original.flatten();
     constexpr float epsilon = 1.0e-2F;
@@ -36,12 +40,34 @@ void finite_difference_check(const morok::model::G1Parameters& original,
     require(p_plus.assign(plus), "plus parameter assignment failed");
     require(p_minus.assign(minus), "minus parameter assignment failed");
     const double numeric =
-        (loss_only(p_plus, bytes, truncation) - loss_only(p_minus, bytes, truncation)) /
+        (loss_only(p_plus, bytes, truncation, initial_state) -
+         loss_only(p_minus, bytes, truncation, initial_state)) /
         (2.0 * static_cast<double>(epsilon));
     const double expected = analytic.values[index];
     const double tolerance = 2.5e-2 + 8.0e-2 * std::abs(numeric);
     require(std::abs(numeric - expected) <= tolerance,
             "BPTT gradient disagrees with central finite differences");
+}
+
+double reference_loss(const morok::model::G1Parameters& parameters,
+                      const std::vector<std::uint8_t>& bytes,
+                      const morok::model::G1State& initial_state) {
+    using namespace morok::model;
+    G1State state = initial_state;
+    double total = 0.0;
+    for (std::size_t target = 1; target < bytes.size(); ++target) {
+        advance_g1_state(parameters, state, bytes[target - 1]);
+        total += evaluate_g1_next_byte(parameters, state, bytes[target])
+                     .negative_log_likelihood_nats;
+    }
+    return total / static_cast<double>(bytes.size() - 1);
+}
+
+bool all_finite(const morok::model::G1Gradients& gradients) {
+    for (const double value : gradients.values) {
+        if (!std::isfinite(value)) return false;
+    }
+    return true;
 }
 
 } // namespace
@@ -59,13 +85,18 @@ int main() {
         require(full.target_byte_count == bytes.size() - 1,
                 "BPTT target count is incorrect");
         require(std::isfinite(full.mean_loss_nats), "BPTT loss is not finite");
-        require(full.gradients.global_norm() > 0.0, "BPTT gradient is unexpectedly zero");
+        require(all_finite(full.gradients), "BPTT contains a non-finite gradient");
+        require(full.gradients.global_norm() > 0.0,
+                "BPTT gradient is unexpectedly zero");
         require(full.final_state.fast != G1State{}.fast,
                 "BPTT final fast state was not advanced");
         for (std::size_t i = 971; i < kG1ParameterCount; ++i) {
             require(full.gradients.values[i] == 0.0,
                     "segmenter parameters must not receive B0 gradients");
         }
+
+        require(std::abs(full.mean_loss_nats - reference_loss(parameters, bytes, {})) < 1e-11,
+                "BPTT forward loss differs from the production forward/evaluation path");
 
         const auto short_blocks = compute_g1_bptt_gradients(parameters, bytes, 2);
         require(std::abs(short_blocks.mean_loss_nats - full.mean_loss_nats) < 1e-10,
@@ -83,10 +114,43 @@ int main() {
                 short_blocks.final_state.slow == full.final_state.slow,
                 "carried state must match regardless of truncation length");
 
-        // Selected central-difference checks cover every trainable tensor family.
+        const auto single_step_blocks = compute_g1_bptt_gradients(parameters, bytes, 1);
+        require(single_step_blocks.final_state.fast == full.final_state.fast &&
+                single_step_blocks.final_state.slow == full.final_state.slow,
+                "one-target blocks must preserve the complete forward state");
+        require(std::abs(single_step_blocks.mean_loss_nats - full.mean_loss_nats) < 1e-10,
+                "one-target blocks must preserve the forward loss");
+
+        const auto huge_window = compute_g1_bptt_gradients(
+            parameters, bytes, std::numeric_limits<std::size_t>::max());
+        require(std::abs(huge_window.mean_loss_nats - full.mean_loss_nats) < 1e-12,
+                "maximum truncation length must safely behave as a full sequence");
+        require(huge_window.final_state.fast == full.final_state.fast &&
+                huge_window.final_state.slow == full.final_state.slow,
+                "maximum truncation length changed the final state");
+
+        // Selected central-difference checks cover all trainable tensor families.
         for (const std::size_t index : std::array<std::size_t, 12>{
                  0, 121, 242, 363, 484, 495, 506, 627, 748, 759, 935, 943}) {
             finite_difference_check(parameters, bytes, full.gradients, index, bytes.size());
+        }
+
+        // Non-zero incoming state is part of the public API and must participate
+        // in both forward evaluation and the recurrent derivative.
+        G1State nonzero_state{};
+        for (std::size_t i = 0; i < kG1InputDimension; ++i) {
+            nonzero_state.fast[i] = static_cast<float>(0.03 * static_cast<double>(i + 1));
+            nonzero_state.slow[i] = static_cast<float>(-0.02 * static_cast<double>(i + 1));
+        }
+        const auto seeded = compute_g1_bptt_gradients(
+            parameters, bytes, bytes.size(), nonzero_state);
+        require(std::abs(seeded.mean_loss_nats -
+                         reference_loss(parameters, bytes, nonzero_state)) < 1e-11,
+                "non-zero initial state forward loss mismatch");
+        for (const std::size_t index : std::array<std::size_t, 6>{
+                 0, 363, 506, 627, 759, 943}) {
+            finite_difference_check(parameters, bytes, seeded.gradients, index,
+                                     bytes.size(), nonzero_state);
         }
 
         bool rejected = false;
@@ -100,6 +164,33 @@ int main() {
         try { (void)compute_g1_bptt_gradients(parameters, bytes, 0); }
         catch (const std::invalid_argument&) { rejected = true; }
         require(rejected, "BPTT must reject zero truncation length");
+
+        G1State invalid_state{};
+        invalid_state.fast[3] = std::numeric_limits<float>::quiet_NaN();
+        rejected = false;
+        try {
+            (void)compute_g1_bptt_gradients(parameters, bytes, 2, invalid_state);
+        } catch (const std::domain_error&) { rejected = true; }
+        require(rejected, "BPTT must reject a non-finite initial fast state");
+
+        invalid_state = {};
+        invalid_state.slow[5] = std::numeric_limits<float>::infinity();
+        rejected = false;
+        try {
+            (void)compute_g1_bptt_gradients(parameters, bytes, 2, invalid_state);
+        } catch (const std::domain_error&) { rejected = true; }
+        require(rejected, "BPTT must reject a non-finite initial slow state");
+
+        auto invalid_parameters = parameters.flatten();
+        invalid_parameters[0] = std::numeric_limits<float>::quiet_NaN();
+        G1Parameters bad_parameters{};
+        require(bad_parameters.assign(invalid_parameters),
+                "parameter assignment unexpectedly rejected test NaN");
+        rejected = false;
+        try {
+            (void)compute_g1_bptt_gradients(bad_parameters, bytes, 2);
+        } catch (const std::domain_error&) { rejected = true; }
+        require(rejected, "BPTT must reject non-finite parameters");
 
         std::cout << "G1 BPTT tests passed\n";
         return 0;
