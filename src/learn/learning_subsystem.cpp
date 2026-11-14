@@ -150,6 +150,9 @@ common::Result<LearningRunResult> LearningSubsystem::run_experiment(
         return failure<LearningRunResult>(error(
             common::ErrorCode::out_of_memory,
             "memory allocation failed during experiment", "run", &request));
+    } catch (const std::invalid_argument& exception) {
+        return failure<LearningRunResult>(error(
+            common::ErrorCode::invalid_argument, exception.what(), "validate", &request));
     } catch (const std::exception& exception) {
         const bool cancelled = std::string_view(exception.what()) == "training cancelled";
         return failure<LearningRunResult>(error(
