@@ -81,3 +81,8 @@ add_executable(morok_test_memory_store unit/memory/test_memory_store.cpp)
 target_link_libraries(morok_test_memory_store PRIVATE Morok::Core morok_build_options SQLite::SQLite3)
 morok_enable_sanitizers(morok_test_memory_store)
 add_test(NAME memory.store COMMAND morok_test_memory_store)
+
+add_executable(morok_test_language_subsystem unit/lang/test_language_subsystem.cpp)
+target_link_libraries(morok_test_language_subsystem PRIVATE Morok::Core morok_build_options)
+morok_enable_sanitizers(morok_test_language_subsystem)
+add_test(NAME lang.language_subsystem COMMAND morok_test_language_subsystem)
