@@ -74,7 +74,9 @@ int main(int argc, char** argv) {
         bool positional_limit_seen = false;
         for (int i = 4; i < argc; ++i) {
             const std::string option = argv[i];
-            if (option == "--temperature" || option == "--top-k" ||
+            if (option == "--printable-only") {
+                config.printable_only = true;
+            } else if (option == "--temperature" || option == "--top-k" ||
                 option == "--seed" || option == "--repetition-penalty" ||
                 option == "--repetition-window" || option == "--eos-threshold" ||
                 option == "--min-new-bytes") {
