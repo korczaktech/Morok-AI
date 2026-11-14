@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <utility>
 namespace {
 morok::core::RequestContext request_for(const morok::common::SessionId& session) {
     auto result = morok::core::RequestContext::create(session);
@@ -41,7 +42,7 @@ int main() {
     assert(trained.value_if()->report.unique_documents == 3);
     assert(trained.value_if()->report.best_epoch == 1);
     assert(trained.value_if()->parameter_evaluation.all_finite);
-    assert(trained.value_if()->request_id == request.request_id());
+    assert(trained.value_if()->request_id == request.request_id().to_string());
     assert(initial.flatten() == original);
     CancellationSource cancelled;
     assert(cancelled.cancel());
