@@ -129,7 +129,7 @@ def main() -> int:
 
         # Seed the policy with three explicitly identified oracle demonstrations.
         # These are a warm start, not model-generated RL episodes.
-        if int(database.get("oracle_demonstration_version", 0)) < 2:
+        if int(database.get("oracle_demonstration_version", 0)) < 3:
             for question in questions:
                 question_id = question["id"]
                 prompt_path = temporary / f"{question_id}.seed.prompt.txt"
@@ -142,12 +142,12 @@ def main() -> int:
                 update_output = run_checked([
                     str(args.reinforcer), str(args.checkpoint),
                     str(prompt_path), str(answer_path), "1",
-                    "0.005", "25",
+                    "0.005", "500",
                 ])
                 episode = {
                     "episode": episode_number,
                     "source": "oracle_demonstration",
-                    "demonstration_version": 2,
+                    "demonstration_version": 3,
                     "question_id": question_id,
                     "prompt": question["prompt"],
                     "answer": answer,
@@ -161,7 +161,7 @@ def main() -> int:
                     "policy_update": {
                         "status": "applied",
                         "algorithm": "reward_weighted_bptt_score_function_surrogate",
-                        "optimizer_steps": 25,
+                        "optimizer_steps": 500,
                         "report": json.loads(update_output),
                     },
                 }
@@ -172,7 +172,7 @@ def main() -> int:
                 database["totals"]["oracle_demonstrations"] += 1
                 atomic_write(args.database, database)
             database["oracle_demonstrations_applied"] = True
-            database["oracle_demonstration_version"] = 2
+            database["oracle_demonstration_version"] = 3
             atomic_write(args.database, database)
 
         for offset, question in enumerate(questions):
@@ -186,8 +186,8 @@ def main() -> int:
             run_checked([
                 str(args.generator), str(args.checkpoint), str(prompt_path),
                 str(answer_path), "48",
-                "--temperature", "0.85",
-                "--top-k", "32",
+                "--temperature", "0.35",
+                "--top-k", "8",
                 "--seed", str(seed),
                 "--repetition-penalty", "0.15",
                 "--repetition-window", "24",
