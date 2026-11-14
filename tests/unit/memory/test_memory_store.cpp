@@ -1,6 +1,9 @@
 #include "morok/common/ids.hpp"
 #include "morok/common/utf8_text.hpp"
 #include "morok/memory/memory_store.hpp"
+#include "morok/memory/memory_subsystem.hpp"
+#include "morok/core/configuration.hpp"
+#include "morok/core/session_registry.hpp"
 
 #include <sqlite3.h>
 
@@ -13,8 +16,27 @@ int main() {
 
     const std::string database = "morok-memory-test.sqlite";
     const std::string backup = "morok-memory-test-backup.sqlite";
+    const std::string integrated_database = "morok-memory-integration.sqlite";
+    core::SessionRegistry registry(2);
+    auto active_session = registry.create();
+    assert(active_session);
+    memory::MemorySubsystem subsystem(integrated_database);
+    assert(subsystem.initialize(core::RuntimeConfig{}));
+    memory::MemoryInput transient{
+        *active_session.value_if(), memory::MemoryKind::working,
+        *working_title.value_if(), *working_body.value_if(),
+        memory::MemorySource::user, "session:transient",
+        memory::Sensitivity::normal, std::nullopt};
+    auto transient_id = subsystem.store().store(transient);
+    assert(transient_id);
+    assert(subsystem.close_session(registry, *active_session.value_if()));
+    assert(!registry.contains(*active_session.value_if()));
+    assert(!subsystem.store().retrieve(*active_session.value_if(), *transient_id.value_if()));
+    assert(subsystem.shutdown());
+
     std::remove(database.c_str());
     std::remove(backup.c_str());
+    std::remove(integrated_database.c_str());
 
     auto session_result = common::SessionId::generate();
     auto other_session_result = common::SessionId::generate();
@@ -124,6 +146,9 @@ int main() {
 
     std::remove(database.c_str());
     std::remove(backup.c_str());
+    std::remove(integrated_database.c_str());
+    std::remove((integrated_database + "-wal").c_str());
+    std::remove((integrated_database + "-shm").c_str());
     std::remove((database + "-wal").c_str());
     std::remove((database + "-shm").c_str());
     std::remove((backup + "-wal").c_str());
