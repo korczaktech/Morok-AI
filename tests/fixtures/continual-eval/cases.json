@@ -21,6 +21,26 @@
       "id": "heldout-04",
       "prompt": "Pergunta: O céu diurno tende a parecer de qual cor?\nResposta: ",
       "reference": "azul"
+    },
+    {
+      "id": "heldout-05",
+      "prompt": "Pergunta: Por que temos dia e noite?\nResposta: ",
+      "reference": "A rotação da Terra faz diferentes regiões alternarem entre dia e noite."
+    },
+    {
+      "id": "heldout-06",
+      "prompt": "Pergunta: Qual é o planeta de maior tamanho do Sistema Solar?\nResposta: ",
+      "reference": "Júpiter é o maior planeta do Sistema Solar."
+    },
+    {
+      "id": "heldout-07",
+      "prompt": "Pergunta: Como se chama a passagem do pólen entre partes reprodutivas das plantas?\nResposta: ",
+      "reference": "Polinização é a transferência de pólen entre estruturas reprodutivas das plantas."
+    },
+    {
+      "id": "heldout-08",
+      "prompt": "Pergunta: Em que estado físico a água fica quando congela?\nResposta: ",
+      "reference": "Gelo é água em estado sólido."
     }
   ]
 }
