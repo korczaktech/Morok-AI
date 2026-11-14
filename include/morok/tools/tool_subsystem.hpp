@@ -12,6 +12,7 @@
 #include <functional>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -81,8 +82,8 @@ enum class ToolAuditEventType { registered, denied, confirmation_required, start
 struct ToolAuditRecord final {
     ToolAuditEventType type{ToolAuditEventType::failed};
     std::string tool_name;
-    common::SessionId session_id;
-    common::RequestId request_id;
+    std::optional<common::SessionId> session_id;
+    std::optional<common::RequestId> request_id;
     std::chrono::system_clock::time_point timestamp;
     std::string detail;
 };
