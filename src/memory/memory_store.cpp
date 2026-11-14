@@ -390,19 +390,43 @@ Status MemoryStore::update_metadata(
     if (static_cast<int>(sensitivity) > 2)
         return Status::failure(Error::make(ErrorCode::invalid_argument,
             "invalid sensitivity value", "memory", "update_metadata"));
+    const auto begin = exec(impl_->db, "BEGIN IMMEDIATE", "begin_metadata_update");
+    if (!begin) return begin;
     Statement statement(impl_->db,
         "UPDATE memories SET sensitivity=?,expires_at=? WHERE id=? AND session_id=?");
-    if (!statement) return Status::failure(db_error(impl_->db, "prepare_update_metadata"));
+    if (!statement) {
+        const auto error = db_error(impl_->db, "prepare_update_metadata");
+        (void)exec(impl_->db, "ROLLBACK", "rollback_metadata_update");
+        return Status::failure(error);
+    }
     sqlite3_bind_int(statement.get(), 1, static_cast<int>(sensitivity));
     if (expires_at) sqlite3_bind_int64(statement.get(), 2, expires_at->unix_nanoseconds());
     else sqlite3_bind_null(statement.get(), 2);
     bind_text(statement.get(), 3, memory_id.to_string());
     bind_text(statement.get(), 4, session_id.to_string());
-    if (sqlite3_step(statement.get()) != SQLITE_DONE)
-        return Status::failure(db_error(impl_->db, "update_metadata"));
-    if (sqlite3_changes(impl_->db) == 0)
+    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+        const auto error = db_error(impl_->db, "update_metadata");
+        (void)exec(impl_->db, "ROLLBACK", "rollback_metadata_update");
+        return Status::failure(error);
+    }
+    if (sqlite3_changes(impl_->db) == 0) {
+        (void)exec(impl_->db, "ROLLBACK", "rollback_metadata_update");
         return Status::failure(Error::make(ErrorCode::invalid_argument,
             "memory not found in this session", "memory", "update_metadata"));
+    }
+    const auto audit = insert_audit(impl_->db, memory_id.to_string(),
+        session_id.to_string(), "system", "metadata_update", "success", std::nullopt);
+    if (!audit) {
+        const auto error = *audit.error_if();
+        (void)exec(impl_->db, "ROLLBACK", "rollback_metadata_update");
+        return Status::failure(error);
+    }
+    const auto commit = exec(impl_->db, "COMMIT", "commit_metadata_update");
+    if (!commit) {
+        const auto error = *commit.error_if();
+        (void)exec(impl_->db, "ROLLBACK", "rollback_metadata_update");
+        return Status::failure(error);
+    }
     return Status::success();
 }
 
