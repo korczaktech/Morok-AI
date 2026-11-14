@@ -168,7 +168,7 @@ bool SecuritySubsystem::has_grant_locked(
 common::Status SecuritySubsystem::grant_tool(
     const SecurityPrincipal& principal, std::string tool_name,
     tools::ToolCapability capability) {
-    if (!valid_principal(principal) || tool_name.empty() || tool_name.size() > 64 ||
+    if (!valid_principal(principal) || !safe_display_text(tool_name, 64) ||
         !valid_tool_capability(capability)) {
         return failure(common::ErrorCode::invalid_argument,
                        "invalid principal or tool grant", "policy");
@@ -214,7 +214,8 @@ common::Status SecuritySubsystem::grant_tool(
 common::Status SecuritySubsystem::revoke_tool(
     const SecurityPrincipal& principal, const std::string& tool_name,
     tools::ToolCapability capability) {
-    if (!valid_principal(principal) || tool_name.empty() || !valid_tool_capability(capability)) {
+    if (!valid_principal(principal) || !safe_display_text(tool_name, 64) ||
+        !valid_tool_capability(capability)) {
         return failure(common::ErrorCode::invalid_argument,
                        "invalid principal or tool grant", "policy");
     }
@@ -243,6 +244,35 @@ common::Status SecuritySubsystem::revoke_tool(
     record.session_id = principal.session_id;
     record.tool_name = tool_name;
     record.operation = "revoke";
+    return audit(std::move(record));
+}
+
+common::Status SecuritySubsystem::close_session(const SecurityPrincipal& principal) {
+    if (!valid_principal(principal)) {
+        return failure(common::ErrorCode::invalid_argument,
+                       "invalid security principal", "session");
+    }
+    {
+        std::lock_guard lock(mutex_);
+        if (!initialized_) {
+            return failure(common::ErrorCode::model_not_loaded,
+                           "security subsystem is not initialized", "session");
+        }
+        std::erase_if(grants_, [&](const SecurityGrant& grant) {
+            return grant.subject_id == principal.subject_id &&
+                   grant.session_id == principal.session_id;
+        });
+        std::erase_if(confirmations_, [&](const auto& item) {
+            const auto& owner = item.second.principal;
+            return owner.subject_id == principal.subject_id &&
+                   owner.session_id == principal.session_id;
+        });
+    }
+    SecurityAuditRecord record;
+    record.type = SecurityEventType::session_closed;
+    record.subject_id = principal.subject_id;
+    record.session_id = principal.session_id;
+    record.operation = "session_close";
     return audit(std::move(record));
 }
 
