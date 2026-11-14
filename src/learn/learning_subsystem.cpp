@@ -1,6 +1,8 @@
 #include "morok/learn/learning_subsystem.hpp"
 
 #include <cmath>
+#include <exception>
+#include <stdexcept>
 #include <new>
 #include <utility>
 #include <string_view>
@@ -105,7 +107,7 @@ common::Result<LearningRunResult> LearningSubsystem::run_experiment(
         experiment.max_documents > config_.max_documents ||
         experiment.max_document_bytes == 0 ||
         experiment.max_document_bytes > config_.max_document_bytes ||
-        experiment.truncation_length == 0 ||
+        experiment.truncation_length == 0 || experiment.truncation_length > 128 ||
         !finite_parameters(initial_parameters)) {
         return failure<LearningRunResult>(error(
             common::ErrorCode::invalid_argument,
