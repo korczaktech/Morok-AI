@@ -53,7 +53,8 @@ void print_usage() {
     std::cerr
         << "uso: morok_generate <checkpoint> <prompt.txt> <saida.txt> [max_bytes]"
         << " [--temperature n] [--top-k n] [--seed n]"
-        << " [--repetition-penalty n] [--repetition-window n]\n"
+        << " [--repetition-penalty n] [--repetition-window n]"
+        << " [--eos-threshold n] [--min-new-bytes n]\n"
         << "temperature 0 mantém geração gulosa; valor positivo ativa amostragem.\n";
 }
 } // namespace
@@ -75,7 +76,8 @@ int main(int argc, char** argv) {
             const std::string option = argv[i];
             if (option == "--temperature" || option == "--top-k" ||
                 option == "--seed" || option == "--repetition-penalty" ||
-                option == "--repetition-window") {
+                option == "--repetition-window" || option == "--eos-threshold" ||
+                option == "--min-new-bytes") {
                 if (i + 1 >= argc) throw std::invalid_argument("opção sem valor: " + option);
                 const std::string value = argv[++i];
                 if (option == "--temperature")
@@ -86,8 +88,12 @@ int main(int argc, char** argv) {
                     config.seed = static_cast<std::uint64_t>(parse_size(value, "seed inválida"));
                 else if (option == "--repetition-penalty")
                     config.repetition_penalty = parse_double(value, "penalidade inválida");
-                else
+                else if (option == "--repetition-window")
                     config.repetition_window = parse_size(value, "janela de repetição inválida");
+                else if (option == "--eos-threshold")
+                    config.eos_threshold = parse_double(value, "limiar EOS inválido");
+                else
+                    config.min_new_bytes = parse_size(value, "mínimo de bytes inválido");
             } else if (!option.empty() && option.front() != '-' && !positional_limit_seen) {
                 config.max_new_bytes = parse_size(option, "limite de bytes inválido");
                 positional_limit_seen = true;
@@ -101,7 +107,9 @@ int main(int argc, char** argv) {
         std::cout << "{\"generated_bytes\":" << report.generated_bytes
                   << ",\"candidate_evaluations\":" << report.candidate_evaluations
                   << ",\"reached_byte_limit\":"
-                  << (report.reached_byte_limit ? "true" : "false") << "}\n";
+                  << (report.reached_byte_limit ? "true" : "false")
+                  << ",\"stopped_by_eos\":"
+                  << (report.stopped_by_eos ? "true" : "false") << "}\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "morok_generate: " << error.what() << '\n';
