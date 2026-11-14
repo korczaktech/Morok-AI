@@ -37,8 +37,12 @@ print(digest.hexdigest())
 PY
 )"
 current_corpus_documents="$(find "$corpus" -maxdepth 1 -type f -name 'doc-*.txt' | wc -l | tr -d ' ')"
+state_exists=false
+if [[ -e "$checkpoint" || -e "$epoch_file" || -e "$status_file" ]]; then
+  state_exists=true
+fi
 checkpoint_compatible=false
-if [[ -s "$checkpoint" ]]; then
+if [[ "$state_exists" == "true" ]]; then
   if python3 - "$status_file" "$expected_arch" "$current_corpus_sha" "$current_corpus_documents" <<'PY'
 import json
 import sys
