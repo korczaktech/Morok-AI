@@ -38,15 +38,22 @@ jobs:
           ./build/morok-train tests/fixtures/benchmark 1 42 --checkpoint build/server-smoke.morok
           ./build/morok-server build/server-smoke.morok 18080 build/server-smoke.sqlite > build/server-smoke.log 2>&1 &
           server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
-            if curl --silent --fail http://127.0.0.1:18080/health > build/server-health.json; then
+          trap 'status=$?; cat build/server-smoke.log; kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; exit "$status"' EXIT
+          for attempt in $(seq 1 10); do
+            if curl --silent --fail --max-time 2 http://127.0.0.1:18080/health > build/server-health.json; then
               break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              cat build/server-smoke.log
+              exit 1
             fi
             sleep 1
           done
-          grep -q '"status":"ok"' build/server-health.json
-          curl --silent --show-error --fail -X POST http://127.0.0.1:18080/v1/chat \
+          if ! grep -q '"status":"ok"' build/server-health.json; then
+            cat build/server-smoke.log
+            exit 1
+          fi
+          timeout 15 curl --silent --show-error --fail -X POST http://127.0.0.1:18080/v1/chat \
             -H 'Content-Type: application/json' \
             -d '{"prompt":"hello","max_new_bytes":4}' > build/server-response.json
           grep -q '"response":' build/server-response.json
