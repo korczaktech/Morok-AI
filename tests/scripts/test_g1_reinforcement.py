@@ -6,6 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MODULE = runpy.run_path(str(ROOT / "scripts" / "run-g1-reinforcement.py"))
 grade = MODULE["grade"]
+select_question = MODULE["select_question"]
+format_attempt_results = MODULE["format_attempt_results"]
 
 
 class ReinforcementGraderTests(unittest.TestCase):
@@ -26,6 +28,30 @@ class ReinforcementGraderTests(unittest.TestCase):
 
     def test_empty_answer_is_incorrect(self):
         self.assertEqual(grade("grass_color", "   ")[0:2], ("incorrect", -1))
+
+
+    def test_attempts_rotate_through_all_three_questions_without_stopping(self):
+        questions = [
+            {"id": "sky_is_blue"},
+            {"id": "mountains_high_or_low"},
+            {"id": "grass_color"},
+        ]
+        selected = [select_question(questions, index)["id"] for index in range(8)]
+        self.assertEqual(selected, [
+            "sky_is_blue", "mountains_high_or_low", "grass_color",
+            "sky_is_blue", "mountains_high_or_low", "grass_color",
+            "sky_is_blue", "mountains_high_or_low",
+        ])
+
+    def test_attempt_report_shows_only_number_answer_and_verdict(self):
+        lines = format_attempt_results([
+            {"attempt": 1, "answer": "Sim.\\n", "verdict": "correct"},
+            {"attempt": 2, "answer": "Não sei.", "verdict": "incorrect"},
+        ])
+        self.assertEqual(lines, [
+            "1. Sim. - correto",
+            "2. Não sei. - errado",
+        ])
 
     def test_database_has_exactly_three_tasks(self):
         database = json.loads((ROOT / "data" / "reinforcement" / "answers.json").read_text(encoding="utf-8"))
