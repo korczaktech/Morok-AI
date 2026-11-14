@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <chrono>
 #include <mutex>
+#include <limits>
 #include <cctype>
 #include <cstdint>
 #include <string>
@@ -185,7 +186,9 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
     if (database_path.empty() || limits.max_record_bytes == 0 ||
         limits.max_results == 0 || limits.max_context_bytes == 0 ||
         limits.max_database_bytes < 4096U || limits.busy_timeout_ms == 0 ||
-        limits.search_timeout_ms == 0) {
+        limits.search_timeout_ms == 0 ||
+        limits.busy_timeout_ms > static_cast<std::uint32_t>(std::numeric_limits<int>::max()) ||
+        limits.search_timeout_ms > static_cast<std::uint32_t>(std::numeric_limits<int>::max())) {
         return Status::failure(Error::make(ErrorCode::invalid_argument,
             "invalid database path or memory limits", "memory", "open"));
     }
@@ -375,7 +378,7 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
     if (query.cancellation.is_cancelled())
         return Result<std::vector<MemoryRecord>>::failure(Error::make(
             ErrorCode::cancelled, "memory search was cancelled", "memory", "search"));
-    if (query.text.empty() || query.session_id.is_nil())
+    if (query.text.empty() || query.session_id.is_nil() || query.text.size_bytes() > 4096U)
         return Result<std::vector<MemoryRecord>>::failure(Error::make(
             ErrorCode::invalid_argument, "search text and session are required",
             "memory", "search"));
@@ -428,7 +431,7 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
     std::size_t used_bytes = 0;
     SearchDeadline deadline{
         std::chrono::steady_clock::now() +
-        std::chrono::milliseconds(impl_->limits.search_timeout_ms),
+        std::chrono::milliseconds(static_cast<std::chrono::milliseconds::rep>(impl_->limits.search_timeout_ms)),
         query.cancellation};
     sqlite3_progress_handler(impl_->db, 1000, interrupt_search,
                              &deadline);
@@ -558,7 +561,7 @@ Status MemoryStore::erase(const common::SessionId& session_id,
     std::lock_guard lock(impl_->mutex);
     if (!is_open()) return Status::failure(Error::make(
         ErrorCode::internal_error, "memory store is not open", "memory", "erase"));
-    if (actor.empty()) return Status::failure(Error::make(
+    if (actor.empty() || actor.size() > 128U) return Status::failure(Error::make(
         ErrorCode::invalid_argument, "audit actor is required", "memory", "erase"));
     const auto begin = exec(impl_->db, "BEGIN IMMEDIATE", "begin_erase");
     if (!begin) return begin;
