@@ -1,0 +1,87 @@
+name: Reinforcement-G2
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/reinforcement-g2.yml"
+      - "apps/reinforce_g2.cpp"
+      - "scripts/run-g2-reinforcement.py"
+      - "tests/unit/model/test_g2_reinforcement.cpp"
+      - "data/reinforcement-g2/answers.json"
+      - "docs/56-aprendizado-por-reforco-g2.md"
+      - "CMakeLists.txt"
+      - "tests/CMakeLists.txt"
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+    inputs:
+      attempts:
+        description: "Number of G2 answer attempts (1-100)"
+        required: true
+        type: number
+        default: 10
+      epochs:
+        description: "Bootstrap epochs per expert"
+        required: true
+        type: number
+        default: 8
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: morok-g2-reinforcement
+  cancel-in-progress: false
+jobs:
+  reinforcement-g2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Restore G2 model
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts/reinforcement-g2
+          previous_run="$(gh run list --workflow reinforcement-g2.yml --branch main --status success --json databaseId --limit 1 --jq '.[0].databaseId // empty')"
+          if [[ -n "$previous_run" ]]; then
+            gh run download "$previous_run" --name morok-g2-reinforcement-state --dir artifacts/reinforcement-g2 || true
+          fi
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libsqlite3-dev python3
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
+          cmake --build build --parallel 2
+          ctest --test-dir build --output-on-failure
+      - name: Run G2 reinforcement
+        run: |
+          python3 scripts/run-g2-reinforcement.py \
+            --checkpoint artifacts/reinforcement-g2/model \
+            --database data/reinforcement-g2/answers.json \
+            --attempts "${{ github.event_name == 'workflow_dispatch' && inputs.attempts || 3 }}" \
+            --bootstrap-epochs "${{ github.event_name == 'workflow_dispatch' && inputs.epochs || 8 }}" \
+            --results-file artifacts/reinforcement-g2/attempt-results.txt
+      - name: Commit G2 feedback history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/reinforcement-g2/answers.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record G2 reinforcement answers and rewards"
+            git fetch origin main && git rebase origin/main && git push origin HEAD:main
+          fi
+      - name: Publish G2 reinforcement state
+        uses: actions/upload-artifact@v4
+        with:
+          name: morok-g2-reinforcement-state
+          path: artifacts/reinforcement-g2/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Display attempt results
+        if: always()
+        run: |
+          if [[ -f artifacts/reinforcement-g2/attempt-results.txt ]]; then cat artifacts/reinforcement-g2/attempt-results.txt; else echo "No G2 attempt results were produced."; fi
