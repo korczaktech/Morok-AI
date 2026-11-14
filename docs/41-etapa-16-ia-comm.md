@@ -80,14 +80,15 @@ O teste comm.communication_subsystem cobre:
 4. papéis system, tool, user e assistant;
 5. validação do nome da ferramenta;
 6. envio de texto UTF-8 e geração IA-LANG;
-7. correlação por RequestId e identificadores distintos;
-8. eventos de streaming e fragmentos UTF-8 válidos;
-9. formatação de transcrição e erros;
-10. histórico ordenado;
-11. cancelamento antes e durante a entrega;
-12. rejeição de papel inválido e falha do consumidor de streaming;
-13. fechamento da conversa e sessão;
-14. rejeição de histórico após fechamento.
+7. correlação por RequestId, IDs distintos e round-trip dos identificadores;
+8. limite de conversas e capacidade de sessões;
+9. eventos de streaming e fragmentos UTF-8 válidos;
+10. formatação de transcrição e erros;
+11. histórico ordenado;
+12. cancelamento antes e durante a entrega;
+13. rejeição de papel inválido e falha do consumidor de streaming;
+14. fechamento da conversa e sessão;
+15. rejeição de histórico após fechamento.
 
 ## Fora do escopo / limitações explícitas
 
