@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       attempts:
-        description: "Quantidade total de respostas que a IA deve tentar gerar"
+        description: "Quantidade total de respostas que a IA deve tentar gerar (1 a 100)"
         required: true
         type: number
         default: 10
@@ -62,6 +62,7 @@ jobs:
           else
             echo "No previous reinforcement model; the runner will bootstrap G1."
           fi
+          rm -f artifacts/reinforcement/attempt-results.txt
 
       - name: Install build tools
         run: |
