@@ -18,10 +18,10 @@ A API oferece:
   - estado rápido: 506;
   - estado lento: 253;
   - cabeça de predição: 212;
-  - pontuador/segmentador: 29.
+  - cabeça EOS: 29.
 - `summarize_g1_loss`: transforma NLL acumulada e número de alvos em nats/byte, bits/byte (BPB) e perplexidade por byte (2^{BPB}); rejeita contagem zero, perda negativa ou valores não finitos.
 
-A perplexidade reportada é perplexidade por byte, não perplexidade por palavra ou token linguístico. O inventário arquitetural contém 1.000 parâmetros; no estado atual do treinamento B0, somente 971 recebem gradientes/updates e os 29 parâmetros do segmentador permanecem fora do caminho de treino.
+A perplexidade reportada é perplexidade por byte, não perplexidade por palavra ou token linguístico. O inventário arquitetural contém 1.000 parâmetros; o treinamento B0 atualiza os 1.000 parâmetros; os 29 valores finais formam a cabeça EOS e recebem gradientes de continuação/fim de documento.
 
 ### Diagnóstico de treinamento
 
@@ -38,7 +38,7 @@ Os valores são gravados no JSONL persistente da execução. A média de norma �
 ### Relatório de benchmark
 
 O executável `morok_benchmark` acrescenta ao JSONL:
-- contagem de parâmetros da arquitetura (1.000), contagem atualizada pelo caminho preditivo B0 (971) e verificação de finitude; os 29 parâmetros do segmentador permanecem reservados e não são atualizados pelo B0;
+- contagem de parâmetros da arquitetura (1.000), contagem atualizada pelo caminho B0 (1.000) e verificação de finitude; os 29 parâmetros do segmentador permanecem reservados e não são atualizados pelo B0;
 - média, desvio-padrão, mínimo e máximo da distribuição global;
 - média e desvio-padrão por grupo rápido, lento, predição e segmentador;
 - perplexidade por byte de treino, validação e teste;
@@ -64,7 +64,7 @@ As comparações alteram uma dimensão por vez. Repetições usam sementes expl�
 - Baseline atual: softmax-256 unigram com suavização add-one. Não possui contexto e não é uma rede neural de capacidade equivalente.
 - Baseline softmax-256 neural condicionado ao mesmo estado recorrente: ainda pendente.
 - A matriz atual compara BPTT, otimizador e learning rate; não executa automaticamente todas as ablações de arquitetura previstas.
-- Comparação fast/slow contra RNN simples, segmentação ligada/desligada, hierarquia de escalas e pesos adaptativos/fixos continuam pendentes. O segmentador de 29 parâmetros não participa do caminho preditivo B0, portanto não existe resultado end-to-end legítimo para atribuir a ele.
+- Comparação fast/slow contra RNN simples, segmentação ligada/desligada, hierarquia de escalas e pesos adaptativos/fixos continuam pendentes. A cabeça EOS de 29 parâmetros participa da geração e é treinada com fronteiras de documentos; sua qualidade precisa ser avaliada em dados com limites de resposta representativos.
 - O conjunto de fixtures sintéticos em CI verifica o mecanismo e as fórmulas, não aprendizagem de linguagem.
 - Ainda é necessário corpus real/licenciado com origem, licença e hash verificáveis, múltiplas sementes e execução no hardware de referência de 4 GB.
 - O pico RSS é máximo cumulativo do processo da campanha; não é uma medição isolada por configuração nem prova de consumo total do dispositivo.
