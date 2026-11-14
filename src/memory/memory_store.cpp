@@ -210,7 +210,21 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
     impl_->limits = limits;
     (void)sqlite3_busy_timeout(db, static_cast<int>(limits.busy_timeout_ms));
 
-    const auto max_pages = static_cast<sqlite3_int64>(limits.max_database_bytes / 4096U);
+    int database_page_size = 0;
+    {
+        Statement page_size_query(db, "PRAGMA page_size");
+        if (page_size_query && sqlite3_step(page_size_query.get()) == SQLITE_ROW)
+            database_page_size = sqlite3_column_int(page_size_query.get(), 0);
+    }
+    if (database_page_size != 4096) {
+        const auto error = Error::make(ErrorCode::invalid_argument,
+            "memory database must use 4 KiB SQLite pages",
+            "memory", "page_size");
+        (void)close();
+        return Status::failure(error);
+    }
+    const auto max_pages = static_cast<sqlite3_int64>(
+        limits.max_database_bytes / static_cast<std::size_t>(database_page_size));
     const std::string page_limit = "PRAGMA max_page_count=" + std::to_string(max_pages) + ";";
     const auto page_limit_result = exec(db, page_limit.c_str(), "page_limit");
     if (!page_limit_result) { const auto error = *page_limit_result.error_if(); (void)close(); return Status::failure(error); }
