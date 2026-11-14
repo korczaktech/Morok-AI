@@ -64,8 +64,7 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
     if (config.max_new_bytes == 0 || config.max_new_bytes > 65536)
         throw std::invalid_argument("max_new_bytes precisa estar entre 1 e 65536");
     if (!std::isfinite(config.temperature) || config.temperature < 0.0 ||
-        !std::isfinite(config.repetition_penalty) || config.repetition_penalty < 0.0 ||
-        (config.temperature > 0.0 && config.top_k == 1 && config.repetition_penalty == 0.0)) {
+        !std::isfinite(config.repetition_penalty) || config.repetition_penalty < 0.0) {
         throw std::invalid_argument("configuração de amostragem inválida");
     }
 
