@@ -52,6 +52,17 @@ int main() {
     assert(results);
     assert(results.value_if()->size() == 1);
 
+    assert(store.update_metadata(session, *id.value_if(),
+        memory::Sensitivity::sensitive, std::nullopt));
+    auto hidden_sensitive = store.search(search);
+    assert(hidden_sensitive);
+    assert(hidden_sensitive.value_if()->empty());
+    assert(store.update_metadata(session, *id.value_if(),
+        memory::Sensitivity::normal, std::nullopt));
+
+    const auto id_roundtrip = common::MemoryId::from_string(id.value_if()->to_string());
+    assert(id_roundtrip && *id_roundtrip.value_if() == *id.value_if());
+
     search.session_id = other_session;
     auto isolated = store.search(search);
     assert(isolated);
