@@ -1,0 +1,2 @@
+Pergunta: Quantos lados tem um quadrado?
+Resposta: Um quadrado tem quatro lados iguais.
