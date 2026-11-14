@@ -39,6 +39,18 @@ void test_stable_activations_and_losses() {
         rejected = true;
     }
     require(rejected);
+
+    const double infinity = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    for (const double invalid_logit : {infinity, -infinity, nan}) {
+        rejected = false;
+        try {
+            static_cast<void>(binary_cross_entropy_with_logits(invalid_logit, 1.0));
+        } catch (const std::invalid_argument&) {
+            rejected = true;
+        }
+        require(rejected, "BCE must reject non-finite logits");
+    }
 }
 
 void test_softmax_and_log_sum_exp() {
@@ -60,6 +72,15 @@ void test_softmax_and_log_sum_exp() {
     const std::array<double, 2> invalid{0.0, std::numeric_limits<double>::infinity()};
     try {
         static_cast<void>(softmax(invalid));
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    require(rejected);
+
+    const std::array<double, 2> nan_values{0.0, std::numeric_limits<double>::quiet_NaN()};
+    rejected = false;
+    try {
+        static_cast<void>(log_sum_exp(nan_values));
     } catch (const std::invalid_argument&) {
         rejected = true;
     }
@@ -88,6 +109,30 @@ void test_matrix_vector_and_dimensions() {
         rejected = true;
     }
     require(rejected);
+
+    rejected = false;
+    try {
+        static_cast<void>(Matrix(0, 3));
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    require(rejected, "matrix must reject zero rows before allocating");
+
+    rejected = false;
+    try {
+        static_cast<void>(Matrix(3, 0));
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    require(rejected, "matrix must reject zero columns before allocating");
+
+    rejected = false;
+    try {
+        static_cast<void>(Matrix(std::numeric_limits<std::size_t>::max(), 2));
+    } catch (const std::length_error&) {
+        rejected = true;
+    }
+    require(rejected, "matrix must reject size multiplication overflow");
 }
 
 void test_gradient_clipping() {
