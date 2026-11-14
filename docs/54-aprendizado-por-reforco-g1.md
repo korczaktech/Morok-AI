@@ -38,7 +38,7 @@ O workflow `reinforcement` executa a cada 15 minutos ou manualmente:
 6. aplica uma atualização reward-weighted à G1;
 7. publica o checkpoint atualizado como artifact e comita o histórico JSON na `main`.
 
-A atualização de parâmetros usa o gradiente BPTT da sequência gerada como aproximação do score-function/REINFORCE: recompensa positiva aumenta a probabilidade aproximada da sequência; recompensa negativa a reduz. A atualização é limitada por clipping, taxa de aprendizado pequena e validação de finitude. O modelo permanece com exatamente 1.000 parâmetros treináveis.
+A atualização de parâmetros usa o gradiente BPTT da sequência como aproximação do score-function/REINFORCE: recompensa positiva aumenta a probabilidade aproximada da sequência; recompensa negativa a reduz. O gerador do experimento usa modo somente imprimível para impedir que bytes de controle ASCII contaminem as respostas. A atualização é limitada por clipping, taxa de aprendizado pequena e validação de finitude. O modelo permanece com exatamente 1.000 parâmetros treináveis.
 
 ## Limitações e interpretação
 
