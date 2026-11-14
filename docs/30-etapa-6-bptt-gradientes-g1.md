@@ -1,4 +1,6 @@
-# Etapa 6 — BPTT e gradientes manuais da G1
+# Etapa 8 operacional — BPTT e gradientes manuais da G1
+
+> Este arquivo manteve o nome histórico `30-etapa-6` da organização documental anterior. Na sequência operacional de 20 etapas aprovada posteriormente, este escopo corresponde à **etapa 8: Gradientes e BPTT**. A etapa 7 é dedicada aos otimizadores.
 
 **Objetivo:** calcular gradientes do preditor B0 da G1 por reverse-mode manual, retropropagando através dos estados fast/slow dentro de janelas truncadas.
 
@@ -13,13 +15,17 @@
 - Perda e gradientes apresentados como média por byte-alvo.
 - Acumulação em double; parâmetros e estados continuam FP32.
 - Os 29 parâmetros do segmentador permanecem com gradiente zero, pois não participam do preditor B0.
-- Verificação de finitude dos parâmetros antes do cálculo e da perda/gradientes ao final.
+- Verificação de finitude dos parâmetros e do estado inicial antes do cálculo.
+- Verificação de finitude da perda e de todos os gradientes ao final.
+- Cálculo seguro do fim da janela mesmo quando o chamador fornece truncation_length próximo de SIZE_MAX.
 
 ## Convenção temporal
 
-Para uma sequência de bytes b0,...,bN-1, o modelo consome b(i-1), atualiza fast/slow e prevê bi, para i=1,...,N-1. Portanto há exatamente N-1 bytes-alvo. O estado inicial é zero.
+Para uma sequência de bytes b0,...,bN-1, o modelo consome b(i-1), atualiza fast/slow e prevê bi, para i=1,...,N-1. Portanto há exatamente N-1 bytes-alvo. O estado inicial representa o estado imediatamente anterior ao consumo de b0; pode ser zero ou um estado finito transportado pelo chamador.
 
 Cada bloco contém no máximo B bytes-alvo. Ao mudar de bloco, o estado numérico final é preservado, mas o gradiente do estado é zerado: não existe caminho de derivada entre blocos. Isso implementa truncamento real, sem reinicializar o contexto forward.
+
+O estado retornado fica após consumir o byte de contexto do último alvo, isto é, imediatamente antes do consumo do último byte-alvo da sequência. O chamador deve reutilizar esse estado e sobrepor o último byte-alvo como primeiro byte de contexto da janela seguinte. Essa convenção evita repetir a perda do byte sobreposto.
 
 ## Derivadas
 
@@ -44,29 +50,33 @@ A derivada atravessa o cast FP32 como straight-through identity. Isso é uma apr
 
 - `G1Gradients`: vetor double com 1.000 posições na ordem canônica do inventário; inclui norma global.
 - `G1BpttResult`: perda média em nats por byte-alvo, quantidade de alvos, gradientes e estado final.
-- `compute_g1_bptt_gradients(parameters, bytes, truncation_length)`: calcula forward e backward de uma sequência. Exige pelo menos dois bytes e truncation_length positivo.
+- `compute_g1_bptt_gradients(parameters, bytes, truncation_length, initial_state)`: calcula forward e backward de uma sequência. Exige pelo menos dois bytes, truncation_length positivo, parâmetros finitos e estado inicial finito.
 
 A função não altera parâmetros nem estado externo. Não aplica clipping, atualizador, weight decay ou scheduler.
 
 ## Testes
 
 - [x] Contagem de alvos igual a N-1.
-- [x] Perda e norma dos gradientes finitas.
-- [x] Gradientes do segmentador iguais a zero.
-- [x] Perda forward e estado final invariantes ao tamanho da janela de truncamento.
-- [x] Comparação por diferenças finitas centrais para um parâmetro de cada tensor treinável, em BPTT integral (12 verificações). O truncamento é verificado separadamente pela diferença entre gradientes e pela invariância do estado forward.
-- [x] Verificação de que a perda/estado forward permanecem iguais, mas os gradientes mudam quando a fronteira de truncamento corta dependências temporais.
+- [x] Perda e todos os gradientes finitos.
+- [x] Gradientes dos 29 parâmetros do segmentador iguais a zero.
+- [x] Perda forward e estado final invariantes aos tamanhos de janela 1, 2 e sequência inteira.
+- [x] Janela SIZE_MAX sem overflow aritmético.
+- [x] Comparação independente da perda com o caminho de produção `advance_g1_state` + `evaluate_g1_next_byte`.
+- [x] Diferenças finitas centrais cobrindo um parâmetro de cada tensor treinável.
+- [x] Diferenças finitas com estado inicial fast/slow não nulo.
+- [x] Verificação de que o truncamento corta dependências temporais dos gradientes, sem alterar estado forward ou perda.
 - [x] Rejeição de sequência curta e truncation_length zero.
-- [x] CI GCC/Clang Debug/Release aprovado no run 43519958949.
-- [x] ASan/UBSan aprovado no run 43519958912.
+- [x] Rejeição de NaN/Inf no estado inicial e de parâmetros não finitos.
+- [ ] CI GCC/Clang Debug/Release aprovado no commit final desta revisão.
+- [ ] ASan/UBSan aprovado no commit final desta revisão.
 
 ## Fora do escopo
 
-AdamW, SGD momentum, clipping aplicado ao treinamento, batching, carregamento de corpus, treinamento por épocas, checkpoint, scheduler, avaliação BPB em corpus e segmentador treinável. Esses componentes pertencem às etapas seguintes.
+AdamW, SGD momentum e clipping aplicado ao treinamento pertencem à etapa 7 operacional. Batching, carregamento de corpus, treinamento por épocas, checkpoint, scheduler e avaliação BPB em corpus pertencem às etapas posteriores. O segmentador treinável também não faz parte do preditor B0 nesta etapa.
 
 ## Limitações
 
 - O cálculo guarda caches de uma janela B; memória temporária é O(B vezes dimensão do estado).
 - O forward é byte a byte e o segmentador não é executado.
 - A aproximação straight-through do cast FP32 pode gerar pequenas diferenças em relação à derivada numérica exata da implementação quantizada.
-- O resultado ainda não demonstra que o modelo aprende linguagem: não houve treinamento nem avaliação em corpus.
+- O resultado ainda não demonstra que o modelo aprende linguagem: isso depende de treinamento e avaliação em corpus.
