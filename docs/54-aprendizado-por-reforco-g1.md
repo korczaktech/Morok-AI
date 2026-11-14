@@ -22,7 +22,7 @@ O arquivo versionado `data/reinforcement/answers.json` é a base de dados do exp
 - horário UTC e hashes do checkpoint antes/depois;
 - resultado da atualização de parâmetros.
 
-O histórico é append-only pelo runner: demonstrações-oráculo e respostas geradas são acrescentadas, sem sobrescrever episódios anteriores. O campo \`source\` distingue demonstrações de respostas amostradas. O workflow grava as alterações diretamente na branch `main`.
+O histórico é append-only pelo runner: demonstrações-oráculo e respostas geradas são acrescentadas, sem sobrescrever episódios anteriores. Cada episódio recebe um identificador estável baseado na execução do GitHub Actions para evitar colisões quando ciclos são enfileirados. O campo \`source\` distingue demonstrações de respostas amostradas. O workflow grava as alterações diretamente na branch `main`.
 
 ## Ciclo de reforço
 
