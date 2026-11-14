@@ -18,7 +18,9 @@ int main() {
     core::RuntimeConfig config;
     config.max_sessions = 2;
     config.resources.max_generation_bytes = 8;
-    assert(language.initialize(config));
+    core::Runtime runtime(config);
+    assert(runtime.initialize(
+        {language.initializer()}, {language.shutdown_callback()}));
     assert(language.initialized());
 
     core::SessionRegistry sessions(2);
@@ -73,7 +75,7 @@ int main() {
     assert(language.close_session(sessions, *second.value_if()));
     assert(language.active_sessions() == 0);
     assert(sessions.size() == 0);
-    assert(language.shutdown());
+    assert(runtime.shutdown());
     assert(!language.initialized());
 
     auto unavailable = language.create_session(sessions);
