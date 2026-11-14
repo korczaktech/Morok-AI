@@ -32,6 +32,8 @@ constexpr std::size_t O_HEAD_BIAS = 935;
 constexpr std::size_t O_TRIANGULAR = 943;
 constexpr std::size_t O_SEGMENTER = 971;
 
+static_assert(O_SEGMENTER + kG1SegmenterParameterCount == kG1ParameterCount);
+
 struct StepCache {
     std::array<double, D> input{};
     std::array<double, D> fast_previous{};
@@ -51,6 +53,19 @@ void require_finite_parameters(const G1Parameters& p) {
     for (const float value : flat) {
         if (!std::isfinite(value)) {
             throw std::domain_error("G1 parameters contain a non-finite value");
+        }
+    }
+}
+
+void require_finite_state(const G1State& state) {
+    for (const float value : state.fast) {
+        if (!std::isfinite(value)) {
+            throw std::domain_error("BPTT initial fast state contains a non-finite value");
+        }
+    }
+    for (const float value : state.slow) {
+        if (!std::isfinite(value)) {
+            throw std::domain_error("BPTT initial slow state contains a non-finite value");
         }
     }
 }
@@ -98,15 +113,16 @@ StepCache forward_step(const G1Parameters& p, const G1State& state,
         double zg = p.b_g[row];
         for (std::size_t col = 0; col < D; ++col) {
             const auto ix = row * D + col;
-            zg += static_cast<double>(p.W_gh[ix]) * cache.fast[col];
+            zg += static_cast<double>(p.W_gh[ix]) * cache.fast_unrounded[col];
             zg += static_cast<double>(p.W_gs[ix]) * cache.slow_previous[col];
         }
         cache.slow_gate[row] = math::sigmoid(zg);
         cache.slow[row] = cache.slow_gate[row] * cache.slow_previous[row] +
-            (1.0 - cache.slow_gate[row]) * cache.fast[row];
+            (1.0 - cache.slow_gate[row]) * cache.fast_unrounded[row];
     }
 
-    // Match the production forward pass: recurrent states are stored in FP32.
+    // Match production storage: recurrent states are rounded to FP32 after both
+    // transitions. The backward pass uses a straight-through derivative.
     for (std::size_t i = 0; i < D; ++i) {
         cache.fast[i] = static_cast<float>(cache.fast[i]);
         cache.slow[i] = static_cast<float>(cache.slow[i]);
@@ -174,7 +190,6 @@ void backward_recurrent_step(const G1Parameters& p, const StepCache& step,
     std::array<double, D> d_fast_candidate_pre{};
     std::array<double, D> d_slow_gate_pre{};
 
-    // Reverse the slow-state interpolation first.
     for (std::size_t row = 0; row < D; ++row) {
         const double g = step.slow_gate[row];
         const double h = step.fast_unrounded[row];
@@ -197,7 +212,6 @@ void backward_recurrent_step(const G1Parameters& p, const StepCache& step,
         }
     }
 
-    // Reverse the fast-state interpolation and its two affine transforms.
     for (std::size_t row = 0; row < D; ++row) {
         const double a = step.fast_gate[row];
         const double candidate = step.fast_candidate[row];
@@ -245,19 +259,22 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
         throw std::invalid_argument("BPTT truncation length must be positive");
     }
     require_finite_parameters(parameters);
+    require_finite_state(initial_state);
 
     G1BpttResult result{};
     result.target_byte_count = bytes.size() - 1;
     G1State state = initial_state;
 
-    // A block contains at most truncation_length target bytes. Its incoming
-    // numeric state is carried forward, but no adjoint crosses its left edge.
     std::size_t first_target = 1;
     while (first_target < bytes.size()) {
-        const std::size_t end_target =
-            std::min(bytes.size(), first_target + truncation_length);
+        // Subtract before adding: this avoids size_t overflow for an extreme
+        // truncation_length supplied by an API caller.
+        const std::size_t remaining = bytes.size() - first_target;
+        const std::size_t block_targets = std::min(truncation_length, remaining);
+        const std::size_t end_target = first_target + block_targets;
+
         std::vector<StepCache> tape;
-        tape.reserve(end_target - first_target);
+        tape.reserve(block_targets);
 
         for (std::size_t target_index = first_target;
              target_index < end_target; ++target_index) {
@@ -268,8 +285,6 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
                 state.fast[i] = static_cast<float>(step.fast[i]);
                 state.slow[i] = static_cast<float>(step.slow[i]);
             }
-            // The state is now the state after consuming bytes[target_index-1].
-            // The next step consumes the next observed byte.
         }
 
         result.final_state = state;
@@ -282,8 +297,6 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
             result.mean_loss_nats +=
                 step_loss_and_head_backward(parameters, step, result.gradients,
                                             d_fast_head, d_slow_head);
-            // Add the adjoint arriving from the next time step before reversing
-            // this step's recurrent transition.
             for (std::size_t i = 0; i < D; ++i) {
                 d_fast_head[i] += d_fast_future[i];
                 d_slow_head[i] += d_slow_future[i];
@@ -296,8 +309,6 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
             d_fast_future = d_fast_previous;
             d_slow_future = d_slow_previous;
         }
-        // The future adjoints are intentionally discarded at the block edge:
-        // the numeric state is carried, but the previous block's graph is detached.
         first_target = end_target;
     }
 
