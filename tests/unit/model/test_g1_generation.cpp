@@ -118,6 +118,23 @@ void test_sampling_is_seeded_and_top_k_one_is_greedy() {
             "top-k one must reduce sampling to greedy selection");
 }
 
+void test_printable_mode_excludes_ascii_control_bytes() {
+    using namespace morok;
+    model::G1Parameters parameters{};
+    auto prompt_result = common::Utf8Text::from_utf8("Resposta:");
+    require(prompt_result.has_value(), "printable-mode prompt must validate");
+    model::G1GenerationConfig config;
+    config.max_new_bytes = 12;
+    config.eos_threshold = 0.99;
+    config.printable_only = true;
+    const auto report = model::generate_g1(parameters, *prompt_result.value_if(), config);
+    require(report.generated_bytes == 12, "printable mode must preserve the byte limit");
+    for (const unsigned char byte : report.continuation.string()) {
+        require(byte >= 0x20U && byte != 0x7FU,
+                "printable mode must not emit ASCII control bytes");
+    }
+}
+
 void test_learned_eos_stops_generation() {
     using namespace morok;
     model::G1Parameters parameters{};
@@ -158,6 +175,7 @@ int main() {
         test_inference_checkpoint_round_trip();
         test_sampling_is_seeded_and_top_k_one_is_greedy();
         test_learned_eos_stops_generation();
+        test_printable_mode_excludes_ascii_control_bytes();
         test_invalid_limits_rejected();
     } catch (const std::exception& error) {
         std::cerr << "G1 generation test failed: " << error.what() << '\n';
