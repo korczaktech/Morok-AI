@@ -243,9 +243,9 @@ Status MemoryStore::open(const std::string& database_path, MemoryLimits limits) 
         "CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN "
         "INSERT INTO memories_fts(rowid,title,body) SELECT new.rowid,new.title,new.body WHERE new.sensitivity<2; END;"
         "CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN "
-        "INSERT INTO memories_fts(memories_fts,rowid,title,body) SELECT 'delete',old.rowid,old.title,old.body WHERE old.sensitivity<2; END;"
+        "DELETE FROM memories_fts WHERE rowid=old.rowid AND old.sensitivity<2; END;"
         "CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN "
-        "INSERT INTO memories_fts(memories_fts,rowid,title,body) SELECT 'delete',old.rowid,old.title,old.body WHERE old.sensitivity<2;"
+        "DELETE FROM memories_fts WHERE rowid=old.rowid AND old.sensitivity<2;"
         "INSERT INTO memories_fts(rowid,title,body) SELECT new.rowid,new.title,new.body WHERE new.sensitivity<2; END;";
     if (exec(db, fts_schema, "fts5_setup")) {
         impl_->fts = true;
