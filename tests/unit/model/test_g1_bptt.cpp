@@ -121,13 +121,27 @@ int main() {
         require(std::abs(single_step_blocks.mean_loss_nats - full.mean_loss_nats) < 1e-10,
                 "one-target blocks must preserve the forward loss");
 
-        const auto huge_window = compute_g1_bptt_gradients(
-            parameters, bytes, std::numeric_limits<std::size_t>::max());
-        require(std::abs(huge_window.mean_loss_nats - full.mean_loss_nats) < 1e-12,
-                "maximum truncation length must safely behave as a full sequence");
-        require(huge_window.final_state.fast == full.final_state.fast &&
-                huge_window.final_state.slow == full.final_state.slow,
-                "maximum truncation length changed the final state");
+        const auto maximum_window = compute_g1_bptt_gradients(
+            parameters, bytes, kG1MaxBpttTruncationLength);
+        require(std::abs(maximum_window.mean_loss_nats - full.mean_loss_nats) < 1e-12,
+                "maximum supported truncation length must behave as a full sequence");
+        require(maximum_window.final_state.fast == full.final_state.fast &&
+                maximum_window.final_state.slow == full.final_state.slow,
+                "maximum supported truncation length changed the final state");
+
+        bool rejected = false;
+        try {
+            (void)compute_g1_bptt_gradients(
+                parameters, bytes, kG1MaxBpttTruncationLength + 1);
+        } catch (const std::invalid_argument&) { rejected = true; }
+        require(rejected, "BPTT must enforce the 128-target memory bound");
+
+        rejected = false;
+        try {
+            (void)compute_g1_bptt_gradients(
+                parameters, bytes, std::numeric_limits<std::size_t>::max());
+        } catch (const std::invalid_argument&) { rejected = true; }
+        require(rejected, "BPTT must reject extreme truncation lengths before allocation");
 
         for (const std::size_t index : std::array<std::size_t, 12>{
                  0, 121, 242, 363, 484, 495, 506, 627, 748, 759, 935, 943}) {
