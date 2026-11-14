@@ -511,11 +511,16 @@ common::Result<std::string> SecuritySubsystem::invoke_tool(
 
     bool confirmed = false;
     if (descriptor->requires_confirmation) {
-        if (!action || !confirmation || action->tool_name != tool_name ||
-            action->arguments_binding != bind_tool_arguments(arguments)) {
+        if (!action || !confirmation || action->tool_name != tool_name) {
             return result_failure<std::string>(
                 common::ErrorCode::confirmation_required,
                 "tool invocation requires a matching human confirmation grant",
+                "confirmation");
+        }
+        if (action->arguments_binding != bind_tool_arguments(arguments)) {
+            return result_failure<std::string>(
+                common::ErrorCode::permission_denied,
+                "tool arguments differ from the human-approved arguments",
                 "confirmation");
         }
         const auto consumed = consume_confirmation(principal, *confirmation, *action);
