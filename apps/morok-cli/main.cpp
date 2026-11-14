@@ -10,6 +10,7 @@
 #include <iterator>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace {
 std::string read_file(const std::string& path, std::size_t limit) {
