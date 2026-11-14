@@ -133,12 +133,16 @@ int main(int argc, char** argv) {
                 const auto parameter_stats = morok::model::evaluate_g1_parameters(parameters);
                 double weighted_gradient_norm = 0.0;
                 double maximum_gradient_norm = 0.0;
+                double total_epoch_seconds = 0.0;
+                double maximum_epoch_seconds = 0.0;
                 std::uint64_t gradient_updates = 0;
                 for (const auto& epoch : report.epochs) {
                     weighted_gradient_norm += epoch.mean_gradient_norm *
                         static_cast<double>(epoch.optimizer_updates);
                     gradient_updates += epoch.optimizer_updates;
                     maximum_gradient_norm = std::max(maximum_gradient_norm, epoch.max_gradient_norm);
+                    total_epoch_seconds += epoch.wall_seconds;
+                    maximum_epoch_seconds = std::max(maximum_epoch_seconds, epoch.wall_seconds);
                 }
                 if (gradient_updates)
                     weighted_gradient_norm /= static_cast<double>(gradient_updates);
@@ -181,6 +185,8 @@ int main(int argc, char** argv) {
                     << "\"test_bpb_ratio_vs_unigram\":" << (report.test_bpb / baseline.softmax256_unigram_bpb) << ','
                     << "\"gradient_norm_mean\":" << weighted_gradient_norm << ','
                     << "\"gradient_norm_max\":" << maximum_gradient_norm << ','
+                    << "\"mean_epoch_seconds\":" << (report.epochs.empty() ? 0.0 : total_epoch_seconds / static_cast<double>(report.epochs.size())) << ','
+                    << "\"max_epoch_seconds\":" << maximum_epoch_seconds << ','
                     << "\"documents\":" << report.unique_documents << ','
                     << "\"corpus_bytes\":" << report.corpus_bytes << ','
                     << "\"training_targets\":" << trained_targets << ','
