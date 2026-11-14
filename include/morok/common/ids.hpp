@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace morok::common {
 
@@ -19,6 +20,7 @@ public:
     using Storage = std::array<std::uint8_t, 16>;
 
     [[nodiscard]] static Result<BasicId> generate();
+    [[nodiscard]] static Result<BasicId> from_string(std::string_view value);
 
     [[nodiscard]] std::string to_string() const;
     [[nodiscard]] bool is_nil() const noexcept;
