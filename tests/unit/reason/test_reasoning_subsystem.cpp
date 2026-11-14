@@ -76,7 +76,7 @@ int main() {
     auto plan = reasoning.create_plan(request, task, context);
     assert(plan);
     assert(plan.value_if()->ordered_steps.size() == 4);
-    assert(plan.value_if()->dependency_depth == 2);
+    assert(plan.value_if()->dependency_depth == 3);
     auto result = reasoning.execute(request, *plan.value_if());
     assert(result);
     assert(result.value_if()->steps_executed == 4);
