@@ -3,7 +3,10 @@
 #include "morok/model/learn/g1_training.hpp"
 #include "morok/model/parameters/g1_parameters.hpp"
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 #include <array>
 #include <cstdlib>
 #include <fstream>
