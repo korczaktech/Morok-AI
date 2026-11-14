@@ -334,6 +334,10 @@ common::Result<Message> CommunicationSubsystem::send_message(
                 "conversation was closed", "comm", "message.send")); }
         found->second = std::move(staged_user);
     }
+    auto assistant_prefix = common::Utf8Text::from_utf8("Assistant: ");
+    if (!assistant_prefix) { release(); return common::Result<Message>::failure(*assistant_prefix.error_if()); }
+    const auto prefix_observed = language_.observe(request, *assistant_prefix.value_if());
+    if (!prefix_observed) { release(); return common::Result<Message>::failure(*prefix_observed.error_if()); }
     auto generated = language_.generate(request, max_new_bytes);
     if (!generated) {
         if (stream) {
