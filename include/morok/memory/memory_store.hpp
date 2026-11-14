@@ -4,6 +4,7 @@
 #include "morok/common/result.hpp"
 #include "morok/common/timestamp.hpp"
 #include "morok/common/utf8_text.hpp"
+#include "morok/core/cancellation.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -57,6 +58,7 @@ struct SearchQuery final {
     std::size_t limit{20};
     std::size_t max_context_bytes{4U * 1024U};
     std::optional<MemoryKind> kind;
+    core::CancellationToken cancellation{};
 };
 
 class MemoryStore final {
