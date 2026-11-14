@@ -45,6 +45,43 @@ Result<BasicId<Tag>> BasicId<Tag>::generate() {
 }
 
 template <typename Tag>
+Result<BasicId<Tag>> BasicId<Tag>::from_string(std::string_view value) {
+    if (value.size() != 36U) {
+        return Result<BasicId>::failure(Error::make(
+            ErrorCode::invalid_argument, "identifier must use canonical UUID form",
+            "core", "identifier_parse"));
+    }
+    Storage bytes{};
+    std::size_t byte_index = 0;
+    int high_nibble = -1;
+    for (const char ch : value) {
+        if (ch == '-') continue;
+        unsigned int digit = 0;
+        if (ch >= '0' && ch <= '9') digit = static_cast<unsigned int>(ch - '0');
+        else if (ch >= 'a' && ch <= 'f') digit = static_cast<unsigned int>(ch - 'a' + 10);
+        else if (ch >= 'A' && ch <= 'F') digit = static_cast<unsigned int>(ch - 'A' + 10);
+        else return Result<BasicId>::failure(Error::make(
+            ErrorCode::invalid_argument, "identifier contains a non-hexadecimal character",
+            "core", "identifier_parse"));
+        if (high_nibble < 0) high_nibble = static_cast<int>(digit);
+        else {
+            if (byte_index >= bytes.size()) return Result<BasicId>::failure(Error::make(
+                ErrorCode::invalid_argument, "identifier has too many digits",
+                "core", "identifier_parse"));
+            bytes[byte_index++] = static_cast<std::uint8_t>(
+                (static_cast<unsigned int>(high_nibble) << 4U) | digit);
+            high_nibble = -1;
+        }
+    }
+    if (byte_index != bytes.size() || high_nibble >= 0) {
+        return Result<BasicId>::failure(Error::make(
+            ErrorCode::invalid_argument, "identifier has an invalid length",
+            "core", "identifier_parse"));
+    }
+    return Result<BasicId>::success(BasicId(bytes));
+}
+
+template <typename Tag>
 std::string BasicId<Tag>::to_string() const {
     constexpr char digits[] = "0123456789abcdef";
     std::string output;
