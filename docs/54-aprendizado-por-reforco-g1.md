@@ -10,6 +10,14 @@ Treinar a G1 para responder a exatamente três perguntas controladas, usando os 
 
 A avaliação é deliberadamente estreita. Acertar essas três perguntas não significa que a G1 adquiriu conhecimento geral ou compreensão ampla da linguagem.
 
+## Execução manual com quantidade definida
+
+Ao iniciar o workflow `reinforcement` pelo botão **Run workflow**, o formulário apresenta o campo numérico `attempts` (1 a 100, validado pelo runner). O valor representa o total de respostas geradas naquela execução, não o total por pergunta. As três perguntas são escolhidas em rodízio; por exemplo, 8 tentativas percorrem céu, montanhas, grama, céu, montanhas, grama, céu e montanhas.
+
+O laço executa exatamente a quantidade solicitada e não encerra antecipadamente por acertos ou erros. Cada resposta é classificada, recebe recompensa +1/-1, é registrada na database JSON e aciona a atualização de política quando há bytes suficientes para o BPTT. Uma falha técnica de execução ainda interrompe o workflow, em vez de fingir que as tentativas restantes foram concluídas.
+
+No final, a etapa **Display attempt results** apresenta somente a lista numerada no formato `1. resposta - correto` ou `2. resposta - errado`. O resumo da execução também mostra a tabela com pergunta, resposta e veredito. O histórico completo permanece em `data/reinforcement/answers.json`.
+
 ## Database de feedback
 
 O arquivo versionado `data/reinforcement/answers.json` é a base de dados do experimento. Cada episódio registra:
