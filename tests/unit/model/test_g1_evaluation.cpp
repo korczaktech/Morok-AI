@@ -13,7 +13,8 @@ void require(bool value, const char* message) {
 void test_parameter_inventory_and_groups() {
     morok::model::G1Parameters parameters{};
     const auto result = morok::model::evaluate_g1_parameters(parameters);
-    require(result.trainable_parameter_count == 1000, "trainable count must remain exactly 1000");
+    require(result.architecture_parameter_count == 1000, "trainable count must remain exactly 1000");
+    require(result.b0_updated_parameter_count == 971, "B0 updated parameter count mismatch");
     require(result.all.count == 1000, "all-parameter statistics count mismatch");
     require(result.fast.count == 506, "fast group count mismatch");
     require(result.slow.count == 253, "slow group count mismatch");
