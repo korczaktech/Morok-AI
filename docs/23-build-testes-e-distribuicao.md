@@ -100,7 +100,9 @@ Cada experimento registra:
 
 Métricas devem ter unidade, janela e denominador explícitos.
 
-## 23.7 Distribuição
+## 23.7 Aplicações e distribuição
+
+O build de aplicações é controlado por `MOROK_BUILD_APPS` e registra `morok-cli`, `morok-convert`, `morok-train`, `morok-evaluate`, `morok_benchmark`, `morok_generate`, `morok_complete` e, em Linux, `morok-server`. Os executáveis são instalados em `bin`; a biblioteca estática e os headers são instalados em `lib` e `include`.
 
 Artefatos incluem versão, arquitetura, inventário, checksum e metadados. Não carregar checkpoint incompatível. O runtime deve permitir executar somente inferência sem incluir ferramentas de treinamento quando isso reduzir superfície e tamanho.
 
