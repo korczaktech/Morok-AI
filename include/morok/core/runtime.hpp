@@ -42,6 +42,11 @@ public:
             return common::Status::failure(*valid.error_if());
         }
 
+        if (shutdowns.size() != initializers.size()) {
+            state_ = LifecycleState::failed;
+            return failure(common::ErrorCode::invalid_argument,
+                           "each subsystem initializer requires a shutdown callback");
+        }
         shutdowns_ = shutdowns;
         for (const auto& initializer : initializers) {
             if (!initializer) {
