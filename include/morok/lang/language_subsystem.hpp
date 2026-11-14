@@ -61,6 +61,7 @@ private:
     model::G1Parameters parameters_;
     LanguageConfig language_config_;
     core::ResourceLimits resource_limits_{};
+    std::size_t max_sessions_{1};
     mutable std::mutex mutex_;
     std::unordered_map<std::string, std::string> session_contexts_;
     bool initialized_{false};
