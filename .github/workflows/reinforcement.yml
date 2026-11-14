@@ -89,6 +89,8 @@ jobs:
             echo "No reinforcement database changes to commit."
           else
             git commit -m "Record G1 reinforcement answers and rewards"
+            git fetch origin main
+            git rebase origin/main
             git push origin HEAD:main
           fi
 
