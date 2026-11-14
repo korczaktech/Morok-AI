@@ -38,11 +38,11 @@ Operações numéricas rejeitam operandos incompatíveis, divisão por zero e re
 6. Calcular profundidade do grafo e rejeitar planos fora dos limites.
 7. Vincular o plano ao SessionId e RequestId que o originaram.
 
-Limites máximos desta versão: 32 etapas, profundidade de dependência 8, objetivo 512 bytes, valor individual 4 KiB e uma tentativa de recuperação por etapa. Os limites são configuráveis para valores menores; os máximos de segurança não podem ser ampliados nesta versão.
+Limites máximos desta versão: 32 etapas, profundidade de dependência 8, objetivo 512 bytes, valor individual 4 KiB e uma tentativa de recuperação por etapa. Os limites são configuráveis para valores menores; a inicialização rejeita qualquer configuração que tente ampliar esses tetos. O tamanho de valores escalares é medido pelo tipo armazenado (double ou bool), não pelo tamanho interno do std::variant.
 
 ## Execução
 
-O executor revalida a identidade do plano, verifica pré-condições, dependências e tipos, executa cada operação determinística e valida pós-condições antes de publicar o valor produzido. Uma etapa não pode sobrescrever valores iniciais nem a saída de outra etapa.
+O executor revalida a identidade do plano e faz uma pré-validação estrutural completa antes de executar qualquer etapa. Como ReasoningPlan é um tipo público mutável, o executor reconstrói o mapa de produtores, verifica identificadores e assinaturas, valida dependências explícitas e inferidas, rejeita referências ausentes/repetidas/adiantadas e recalcula a profundidade do grafo. Só então verifica pré-condições, executa operações e valida pós-condições antes de publicar valores. Uma etapa não pode sobrescrever valores iniciais nem a saída de outra etapa.
 
 Uma etapa pode declarar um valor alternativo (fallback). Se a operação falhar ou a pós-condição não for satisfeita, o executor pode tentar esse valor uma única vez; ele só é aceito se passar pela pós-condição. O resultado informa etapas concluídas, recuperadas, falhas e ignoradas.
 
@@ -84,7 +84,12 @@ O teste reason.reasoning_subsystem cobre:
 9. orçamento de etapas;
 10. isolamento por RequestId;
 11. cancelamento;
-12. rejeição de chamadas após shutdown.
+12. rejeição de chamadas após shutdown;
+13. rejeição de planos adulterados com operação desconhecida;
+14. rejeição de dependências inexistentes e ordem topológica adulterada;
+15. rejeição de assinaturas de operandos alteradas após o planejamento;
+16. tetos rígidos de configuração para valor e objetivo;
+17. medição correta do tamanho de valores escalares em configurações menores.
 
 ## Limitações explícitas
 
@@ -98,4 +103,4 @@ O teste reason.reasoning_subsystem cobre:
 
 ## Critério de conclusão
 
-IA-REAS está implementada quando aceita tarefas tipadas, valida valores e restrições, constrói ordem topológica determinística, detecta ciclos e limites, executa operações matemáticas/lógicas seguras, aplica pré/pós-condições, respeita política de falha e cancelamento, vincula planos a requisições e possui teste automatizado registrado no CTest. A validação final exige que GCC, Clang e sanitizers aprovem os workflows do commit correspondente.
+IA-REAS está implementada quando aceita tarefas tipadas, valida valores e restrições, constrói ordem topológica determinística, detecta ciclos e limites, executa operações matemáticas/lógicas seguras, aplica pré/pós-condições, respeita política de falha e cancelamento, vincula planos a requisições, revalida integralmente a estrutura pública do plano antes da execução e possui teste automatizado registrado no CTest. A validação final exige que GCC, Clang e sanitizers aprovem os workflows do commit correspondente.
