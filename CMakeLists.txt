@@ -81,14 +81,6 @@ if(MOROK_BUILD_APPS)
         morok_enable_sanitizers(morok_server)
     endif()
 
-    install(TARGETS morok_cli morok_convert morok_evaluate morok_train
-        morok_benchmark morok_generate morok_complete
-        RUNTIME DESTINATION bin)
-    if(UNIX)
-        install(TARGETS morok_server RUNTIME DESTINATION bin)
-    endif()
-    install(TARGETS morok_core ARCHIVE DESTINATION lib)
-    install(DIRECTORY include/ DESTINATION include)
 endif()
 
 if(MOROK_BUILD_TESTS)
@@ -116,3 +108,14 @@ morok_enable_sanitizers(morok_complete)
 add_executable(morok_generate apps/generate_g1.cpp)
 target_link_libraries(morok_generate PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_generate)
+
+if(MOROK_BUILD_APPS)
+    install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
+        morok_train morok_benchmark morok_generate morok_complete
+        RUNTIME DESTINATION bin)
+    if(UNIX)
+        install(TARGETS morok_server RUNTIME DESTINATION bin)
+    endif()
+    install(TARGETS morok_core ARCHIVE DESTINATION lib)
+    install(DIRECTORY include/ DESTINATION include)
+endif()
