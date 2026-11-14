@@ -111,6 +111,16 @@ add_executable(morok_generate apps/generate_g1.cpp)
 target_link_libraries(morok_generate PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_generate)
 
+add_executable(morok_train_g2 apps/train_g2.cpp)
+target_link_libraries(morok_train_g2 PRIVATE Morok::Core morok_build_options)
+set_target_properties(morok_train_g2 PROPERTIES OUTPUT_NAME "morok-train-g2")
+morok_enable_sanitizers(morok_train_g2)
+
+add_executable(morok_generate_g2 apps/generate_g2.cpp)
+target_link_libraries(morok_generate_g2 PRIVATE Morok::Core morok_build_options)
+set_target_properties(morok_generate_g2 PROPERTIES OUTPUT_NAME "morok-generate-g2")
+morok_enable_sanitizers(morok_generate_g2)
+
 add_executable(morok_reinforce apps/reinforce_g1.cpp)
 target_link_libraries(morok_reinforce PRIVATE Morok::Core morok_build_options)
 set_target_properties(morok_reinforce PROPERTIES OUTPUT_NAME "morok-reinforce")
