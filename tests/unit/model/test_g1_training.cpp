@@ -25,6 +25,8 @@ void pipeline(){
   req(!r.corpus_hash.empty()&&!r.epochs.empty(),"report metadata");
   req(std::isfinite(r.best_validation_bpb)&&std::isfinite(r.test_bpb),"finite BPB");
   req(r.test_target_bytes>0&&r.epochs[0].optimizer_updates>0,"training/evaluation did not run");
+  req(std::isfinite(r.epochs[0].mean_gradient_norm)&&std::isfinite(r.epochs[0].max_gradient_norm),"gradient norm diagnostics must be finite");
+  req(r.epochs[0].max_gradient_norm>=r.epochs[0].mean_gradient_norm,"maximum gradient norm must bound the mean");
  }catch(...){std::filesystem::remove_all(root);throw;}std::filesystem::remove_all(root);
 }
 
