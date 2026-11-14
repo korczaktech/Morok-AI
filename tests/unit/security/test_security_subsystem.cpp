@@ -169,6 +169,20 @@ int main() {
     }
     assert(saw_denial && saw_grant && saw_confirmation && saw_consumed);
 
+    security::SecuritySubsystem missing_audit;
+    assert(!missing_audit.initialize(core::RuntimeConfig{}));
+
+    security::SecuritySubsystem failing_audit({}, [](const security::SecurityAuditRecord&) {
+        return common::Status::failure(common::Error::make(
+            common::ErrorCode::tool_failure, "audit unavailable", "test", "audit"));
+    });
+    assert(failing_audit.initialize(core::RuntimeConfig{}));
+    auto audit_failure = failing_audit.grant_tool(
+        principal, "sensitive_action", tools::ToolCapability::external_write);
+    assert(!audit_failure);
+    assert(failing_audit.grant_count() == 0);
+    assert(failing_audit.shutdown());
+
     assert(runtime.shutdown());
     assert(!security_system.initialized());
     return 0;
