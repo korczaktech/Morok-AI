@@ -74,12 +74,15 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 44. [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md)
 45. [Etapa 13 — Segurança](docs/46-etapa-13-seguranca.md)
 46. [Etapa 14 — Aplicações executáveis (roteiro de 20 etapas)](docs/47-etapa-14-aplicacoes-executaveis.md)
+47. [Etapa 15 — Testes automatizados](docs/48-etapa-15-testes-automatizados.md)
 
 ## Estado atual
 
 - Etapa 13 — Segurança: SecuritySubsystem com negação por padrão, grants exatos por sujeito/sessão/ferramenta/capacidade, revogação, política para IA-TOOLS, confirmações humanas de uso único vinculadas à ação e aos argumentos exatos, wrapper seguro de execução IA-TOOLS, classificação imutável de origem e auditoria sem conteúdo sensível. Teste `security.security_subsystem` registrado no CTest. Sandbox de processo/OS, criptografia em repouso e detecção completa de prompt injection não estão implementadas. Consulte [Etapa 13 — Segurança](docs/46-etapa-13-seguranca.md).
 
-- Etapa 14 — Aplicações executáveis: CLI unificada, conversor UTF-8 de corpus, treinamento, avaliação BPB, benchmark, geração offline e servidor HTTP local com composição de lifecycle IA-CORE implementados. CI GCC/Clang Debug/Release aprovado no run `43546254832`; Sanitizers ASan/UBSan aprovado no run `43546254828`; smoke test ponta a ponta de conversão, treino, inspeção, geração, avaliação e HTTP aprovado. Consulte [Etapa 14 — Aplicações executáveis](docs/47-etapa-14-aplicacoes-executaveis.md).
+- Etapa 14 — Aplicações executáveis: CLI unificada, conversor UTF-8 de corpus, treinamento, avaliação BPB, benchmark, geração offline e servidor HTTP local com composição de lifecycle IA-CORE implementados. CI GCC/Clang Debug/Release aprovado; Sanitizers ASan/UBSan aprovado; smoke test ponta a ponta de conversão, treino, inspeção, geração, avaliação e HTTP aprovado. Consulte [Etapa 14 — Aplicações executáveis](docs/47-etapa-14-aplicacoes-executaveis.md).
+
+- Etapa 15 — Testes automatizados: camadas unitária, integração, propriedades, regressão e fuzzing adicionadas. Inclui pipeline treinamento → checkpoint → geração, invariantes determinísticos de parâmetros/UTF-8/G1/RLAH, regressão de rollback do IA-CORE e harnesses libFuzzer para UTF-8, RLAH e checkpoints. Validação CI desta etapa em andamento. Consulte [Etapa 15 — Testes automatizados](docs/48-etapa-15-testes-automatizados.md).
 
 - Etapa 12 — IA-TOOLS: registro, descoberta, esquema tipado, allowlist, grants de capacidade, confirmação de efeitos colaterais, validação UTF-8 e de tipos, limites de concorrência/entrada/saída/tempo, captura de exceções, auditoria injetável e lifecycle IA-CORE implementados. Teste `tools.tool_subsystem` registrado no CTest. Isolamento de processo/OS e interrupção forçada de handlers não fazem parte desta versão; handlers devem ser código confiável. Consulte [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md).
 
