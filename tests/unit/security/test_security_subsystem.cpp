@@ -117,6 +117,11 @@ int main() {
         tool_subsystem, *mismatch_request.value_if(), principal, "publish",
         publish_arguments, &publish_action, &*publish_approval.value_if());
     assert(publish_result && *publish_result.value_if() == "published");
+    auto cross_session_invoke = security_system.invoke_tool(
+        tool_subsystem, *mismatch_request.value_if(), other_principal, "publish",
+        publish_arguments, &publish_action, &*publish_approval.value_if());
+    assert(!cross_session_invoke &&
+           cross_session_invoke.error_if()->code == common::ErrorCode::permission_denied);
     auto publish_replay = security_system.invoke_tool(
         tool_subsystem, *mismatch_request.value_if(), principal, "publish",
         publish_arguments, &publish_action, &*publish_approval.value_if());
