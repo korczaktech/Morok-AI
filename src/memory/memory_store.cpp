@@ -153,11 +153,13 @@ void bind_text(sqlite3_stmt* stmt, int index, std::string_view value) {
 
 struct SearchDeadline final {
     std::chrono::steady_clock::time_point expires;
+    core::CancellationToken cancellation;
 };
 
 int interrupt_search(void* context) {
     const auto* deadline = static_cast<const SearchDeadline*>(context);
-    return std::chrono::steady_clock::now() >= deadline->expires ? 1 : 0;
+    return deadline->cancellation.is_cancelled() ||
+        std::chrono::steady_clock::now() >= deadline->expires ? 1 : 0;
 }
 
 constexpr const char* record_columns =
@@ -421,7 +423,8 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
     std::size_t used_bytes = 0;
     SearchDeadline deadline{
         std::chrono::steady_clock::now() +
-        std::chrono::milliseconds(impl_->limits.search_timeout_ms)};
+        std::chrono::milliseconds(impl_->limits.search_timeout_ms),
+        query.cancellation};
     sqlite3_progress_handler(impl_->db, 1000, interrupt_search,
                              &deadline);
     int step_result = SQLITE_OK;
@@ -442,10 +445,15 @@ Result<std::vector<MemoryRecord>> MemoryStore::search(const SearchQuery& query) 
     }
     sqlite3_progress_handler(impl_->db, 0, nullptr, nullptr);
     if (step_result != SQLITE_DONE) {
-        if (step_result == SQLITE_INTERRUPT)
+        if (step_result == SQLITE_INTERRUPT) {
+            const auto code = query.cancellation.is_cancelled()
+                ? ErrorCode::cancelled : ErrorCode::tool_timeout;
             return Result<std::vector<MemoryRecord>>::failure(Error::make(
-                ErrorCode::tool_timeout, "memory search exceeded its time budget",
+                code, query.cancellation.is_cancelled()
+                    ? "memory search was cancelled"
+                    : "memory search exceeded its time budget",
                 "memory", "search"));
+        }
         return Result<std::vector<MemoryRecord>>::failure(db_error(impl_->db, "search"));
     }
     return Result<std::vector<MemoryRecord>>::success(std::move(records));
