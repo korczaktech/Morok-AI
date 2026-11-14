@@ -69,7 +69,8 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 41. [Etapa 16 — IA-COMM](docs/41-etapa-16-ia-comm.md)
 42. [Etapa 17 — IA-REAS](docs/42-etapa-17-ia-reas.md)
 43. [Etapa 18 — IA-LEARN](docs/43-etapa-18-ia-learn.md)
-44. [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md)\n44. [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md)
+44. [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md)
+45. [Etapa 13 — Segurança](docs/46-etapa-13-seguranca.md)
 
 ## Estado atual
 
