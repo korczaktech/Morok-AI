@@ -56,7 +56,7 @@ Padrões iniciais:
 - orçamento de execução da busca: 100 ms;
 - limite de banco: 256 MiB, aplicado por max_page_count com páginas de 4 KiB.
 
-O limite de resultados/contexto também é aplicado na camada C++, independentemente do plano de consulta. A busca FTS trata a consulta como termos literais AND, sem permitir que o texto do usuário injete operadores FTS.
+O limite de resultados/contexto também é aplicado na camada C++, independentemente do plano de consulta. A busca FTS trata a consulta como termos literais AND, sem permitir que o texto do usuário injete operadores FTS. A consulta aceita `CancellationToken` e respeita cancelamento cooperativo.
 
 ## Retenção, promoção e exclusão
 
@@ -68,7 +68,7 @@ O limite de resultados/contexto também é aplicado na camada C++, independentem
 - `erase` exige ator e SessionId, registra evento de exclusão na mesma transação que remove o registro.
 - Triggers FTS removem o conteúdo correspondente do índice quando o registro é apagado.
 
-O encerramento de uma sessão deve chamar `MemoryStore::clear_working(session_id)` antes ou durante o callback de encerramento registrado no IA-CORE. A integração automática entre SessionRegistry e MemoryStore é responsabilidade do composition root.
+O encerramento de uma sessão deve usar `MemorySubsystem::close_session(registry, session_id)`: o adaptador limpa a memória de trabalho e só então remove a sessão do `SessionRegistry`. O composition root deve registrar `initializer()` e `shutdown_callback()` no Runtime.
 
 ## Backup e integridade
 
