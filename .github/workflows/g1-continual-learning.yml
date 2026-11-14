@@ -1,0 +1,74 @@
+name: G1 Continual Learning
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: morok-g1-continual-learning
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  continual-learning:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore state from the latest successful cycle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts/continual-g1
+          previous_run="$(gh run list \
+            --workflow g1-continual-learning.yml \
+            --branch main \
+            --status success \
+            --json databaseId \
+            --limit 1 \
+            --jq '.[0].databaseId // empty')"
+          if [[ -n "$previous_run" ]]; then
+            echo "Restoring state from successful run $previous_run"
+            gh run download "$previous_run" \
+              --name morok-g1-continual-state \
+              --dir artifacts/continual-g1
+          else
+            echo "No previous successful cycle; starting from deterministic initialization."
+          fi
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libsqlite3-dev
+
+      - name: Configure Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
+
+      - name: Build
+        run: cmake --build build --parallel 2
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Train, evaluate target and save resumable state
+        env:
+          MOROK_EPOCHS_PER_CYCLE: "10"
+          MOROK_MAX_TOTAL_EPOCHS: "500"
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: bash scripts/run-g1-continual-cycle.sh artifacts/continual-g1
+
+      - name: Publish resumable state and evaluation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: morok-g1-continual-state
+          path: artifacts/continual-g1/
+          if-no-files-found: warn
+          retention-days: 90
