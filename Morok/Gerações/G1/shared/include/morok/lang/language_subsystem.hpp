@@ -17,7 +17,7 @@
 
 namespace morok::lang {
 
-enum class LanguageProfile { tsukuyomi, apollo, mokosh };
+enum class LanguageProfile { tsukuyomi, apollo, mokosh, tsukuyomi_max };
 enum class DetectedLanguage { portuguese, english, spanish, unknown };
 enum class ConversationRole { user, assistant };
 
@@ -30,7 +30,7 @@ struct ConversationMessage final {
 
 struct LanguageConfig final {
     std::size_t max_context_bytes{64U * 1024U};
-    LanguageProfile profile{LanguageProfile::tsukuyomi};
+    LanguageProfile profile{LanguageProfile::tsukuyomi_max};
 };
 
 struct LanguageGeneration final {
