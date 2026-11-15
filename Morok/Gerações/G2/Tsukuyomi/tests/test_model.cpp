@@ -120,6 +120,24 @@ int main() {
                forward(linguistic_model, lower_a).hidden);
     }
 
+    // O canal de categoria também recebe gradiente pela representação da pergunta.
+    {
+        assert(compute_target_gradient(model, question_gradient_sample, 12, analytic));
+        constexpr float epsilon = 1.0e-3F;
+        Model plus = model;
+        Model minus = model;
+        const std::size_t feature_parameter = 1 * kHiddenSize;
+        plus.parameters[feature_parameter] += epsilon;
+        minus.parameters[feature_parameter] -= epsilon;
+        std::array<std::uint8_t, 13> one_target_mask{};
+        one_target_mask[12] = 1;
+        const double loss_plus = evaluate_loss(plus, question_gradient_sample, one_target_mask);
+        const double loss_minus = evaluate_loss(minus, question_gradient_sample, one_target_mask);
+        const double numerical = (loss_plus - loss_minus) / (2.0 * epsilon);
+        assert(std::abs(numerical - analytic[feature_parameter]) <=
+               3.0e-2 + 3.0e-2 * std::abs(numerical));
+    }
+
     // Perguntas longas que diferem no início não podem colapsar ao mesmo contexto.
     const std::string prompt_a = "U: A pergunta inteira tem contexto longo?\nIA:";
     const std::string prompt_b = "U: B pergunta inteira tem contexto longo?\nIA:";
