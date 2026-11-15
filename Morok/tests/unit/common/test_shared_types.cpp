@@ -114,13 +114,13 @@ void test_identifiers() {
 void test_model_version_and_timestamp() {
     using namespace morok::common;
 
-    const auto version = ModelVersion::create("RLAH-G1-fastslow-d11-bit8", 1000U, 1U);
+    const auto version = ModelVersion::create("RLAH-G1-fastslow-d11-lex-eos", 1000U, 1U);
     check(version.has_value(), "valid model version is accepted");
     check(version.value_if() != nullptr &&
               version.value_if()->parameter_count() == 1000U,
           "model version stores parameter inventory");
     check(version.value_if() != nullptr &&
-              version.value_if()->architecture_id() == "RLAH-G1-fastslow-d11-bit8",
+              version.value_if()->architecture_id() == "RLAH-G1-fastslow-d11-lex-eos",
           "model version stores architecture identity");
 
     const auto invalid = ModelVersion::create("", 1000U, 1U);
