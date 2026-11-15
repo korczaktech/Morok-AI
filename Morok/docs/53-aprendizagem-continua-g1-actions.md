@@ -97,4 +97,4 @@ Os 29 parâmetros finais do inventário agora são uma cabeça de parada:
 
 Durante BPTT, cada contexto que possui um próximo byte recebe o rótulo "continuar". Depois do último byte de cada documento de treinamento, o loop consome esse byte e aplica um rótulo positivo de parada. A cabeça EOS é atualizada pelo mesmo otimizador dos demais parâmetros. A inferência consulta a probabilidade de parada depois do comprimento mínimo e somente em fronteiras completas de caracteres UTF-8.
 
-O identificador de arquitetura do checkpoint mudou para `RLAH-G1-fastslow-d11-bit8-eos`. O ciclo contínuo descarta checkpoints anteriores sem esse identificador e reinicia deterministicamente, pois os 29 valores mudaram de semântica. Checkpoints antigos não são compatíveis com essa versão.
+O identificador de arquitetura do checkpoint mudou para `RLAH-G1-fastslow-d11-lex-eos`. O ciclo contínuo descarta checkpoints anteriores sem esse identificador e reinicia deterministicamente, pois os 29 valores mudaram de semântica. Checkpoints antigos não são compatíveis com essa versão.
