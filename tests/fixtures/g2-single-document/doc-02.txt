@@ -1,0 +1,2 @@
+Usuario: As montanhas sao altas ou baixas?
+IA: As montanhas sao altas.
