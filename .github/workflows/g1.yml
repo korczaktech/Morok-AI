@@ -193,26 +193,39 @@ jobs:
               mean_ms = sum(r["latency_ms"] for r in selected) / len(selected)
               individual.append([profile, correct, incorrect, f"{mean_ms:.3f} ms"])
 
-          detailed = []
+          # Consolida todas as tentativas por modelo/pergunta.
+          # A resposta exibida é a mais frequente; latência e taxa de acerto são médias.
+          grouped = {}
           for row in rows:
-              answer = display_answer(row["answer"].strip())
-              verdict = "Correto" if row["correct"] else "Errado"
-              detailed.append([row["profile"], questions[row["question_id"]],
-                               row["attempt"], answer, verdict,
-                               f'{row["latency_ms"]:.3f} ms'])
-              level = "notice" if row["correct"] else "warning"
+              grouped.setdefault((row["profile"], row["question_id"]), []).append(row)
+
+          detailed = []
+          for (profile, qid), attempts in grouped.items():
+              answers = [r["answer"].strip() for r in attempts]
+              answer_counts = {}
+              for answer in answers:
+                  answer_counts[answer] = answer_counts.get(answer, 0) + 1
+              representative = max(answer_counts, key=answer_counts.get)
+              correct_count = sum(r["correct"] for r in attempts)
+              accuracy = correct_count / len(attempts) * 100
+              mean_ms = sum(r["latency_ms"] for r in attempts) / len(attempts)
+              verdict = "Correto" if accuracy > 50 else ("Errado" if accuracy < 50 else "Empate")
+              answer = display_answer(representative)
+              detailed.append([profile, questions[qid], answer, verdict,
+                               f"{accuracy:.1f}%", f"{mean_ms:.3f} ms"])
+              level = "notice" if accuracy > 50 else "warning"
               safe = answer.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A").replace(":", "%3A").replace(",", "%2C")
-              print(f"::{level} title={row['profile']} - tentativa {row['attempt']}::{questions[row['question_id']]}; {verdict}; resposta: {safe}; latência: {row['latency_ms']:.3f} ms")
+              print(f"::{level} title={profile}::{questions[qid]}; acerto médio: {accuracy:.1f}%; estado: {verdict}; resposta representativa: {safe}; latência média: {mean_ms:.3f} ms")
 
           report = [
               "# Avaliação G1 — execução configurada", "",
-              f"Modelos: {', '.join(profiles)}. Perguntas selecionadas: {len(question_ids)}. Tentativas por pergunta/modelo: {max(int(r['attempt']) for r in rows)}.", "",
+              f"Modelos: {', '.join(profiles)}. Perguntas selecionadas: {len(question_ids)}. Resultados consolidados pela média das tentativas.", "",
               "## G1 ao todo — todos os modelos",
               table(["Pergunta", "Respostas Erradas", "Respostas Certas", "Estado"], overall), "",
               "## Resultado individual por modelo",
               table(["Modelo", "Corretas", "Incorretas", "Tempo médio"], individual), "",
-              "## Avaliação individual de cada tentativa",
-              table(["Modelo", "Pergunta", "Tentativa", "Resposta gerada", "Estado", "Tempo"], detailed)
+              "## Resultado médio por modelo e pergunta",
+              table(["Modelo", "Pergunta", "Resposta representativa", "Estado", "Acerto médio", "Latência média"], detailed)
           ]
           rendered = "\n".join(report) + "\n"
           if summary_path:
