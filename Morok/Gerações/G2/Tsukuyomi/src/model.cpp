@@ -45,8 +45,9 @@ float at(const Model& model, std::size_t offset) {
 }
 
 struct LinguisticFeatures {
-    std::uint8_t category{16};
-    std::uint8_t boundary{24};
+    // Protótipos em bytes inválidos para UTF-8: não colidem com texto válido.
+    std::uint8_t category{0xFB};
+    std::uint8_t boundary{0xFF};
 };
 
 bool ascii_letter(std::uint8_t byte) {
@@ -59,33 +60,22 @@ bool word_byte(std::uint8_t byte) {
 }
 LinguisticFeatures linguistic_features(std::uint8_t byte, std::uint8_t previous) {
     LinguisticFeatures result;
-    if (byte >= 'A' && byte <= 'Z') result.category = 1;
-    else if (byte >= 'a' && byte <= 'z') result.category = 2;
-    else if (byte >= '0' && byte <= '9') result.category = 3;
-    else if (byte == ' ' || byte == '\t') result.category = 4;
-    else if (byte == '\n' || byte == '\r') result.category = 5;
-    else if (byte == '.' || byte == '?' || byte == '!') result.category = 6;
-    else if (byte == ',' || byte == ';' || byte == ':') result.category = 7;
-    else if (byte == '(' || byte == '[' || byte == '{' || byte == '<') result.category = 8;
-    else if (byte == ')' || byte == ']' || byte == '}' || byte == '>') result.category = 9;
-    else if (byte >= 0x80 && byte <= 0xBF) result.category = 10;
-    else if (byte >= 0xC2 && byte <= 0xDF) result.category = 11;
-    else if (byte >= 0xE0 && byte <= 0xEF) result.category = 12;
-    else if (byte >= 0xF0 && byte <= 0xF4) result.category = 13;
-    else if (byte >= 0x21 && byte <= 0x7E) result.category = 14;
-    else if (byte < 0x20 || byte == 0x7F) result.category = 15;
-    else result.category = 16;
+    if (byte >= 'A' && byte <= 'Z') result.category = 0xC0;
+    else if (byte >= 'a' && byte <= 'z') result.category = 0xC1;
+    else if (byte >= '0' && byte <= '9') result.category = 0xF5;
+    else if (byte == ' ' || byte == '\t') result.category = 0xF6;
+    else if (byte == '\n' || byte == '\r') result.category = 0xF7;
+    else if (byte == '.' || byte == '?' || byte == '!') result.category = 0xF8;
+    else if (byte >= 0x80 && byte <= 0xBF) result.category = 0xFB;
+    else if (byte >= 0xC2 && byte <= 0xF4) result.category = 0xFA;
+    else result.category = 0xF9;
 
     const bool current_word = word_byte(byte);
     const bool previous_word = word_byte(previous);
-    if (current_word && !previous_word) result.boundary = 17;
-    else if (current_word && previous_word) result.boundary = 18;
-    else if (!current_word && previous_word) result.boundary = 19;
-    else if (byte == ' ' || byte == '\t') result.boundary = 20;
-    else if (byte == '\n' || byte == '\r') result.boundary = 21;
-    else if (byte == '.' || byte == '?' || byte == '!') result.boundary = 22;
-    else if (result.category >= 7 && result.category <= 9) result.boundary = 23;
-    else result.boundary = 24;
+    if (current_word && !previous_word) result.boundary = 0xFC;
+    else if (current_word && previous_word) result.boundary = 0xFD;
+    else if (!current_word && previous_word) result.boundary = 0xFE;
+    else result.boundary = 0xFF;
     return result;
 }
 
