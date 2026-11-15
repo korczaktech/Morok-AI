@@ -13,10 +13,10 @@ import treinamento_ciclico as training
 class TrainingDataTests(unittest.TestCase):
     def test_learning_rate_scheduler_reduces_after_plateau(self):
         lr = training.INITIAL_LEARNING_RATE
-        best = 0.5
+        best = (0, 0.5)
         plateau = 0
         for _ in range(training.LR_PLATEAU_CYCLES - 1):
-            lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 0.5)
+            lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, (0, 0.5))
             self.assertFalse(reduced)
         lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 0.5)
         self.assertTrue(reduced)
@@ -30,18 +30,18 @@ class TrainingDataTests(unittest.TestCase):
 
     def test_learning_rate_scheduler_never_crosses_minimum(self):
         lr = training.MIN_LEARNING_RATE * 2
-        best = 0.9
+        best = (0, 0.9)
         plateau = 0
         for _ in range(training.LR_PLATEAU_CYCLES):
-            lr, best, plateau, _ = training.update_learning_rate(lr, best, plateau, 0.1)
+            lr, best, plateau, _ = training.update_learning_rate(lr, best, plateau, (0, 0.1))
         self.assertEqual(lr, training.MIN_LEARNING_RATE)
 
     def test_learning_rate_scheduler_resets_on_improvement(self):
         lr, best, plateau, reduced = training.update_learning_rate(
-            0.001, 0.5, 4, 0.8
+            0.001, (0, 0.5), 4, (0, 0.8)
         )
         self.assertEqual(lr, 0.001)
-        self.assertEqual(best, 0.8)
+        self.assertEqual(best, (0, 0.8))
         self.assertEqual(plateau, 0)
         self.assertFalse(reduced)
 
