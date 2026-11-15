@@ -2,7 +2,7 @@
 
 ## Organização por geração
 
-Cada geração contém quatro modelos especializados. G1, G2 e G3 são gerações; Mokosh, Tsukuyomi, Artemis e Apollo são modelos dentro de cada geração.
+G1, G2 e G3 são gerações. Os perfis disponíveis são definidos individualmente por geração; não é obrigatório que todas tenham os mesmos perfis.
 
 ```text
 Morok-AI/
@@ -63,7 +63,7 @@ Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a prim
 
 ## Relação entre gerações
 
-Cada geração implementará os quatro perfis. Mokosh mantém a prioridade de eficiência; Tsukuyomi usa exatamente um agente; Artemis usa mais de dois agentes; Apollo prioriza baixa latência. A quantidade de parâmetros, mecanismos cognitivos e capacidades de cada geração será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
+Os perfis são definidos por geração. Na G1 existem somente Tsukuyomi, Apollo e Mokosh; Artemis não faz parte dessa geração. Na G2, os perfis permanecem independentes conforme sua própria implementação. A quantidade de parâmetros, mecanismos cognitivos e capacidades será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
 
 ## Organização real do código
 
@@ -77,7 +77,7 @@ Aplicações, scripts, dados de reforço, fixtures e testes específicos foram m
 
 ## Estado dos perfis
 
-G1 e G2 possuem alvos CMake independentes para Mokosh, Tsukuyomi, Artemis e Apollo. Cada perfil mantém suas políticas e código exclusivo dentro de seu próprio diretório, com testes próprios. Os motores e adaptadores comuns a todos os perfis de uma geração permanecem no diretório interno dessa geração, fora dos diretórios dos perfis. Artemis expõe três agentes; Tsukuyomi expõe exatamente um. Mokosh e Apollo possuem políticas distintas de geração.
+G1 possui alvos CMake independentes para Mokosh, Tsukuyomi e Apollo. G2 mantém alvos independentes para seus perfis implementados. Cada perfil mantém suas políticas e código exclusivo dentro de seu próprio diretório, com testes próprios. Os motores e adaptadores comuns aos perfis de uma geração permanecem no diretório interno dessa geração, fora dos diretórios dos perfis. Na G1, Tsukuyomi preserva a execução atual de agente único; Apollo é o perfil de velocidade; Mokosh deriva da base de Tsukuyomi, com processamento de raciocínio mais demorado e treinamento com mais épocas. Artemis não existe na G1.
 
 G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de G1 ou G2 dentro da G3.
 

@@ -69,7 +69,7 @@ morok_enable_sanitizers(morok_g1)
 
 # Each G1 profile is a private target that may use the G1 shared engine,
 # but never another profile's implementation.
-foreach(_profile IN ITEMS Mokosh Tsukuyomi Artemis Apollo)
+foreach(_profile IN ITEMS Mokosh Tsukuyomi Apollo)
     string(TOLOWER "${_profile}" _profile_lower)
     add_library(morok_g1_${_profile_lower} STATIC
         Gerações/G1/${_profile}/src/profile.cpp)
