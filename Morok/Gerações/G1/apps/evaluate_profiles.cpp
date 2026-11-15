@@ -9,7 +9,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <numeric>
+#include <string_view>
+#include <utility>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -50,11 +51,6 @@ std::string normalize(std::string_view input) {
     return output;
 }
 
-std::string clean(std::string value) {
-    for (char& ch : value)
-        if (ch == '\t' || ch == '\n' || ch == '\r') ch = ' ';
-    return value;
-}
 
 struct Aggregate {
     std::size_t attempts{0};
