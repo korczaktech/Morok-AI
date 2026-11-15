@@ -326,13 +326,19 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
     std::array<float, kParameterCount> gradient{};
     std::size_t accumulated_targets = 0;
     const auto apply_batch = [&]() {
-        if (accumulated_targets == 0) return;
+        if (accumulated_targets == 0) return true;
+        if (state.step == std::numeric_limits<std::uint64_t>::max() ||
+            !std::all_of(gradient.begin(), gradient.end(),
+                         [](float value) { return std::isfinite(value); }))
+            return false;
         const float inverse_batch = 1.0F / static_cast<float>(accumulated_targets);
         for (auto& value : gradient) value *= inverse_batch;
         ++state.step;
         apply_adam(model, gradient, state, config);
         gradient.fill(0.0F);
         accumulated_targets = 0;
+        return std::all_of(model.parameters.begin(), model.parameters.end(),
+                           [](float value) { return std::isfinite(value); });
     };
 
     for (std::size_t epoch = 0; epoch < config.epochs; ++epoch) {
@@ -347,9 +353,10 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
 
             ++accumulated_targets;
             ++epoch_targets;
-            if (accumulated_targets >= config.batch_size) apply_batch();
+            if (accumulated_targets >= config.batch_size && !apply_batch())
+                return report;
         }
-        apply_batch();
+        if (!apply_batch()) return report;
         ++report.epochs_completed;
         report.target_bytes += epoch_targets;
     }
