@@ -2,6 +2,7 @@
 #include "morok/g1/tsukuyomi/profile.hpp"
 #include "morok/g1/mokosh/profile.hpp"
 #include "morok/g1/apollo/profile.hpp"
+#include "morok/g1/tsukuyomi_max/profile.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -115,7 +116,7 @@ int main(int argc, char** argv) {
             throw std::invalid_argument("attempts must be in 1..1000");
         if (selected.empty())
             throw std::invalid_argument("at least one question is required");
-        if (profile != "Tsukuyomi" && profile != "Apollo" && profile != "Mokosh")
+        if (profile != "Tsukuyomi" && profile != "Apollo" && profile != "Mokosh" && profile != "TsukuyomiMax")
             throw std::invalid_argument("unknown profile");
         for (const auto& id : selected) {
             if (std::none_of(questions.begin(), questions.end(),
@@ -145,12 +146,19 @@ int main(int argc, char** argv) {
                     policy.seed += attempt - 1;
                     return morok::g1::apollo::generate(p, q, policy);
                 }, selected, attempts);
-        } else {
+        } else if (profile == "Mokosh") {
             run_profile(profile.c_str(), checkpoint.parameters, output,
                 [](const auto& p, const auto& q, std::size_t attempt) {
                     morok::g1::mokosh::Policy policy{};
                     policy.seed += attempt - 1;
                     return morok::g1::mokosh::generate(p, q, policy);
+                }, selected, attempts);
+        } else {
+            run_profile(profile.c_str(), checkpoint.parameters, output,
+                [](const auto& p, const auto& q, std::size_t attempt) {
+                    morok::g1::tsukuyomi_max::Policy policy{};
+                    policy.seed += attempt - 1;
+                    return morok::g1::tsukuyomi_max::generate(p, q, policy);
                 }, selected, attempts);
         }
         return 0;
