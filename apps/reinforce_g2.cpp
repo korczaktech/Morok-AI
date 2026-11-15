@@ -47,7 +47,7 @@ int main(int argc,char** argv) {
   sequence.push_back(static_cast<std::uint8_t>(static_cast<unsigned char>(prompt_text.back())));
   for(unsigned char b:response_text) sequence.push_back(b);
   auto config=morok::model::G1OptimizerConfig::adamw(); config.learning_rate=lr; config.weight_decay=0.0; config.max_gradient_norm=5.0;
-  auto optimizer_a=morok::model::make_g1_optimizer_state(morok::model::G1OptimizerKind::SGDMomentum);
+  auto optimizer_a=morok::model::make_g1_optimizer_state(morok::model::G1OptimizerKind::AdamW);
   auto optimizer_b=morok::model::make_g1_optimizer_state(morok::model::G1OptimizerKind::SGDMomentum);
   const auto before=parameters.flatten(); double first_norm=0,last_norm=0;
   const double loss_before=(target_loss(parameters.expert_a,prompt_text,response_text)+target_loss(parameters.expert_b,prompt_text,response_text))*0.5;

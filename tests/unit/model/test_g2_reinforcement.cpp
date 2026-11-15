@@ -12,7 +12,7 @@ int main(){
  try{
   std::filesystem::remove_all(dir); std::filesystem::create_directories(dir);
   G2Parameters p; initialize_g2_parameters(p,123); const auto before=p.flatten();
-  const std::string prompt="Usuario: O ceu e azul?\\nIA: ";
+  const std::string prompt="Usuario: O ceu e azul?\nIA: ";
   const std::string answer="Sim, o ceu e azul";
   G1State context_a{},context_b{};
   for(std::size_t i=0;i+1<prompt.size();++i){
@@ -27,7 +27,7 @@ int main(){
   auto positive_b=compute_g1_bptt_gradients(positive.expert_b,sequence,64,context_b,prompt.size()-1);
   const double before_a=positive_a.mean_loss_nats, before_b=positive_b.mean_loss_nats;
   auto optimizer_a=make_g1_optimizer_state(G1OptimizerKind::AdamW);
-  auto optimizer_b=make_g1_optimizer_state(G1OptimizerKind::SGDMomentum);
+  auto optimizer_b=make_g1_optimizer_state(G1OptimizerKind::AdamW);
   const auto step_a=apply_g1_optimizer_step(positive.expert_a,positive_a.gradients,config,optimizer_a);
   const auto step_b=apply_g1_optimizer_step(positive.expert_b,positive_b.gradients,config,optimizer_b);
   if(step_a.step!=1||step_b.step!=1)throw std::runtime_error("both G2 experts must receive an optimizer update");
@@ -42,8 +42,8 @@ int main(){
   const double negative_before_a=negative_a.mean_loss_nats, negative_before_b=negative_b.mean_loss_nats;
   for(double& value:negative_a.gradients.values)value=-value;
   for(double& value:negative_b.gradients.values)value=-value;
-  auto negative_optimizer_a=make_g1_optimizer_state(G1OptimizerKind::SGDMomentum);
-  auto negative_optimizer_b=make_g1_optimizer_state(G1OptimizerKind::SGDMomentum);
+  auto negative_optimizer_a=make_g1_optimizer_state(G1OptimizerKind::AdamW);
+  auto negative_optimizer_b=make_g1_optimizer_state(G1OptimizerKind::AdamW);
   apply_g1_optimizer_step(negative.expert_a,negative_a.gradients,config,negative_optimizer_a);
   apply_g1_optimizer_step(negative.expert_b,negative_b.gradients,config,negative_optimizer_b);
   if(!(compute_g1_bptt_gradients(negative.expert_a,sequence,64,context_a,prompt.size()-1).mean_loss_nats>negative_before_a)||

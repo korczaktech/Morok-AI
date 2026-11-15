@@ -83,7 +83,10 @@ def main():
    if training_source=="oracle_demonstration":answer_file.write_text(training_target,encoding="utf-8")
    if len(training_target.encode("utf-8"))>=2:
     report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate),"100"]))
-    episode["policy_update"]={"status":"applied","source":training_source,"algorithm":"positive_reward_adamw_on_target_sequence","report":report,"target_loss_before":report.get("target_loss_before"),"target_loss_after":report.get("target_loss_after"),"target_loss_decreased":report.get("target_loss_after",float("inf")) < report.get("target_loss_before",float("-inf"))}
+    target_loss_decreased=report.get("target_loss_after",float("inf")) < report.get("target_loss_before",float("-inf"))
+    if not target_loss_decreased:
+     raise RuntimeError("G2 update did not reduce the target sequence loss; refusing to record a successful update")
+    episode["policy_update"]={"status":"applied","source":training_source,"algorithm":"positive_reward_adamw_on_target_sequence","report":report,"target_loss_before":report.get("target_loss_before"),"target_loss_after":report.get("target_loss_after"),"target_loss_decreased":target_loss_decreased}
     db["totals"]["policy_updates"]+=1
     if training_source=="oracle_demonstration":db["totals"]["oracle_demonstrations"]+=1
    else:
