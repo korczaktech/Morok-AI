@@ -119,6 +119,17 @@ def read_dialogues(corpus: Path) -> list[tuple[str, str]]:
     return dialogues
 
 
+def extract_training_metric(output: str, name: str) -> float:
+    match = re.search(rf"^{re.escape(name)}:\s*([0-9.eE+-]+)\s*$",
+                      output, flags=re.MULTILINE)
+    if not match:
+        raise RuntimeError(f"O treinador não informou {name}.")
+    value = float(match.group(1))
+    if not math.isfinite(value):
+        raise RuntimeError(f"A métrica {name} não é finita.")
+    return value
+
+
 def evaluate_set(generator: Path, checkpoint: Path,
                  dialogues: list[tuple[str, str]]) -> list[tuple[str, bool, float]]:
     prompts = "".join(
@@ -255,8 +266,15 @@ def main() -> int:
                 command, check=True, capture_output=True, text=True, encoding="utf-8"
             )
             print(training_process.stdout, end="", flush=True)
-            if not re.search(r"train_bpb final:\s*[0-9.eE+-]+", training_process.stdout):
-                raise RuntimeError("O treinador não informou train_bpb final.")
+            initial_bpb = extract_training_metric(training_process.stdout, "train_bpb inicial")
+            final_bpb = extract_training_metric(training_process.stdout, "train_bpb final")
+            target_bytes = extract_training_metric(training_process.stdout, "Bytes-alvo")
+            completed_epochs = extract_training_metric(training_process.stdout, "Épocas")
+            if target_bytes <= 0 or completed_epochs != epochs:
+                raise RuntimeError("O treinador não concluiu todas as épocas ou não processou alvos.")
+            if (not checkpoint.is_file() or checkpoint.stat().st_size == 0 or
+                    not optimizer_state.is_file() or optimizer_state.stat().st_size == 0):
+                raise RuntimeError("O treinador não publicou checkpoint e estado Adam válidos.")
             validation_results = evaluate_set(generator, checkpoint, validation)
             correct_count, total = write_results(
                 report, f"Validação — ciclo {cycle}", validation, validation_results
@@ -281,6 +299,8 @@ def main() -> int:
                 )
             elapsed = time.perf_counter() - started
             report.write(
+                f"**Treino: {completed_epochs:.0f} época(s), {target_bytes:.0f} bytes-alvo, "
+                f"train_bpb {initial_bpb:.4f} → {final_bpb:.4f}.**\\n"
                 f"**Validação: {correct_count}/{total}; F1 médio: {mean_f1:.3f}; "
                 f"pontuação: {validation_score:.3f}; LR: {learning_rate:.6f}; "
                 f"duração: {elapsed:.2f}s.**\n\n"
