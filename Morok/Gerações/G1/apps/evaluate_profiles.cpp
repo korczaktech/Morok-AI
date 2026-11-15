@@ -104,8 +104,9 @@ bool has_negated_target(const std::string& text,
         const std::string t(target);
         const std::vector<std::string> patterns{
             "nao " + t, "nao e " + t, "nao esta " + t,
-            "not " + t, "is not " + t, "isnt " + t,
-            "no es " + t, "no " + t
+            "nao sao " + t, "not " + t, "is not " + t,
+            "isnt " + t, "isn t " + t, "are not " + t,
+            "no es " + t, "no son " + t, "no " + t
         };
         for (const auto& pattern : patterns) {
             if (text.find(pattern) != std::string::npos) return true;
