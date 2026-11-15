@@ -36,7 +36,7 @@ Os offsets e a soma são verificados por asserção estática no código. O chec
 
 ## Treinamento
 
-O treinador percorre o corpus byte a byte e atualiza os parâmetros com gradientes da entropia cruzada, Adam, clipping global e weight decay. Em corpora com pares U:/IA:, o executável cria uma máscara que seleciona somente os bytes posteriores ao prefixo IA: como alvos de treinamento; os bytes da pergunta continuam disponíveis como contexto. Em arquivos sem pares de diálogo reconhecidos, todos os bytes continuam sendo alvos. Os gradientes são acumulados em mini-lotes (16 alvos por padrão) e aplicados uma vez por lote. O estado do Adam (momentos de primeira e segunda ordem e contador global de atualizações) é serializado separadamente e restaurado na retomada. O relatório expõe loss e train_bpb calculados sobre os alvos selecionados. A implementação ainda usa contexto finito de 14 bytes e não propaga gradientes através do tempo (sem BPTT). O executável limita o corpus a 512 MiB.
+O treinador percorre o corpus byte a byte e atualiza os parâmetros com gradientes da entropia cruzada, Adam, clipping global e weight decay. Em corpora com pares U:/IA:, o executável cria uma máscara que seleciona somente os bytes posteriores ao prefixo IA: como alvos de treinamento; os bytes da pergunta continuam disponíveis como contexto. Em arquivos sem pares de diálogo reconhecidos, todos os bytes continuam sendo alvos. Os gradientes são acumulados em mini-lotes (16 alvos por padrão) e aplicados uma vez por lote. O estado do Adam (momentos de primeira e segunda ordem e contador global de atualizações) é serializado separadamente e restaurado na retomada. O learning rate padrão é 0,001 (0,1%), constante e sem scheduler; Adam usa β1=0,9, β2=0,999 e epsilon=1e-8. O clipping limita a norma global a 1,0. O weight decay padrão é 0,00001 e atua somente em embeddings e matrizes, não em biases, escala, deslocamento ou estado inicial. O relatório expõe loss e train_bpb calculados sobre os alvos selecionados. O gradiente analítico é compartilhado entre treinamento e diagnóstico e possui testes de diferenças finitas para os principais blocos de parâmetros. A implementação ainda usa contexto finito de 14 bytes e não propaga gradientes através do tempo (sem BPTT). O executável limita o corpus a 512 MiB.
 
 Comando:
 
@@ -61,6 +61,7 @@ Formato binário MOROKG2T, versão 1, contagem explícita de 10.000 floats e che
 ## Limitações conhecidas do v0.1
 
 - Contexto limitado a 13 bytes anteriores e ao byte corrente (14 bytes efetivos).
+- Sem dropout: a versão 0.1 não aplica mascaramento estocástico; regularização fica restrita ao weight decay seletivo e clipping.
 - Sem atenção, recorrência, BPTT, memória externa ou subsistemas cognitivos G2.
 - A máscara supervisionada seleciona os bytes de resposta, mas não amplia o contexto nem ensina dependências entre partes distantes da pergunta.
 - O pipeline atual usa entropia cruzada supervisionada; ainda não implementa Reinforcement Learning (RL) nem recompensa semântica.
