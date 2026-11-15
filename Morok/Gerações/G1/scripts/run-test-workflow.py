@@ -44,6 +44,13 @@ for model in selected:
     value = epochs.get(model, 0)
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise RuntimeError(f"Contador de épocas inválido para {model}.")
+    if model in completed and not isinstance(completed[model], bool):
+        raise RuntimeError(f"Estado de conclusão inválido para {model}.")
+if results_path.exists() and results_path.stat().st_size:
+    with results_path.open(encoding="utf-8", newline="") as stream:
+        header = next(csv.reader(stream, delimiter="\\t"), None)
+    if header != ["model", "epoch", "question_id", "verdict", "answer"]:
+        raise RuntimeError("Cabeçalho de history.tsv incompatível; não será anexado histórico corrompido.")
 
 def save_json_atomic(path, value):
     temporary = path.with_suffix(path.suffix + ".tmp")
