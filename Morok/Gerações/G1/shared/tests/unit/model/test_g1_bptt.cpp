@@ -135,7 +135,7 @@ int main() {
             (void)compute_g1_bptt_gradients(
                 parameters, bytes, kG1MaxBpttTruncationLength + 1);
         } catch (const std::invalid_argument&) { rejected = true; }
-        require(rejected, "BPTT must enforce the 128-target memory bound");
+        require(rejected, "BPTT must enforce the 512-target memory bound");
 
         rejected = false;
         try {
