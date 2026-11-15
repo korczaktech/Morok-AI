@@ -11,6 +11,27 @@ import treinamento_ciclico as training
 
 
 class TrainingDataTests(unittest.TestCase):
+    def test_learning_rate_scheduler_reduces_after_plateau(self):
+        lr = training.INITIAL_LEARNING_RATE
+        best = 1.0
+        plateau = 0
+        for _ in range(training.LR_PLATEAU_CYCLES - 1):
+            lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 1.0)
+            self.assertFalse(reduced)
+        lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 1.0)
+        self.assertTrue(reduced)
+        self.assertEqual(lr, training.INITIAL_LEARNING_RATE * 0.5)
+        self.assertEqual(plateau, 0)
+
+    def test_learning_rate_scheduler_resets_on_improvement(self):
+        lr, best, plateau, reduced = training.update_learning_rate(
+            0.001, 1.0, 4, 0.8
+        )
+        self.assertEqual(lr, 0.001)
+        self.assertEqual(best, 0.8)
+        self.assertEqual(plateau, 0)
+        self.assertFalse(reduced)
+
     def test_continuous_training_stops_on_first_correct_single_question(self):
         self.assertTrue(training.should_stop(True, 1, 1))
         self.assertFalse(training.should_stop(True, 0, 1))
