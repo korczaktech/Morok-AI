@@ -41,6 +41,7 @@ int main() {
     auto generated = language.generate(*request.value_if(), 4);
     assert(generated);
     assert(generated.value_if()->generated_bytes <= 4);
+    assert(generated.value_if()->input_language == lang::DetectedLanguage::portuguese);
     assert(generated.value_if()->text.size_bytes() ==
            generated.value_if()->generated_bytes);
     assert(common::Utf8Text::from_utf8(
