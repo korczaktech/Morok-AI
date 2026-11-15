@@ -102,12 +102,12 @@ jobs:
               lines = ["| " + " | ".join(headers) + " |",
                        "| " + " | ".join("---" for _ in headers) + " |"]
               for row in rows:
-                  cells = [str(cell).replace("|", "\|").replace("\r", " ").replace("\n", " ") for cell in row]
+                  cells = [str(cell).replace("|", chr(92) + "|").replace("\r", " ").replace("\n", " ") for cell in row]
                   lines.append("| " + " | ".join(cells) + " |")
               return "\n".join(lines) + "\n"
 
           if not report.is_file():
-              message = "O relatório de respostas não foi produzido; verifique o treinamento cíclico."
+              message = "O relatório de respostas não foi produzido; verifique a etapa de treinamento."
               print(f"::error title=Tsukuyomi G2::{message}")
               rendered = "# Treinamento G2 — respostas e annotations\n\n" + message + "\n"
               if summary_path:
@@ -118,24 +118,28 @@ jobs:
           content = report.read_text(encoding="utf-8")
           questions = []
           current = None
+          cycle = 0
           for line in content.splitlines():
-              if line.startswith("### "):
+              cycle_match = re.match(r"## Tentativa (\d+)", line)
+              if cycle_match:
+                  cycle = int(cycle_match.group(1))
+              elif line.startswith("### "):
                   if current is not None:
                       questions.append(current)
                   match = re.match(r"###\s+(\d+)\.\s+(.*)", line)
-                  current = {"number": match.group(1) if match else "?", "question": match.group(2) if match else line[4:], "answer": ""}
+                  current = {
+                      "cycle": cycle,
+                      "number": match.group(1) if match else "?",
+                      "question": match.group(2) if match else line[4:],
+                      "answer": "",
+                  }
               elif current is not None and line.strip() and not line.startswith("#"):
                   current["answer"] = (current["answer"] + " " + line.strip()).strip()
           if current is not None:
               questions.append(current)
 
-          cycle = 0
-          for line in content.splitlines():
-              match = re.match(r"## Tentativa (\d+)", line)
-              if match:
-                  cycle = int(match.group(1))
-                  # Cada tentativa é marcada na própria tabela via cabeçalho.
-          cycles = int(re.search(r"Ciclos/tentativas: (\d+)", content).group(1)) if re.search(r"Ciclos/tentativas: (\d+)", content) else 0
+          match = re.search(r"Ciclos/tentativas: (\d+)", content)
+          cycles = int(match.group(1)) if match else 0
           expected = len(questions)
           generated = sum(bool(item["answer"]) for item in questions)
           empty = expected - generated
@@ -144,16 +148,16 @@ jobs:
           for item in questions:
               answer = item["answer"] or "(nenhuma saída gerada)"
               visible = answer if len(answer) <= 160 else answer[:157] + "..."
-              rows.append([item["number"], item["question"], visible, "Gerada — não avaliada"])
+              rows.append([item["cycle"], item["number"], item["question"], visible, "Gerada — não avaliada"])
               safe = visible.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A").replace(":", "%3A").replace(",", "%2C")
               level = "notice" if item["answer"] else "warning"
-              print(f"::{level} title=Tsukuyomi G2::Pergunta {item['number']}: {item['question']}; resposta: {safe}; avaliação semântica: pendente")
+              print(f"::{level} title=Tsukuyomi G2::Tentativa {item['cycle']}, pergunta {item['number']}: {item['question']}; resposta: {safe}; avaliação semântica: pendente")
 
           rendered = [
               "# Treinamento G2 — respostas e annotations", "",
-              f"Ciclos configurados: {cycles}. Perguntas registradas: {expected}. Respostas não vazias: {generated}. Saídas vazias: {empty}.", "",
+              f"Ciclos configurados: {cycles}. Respostas registradas: {expected}. Respostas não vazias: {generated}. Saídas vazias: {empty}.", "",
               "As respostas são saídas reais da inferência do modelo. Ainda não existe avaliador semântico nesta versão; portanto, nenhuma resposta é marcada como correta ou incorreta.", "",
-              table(["Nº", "Pergunta", "Resposta gerada", "Avaliação"], rows)
+              table(["Tentativa", "Nº", "Pergunta", "Resposta gerada", "Avaliação"], rows)
           ]
           text = "\n".join(rendered) + "\n"
           if summary_path:
