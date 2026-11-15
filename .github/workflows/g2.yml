@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "G2/**"
+      - "Gerações/G2/**"
       - "include/**"
       - "src/**"
       - "tests/**"
@@ -13,7 +13,7 @@ on:
       - ".github/workflows/g2.yml"
   pull_request:
     paths:
-      - "G2/**"
+      - "Gerações/G2/**"
       - "include/**"
       - "src/**"
       - "tests/**"
@@ -60,7 +60,7 @@ jobs:
         run: |
           MOROK_TRAIN_G2_BIN=./build/g2/morok-train-g2 \
           MOROK_GENERATE_G2_BIN=./build/g2/morok-generate-g2 \
-            bash G2/scripts/first-training.sh artifacts/g2-first-training 2 42
+            bash Gerações/G2/scripts/first-training.sh artifacts/g2-first-training 2 42
 
       - name: Upload G2 training artifacts
         if: always()
