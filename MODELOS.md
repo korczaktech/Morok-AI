@@ -69,11 +69,11 @@ Cada geração implementará os quatro perfis. Mokosh mantém a prioridade de ef
 
 O diretório público `include/` e a biblioteca `Morok::Core` contêm contratos e infraestrutura neutra, usados por mais de uma geração. Não devem conter parâmetros, forward pass, treinamento, geração, checkpoints ou adaptadores específicos de uma geração/modelo.
 
-A implementação compartilhada da geração G1 está em `G1/shared/` e é compilada apenas em `Morok::G1`. Inclui o motor de parâmetros, forward pass, BPTT, otimizador, treinamento, inferência, checkpoints e adaptadores de linguagem/comunicação/aprendizado que ainda são específicos da G1.
+A implementação compartilhada da geração G1 está em `Gerações/G1/shared/` e é compilada apenas em `Morok::G1`. Inclui o motor de parâmetros, forward pass, BPTT, otimizador, treinamento, inferência, checkpoints e adaptadores de linguagem/comunicação/aprendizado que ainda são específicos da G1.
 
-A implementação da G2 está dentro de `G2/`. `G2/engine/` contém o motor independente de cada especialista; `G2/model/` implementa o modelo composto por dois especialistas. A G2 não importa headers nem símbolos da G1. Os alvos `Morok::G1` e `Morok::G2` dependem do Core, mas não dependem um do outro.
+A implementação da G2 está dentro de `Gerações/G2/`. `Gerações/G2/engine/` contém o motor independente de cada especialista; `Gerações/G2/model/` implementa o modelo composto por dois especialistas. A G2 não importa headers nem símbolos da G1. Os alvos `Morok::G1` e `Morok::G2` dependem do Core, mas não dependem um do outro.
 
-Aplicações, scripts, dados de reforço, fixtures e testes específicos foram movidos para `G1/` ou `G2/`. O CMake continua na raiz como orquestrador de build e só inclui fontes da geração correspondente no alvo correspondente.
+Aplicações, scripts, dados de reforço, fixtures e testes específicos foram movidos para `Gerações/G1/` ou `Gerações/G2/`. O CMake continua na raiz como orquestrador de build e só inclui fontes da geração correspondente no alvo correspondente.
 
 ## Estado dos perfis
 
