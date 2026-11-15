@@ -23,20 +23,27 @@ bool close(double left, double right, double tolerance = 1e-6) {
 void test_byte_encoding() {
     using namespace morok::model;
     const auto zero = encode_g1_byte(0x00);
-    for (std::size_t i = 0; i < 8; ++i) {
+    for (std::size_t i = 0; i < 8; ++i)
         require(zero[i] == -1.0F, "zero byte bits must encode as -1");
-    }
-    require(zero[8] == 1.0F, "zero has even parity");
-    require(zero[9] == -1.0F, "zero popcount normalization");
-    require(zero[10] == -1.0F, "zero byte value normalization");
+    require(zero[8] == -1.0F && zero[9] == -1.0F && zero[10] == 1.0F,
+            "default encoding must distinguish byte content from lexical boundaries");
 
-    const auto high_bit = encode_g1_byte(0x80);
+    const auto word_start = encode_g1_byte(static_cast<std::uint8_t>('a'), true, false);
+    require(word_start[8] == 1.0F && word_start[9] == -1.0F &&
+            word_start[10] == 1.0F, "word starts must be represented in input features");
+    const auto separator = encode_g1_byte(static_cast<std::uint8_t>(' '), false, true);
+    require(separator[8] == -1.0F && separator[9] == 1.0F &&
+            separator[10] == -1.0F, "separators must be represented in input features");
+    require(is_g1_token_separator(static_cast<std::uint8_t>(' ')) &&
+            is_g1_token_separator(static_cast<std::uint8_t>('?')) &&
+            !is_g1_token_separator(static_cast<std::uint8_t>('a')),
+            "ASCII whitespace and punctuation must delimit lexical tokens");
+
+    const auto high_bit = encode_g1_byte(0x80, true, false);
     require(high_bit[0] == 1.0F && high_bit[1] == -1.0F,
             "byte bits must be encoded most-significant first");
-    require(high_bit[8] == -1.0F, "one set bit has odd parity");
-    require(high_bit[9] == -0.75F, "one set bit popcount normalization");
-    require(high_bit[10] > -1.0F && high_bit[10] < 1.0F,
-            "byte value feature must be normalized");
+    require(high_bit[8] == 1.0F && high_bit[9] == -1.0F,
+            "multibyte UTF-8 bytes must retain explicit lexical context");
 }
 
 void test_zero_parameters_produce_uniform_distribution() {
