@@ -7,7 +7,7 @@ if [[ $# -ne 1 ]]; then
 fi
 
 state_dir="$1"
-root="$(cd "$(dirname "$0")/.." && pwd)"
+root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root"
 
 train_bin="${MOROK_TRAIN_BIN:-./build/morok-train}"

@@ -14,7 +14,7 @@ seed="${3:-42}"
 [[ "$seed" =~ ^[0-9]+$ ]] || { echo "seed must be an unsigned integer" >&2; exit 2; }
 (( epochs <= 100000 )) || { echo "epochs exceeds supported limit" >&2; exit 2; }
 
-root="$(cd "$(dirname "$0")/.." && pwd)"
+root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root"
 
 train_bin="${MOROK_TRAIN_BIN:-./build/morok-train}"

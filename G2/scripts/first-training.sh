@@ -10,7 +10,7 @@ seed="${3:-42}"
 [[ "$epochs" =~ ^[1-9][0-9]{0,4}$ ]] || { echo "epochs must be 1..99999" >&2; exit 2; }
 [[ "$seed" =~ ^[0-9]+$ ]] || { echo "seed must be an unsigned integer" >&2; exit 2; }
 (( epochs < 100000 )) || { echo "epochs must leave room for the resume pass" >&2; exit 2; }
-root="$(cd "$(dirname "$0")/.." && pwd)"
+root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root"
 train_bin="${MOROK_TRAIN_G2_BIN:-./build/morok-train-g2}"
 generate_bin="${MOROK_GENERATE_G2_BIN:-./build/morok-generate-g2}"
