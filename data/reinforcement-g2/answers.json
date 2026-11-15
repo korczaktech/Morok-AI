@@ -52,12 +52,15 @@
     }
   ],
   "totals": {
-    "episodes": 3,
-    "correct": 3,
+    "episodes": 6,
+    "correct": 6,
     "incorrect": 0,
-    "policy_updates": 3,
+    "policy_updates": 6,
     "skipped_updates": 0,
-    "oracle_demonstrations": 1
+    "oracle_demonstrations": 3,
+    "memory_replay_experiences": 3,
+    "memory_replay_updates": 3,
+    "memory_replay_skipped": 0
   },
   "episodes": [
     {
@@ -188,6 +191,135 @@
         "target_loss_decreased": true
       },
       "initial_answer": "A grama?JI!,<,4``e bdgram! wu aazmlJIYIHIZJK:A1 "
+    },
+    {
+      "episode": 4,
+      "episode_id": "43666053973:1:1:sky_is_blue",
+      "run_id": "43666053973",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "sky_is_blue",
+      "prompt": "Usuario: O ceu e azul?\nIA: ",
+      "answer": "Sim, o ceu e azul*(a{:Ia1b`kno~Aq epddf.\"cree u`",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "matched_required_concepts",
+      "timestamp_utc": "2026-11-15T02:06:32.786167+00:00",
+      "model_sha256_before": "afa734a75def4b8d7592ccd252f3abe10a8862808eb5746ac2a019e0b3363e711de668c3c1d7cc537654cb73a67ea40d7aced7e425cb0bb8138ac68a057e3562",
+      "model_sha256_after": "837173fd8a885a9e51ff539e12c2d23f0c2522319d9e6c332000e1b58bba588568992c618a36c53d56c8a2f136c96a3af83f6a8b66520b1dd0ed71c3d81c3dfb",
+      "trainable_parameters": 2000,
+      "policy_update": {
+        "status": "applied",
+        "source": "model_response",
+        "algorithm": "positive_reward_adamw_on_target_sequence",
+        "optimizer_steps": 1000,
+        "report": {
+          "generation": "G2",
+          "reward": 1,
+          "target_bytes": 48,
+          "gradient_norm_first": 101.393,
+          "gradient_norm_last": 33.2722,
+          "target_loss_before": 13.5576,
+          "target_loss_after": 9.65073,
+          "target_loss_delta": -3.90689,
+          "parameter_delta_l2": 0.980778,
+          "optimizer": "AdamW",
+          "optimizer_steps_per_expert": 45,
+          "expert_a_optimizer_step": 45,
+          "expert_b_optimizer_step": 45,
+          "trainable_parameters": 2000
+        },
+        "target_loss_before": 13.5576,
+        "target_loss_after": 9.65073,
+        "target_loss_decreased": true
+      },
+      "initial_answer": "Sim, o ceu e azul*(a{:Ia1b`kno~A1 ak~HIa2ashm$ e"
+    },
+    {
+      "episode": 5,
+      "episode_id": "43666053973:1:2:mountains_high_or_low",
+      "run_id": "43666053973",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "mountains_high_or_low",
+      "prompt": "Usuario: As montanhas sao altas ou baixas?\nIA: ",
+      "answer": "As montanhas sao altas.*^,(`er}e. ",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "matched_required_concepts",
+      "timestamp_utc": "2026-11-15T02:06:32.827009+00:00",
+      "model_sha256_before": "837173fd8a885a9e51ff539e12c2d23f0c2522319d9e6c332000e1b58bba588568992c618a36c53d56c8a2f136c96a3af83f6a8b66520b1dd0ed71c3d81c3dfb",
+      "model_sha256_after": "f7583474e3a68a6428fce2e91f6afea46ef5612d16b9a5fb5196b4348d6666ed6d6c030de356917ff67610020ebb67a1920603f94faa11c1df07cc1a588fd9ca",
+      "trainable_parameters": 2000,
+      "policy_update": {
+        "status": "applied",
+        "source": "oracle_demonstration",
+        "algorithm": "positive_reward_adamw_on_target_sequence",
+        "optimizer_steps": 1000,
+        "report": {
+          "generation": "G2",
+          "reward": 1,
+          "target_bytes": 23,
+          "gradient_norm_first": 131.453,
+          "gradient_norm_last": 0.296332,
+          "target_loss_before": 2.2829,
+          "target_loss_after": 0.00490674,
+          "target_loss_delta": -2.27799,
+          "parameter_delta_l2": 0.207415,
+          "optimizer": "AdamW",
+          "optimizer_steps_per_expert": 6,
+          "expert_a_optimizer_step": 6,
+          "expert_b_optimizer_step": 6,
+          "trainable_parameters": 2000
+        },
+        "target_loss_before": 2.2829,
+        "target_loss_after": 0.00490674,
+        "target_loss_decreased": true
+      },
+      "initial_answer": "As montanlalq`an~JHYYI1 ccbeape0de ddlJIl.JA{n) "
+    },
+    {
+      "episode": 6,
+      "episode_id": "43666053973:1:3:grass_color",
+      "run_id": "43666053973",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "grass_color",
+      "prompt": "Usuario: Que cor e a grama?\nIA: ",
+      "answer": "A grama e verde.*́[_uas*~ ebu`grama,(H00A q(mre",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "matched_required_concepts",
+      "timestamp_utc": "2026-11-15T02:06:32.844268+00:00",
+      "model_sha256_before": "f7583474e3a68a6428fce2e91f6afea46ef5612d16b9a5fb5196b4348d6666ed6d6c030de356917ff67610020ebb67a1920603f94faa11c1df07cc1a588fd9ca",
+      "model_sha256_after": "4f6e6061d107233a8a5e653a3028a58ce4f169402cb490279b275abcc28ff4acffb8680ddb17d0a79ff49c6f9e271d5da211efa364be08afb476d67455e77573",
+      "trainable_parameters": 2000,
+      "policy_update": {
+        "status": "applied",
+        "source": "oracle_demonstration",
+        "algorithm": "positive_reward_adamw_on_target_sequence",
+        "optimizer_steps": 1000,
+        "report": {
+          "generation": "G2",
+          "reward": 1,
+          "target_bytes": 16,
+          "gradient_norm_first": 95.782,
+          "gradient_norm_last": 9.10667,
+          "target_loss_before": 0.448587,
+          "target_loss_after": 0.0330925,
+          "target_loss_delta": -0.415495,
+          "parameter_delta_l2": 0.1448,
+          "optimizer": "AdamW",
+          "optimizer_steps_per_expert": 4,
+          "expert_a_optimizer_step": 4,
+          "expert_b_optimizer_step": 4,
+          "trainable_parameters": 2000
+        },
+        "target_loss_before": 0.448587,
+        "target_loss_after": 0.0330925,
+        "target_loss_decreased": true
+      },
+      "initial_answer": "A grama e bdgbmo~Ame(0`ea,<HXA2beazu$ aao*0 Ewda"
     }
   ]
 }
