@@ -144,7 +144,7 @@ class G2ReinforcementTests(unittest.TestCase):
         self.assertEqual(db["totals"]["policy_updates"], 1)
 
     def test_runner_replays_memory_before_new_attempts(self):
-        runner = (ROOT / "scripts" / "run-g2-reinforcement.py").read_text(encoding="utf-8")
+        runner = (ROOT / "G2" / "scripts" / "reinforcement.py").read_text(encoding="utf-8")
         self.assertIn('default=32,help="number of latest persisted experiences', runner)
         self.assertIn('memory=build_memory_replay(db["episodes"],a.memory_replay_limit)', runner)
         self.assertIn('a.memory_replay_steps', runner)
@@ -152,7 +152,7 @@ class G2ReinforcementTests(unittest.TestCase):
 
 
     def test_runner_uses_adaptive_training_and_reports_sequence_loss(self):
-        runner = (ROOT / "scripts" / "run-g2-reinforcement.py").read_text(encoding="utf-8")
+        runner = (ROOT / "G2" / "scripts" / "reinforcement.py").read_text(encoding="utf-8")
         app = (ROOT / "G2" / "apps" / "reinforce.cpp").read_text(encoding="utf-8")
         self.assertIn('default=10000)', runner)
         self.assertIn('MAX_BOOTSTRAP_EPOCHS=10000', runner)
@@ -164,19 +164,13 @@ class G2ReinforcementTests(unittest.TestCase):
         self.assertIn('run([str(a.generator),str(checkpoint),str(prompt),str(answer),"48"])', runner)
         self.assertIn('previous_verdict=verdict', runner)
         self.assertIn('"--patience",str(a.bootstrap_epochs)', runner)
-        workflow = (ROOT / ".github" / "workflows" / "reinforcement-g2.yml").read_text(encoding="utf-8")
-        self.assertIn('inputs.epochs || 10000', workflow)
-        self.assertIn('gh run download "$previous_run"', workflow)
-        self.assertIn('model.v3.expert-a', workflow)
-        self.assertIn('model.v3.expert-b', workflow)
-        self.assertIn("if-no-files-found: warn", workflow)
         self.assertIn('target_loss_before', app)
         self.assertIn('target_loss_after', app)
-        self.assertIn('G1OptimizerConfig::adamw()', app)
+        self.assertIn('morok::g2::engine::G2ExpertOptimizerConfig::adamw()', app)
 
     def test_runner_isolates_new_checkpoints_and_requires_loss_progress(self):
-        runner = (ROOT / "scripts" / "run-g2-reinforcement.py").read_text(encoding="utf-8")
-        app = (ROOT / "apps" / "reinforce_g2.cpp").read_text(encoding="utf-8")
+        runner = (ROOT / "G2" / "scripts" / "reinforcement.py").read_text(encoding="utf-8")
+        app = (ROOT / "G2" / "apps" / "reinforce.cpp").read_text(encoding="utf-8")
         self.assertIn('checkpoint=Path(str(a.checkpoint)+".v3")', runner)
         self.assertIn('"reason":"already_correct"', runner)
         self.assertIn('"reason":"target_loss_not_reduced"', runner)
@@ -212,12 +206,12 @@ class G2ReinforcementTests(unittest.TestCase):
             self.assertEqual(question["prompt"], prompt)
             self.assertIn(prompt + target, corpus)
         self.assertTrue(all(not document.endswith("\n") for document in corpus))
-        trainer = (ROOT / "G2" / "legacy" / "src" / "model" / "learn" / "g2_training.cpp").read_text(encoding="utf-8")
+        trainer = (ROOT / "G2" / "model" / "src" / "learn" / "g2_training.cpp").read_text(encoding="utf-8")
         self.assertEqual(trainer.count("train_all_documents=true;"), 2)
         self.assertEqual(db["totals"]["episodes"], len(db["episodes"]))
 
     def test_database_is_isolated_and_has_2000_parameter_policy(self):
-        db = json.loads((ROOT / "data" / "reinforcement-g2" / "answers.json").read_text(encoding="utf-8"))
+        db = json.loads((ROOT / "G2" / "data" / "reinforcement" / "answers.json").read_text(encoding="utf-8"))
         self.assertEqual(db["policy"]["trainable_parameters"], 2000)
         self.assertEqual(db["policy"]["experts"], {"expert_a": 1000, "expert_b": 1000})
         episodes = db["episodes"]

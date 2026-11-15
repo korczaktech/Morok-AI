@@ -181,7 +181,7 @@ if(MOROK_BUILD_APPS)
 endif()
 
 # Stage 15: property, integration and regression coverage.
-add_executable(morok_test_model_properties property/test_model_properties.cpp)
+add_executable(morok_test_model_properties ../G1/shared/tests/property/test_model_properties.cpp)
 target_link_libraries(morok_test_model_properties PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_model_properties)
 add_test(NAME property.model_invariants COMMAND morok_test_model_properties)

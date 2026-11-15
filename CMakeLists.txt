@@ -234,15 +234,18 @@ if(MOROK_BUILD_FUZZERS)
         -fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer)
     target_compile_options(morok_g1 PRIVATE
         -fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer)
-    foreach(_fuzz_target IN ITEMS utf8 rlah_decode checkpoint)
+    foreach(_fuzz_target IN ITEMS utf8 rlah_decode)
         add_executable(morok_fuzz_${_fuzz_target} tests/fuzz/fuzz_${_fuzz_target}.cpp)
         target_link_libraries(morok_fuzz_${_fuzz_target} PRIVATE Morok::Core morok_build_options)
-        if(_fuzz_target STREQUAL "checkpoint")
-            target_link_libraries(morok_fuzz_${_fuzz_target} PRIVATE Morok::G1)
-        endif()
         target_compile_options(morok_fuzz_${_fuzz_target} PRIVATE
             -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
         target_link_options(morok_fuzz_${_fuzz_target} PRIVATE
             -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
     endforeach()
+    add_executable(morok_fuzz_checkpoint G1/shared/tests/fuzz/fuzz_checkpoint.cpp)
+    target_link_libraries(morok_fuzz_checkpoint PRIVATE Morok::Core Morok::G1 morok_build_options)
+    target_compile_options(morok_fuzz_checkpoint PRIVATE
+        -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
+    target_link_options(morok_fuzz_checkpoint PRIVATE
+        -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
 endif()
