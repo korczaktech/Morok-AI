@@ -44,6 +44,52 @@ float at(const Model& model, std::size_t offset) {
     return model.parameters[offset];
 }
 
+struct LinguisticFeatures {
+    std::uint8_t category{16};
+    std::uint8_t boundary{24};
+};
+
+bool ascii_letter(std::uint8_t byte) {
+    return (byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z');
+}
+bool word_byte(std::uint8_t byte) {
+    return ascii_letter(byte) || (byte >= '0' && byte <= '9') ||
+           (byte >= 0x80 && byte <= 0xBF) ||
+           (byte >= 0xC2 && byte <= 0xF4);
+}
+LinguisticFeatures linguistic_features(std::uint8_t byte, std::uint8_t previous) {
+    LinguisticFeatures result;
+    if (byte >= 'A' && byte <= 'Z') result.category = 1;
+    else if (byte >= 'a' && byte <= 'z') result.category = 2;
+    else if (byte >= '0' && byte <= '9') result.category = 3;
+    else if (byte == ' ' || byte == '\\t') result.category = 4;
+    else if (byte == '\\n' || byte == '\\r') result.category = 5;
+    else if (byte == '.' || byte == '?' || byte == '!') result.category = 6;
+    else if (byte == ',' || byte == ';' || byte == ':') result.category = 7;
+    else if (byte == '(' || byte == '[' || byte == '{' || byte == '<') result.category = 8;
+    else if (byte == ')' || byte == ']' || byte == '}' || byte == '>') result.category = 9;
+    else if (byte >= 0x80 && byte <= 0xBF) result.category = 10;
+    else if (byte >= 0xC2 && byte <= 0xDF) result.category = 11;
+    else if (byte >= 0xE0 && byte <= 0xEF) result.category = 12;
+    else if (byte >= 0xF0 && byte <= 0xF4) result.category = 13;
+    else if (byte >= 0x21 && byte <= 0x7E) result.category = 14;
+    else if (byte < 0x20 || byte == 0x7F) result.category = 15;
+    else result.category = 16;
+
+    const bool current_word = word_byte(byte);
+    const bool previous_word = word_byte(previous);
+    if (current_word && !previous_word) result.boundary = 17;
+    else if (current_word && previous_word) result.boundary = 18;
+    else if (!current_word && previous_word) result.boundary = 19;
+    else if (byte == ' ' || byte == '\\t') result.boundary = 20;
+    else if (byte == '\\n' || byte == '\\r') result.boundary = 21;
+    else if (byte == '.' || byte == '?' || byte == '!') result.boundary = 22;
+    else if (result.category >= 7 && result.category <= 9) result.boundary = 23;
+    else result.boundary = 24;
+    return result;
+}
+
+QuestionFeatures dummy_question_features_marker;
 struct QuestionFeatures {
     std::array<float, kContextSize * kHiddenSize> values{};
     std::array<std::size_t, kContextSize> counts{};
@@ -73,8 +119,16 @@ QuestionFeatures prepare_question_features(
         const std::size_t bucket = (result.end - 1 - position) % kContextSize;
         ++result.counts[bucket];
         const auto base = kEmbeddingOffset + static_cast<std::size_t>(context[position]) * kHiddenSize;
+        const auto features = linguistic_features(context[position],
+            position == 0 ? static_cast<std::uint8_t>(' ') : context[position - 1]);
+        const auto category_base = kEmbeddingOffset +
+            static_cast<std::size_t>(features.category) * kHiddenSize;
+        const auto boundary_base = kEmbeddingOffset +
+            static_cast<std::size_t>(features.boundary) * kHiddenSize;
         for (std::size_t h = 0; h < kHiddenSize; ++h)
-            result.values[bucket * kHiddenSize + h] += at(model, base + h);
+            result.values[bucket * kHiddenSize + h] +=
+                at(model, base + h) + at(model, category_base + h) +
+                at(model, boundary_base + h);
     }
     for (std::size_t bucket = 0; bucket < kContextSize; ++bucket) {
         if (result.counts[bucket] == 0) continue;
@@ -103,15 +157,21 @@ std::array<float, kHiddenSize> initial_recurrent_state(
 
 std::array<float, kHiddenSize> advance_recurrent_state(
     const Model& model, const std::array<float, kHiddenSize>& previous,
-    std::uint8_t byte) {
+    std::uint8_t byte, std::uint8_t previous_byte) {
     std::array<float, kHiddenSize> next{};
     const auto embedding_base = kEmbeddingOffset +
         static_cast<std::size_t>(byte) * kHiddenSize;
+    const auto features = linguistic_features(byte, previous_byte);
+    const auto category_base = kEmbeddingOffset +
+        static_cast<std::size_t>(features.category) * kHiddenSize;
+    const auto boundary_base = kEmbeddingOffset +
+        static_cast<std::size_t>(features.boundary) * kHiddenSize;
     for (std::size_t h = 0; h < kHiddenSize; ++h) {
         float value = at(model, kHiddenBiasOffset + h);
         for (std::size_t k = 0; k < kHiddenSize; ++k)
             value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
-                (at(model, embedding_base + k) + previous[k]);
+                (at(model, embedding_base + k) + at(model, category_base + k) +
+                 at(model, boundary_base + k) + previous[k]);
         const float candidate = std::tanh(value);
         const float retention = 1.0F / (1.0F + std::exp(-value));
         next[h] = retention * previous[h] +
@@ -142,6 +202,8 @@ struct RecurrentStep {
     std::array<float, kHiddenSize> candidate{};
     std::array<float, kHiddenSize> retention{};
     std::uint8_t byte{0};
+    std::uint8_t category_feature{16};
+    std::uint8_t boundary_feature{24};
 };
 
 struct Cache {
@@ -189,13 +251,24 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
         RecurrentStep step;
         step.previous_state = state;
         step.byte = context[position];
+        const auto features = linguistic_features(step.byte,
+            position == sequence_begin ? (position == 0 ? static_cast<std::uint8_t>(' ')
+                                                       : context[position - 1])
+                                       : context[position - 1]);
+        step.category_feature = features.category;
+        step.boundary_feature = features.boundary;
         const auto embedding_base = kEmbeddingOffset +
             static_cast<std::size_t>(step.byte) * kHiddenSize;
+        const auto category_base = kEmbeddingOffset +
+            static_cast<std::size_t>(step.category_feature) * kHiddenSize;
+        const auto boundary_base = kEmbeddingOffset +
+            static_cast<std::size_t>(step.boundary_feature) * kHiddenSize;
         for (std::size_t h = 0; h < kHiddenSize; ++h) {
             float value = at(model, kHiddenBiasOffset + h);
             for (std::size_t k = 0; k < kHiddenSize; ++k)
                 value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
-                    (at(model, embedding_base + k) + state[k]);
+                    (at(model, embedding_base + k) + at(model, category_base + k) +
+                     at(model, boundary_base + k) + state[k]);
             step.candidate[h] = std::tanh(value);
             step.retention[h] = 1.0F / (1.0F + std::exp(-value));
             step.activation[h] = step.retention[h] * state[h] +
@@ -422,18 +495,26 @@ bool accumulate_target_gradient(const Model& model, std::span<const std::uint8_t
         }
         const auto embedding_base = kEmbeddingOffset +
             static_cast<std::size_t>(step.byte) * kHiddenSize;
+        const auto category_base = kEmbeddingOffset +
+            static_cast<std::size_t>(step.category_feature) * kHiddenSize;
+        const auto boundary_base = kEmbeddingOffset +
+            static_cast<std::size_t>(step.boundary_feature) * kHiddenSize;
         for (std::size_t h = 0; h < kHiddenSize; ++h) {
             for (std::size_t k = 0; k < kHiddenSize; ++k) {
                 const std::size_t weight = kHiddenWeightOffset + h * kHiddenSize + k;
                 gradient[weight] += pre_gradient[h] *
-                    (at(model, embedding_base + k) + step.previous_state[k]);
+                    (at(model, embedding_base + k) + at(model, category_base + k) +
+                     at(model, boundary_base + k) + step.previous_state[k]);
                 const float contribution = pre_gradient[h] * at(model, weight);
                 previous_gradient[k] += contribution;
                 input_gradient[k] += contribution;
             }
         }
-        for (std::size_t h = 0; h < kHiddenSize; ++h)
+        for (std::size_t h = 0; h < kHiddenSize; ++h) {
             gradient[embedding_base + h] += input_gradient[h];
+            gradient[category_base + h] += input_gradient[h];
+            gradient[boundary_base + h] += input_gradient[h];
+        }
         state_gradient = previous_gradient;
     }
 
@@ -458,12 +539,22 @@ bool accumulate_target_gradient(const Model& model, std::span<const std::uint8_t
                     (cache.question_end - 1 - position) % kContextSize;
                 const auto base = kEmbeddingOffset +
                     static_cast<std::size_t>(bytes[position]) * kHiddenSize;
+                const auto features = linguistic_features(bytes[position],
+                    position == 0 ? static_cast<std::uint8_t>(' ') : bytes[position - 1]);
+                const auto category_base = kEmbeddingOffset +
+                    static_cast<std::size_t>(features.category) * kHiddenSize;
+                const auto boundary_base = kEmbeddingOffset +
+                    static_cast<std::size_t>(features.boundary) * kHiddenSize;
                 const float inverse_count = 1.0F /
                     static_cast<float>(cache.context_counts[bucket]);
-                for (std::size_t h = 0; h < kHiddenSize; ++h)
-                    gradient[base + h] += initial_pre_gradient[h] *
+                for (std::size_t h = 0; h < kHiddenSize; ++h) {
+                    const float contribution = initial_pre_gradient[h] *
                         at(model, kContextWeightOffset + bucket * kHiddenSize + h) *
                         inverse_count;
+                    gradient[base + h] += contribution;
+                    gradient[category_base + h] += contribution;
+                    gradient[boundary_base + h] += contribution;
+                }
             }
         }
     }
@@ -583,8 +674,12 @@ std::vector<std::uint8_t> generate(const Model& model,
         }
     }
     auto state = initial_recurrent_state(model, question);
-    for (std::size_t position = sequence_begin; position < prompt.size(); ++position)
-        state = advance_recurrent_state(model, state, prompt[position]);
+    std::uint8_t previous_byte = sequence_begin == 0
+        ? static_cast<std::uint8_t>(' ') : prompt[sequence_begin - 1];
+    for (std::size_t position = sequence_begin; position < prompt.size(); ++position) {
+        state = advance_recurrent_state(model, state, prompt[position], previous_byte);
+        previous_byte = prompt[position];
+    }
 
     for (std::size_t i = 0; i < max_new_bytes; ++i) {
         const auto logits = logits_for_state(model, state);
@@ -606,7 +701,8 @@ std::vector<std::uint8_t> generate(const Model& model,
         if (!consume_utf8(utf8, byte)) break;
         output.push_back(byte);
         if (byte == '\n' || byte == '\r' || byte == '\0') break;
-        state = advance_recurrent_state(model, state, byte);
+        state = advance_recurrent_state(model, state, byte, previous_byte);
+        previous_byte = byte;
     }
     return output;
 }
@@ -633,7 +729,7 @@ bool save_training_state(const TrainingState& state,
                          const std::filesystem::path& path) {
     if (path.empty()) return false;
     constexpr char magic[8] = {'M','O','R','O','K','A','D','M'};
-    constexpr std::uint32_t version = 5;
+    constexpr std::uint32_t version = 6;
     constexpr std::uint32_t count = static_cast<std::uint32_t>(kParameterCount);
     std::uint64_t hash = 14695981039346656037ULL;
     const auto update_hash = [&hash](const unsigned char* data, std::size_t size) {
@@ -677,7 +773,7 @@ bool load_training_state(TrainingState& state,
     stream.read(reinterpret_cast<char*>(&step), sizeof(step));
     stream.read(reinterpret_cast<char*>(&expected_hash), sizeof(expected_hash));
     if (!stream || std::memcmp(magic, "MOROKADM", 8) != 0 ||
-        version != 5 || count != kParameterCount)
+        version != 6 || count != kParameterCount)
         return false;
     candidate.step = step;
     stream.read(reinterpret_cast<char*>(candidate.first_moment.data()),
