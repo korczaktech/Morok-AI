@@ -15,7 +15,7 @@ inline constexpr std::size_t kContextSize = 13;
 inline constexpr std::size_t kBpttTruncation = 13;
 inline constexpr std::size_t kParameterCount = 10000;
 // Formato interno recorrente; a versão pública do modelo permanece 0.1.
-inline constexpr std::uint32_t kCheckpointFormatVersion = 6;
+inline constexpr std::uint32_t kCheckpointFormatVersion = 7;
 
 struct Model {
     std::array<float, kParameterCount> parameters{};
