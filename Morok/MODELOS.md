@@ -16,7 +16,8 @@ Morok-AI/
     │   │   ├── shared/          # motor e subsistemas exclusivos da G1
     │   │   ├── Mokosh/
     │   │   ├── Tsukuyomi/
-    │   │   └── Apollo/
+    │   │   ├── Apollo/
+    │   │   └── TsukuyomiMax/
     │   └── G3/                  # estrutura documental
     ├── apps/
     ├── data/
@@ -48,7 +49,7 @@ Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a prim
 1. Código exclusivo de um modelo fica dentro da pasta desse modelo e não pode ser importado por outro.
 2. Um modelo não depende de diretórios privados de outra geração ou modelo.
 3. Componentes reutilizáveis ficam nas bibliotecas públicas da raiz, como `core/` e `tools/`, ou em outras bibliotecas públicas explicitamente aprovadas.
-4. Uma biblioteca pública não pode conter lógica específica de Mokosh, Tsukuyomi, Artemis ou Apollo.
+4. Uma biblioteca pública não pode conter lógica específica de Mokosh, Tsukuyomi, Tsukuyomi Max, Artemis ou Apollo.
 5. Cada perfil mantém suas políticas, adaptadores, configurações e testes próprios. Parâmetros, treinamento, inferência e memória podem ser compartilhados no nível da geração quando fizerem parte do mesmo motor; um perfil nunca importa código privado de outro perfil.
 6. Não criar diretórios ou subsistemas que o modelo não utiliza.
 7. O CMake deve oferecer alvos independentes por modelo. Compilar um modelo não compila fontes privadas dos demais.
