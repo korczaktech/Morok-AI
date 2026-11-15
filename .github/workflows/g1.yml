@@ -131,10 +131,13 @@ jobs:
               return "\n".join(lines) + "\n"
 
           def display_answer(answer):
-              # Preserve the model's exact output without allowing control/private-use
-              # Unicode characters to corrupt the Markdown table or terminal rendering.
+              # The TSV artifact retains the exact bytes. Keep non-linguistic output
+              # from polluting the Markdown report with private-use/control glyphs.
               if not answer:
                   return "(resposta vazia)"
+              ascii_letters = sum(ch.isascii() and ch.isalpha() for ch in answer)
+              if ascii_letters < 4 or ascii_letters / len(answer) < 0.20:
+                  return f"(saída não legível; {len(answer)} caracteres)"
               escaped = answer.encode("unicode_escape").decode("ascii")
               if len(escaped) > 100:
                   escaped = escaped[:100] + "…"
