@@ -43,9 +43,9 @@ class G2ReinforcementTests(unittest.TestCase):
         self.assertEqual(len(documents), 1)
         corpus = documents[0].read_text(encoding="utf-8")
         expected = {
-            "sky_is_blue": ("Usuario: O ceu e azul?\\nIA: ", "Sim, o ceu e azul"),
-            "mountains_high_or_low": ("Usuario: As montanhas sao altas ou baixas?\\nIA: ", "As montanhas sao altas."),
-            "grass_color": ("Usuario: Que cor e a grama?\\nIA: ", "A grama e verde."),
+            "sky_is_blue": ("Usuario: O ceu e azul?\nIA: ", "Sim, o ceu e azul"),
+            "mountains_high_or_low": ("Usuario: As montanhas sao altas ou baixas?\nIA: ", "As montanhas sao altas."),
+            "grass_color": ("Usuario: Que cor e a grama?\nIA: ", "A grama e verde."),
         }
         db = json.loads((ROOT / "data" / "reinforcement-g2" / "answers.json").read_text(encoding="utf-8"))
         for question in db["questions"]:
