@@ -186,7 +186,8 @@ G1TrainingReport train_g1_corpus(const G1TrainingConfig&c,G1Parameters&p){
      model.parameters = bestp;
      std::ostringstream metadata;
      metadata << std::setprecision(17)
-              << "kind=inference\n"
+              << "kind=candidate\n"
+              << "approval_status=pending_external_quality_gate\n"
               << "corpus_hash=" << out.corpus_hash << "\n"
               << "best_epoch=" << out.best_epoch << "\n"
               << "validation_bpb=" << out.best_validation_bpb << "\n"
