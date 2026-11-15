@@ -146,8 +146,8 @@ int main() {
         positional_model.parameters[9216] = 1.0F; // primeira região, dimensão 0
         positional_model.parameters[9216 + 12 * kHiddenSize] = 2.0F; // última região
         positional_model.parameters[9920] = 1.0F;
-        const std::string first_text = "U: A............\\nIA:";
-        const std::string last_text  = "U: ............A\\nIA:";
+        const std::string first_text = "U: A............\nIA:";
+        const std::string last_text  = "U: ............A\nIA:";
         const std::vector<std::uint8_t> first_prompt(first_text.begin(), first_text.end());
         const std::vector<std::uint8_t> last_prompt(last_text.begin(), last_text.end());
         assert(forward(positional_model, first_prompt).hidden !=
