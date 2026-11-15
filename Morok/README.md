@@ -2,7 +2,7 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
-**Organização dos modelos:** os perfis são definidos individualmente por geração. A G1 possui Mokosh, Tsukuyomi, Apollo e Tsukuyomi Max; este último é a rede neural unificada da geração. A G3 permanece documental. Consulte [MODELOS.md](MODELOS.md) para a especificação, as regras de isolamento e o estado da migração.
+**Organização dos modelos:** os perfis são definidos individualmente por geração. A G1 possui somente Tsukuyomi Max, a rede neural unificada da geração. A G3 permanece documental. Consulte [MODELOS.md](MODELOS.md) para a especificação, as regras de isolamento e o estado da migração.
 
 > **Estado atual:** o Core compartilhado, o motor da G1 e  G3 permanece documental. A migração de caminhos e namespaces foi aplicada; compilação e testes locais ainda precisam ser executados para validar o commit final.
 
