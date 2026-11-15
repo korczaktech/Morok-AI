@@ -122,8 +122,8 @@ int main() {
            forward(model, history_bytes_b).hidden);
 
     // A ordem dos bytes anteriores importa: o estado é recorrente, não uma soma sem ordem.
-    const std::string ordered_a = "U: Q\\nIA:abc";
-    const std::string ordered_b = "U: Q\\nIA:acb";
+    const std::string ordered_a = "U: Q\nIA:abc";
+    const std::string ordered_b = "U: Q\nIA:acb";
     const std::vector<std::uint8_t> ordered_bytes_a(ordered_a.begin(), ordered_a.end());
     const std::vector<std::uint8_t> ordered_bytes_b(ordered_b.begin(), ordered_b.end());
     assert(forward(model, ordered_bytes_a).hidden !=
