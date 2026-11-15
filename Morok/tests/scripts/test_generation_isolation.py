@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate G1 layout, profile isolation and shared-core ownership."""
+"""Validate G1/G2 layout, profile isolation and shared-core ownership."""
 from pathlib import Path
 import sys
 
@@ -43,10 +43,26 @@ def main() -> int:
     g1_block = cmake.split("add_library(morok_g1 STATIC", 1)[1].split("add_library(Morok::G1", 1)[0]
     if "Gerações/G1/shared/src/" not in g1_block:
         errors.append("Morok::G1 does not compile the G1 shared engine")
-    if "Gerações/G2/" in cmake or "MOROK_BUILD_G2" in cmake or "Artemis" in cmake:
-        errors.append("CMake contains removed G2 or G1 Artemis configuration")
+    if "MOROK_BUILD_G2" in cmake or "Artemis" in cmake:
+        errors.append("CMake contains removed G2 build option or G1 Artemis configuration")
     if "TsukuyomiMax" not in cmake or "morok_g1_tsukuyomimax" not in cmake:
         errors.append("CMake does not declare the Tsukuyomi Max G1 target")
+    g2_tsukuyomi = ROOT / "Gerações" / "G2" / "Tsukuyomi"
+    g2_sources = sources(g2_tsukuyomi)
+    required_g2 = ("model.hpp", "model.cpp", "train.cpp", "generate.cpp", "test_model.cpp")
+    for filename in required_g2:
+        if not any(path.name == filename for path in g2_sources):
+            errors.append(f"G2/Tsukuyomi: missing {filename}")
+    for file in g2_sources:
+        content = file.read_text(encoding="utf-8")
+        if "Gerações/G1/" in content or "morok::model::G1" in content:
+            errors.append(f"G2/Tsukuyomi imports private G1 implementation: {file.relative_to(ROOT)}")
+    g2_block = cmake.split("add_library(morok_g2_tsukuyomi STATIC", 1)
+    if len(g2_block) != 2 or "Gerações/G2/Tsukuyomi/src/" not in g2_block[1].split("add_library(Morok::G2::Tsukuyomi", 1)[0]:
+        errors.append("Morok::G2::Tsukuyomi does not compile its private model source")
+    if "Gerações/G2/" in core:
+        errors.append("Morok::Core contains G2-private sources")
+
     model_directories = sorted(p.name for p in g1.iterdir()
                                 if p.is_dir() and (p / "src" / "profile.cpp").is_file())
     if model_directories != ["TsukuyomiMax"]:
@@ -57,7 +73,7 @@ def main() -> int:
         for error in errors:
             print(f"- {error}", file=sys.stderr)
         return 1
-    print("G1 directory layout and profile isolation checks passed.")
+    print("G1/G2 directory layout and profile isolation checks passed.")
     return 0
 
 
