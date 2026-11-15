@@ -43,7 +43,8 @@ struct Cache {
     bool at_start{false};
 };
 
-Cache calculate(const Model& model, std::span<const std::uint8_t> context) {
+Cache calculate(const Model& model, std::span<const std::uint8_t> context,
+                bool calculate_probabilities = true) {
     Cache cache;
     cache.has_current = !context.empty();
     cache.current_byte = cache.has_current ? context.back() : 0;
@@ -55,15 +56,55 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context) {
             cache.input[h] = at(model, base + h);
     }
 
-    const std::size_t available = context.empty() ? 0 :
-        std::min(kContextSize, context.size() - 1);
-    for (std::size_t j = 0; j < available; ++j) {
-        const auto byte = context[context.size() - 2 - j];
-        const float feature = (static_cast<float>(byte) - 127.5F) / 127.5F;
-        cache.context_features[j] = feature;
-        for (std::size_t h = 0; h < kHiddenSize; ++h) {
-            cache.input[h] += feature *
-                at(model, kContextWeightOffset + j * kHiddenSize + h);
+    // Quando o prompt segue o protocolo U:/IA:, usa a pergunta inteira,
+    // não apenas os últimos 13 bytes. Os bytes são agregados em 13 posições
+    // relativas compartilhadas, sem aumentar o orçamento de parâmetros.
+    std::size_t question_begin = context.size();
+    std::size_t question_end = context.size();
+    for (std::size_t line = 0; line < context.size();) {
+        std::size_t end = line;
+        while (end < context.size() && context[end] != '\\n' && context[end] != '\\r')
+            ++end;
+        std::size_t marker = line;
+        while (marker < end && (context[marker] == ' ' || context[marker] == '\\t'))
+            ++marker;
+        if (end - marker >= 2 && context[marker] == 'U' && context[marker + 1] == ':') {
+            question_begin = marker + 2;
+            question_end = end;
+        }
+        line = end;
+        while (line < context.size() && (context[line] == '\\n' || context[line] == '\\r'))
+            ++line;
+    }
+
+    if (question_begin < question_end) {
+        std::array<std::size_t, kContextSize> counts{};
+        for (std::size_t position = question_begin; position < question_end; ++position) {
+            const std::size_t bucket = (question_end - 1 - position) % kContextSize;
+            const float feature =
+                (static_cast<float>(context[position]) - 127.5F) / 127.5F;
+            cache.context_features[bucket] += feature;
+            ++counts[bucket];
+        }
+        for (std::size_t j = 0; j < kContextSize; ++j) {
+            if (counts[j] != 0)
+                cache.context_features[j] /= static_cast<float>(counts[j]);
+            for (std::size_t h = 0; h < kHiddenSize; ++h) {
+                cache.input[h] += cache.context_features[j] *
+                    at(model, kContextWeightOffset + j * kHiddenSize + h);
+            }
+        }
+    } else {
+        const std::size_t available = context.empty() ? 0 :
+            std::min(kContextSize, context.size() - 1);
+        for (std::size_t j = 0; j < available; ++j) {
+            const auto byte = context[context.size() - 2 - j];
+            const float feature = (static_cast<float>(byte) - 127.5F) / 127.5F;
+            cache.context_features[j] = feature;
+            for (std::size_t h = 0; h < kHiddenSize; ++h) {
+                cache.input[h] += feature *
+                    at(model, kContextWeightOffset + j * kHiddenSize + h);
+            }
         }
     }
 
@@ -86,19 +127,22 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context) {
         for (std::size_t h = 0; h < kHiddenSize; ++h)
             logit += at(model, base + h) * cache.hidden[h];
         cache.logits[token] = logit;
-        maximum = std::max(maximum, static_cast<double>(logit));
+        if (calculate_probabilities)
+            maximum = std::max(maximum, static_cast<double>(logit));
     }
 
-    double denominator = 0.0;
-    for (std::size_t token = 0; token < kVocabularySize; ++token) {
-        const double value = std::exp(
-            static_cast<double>(cache.logits[token]) - maximum);
-        cache.probabilities[token] = static_cast<float>(value);
-        denominator += value;
-    }
-    if (denominator > 0.0) {
-        for (auto& probability : cache.probabilities)
-            probability = static_cast<float>(probability / denominator);
+    if (calculate_probabilities) {
+        double denominator = 0.0;
+        for (std::size_t token = 0; token < kVocabularySize; ++token) {
+            const double value = std::exp(
+                static_cast<double>(cache.logits[token]) - maximum);
+            cache.probabilities[token] = static_cast<float>(value);
+            denominator += value;
+        }
+        if (denominator > 0.0) {
+            for (auto& probability : cache.probabilities)
+                probability = static_cast<float>(probability / denominator);
+        }
     }
     return cache;
 }
@@ -247,12 +291,12 @@ double evaluate_loss(const Model& model, std::span<const std::uint8_t> bytes,
 }
 
  
-bool compute_target_gradient(const Model& model,
+namespace {
+bool accumulate_target_gradient(const Model& model,
                              std::span<const std::uint8_t> bytes,
                              std::size_t target_index,
                              std::array<float, kParameterCount>& gradient) {
     if (target_index >= bytes.size()) return false;
-    gradient.fill(0.0F);
     const auto cache = calculate(model, bytes.first(target_index));
     std::array<float, kHiddenSize> hidden_gradient{};
     for (std::size_t token = 0; token < kVocabularySize; ++token) {
@@ -294,6 +338,16 @@ bool compute_target_gradient(const Model& model,
                 pre_gradient[h] * cache.context_features[j];
     }
     return true;
+}
+
+} // namespace
+
+bool compute_target_gradient(const Model& model,
+                             std::span<const std::uint8_t> bytes,
+                             std::size_t target_index,
+                             std::array<float, kParameterCount>& gradient) {
+    gradient.fill(0.0F);
+    return accumulate_target_gradient(model, bytes, target_index, gradient);
 }
 
 TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
@@ -345,11 +399,10 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
         std::uint64_t epoch_targets = 0;
         for (std::size_t target = 0; target < bytes.size(); ++target) {
             if (!target_mask.empty() && target_mask[target] == 0) continue;
-            std::array<float, kParameterCount> target_gradient{};
-            if (!compute_target_gradient(model, bytes, target, target_gradient))
+            // Acumula diretamente no gradiente do mini-lote: evita zerar,
+            // copiar e percorrer um segundo vetor de 10.000 parâmetros por byte.
+            if (!accumulate_target_gradient(model, bytes, target, gradient))
                 return report;
-            for (std::size_t i = 0; i < kParameterCount; ++i)
-                gradient[i] += target_gradient[i];
 
             ++accumulated_targets;
             ++epoch_targets;
@@ -377,7 +430,7 @@ std::vector<std::uint8_t> generate(const Model& model,
         return output;
 
     for (std::size_t i = 0; i < max_new_bytes; ++i) {
-        const auto cache = calculate(model, output);
+        const auto cache = calculate(model, output, false);
         std::size_t best = kVocabularySize;
         float best_logit = -std::numeric_limits<float>::infinity();
         const std::size_t slots_after = max_new_bytes - i - 1;
@@ -395,6 +448,8 @@ std::vector<std::uint8_t> generate(const Model& model,
         const auto byte = static_cast<std::uint8_t>(best);
         if (!consume_utf8(utf8, byte)) break;
         output.push_back(byte);
+        // A quebra de linha encerra a resposta; não gere bytes descartados depois dela.
+        if (byte == '\\n' || byte == '\\r' || byte == '\\0') break;
     }
     return output;
 }
