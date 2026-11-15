@@ -44,8 +44,8 @@ jobs:
 
       - name: Validar parâmetros
         env:
-          EPOCAS: ${{ inputs.epocas }}
-          TENTATIVAS: ${{ inputs.tentativas }}
+          EPOCAS: ${{ inputs.epocas || 200 }}
+          TENTATIVAS: ${{ inputs.tentativas || 10 }}
         run: |
           python3 - <<'PY'
           import os
