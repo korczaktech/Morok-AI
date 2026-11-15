@@ -6,7 +6,7 @@ Executar o primeiro ciclo completo e reproduzível de treinamento da G1, partind
 
 ## Execução automatizada
 
-O workflow `.github/workflows/g1-first-training.yml` compila em Release, executa toda a suíte CTest e executa `scripts/run-g1-first-training.sh`. O workflow é disparado quando os componentes da etapa 20 mudam em `main` e também pode ser iniciado manualmente.
+O script `G1/scripts/first-training.sh` executa o primeiro treinamento. O build Release e a suíte CTest podem ser executados manualmente; os workflows de GitHub Actions foram removidos temporariamente.
 
 Padrões da campanha técnica:
 - 50 épocas solicitadas (configurável no workflow);
@@ -14,7 +14,7 @@ Padrões da campanha técnica:
 - AdamW, learning rate 0,001;
 - BPTT truncado em 64 bytes;
 - early stopping com paciência 5;
-- corpus `tests/fixtures/benchmark`, com divisão determinística por documento;
+- corpus `G1/shared/tests/fixtures/benchmark`, com divisão determinística por documento;
 - retomada obrigatória a partir do checkpoint de fronteira de época;
 - geração autoregressiva limitada a 128 bytes.
 

@@ -6,14 +6,14 @@ A G2 possui dois especialistas independentes de 1.000 parâmetros cada, totaliza
 
 - Checkpoints de inferência: `<prefix>.expert-a` e `<prefix>.expert-b`.
 - Checkpoints de retomada do bootstrap: `<prefix>.expert-a.training` e `<prefix>.expert-b.training`.
-- Histórico: `data/reinforcement-g2/answers.json`.
-- Runner: `scripts/run-g2-reinforcement.py`.
+- Histórico: `G2/data/reinforcement/answers.json`.
+- Runner: `G2/scripts/reinforcement.py`.
 - Gerador: `morok-generate-g2`.
 - Atualizador: `morok-reinforce-g2`.
 
 ## Corpus
 
-O bootstrap usa três documentos independentes em `tests/fixtures/g2-single-document/`, um por pergunta e resposta. Cada arquivo termina exatamente no fim da resposta, permitindo que o treinador aplique um alvo EOS positivo em cada limite:
+O bootstrap usa três documentos independentes em `G2/tests/fixtures/g2-single-document/`, um por pergunta e resposta. Cada arquivo termina exatamente no fim da resposta, permitindo que o treinador aplique um alvo EOS positivo em cada limite:
 
 - `Usuario: O ceu e azul?` → `Sim, o ceu e azul`.
 - `Usuario: As montanhas sao altas ou baixas?` → `As montanhas sao altas.`.

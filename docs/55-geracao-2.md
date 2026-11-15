@@ -33,6 +33,6 @@ A geração atual é reranking de duas continuações independentes, não beam s
 
 ## Corpus de respostas e encerramento
 
-O bootstrap e o Reinforcement-G2 usam três arquivos independentes em `tests/fixtures/g2-single-document`, um para cada par controlado de pergunta e resposta (céu, montanhas e grama). Cada arquivo termina exatamente após a resposta. O treinador G2 ativa `train_all_documents`: os três documentos são usados no treinamento, cada um reinicializa o estado recorrente e recebe um alvo EOS positivo no próprio limite. Isso evita ensinar o modelo a continuar diretamente da resposta de uma pergunta para a próxima pergunta do corpus.
+O bootstrap e o Reinforcement-G2 usam três arquivos independentes em `G2/tests/fixtures/g2-single-document`, um para cada par controlado de pergunta e resposta (céu, montanhas e grama). Cada arquivo termina exatamente após a resposta. O treinador G2 ativa `train_all_documents`: os três documentos são usados no treinamento, cada um reinicializa o estado recorrente e recebe um alvo EOS positivo no próprio limite. Isso evita ensinar o modelo a continuar diretamente da resposta de uma pergunta para a próxima pergunta do corpus.
 
 As métricas desse modo são calculadas nos mesmos documentos de treinamento (resubstituição), não em conjuntos independentes, e não demonstram generalização. O nome histórico da pasta de fixture permanece por compatibilidade dos workflows, embora agora contenha três documentos.

@@ -16,11 +16,11 @@ Ao iniciar o workflow `reinforcement` pelo botão **Run workflow**, o formulári
 
 O laço executa exatamente a quantidade solicitada e não encerra antecipadamente por acertos ou erros. Cada resposta é classificada, recebe recompensa +1/-1, é registrada na database JSON e aciona a atualização de política quando há bytes suficientes para o BPTT. Uma falha técnica de execução ainda interrompe o workflow, em vez de fingir que as tentativas restantes foram concluídas.
 
-No final, a etapa **Display attempt results** apresenta somente a lista numerada no formato `1. resposta - correto` ou `2. resposta - errado`. O resumo da execução também mostra a tabela com pergunta, resposta e veredito. O histórico completo permanece em `data/reinforcement/answers.json`.
+No final, a etapa **Display attempt results** apresenta somente a lista numerada no formato `1. resposta - correto` ou `2. resposta - errado`. O resumo da execução também mostra a tabela com pergunta, resposta e veredito. O histórico completo permanece em `G1/data/reinforcement/answers.json`.
 
 ## Database de feedback
 
-O arquivo versionado `data/reinforcement/answers.json` é a base de dados do experimento. Cada episódio registra:
+O arquivo versionado `G1/data/reinforcement/answers.json` é a base de dados do experimento. Cada episódio registra:
 
 - pergunta e prompt utilizados;
 - resposta integral produzida pela G1;
