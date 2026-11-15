@@ -32,8 +32,14 @@ jobs:
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Validar página inicial
-        run: test -f Site/Front-End/index.html
+      - name: Validar arquivos do frontend
+        run: |
+          test -s Site/Front-End/index.html
+          test -s Site/Front-End/styles.css
+          test -s Site/Front-End/app.js
+
+      - name: Validar sintaxe JavaScript
+        run: node --check Site/Front-End/app.js
 
       - name: Preparar arquivos do site
         uses: actions/upload-pages-artifact@v3
