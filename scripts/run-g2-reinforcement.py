@@ -5,7 +5,7 @@ import argparse, hashlib, json, os, re, subprocess, sys, tempfile, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
-MAX_BOOTSTRAP_EPOCHS=1000
+MAX_BOOTSTRAP_EPOCHS=10000
 REQUIRED_CONCEPTS={
  "sky_is_blue":{"sim","azul"},
  "mountains_high_or_low":{"montanhas","altas"},
@@ -45,7 +45,7 @@ def main():
  ap=argparse.ArgumentParser()
  ap.add_argument("--checkpoint",type=Path,required=True); ap.add_argument("--database",type=Path,default=ROOT/"data/reinforcement-g2/answers.json")
  ap.add_argument("--trainer",type=Path,default=ROOT/"build/morok-train-g2"); ap.add_argument("--generator",type=Path,default=ROOT/"build/morok-generate-g2")
- ap.add_argument("--reinforcer",type=Path,default=ROOT/"build/morok-reinforce-g2"); ap.add_argument("--bootstrap-epochs",type=int,default=1000)
+ ap.add_argument("--reinforcer",type=Path,default=ROOT/"build/morok-reinforce-g2"); ap.add_argument("--bootstrap-epochs",type=int,default=10000)
  ap.add_argument("--attempts",type=int,default=3); ap.add_argument("--questions",nargs="+",choices=sorted(TASK_CONCEPTS),default=list(TASK_CONCEPTS)); ap.add_argument("--learning-rate",type=float,default=.001)
  ap.add_argument("--results-file",type=Path,default=ROOT/"artifacts/reinforcement-g2/attempt-results.txt")
  a=ap.parse_args()
