@@ -175,6 +175,26 @@ int main() {
                forward(memory_model, memory_bytes_b).hidden);
     }
 
+    // Ablations causais: remover a projeção da pergunta elimina a influência
+    // da pergunta; remover a matriz recorrente elimina a influência do histórico.
+    {
+        Model context_ablated = model;
+        std::fill(context_ablated.parameters.begin() + 9216,
+                  context_ablated.parameters.begin() + 9632, 0.0F);
+        const std::string same_answer_a = "U: pergunta A\nIA:";
+        const std::string same_answer_b = "U: pergunta B\nIA:";
+        const std::vector<std::uint8_t> prompt_a(same_answer_a.begin(), same_answer_a.end());
+        const std::vector<std::uint8_t> prompt_b(same_answer_b.begin(), same_answer_b.end());
+        assert(forward(context_ablated, prompt_a).hidden ==
+               forward(context_ablated, prompt_b).hidden);
+
+        Model recurrence_ablated = model;
+        std::fill(recurrence_ablated.parameters.begin() + 8192,
+                  recurrence_ablated.parameters.begin() + 9216, 0.0F);
+        assert(forward(recurrence_ablated, history_bytes_a).hidden ==
+               forward(recurrence_ablated, history_bytes_b).hidden);
+    }
+
     // A matriz recorrente compartilhada altera o estado após processar a sequência.
     Model recurrent_changed = model;
     recurrent_changed.parameters[8192] += 0.5F;
