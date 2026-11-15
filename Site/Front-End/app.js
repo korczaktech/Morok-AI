@@ -488,7 +488,7 @@
   $('#profile-save').addEventListener('click',()=>{const name=$('#display-name').value.trim();state.displayName=name||'Visitante';updateProfile();persist();});
   $('#model-select').addEventListener('click',()=>{const pop=$('#model-popover');pop.hidden=!pop.hidden;if(!pop.hidden){$('#generation-list').hidden=false;$('#model-submenu').hidden=true;}$('#model-select').setAttribute('aria-expanded',String(!pop.hidden));});
   function updateModelMenu() {
-    $('#model-select-label').textContent = 'Morok';
+    $('#model-select-label').textContent = state.generation + ' · ' + state.model;
     $$('[data-generation]').forEach(button=>button.classList.toggle('selected',button.dataset.generation===state.generation));
     $$('[data-model]').forEach(button=>button.classList.toggle('selected',button.dataset.model===state.model));
   }
