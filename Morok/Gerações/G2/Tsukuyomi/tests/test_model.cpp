@@ -54,8 +54,8 @@ int main() {
     check_gradient(0, 9984); // vetor inicial
     check_gradient(3, 0);    // embedding usado na saída
     check_gradient(3, 101 * kHiddenSize); // embedding de entrada compartilhado
-    check_gradient(3, 1 * kHiddenSize);   // protótipo aprendido de letra maiúscula
-    check_gradient(3, 17 * kHiddenSize); // protótipo aprendido de início de palavra
+    check_gradient(3, 0xC0 * kHiddenSize); // protótipo aprendido de letra maiúscula
+    check_gradient(3, 0xFC * kHiddenSize); // protótipo aprendido de início de palavra
     check_gradient(3, 8192); // projeção oculta
     check_gradient(3, 9216); // projeção de contexto
     check_gradient(3, 9632); // bias oculto
@@ -111,8 +111,8 @@ int main() {
             linguistic_model.parameters[8192 + h * kHiddenSize + h] = 0.1F;
             linguistic_model.parameters[9920 + h] = 1.0F;
         }
-        linguistic_model.parameters[1 * kHiddenSize] = 0.7F; // maiúsculas
-        linguistic_model.parameters[2 * kHiddenSize] = -0.7F; // minúsculas
+        linguistic_model.parameters[0xC0 * kHiddenSize] = 0.7F; // maiúsculas
+        linguistic_model.parameters[0xC1 * kHiddenSize] = -0.7F; // minúsculas
         const std::array<std::uint8_t, 1> upper_a{'A'}, upper_b{'B'}, lower_a{'a'};
         assert(forward(linguistic_model, upper_a).hidden ==
                forward(linguistic_model, upper_b).hidden);
@@ -126,7 +126,7 @@ int main() {
         constexpr float epsilon = 1.0e-3F;
         Model plus = model;
         Model minus = model;
-        const std::size_t feature_parameter = 1 * kHiddenSize;
+        const std::size_t feature_parameter = 0xC0 * kHiddenSize;
         plus.parameters[feature_parameter] += epsilon;
         minus.parameters[feature_parameter] -= epsilon;
         std::array<std::uint8_t, 13> one_target_mask{};
