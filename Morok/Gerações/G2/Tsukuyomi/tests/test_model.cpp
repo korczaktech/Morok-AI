@@ -106,12 +106,6 @@ int main() {
     const std::vector<std::uint8_t> bytes_b(prompt_b.begin(), prompt_b.end());
     assert(forward(model, bytes_a).hidden != forward(model, bytes_b).hidden);
 
-    // A matriz recorrente compartilhada altera o estado após processar a sequência.
-    Model recurrent_changed = model;
-    recurrent_changed.parameters[8192] += 0.5F;
-    assert(forward(model, history_bytes_a).hidden !=
-           forward(recurrent_changed, history_bytes_a).hidden);
-
     // A resposta anterior precisa influenciar a previsão: pergunta e último
     // byte iguais, mas histórico de resposta diferente, devem gerar estados distintos.
     const std::string history_a = "U: Q\nIA:ab";
@@ -120,6 +114,12 @@ int main() {
     const std::vector<std::uint8_t> history_bytes_b(history_b.begin(), history_b.end());
     assert(forward(model, history_bytes_a).hidden !=
            forward(model, history_bytes_b).hidden);
+
+    // A matriz recorrente compartilhada altera o estado após processar a sequência.
+    Model recurrent_changed = model;
+    recurrent_changed.parameters[8192] += 0.5F;
+    assert(forward(model, history_bytes_a).hidden !=
+           forward(recurrent_changed, history_bytes_a).hidden);
 
     // A ordem dos bytes anteriores importa: o estado é recorrente, não uma soma sem ordem.
     const std::string ordered_a = "U: Q\nIA:abc";
