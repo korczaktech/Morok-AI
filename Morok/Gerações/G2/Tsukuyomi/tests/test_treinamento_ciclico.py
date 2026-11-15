@@ -146,6 +146,37 @@ class TrainingDataTests(unittest.TestCase):
             )
             self.assertEqual(training.read_dialogues(corpus), [("pergunta", "resposta")])
 
+    def test_character_similarity_is_bounded_and_normalized(self):
+        self.assertEqual(training.character_similarity("O céu é azul!", "O ceu e azul."), 1.0)
+        self.assertGreater(training.character_similarity("o céu azul", "o céu é azul"), 0.0)
+        self.assertLessEqual(training.character_similarity("resposta", "pergunta"), 1.0)
+        self.assertEqual(training.character_similarity("", "resposta"), 0.0)
+
+    def test_benchmark_categories_cover_composition_concepts_and_facts(self):
+        self.assertEqual(training.benchmark_category("Compare Apollo e Mokosh"), "composicao")
+        self.assertEqual(training.benchmark_category("Explique o que é contexto"), "conceito")
+        self.assertEqual(training.benchmark_category("Quantos parâmetros existem?"), "fato")
+        self.assertEqual(training.benchmark_category("Olá, tudo bem?"), "conversa")
+
+    def test_report_includes_metrics_by_skill(self):
+        from io import StringIO
+        report = StringIO()
+        dialogues = [
+            ("Compare dois modelos", "Apollo é equilibrado e Mokosh é rápido."),
+            ("Explique contexto", "Contexto ajuda a prever o próximo byte."),
+        ]
+        results = [
+            ("Apollo é equilibrado e Mokosh é rápido.", True, 1.0),
+            ("Contexto ajuda.", False, 0.5),
+        ]
+        training.write_results(report, "Benchmark", dialogues, results)
+        content = report.getvalue()
+        self.assertIn("Resultado por habilidade", content)
+        self.assertIn("composicao", content)
+        self.assertIn("conceito", content)
+        self.assertIn("Similaridade de caracteres média", content)
+        self.assertIn("Aprovação exige igualdade lexical normalizada", content)
+
     def test_generation_diagnostics_detect_repetition_and_diversity(self):
         repetition, diversity = training.generation_diagnostics("aaaa")
         self.assertEqual(repetition, 1.0)
