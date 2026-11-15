@@ -121,7 +121,7 @@ def benchmark_category(question: str) -> str:
     tokens = normalize(question)
     if any(word in tokens for word in ("compare", "relacao", "diferenca")):
         return "composicao"
-    if any(word in tokens for word in ("explique", "defina", "significa", "como")):
+    if any(word in tokens for word in ("explique", "defina", "significa", "como")) or {"que", "e"}.issubset(tokens):
         return "conceito"
     if any(word in tokens for word in ("quantos", "quantas", "qual", "quais", "quem", "onde")):
         return "fato"
