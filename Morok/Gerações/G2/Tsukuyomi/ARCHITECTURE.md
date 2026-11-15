@@ -88,6 +88,6 @@ Formato binário MOROKG2T, versão 6, contagem explícita de 10.000 floats e che
 - Sem tokenizer; a entrada é byte-level.
 - O treinador aceita bytes arbitrários; a CLI de geração exige prompt UTF-8 válido para produzir continuação útil.
 - O corpus supervisionado foi ampliado de 32 para 56 diálogos, preservando os 32 originais; a validação mantém 40 perguntas e o teste reservado foi ampliado para 12 perguntas. O conjunto continua pequeno e não equivale a um corpus natural amplo.
-- O checkpoint de pesos (formato 5) e o arquivo `.adam` (formato 4) são artefatos separados e ambos são necessários para uma retomada exata do otimizador.
+- O checkpoint de pesos (formato 6) e o arquivo `.adam` (formato 5) são artefatos separados e ambos são necessários para uma retomada exata do otimizador.
 
 A versão 0.1 estabelece uma implementação executável, mensurável e isolada. Evoluções arquiteturais só devem ser aceitas com testes e comparação experimental.
