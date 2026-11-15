@@ -18,7 +18,7 @@ class TrainingDataTests(unittest.TestCase):
         for _ in range(training.LR_PLATEAU_CYCLES - 1):
             lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 0.5)
             self.assertFalse(reduced)
-        lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 1.0)
+        lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 0.5)
         self.assertTrue(reduced)
         self.assertEqual(lr, training.INITIAL_LEARNING_RATE * 0.5)
         self.assertEqual(plateau, 0)
