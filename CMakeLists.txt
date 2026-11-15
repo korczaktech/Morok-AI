@@ -195,9 +195,14 @@ if(MOROK_BUILD_FUZZERS)
     endif()
     target_compile_options(morok_core PRIVATE
         -fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer)
+    target_compile_options(morok_g1 PRIVATE
+        -fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer)
     foreach(_fuzz_target IN ITEMS utf8 rlah_decode checkpoint)
         add_executable(morok_fuzz_${_fuzz_target} tests/fuzz/fuzz_${_fuzz_target}.cpp)
         target_link_libraries(morok_fuzz_${_fuzz_target} PRIVATE Morok::Core morok_build_options)
+        if(_fuzz_target STREQUAL "checkpoint")
+            target_link_libraries(morok_fuzz_${_fuzz_target} PRIVATE Morok::G1)
+        endif()
         target_compile_options(morok_fuzz_${_fuzz_target} PRIVATE
             -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
         target_link_options(morok_fuzz_${_fuzz_target} PRIVATE
