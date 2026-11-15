@@ -12,7 +12,7 @@ G2_CODE = [
     ROOT / "G2" / "tests",
 ]
 FORBIDDEN = re.compile(
-    r"morok/model/(?:g1_forward|parameters/g1_parameters|learn/g1_)|morok/g1/"
+    r"morok/model/|morok::model::|morok/g1/|morok::g1::"
     r"|\b(?:G1Parameters|G1State|G1Checkpoint|G1TrainingConfig|"
     r"G1GenerationConfig|train_g1_corpus|generate_g1|advance_g1_state|"
     r"compute_g1_bptt_gradients|apply_g1_optimizer_step)\b"
