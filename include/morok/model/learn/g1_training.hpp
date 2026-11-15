@@ -14,6 +14,7 @@ struct G1TrainingConfig {
  std::size_t max_documents{100000};
  std::uint64_t max_document_bytes{1ULL<<30U};
  G1OptimizerConfig optimizer{G1OptimizerConfig::adamw()};
+ bool allow_single_document{false};
  std::function<bool()> cancellation_requested{};
 };
 struct G1EpochMetrics {
@@ -32,7 +33,7 @@ struct G1TrainingReport {
  double best_validation_bpb{0}, test_bpb{0};
  double test_evaluation_seconds{0}, test_evaluation_bytes_per_second{0};
  std::uint64_t test_target_bytes{0};
- bool stopped_early{false}, resumed{false};
+ bool stopped_early{false}, resumed{false}, single_document_evaluation{false};
  std::vector<G1EpochMetrics> epochs{};
 };
 [[nodiscard]] G1TrainingReport train_g1_corpus(const G1TrainingConfig&, G1Parameters&);
