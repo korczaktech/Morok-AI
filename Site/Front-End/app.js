@@ -260,17 +260,21 @@
   async function checkHealth(showToast = false) {
     if (!state.apiUrl) { setConnection('off','API não configurada'); if (showToast) toast('Configure o endereço da API primeiro.'); return false; }
     setConnection('wait','Verificando API…');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
     try {
-      const response = await fetch(state.apiUrl.replace(/\/+$/,'') + '/health',{method:'GET',mode:'cors',cache:'no-store'});
-      const data = await response.json();
-      if (!response.ok || data.status !== 'ok') throw new Error('Health check inválido.');
-      setConnection('online','API conectada');
+      const response = await fetch(state.apiUrl.replace(/\\/+$/,'') + '/health',{method:'GET',mode:'cors',cache:'no-store',signal:controller.signal});
+      const data = await response.json().catch(() => null);
+      if (!response.ok || data?.status !== 'ok') throw new Error('Health check inválido (HTTP ' + response.status + ').');
+      setConnection('online','API configurada');
       if (showToast) toast('Conexão com o Morok estabelecida.');
       return true;
-    } catch {
-      setConnection('error','API indisponível');
-      if (showToast) toast('Não foi possível conectar. Verifique URL, HTTPS e CORS.');
+    } catch (error) {
+      setConnection('error',error.name === 'AbortError' ? 'Tempo esgotado ao conectar' : 'API indisponível');
+      if (showToast) toast(error.name === 'AbortError' ? 'A API demorou mais de 12 segundos para responder.' : 'Não foi possível conectar. Verifique URL, HTTPS e CORS.');
       return false;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
   function setConnection(status,label) {
@@ -436,7 +440,10 @@
     try { if(state.authSession?.access_token) await authRequest('/auth/logout',{token:state.authSession.access_token}); } catch {}
     saveAuthSession(null); state.displayName='Visitante'; updateProfile(); persist(); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
   }
-  $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
+  // Start API health check before optional UI bindings.
+  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); checkHealth(); refreshAuthSession();
+
+  $('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
   $('#auth-form').addEventListener('submit',event=>{event.preventDefault();if(event.submitter && event.submitter.id!=='auth-submit')return;submitAuth();});
   $('#auth-logout').addEventListener('click',logout);
 
@@ -479,5 +486,5 @@
     if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='o'){event.preventDefault();createConversation();}
   });
   matchMedia('(prefers-color-scheme: light)').addEventListener?.('change',()=>{if(state.theme==='system')applyTheme();});
-  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); checkHealth(); refreshAuthSession();
+  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); refreshAuthSession();
 })();
