@@ -756,7 +756,7 @@ h1 span,.welcome h1 span{
 /* Native select elements are hidden behind site-owned dropdown menus */
 .site-select{position:relative;width:100%;min-width:0}
 .site-select-trigger{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:12px;text-align:left;cursor:pointer}
-.site-select-trigger::after{content:"⌄";margin-left:12px;color:var(--muted)}
+.site-select-trigger::after{content:none}
 .site-select-trigger[aria-expanded="true"]{border-color:var(--accent)}
 .site-select-menu{position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:120;display:grid;gap:3px;max-height:220px;overflow:auto;padding:5px;border:1px solid var(--line);border-radius:10px;background:#08040e;box-shadow:0 16px 42px #000}
 .site-select-menu[hidden]{display:none}
@@ -819,3 +819,9 @@ h1 span,.welcome h1 span{
 .site-select-trigger::after{content:none}
 .site-select-trigger .ui-icon{width:14px;height:14px;margin-left:12px;color:var(--muted)}
 :root[data-theme="light"] .ui-icon{color:inherit}
+
+.ui-icon-command{width:13px;height:13px;vertical-align:middle}
+kbd [data-icon]{display:inline-flex;vertical-align:middle}
+.primary-button .ui-icon{width:15px;height:15px;margin-right:6px}
+.image-remove{display:flex;align-items:center;justify-content:center;gap:6px}
+.image-remove .ui-icon{width:13px;height:13px}
