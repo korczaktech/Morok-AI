@@ -34,6 +34,26 @@ def is_degenerate_response(response):
 def select_training_target(question_id,response,verdict):
  if verdict=="correct" and len(response.encode("utf-8"))>=2:return response,"model_response"
  return SEED_ANSWERS[question_id],"oracle_demonstration"
+def build_memory_replay(episodes,limit=32):
+ if not isinstance(limit,int) or limit<0 or limit>256:raise ValueError("memory replay limit must be in [0,256]")
+ if limit==0:return []
+ replay=[]
+ for episode in episodes[-limit:]:
+  question_id=episode.get("question_id")
+  update=episode.get("policy_update") or {}
+  if question_id not in SEED_ANSWERS or update.get("status")!="applied":continue
+  source=update.get("source")
+  if source=="oracle_demonstration":
+   target=SEED_ANSWERS[question_id]
+  elif source=="model_response":
+   target=episode.get("initial_answer") or episode.get("answer","")
+  else:
+   continue
+  prompt=episode.get("prompt","")
+  if not prompt or len(target.encode("utf-8"))<2:continue
+  replay.append({"episode_id":episode.get("episode_id","legacy"),"question_id":question_id,
+                 "prompt":prompt,"target":target,"source":source,"reward":1})
+ return replay
 def run(cmd):
  r=subprocess.run(cmd,capture_output=True,text=True,encoding="utf-8")
  if r.returncode:raise RuntimeError(f"command failed: {' '.join(cmd)}\n{r.stdout}\n{r.stderr}")
@@ -47,11 +67,11 @@ def main():
  ap.add_argument("--trainer",type=Path,default=ROOT/"build/morok-train-g2"); ap.add_argument("--generator",type=Path,default=ROOT/"build/morok-generate-g2")
  ap.add_argument("--reinforcer",type=Path,default=ROOT/"build/morok-reinforce-g2"); ap.add_argument("--bootstrap-epochs",type=int,default=10000)
  ap.add_argument("--attempts",type=int,default=3); ap.add_argument("--questions",nargs="+",choices=sorted(TASK_CONCEPTS),default=list(TASK_CONCEPTS)); ap.add_argument("--learning-rate",type=float,default=.001)
- ap.add_argument("--results-file",type=Path,default=ROOT/"artifacts/reinforcement-g2/attempt-results.txt")
+ ap.add_argument("--results-file",type=Path,default=ROOT/"artifacts/reinforcement-g2/attempt-results.txt")\n ap.add_argument("--memory-replay-limit",type=int,default=32,help="number of latest persisted experiences to rehearse (0 disables replay)")\n ap.add_argument("--memory-replay-steps",type=int,default=25,help="optimizer steps per remembered experience")
  a=ap.parse_args()
  a.results_file.parent.mkdir(parents=True,exist_ok=True)
  if not 1<=a.attempts<=10 or not 1<=a.bootstrap_epochs<=MAX_BOOTSTRAP_EPOCHS:raise ValueError(f"attempts must be in [1,10] and bootstrap epochs in [1,{MAX_BOOTSTRAP_EPOCHS}]")
- if not a.questions or len(a.questions)!=len(set(a.questions)):raise ValueError("select at least one unique question")
+ if not a.questions or len(a.questions)!=len(set(a.questions)):raise ValueError("select at least one unique question")\n if not 0<=a.memory_replay_limit<=256 or not 1<=a.memory_replay_steps<=1000:raise ValueError("memory replay limit must be in [0,256] and replay steps in [1,1000]")
  if not a.database.is_file():raise FileNotFoundError(a.database)
  db=json.loads(a.database.read_text(encoding="utf-8"))
  if db.get("schema_version")!=1 or {q["id"] for q in db["questions"]}!=set(TASK_CONCEPTS):raise ValueError("invalid G2 feedback database")
@@ -114,7 +134,7 @@ def main():
  lines=[f"{x['attempt']}. {x['answer'].replace(chr(10),' ').strip() or '[resposta vazia]'} - {'correto' if x['verdict']=='correct' else 'errado'}" for x in results]
  a.results_file.parent.mkdir(parents=True,exist_ok=True); a.results_file.write_text("\n".join(lines)+"\n",encoding="utf-8")
  correct_count=sum(x["verdict"]=="correct" for x in results)
- report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"selected_questions":[q["id"] for q in selected_questions],"results":results,"correct_in_this_run":correct_count,"behavioral_gate":"passed" if correct_count else "failed","totals":db["totals"],"trainable_parameters":2000,"checkpoint_reused":checkpoint_reused,"checkpoint_version":"v2"}
+ report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"selected_questions":[q["id"] for q in selected_questions],"results":results,"correct_in_this_run":correct_count,"behavioral_gate":"passed" if correct_count else "failed","totals":db["totals"],"trainable_parameters":2000,"checkpoint_reused":checkpoint_reused,"checkpoint_version":"v2","memory_replay":{"experiences_considered":len(memory),"updates_applied":memory_updates,"steps_per_experience":a.memory_replay_steps,"limit":a.memory_replay_limit}}
  summary=os.environ.get("GITHUB_STEP_SUMMARY")
  if summary:
   with open(summary,"a",encoding="utf-8") as f:
