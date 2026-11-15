@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 TASK_CONCEPTS={"sky_is_blue":{"sim","azul"},"mountains_high_or_low":{"altas"},"grass_color":{"verde"}}
-SEED_ANSWERS={"sky_is_blue":"Sim.","mountains_high_or_low":"Altas.","grass_color":"Verde."}
+SEED_ANSWERS={"sky_is_blue":"Sim, o ceu e azul","mountains_high_or_low":"As montanhas sao altas.","grass_color":"A grama e verde."}
 NEGATIONS={"nao","nunca","jamais"}
 def tokens(s):
  v=unicodedata.normalize("NFKD",s.casefold()); v="".join(c for c in v if not unicodedata.combining(c)); return re.findall(r"[a-z0-9]+",v)
@@ -67,11 +67,24 @@ def main():
    episode={"episode":episode_no,"episode_id":f"{run_id}:{run_attempt}:{i+1}:{q['id']}","run_id":run_id,"run_attempt":int(run_attempt),"source":"model_generated","question_id":q["id"],"prompt":q["prompt"],"answer":response,"verdict":verdict,"reward":reward,"grading_reason":reason,"timestamp_utc":datetime.now(timezone.utc).isoformat(),"model_sha256_before":before,"model_sha256_after":None,"trainable_parameters":2000,"policy_update":{"status":"pending","algorithm":"reward_weighted_bptt_score_gradient_on_both_experts"}}
    db["episodes"].append(episode); db["totals"]["episodes"]+=1; db["totals"][verdict]+=1; atomic(a.database,db)
    if verdict=="correct" and len(response.encode("utf-8"))>=2:
-    prompt_file=tmp/"prompt.txt"; answer_file=tmp/"answer.txt"
-    report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt_file),str(answer_file),"1",str(a.learning_rate)]))
-    episode["policy_update"]={"status":"applied","algorithm":"positive_reward_weighted_bptt_on_correct_model_response","report":report}; db["totals"]["policy_updates"]+=1
+    training_source="model_response"
+    training_target=response
    else:
-    episode["policy_update"]={"status":"skipped","reason":"incorrect_or_degenerate_response_not_used_as_training_target"}; db["totals"]["skipped_updates"]+=1
+    # A wrong model response is never treated as a positive target. Use the
+    # known answer from the controlled corpus as an oracle demonstration so
+    # the next attempt actually receives a learning signal.
+    training_source="oracle_demonstration"
+    training_target=SEED_ANSWERS[q["id"]]
+    answer_file.write_text(training_target,encoding="utf-8")
+   if len(training_target.encode("utf-8"))>=2:
+    report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate)]))
+    episode["policy_update"]={"status":"applied","source":training_source,"algorithm":"positive_reward_weighted_bptt_on_model_response_or_oracle_demonstration","report":report}
+    db["totals"]["policy_updates"]+=1
+    if training_source=="oracle_demonstration":
+     db["totals"]["oracle_demonstrations"]+=1
+   else:
+    episode["policy_update"]={"status":"skipped","reason":"training_target_too_short"}
+    db["totals"]["skipped_updates"]+=1
    episode["model_sha256_after"]=digest(Path(str(a.checkpoint)+".expert-a"))+digest(Path(str(a.checkpoint)+".expert-b")); atomic(a.database,db)
    results.append({"attempt":i+1,"question_id":q["id"],"answer":response,"verdict":verdict,"reward":reward,"policy_update":episode["policy_update"]["status"],"grading_reason":reason})
  lines=[f"{x['attempt']}. {x['answer'].replace(chr(10),' ').strip() or '[resposta vazia]'} - {'correto' if x['verdict']=='correct' else 'errado'}" for x in results]
