@@ -51,9 +51,11 @@ def main() -> int:
         errors.append("Morok::G1 does not compile the G1 shared engine")
     if "Gerações/G2/" in cmake or "MOROK_BUILD_G2" in cmake or "Artemis" in cmake:
         errors.append("CMake contains removed G2 or G1 Artemis configuration")
-    for profile in PROFILES:
-        if f"Morok::G1::{profile}" not in cmake:
-            errors.append(f"missing CMake target for G1/{profile}")
+    profile_block = cmake.split("foreach(_profile IN ITEMS", 1)[1].split(")", 1)[0]
+    if not all(profile in profile_block.split() for profile in PROFILES):
+        errors.append("CMake does not declare all three G1 profiles in its target loop")
+    if "Morok::G1::${_profile}" not in cmake:
+        errors.append("CMake does not expose namespaced G1 profile targets")
 
     if errors:
         print("G1 architecture validation failed:", file=sys.stderr)

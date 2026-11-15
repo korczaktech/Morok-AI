@@ -14,12 +14,12 @@ seed="${3:-42}"
 [[ "$seed" =~ ^[0-9]+$ ]] || { echo "seed must be an unsigned integer" >&2; exit 2; }
 (( epochs <= 100000 )) || { echo "epochs exceeds supported limit" >&2; exit 2; }
 
-root="$(cd "$(dirname "$0")/../.." && pwd)"
+root="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$root"
 
 train_bin="${MOROK_TRAIN_BIN:-./build/morok-train}"
 generate_bin="${MOROK_GENERATE_BIN:-./build/morok_generate}"
-corpus="G1/shared/tests/fixtures/benchmark"
+corpus="Gerações/G1/shared/tests/fixtures/benchmark"
 checkpoint="$output_dir/g1-resume.morokckp"
 best_model="$output_dir/g1-best.morokckp"
 metrics="$output_dir/metrics.jsonl"
