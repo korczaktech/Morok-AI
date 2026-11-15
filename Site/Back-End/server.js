@@ -16,6 +16,19 @@ const ALLOWED_ORIGINS = new Set([
   "https://korczaktech.github.io"
 ]);
 
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  try {
+    const parsed = new URL(origin);
+    return parsed.protocol === "https:" &&
+      (parsed.hostname === "korczaktech.com.br" ||
+       parsed.hostname.endsWith(".korczaktech.com.br"));
+  } catch {
+    return false;
+  }
+}
+
 if (!MONGODB_URI || !JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error("MONGODB_URI e JWT_SECRET (mínimo 32 caracteres) são obrigatórios.");
 }
@@ -47,7 +60,7 @@ function send(res, status, payload, origin) {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer"
   };
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (origin && isAllowedOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Vary"] = "Origin";
     headers["Access-Control-Allow-Credentials"] = "false";
@@ -58,7 +71,7 @@ function send(res, status, payload, origin) {
 
 function cors(req, res) {
   const origin = req.headers.origin;
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  if (origin && !isAllowedOrigin(origin)) {
     send(res, 403, { error: "Origem não autorizada." });
     return false;
   }
