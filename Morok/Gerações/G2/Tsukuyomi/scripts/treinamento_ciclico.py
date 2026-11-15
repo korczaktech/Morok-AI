@@ -297,6 +297,7 @@ def main() -> int:
     best_validation_score = -1.0
     best_validation_correct = 0
     best_validation_cycle = 0
+    best_validation_rank = (0, -1.0)
     plateau_cycles = 0
     maximum_cycles = min(attempts, MAX_CYCLES)
     with output.open("w", encoding="utf-8") as report:
