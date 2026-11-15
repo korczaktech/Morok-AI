@@ -1,4 +1,5 @@
-#include "morok/model/g1_forward.hpp"
+#include "morok/common/utf8_text.hpp"
+#include "morok/model/learn/g1_generation.hpp"
 #include "morok/model/learn/g1_bptt.hpp"
 #include "morok/model/learn/optimizer.hpp"
 #include "morok/model/parameters/g1_parameters.hpp"
@@ -46,30 +47,26 @@ std::vector<std::uint8_t> read_input(const char* path) {
 }
 
 std::vector<std::uint8_t> generate(const morok::model::G1Parameters& parameters,
-                                   const std::vector<std::uint8_t>& prompt) {
-    morok::model::G1State state{};
-    for (const auto byte : prompt) {
-        morok::model::advance_g1_state(parameters, state, byte);
-    }
+                                   const std::vector<std::uint8_t>& prompt_bytes) {
+    const std::string prompt_text(
+        reinterpret_cast<const char*>(prompt_bytes.data()), prompt_bytes.size());
+    auto prompt = morok::common::Utf8Text::from_utf8(prompt_text);
+    if (!prompt) throw std::runtime_error("entrada.txt não contém UTF-8 válido");
 
+    morok::model::G1GenerationConfig config;
+    config.max_new_bytes = kGenerationBytes;
+    config.temperature = 0.8;
+    config.top_k = 0;
+    config.seed = input_seed(prompt_bytes);
+    config.repetition_penalty = 0.35;
+    config.repetition_window = 48;
+    config.printable_only = true;
+    const auto report = morok::model::generate_g1(parameters, *prompt.value_if(), config);
+    const auto& text = report.continuation.string();
     std::vector<std::uint8_t> output;
-    output.reserve(kGenerationBytes);
-    for (std::size_t position = 0; position < kGenerationBytes; ++position) {
-        double best_loss = std::numeric_limits<double>::infinity();
-        std::uint8_t best_byte = static_cast<std::uint8_t>(' ');
-        // Constrain generation to printable ASCII so saida.txt is always valid,
-        // readable UTF-8. This first prototype does not generate accented bytes.
-        for (unsigned int candidate = 32; candidate <= 126; ++candidate) {
-            const auto evaluation = morok::model::evaluate_g1_next_byte(
-                parameters, state, static_cast<std::uint8_t>(candidate));
-            if (evaluation.negative_log_likelihood_nats < best_loss) {
-                best_loss = evaluation.negative_log_likelihood_nats;
-                best_byte = static_cast<std::uint8_t>(candidate);
-            }
-        }
-        output.push_back(best_byte);
-        morok::model::advance_g1_state(parameters, state, best_byte);
-    }
+    output.reserve(text.size());
+    for (const unsigned char byte : text)
+        output.push_back(static_cast<std::uint8_t>(byte));
     return output;
 }
 } // namespace
