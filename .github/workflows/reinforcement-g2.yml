@@ -66,11 +66,15 @@ jobs:
           if [[ -n "$previous_run" ]]; then
             mkdir -p artifacts/reinforcement-g2
             gh run download "$previous_run" --name morok-g2-reinforcement-state-v3 --dir artifacts/reinforcement-g2
-            if [[ ! -f artifacts/reinforcement-g2/model.v2.expert-a || ! -f artifacts/reinforcement-g2/model.v2.expert-b ]]; then
-              echo "::error::Previous G2 artifact does not contain both expert checkpoints."
+            if [[ -f artifacts/reinforcement-g2/model.v3.expert-a && -f artifacts/reinforcement-g2/model.v3.expert-b ]]; then
+              echo "Restored G2 v3 checkpoints from workflow run $previous_run."
+            elif [[ -f artifacts/reinforcement-g2/model.v3.expert-a || -f artifacts/reinforcement-g2/model.v3.expert-b ]]; then
+              echo "::error::Previous G2 artifact contains an incomplete v3 expert pair."
               exit 1
+            else
+              rm -f artifacts/reinforcement-g2/model.v2*
+              echo "Previous artifact predates independent QA/EOS training; starting fresh with v3."
             fi
-            echo "Restored G2 checkpoints from workflow run $previous_run."
           else
             echo "No successful previous G2 run found; bootstrap will initialize both experts."
           fi
