@@ -477,12 +477,11 @@ double evaluate_loss(const Model& model, std::span<const std::uint8_t> bytes,
 
  
 namespace {
-bool accumulate_target_gradient(const Model& model, std::span<const std::uint8_t> bytes,
-                             std::size_t target_index,
-                             std::array<float, kParameterCount>& gradient,
-                             std::size_t bptt_steps = kBpttTruncation) {
+bool accumulate_target_gradient_from_cache(
+    const Model& model, std::span<const std::uint8_t> bytes,
+    std::size_t target_index, const Cache& cache,
+    std::array<float, kParameterCount>& gradient) {
     if (target_index >= bytes.size()) return false;
-    const auto cache = calculate(model, bytes.first(target_index), true, nullptr, bptt_steps);
     std::array<float, kHiddenSize> hidden_gradient{};
     for (std::size_t token = 0; token < kVocabularySize; ++token) {
         const float delta = cache.probabilities[token] -
@@ -585,6 +584,15 @@ bool accumulate_target_gradient(const Model& model, std::span<const std::uint8_t
         }
     }
     return true;
+}
+
+bool accumulate_target_gradient(const Model& model, std::span<const std::uint8_t> bytes,
+                                std::size_t target_index,
+                                std::array<float, kParameterCount>& gradient,
+                                std::size_t bptt_steps = kBpttTruncation) {
+    if (target_index >= bytes.size()) return false;
+    const Cache cache = calculate(model, bytes.first(target_index), true, nullptr, bptt_steps);
+    return accumulate_target_gradient_from_cache(model, bytes, target_index, cache, gradient);
 }
 
 } // namespace
