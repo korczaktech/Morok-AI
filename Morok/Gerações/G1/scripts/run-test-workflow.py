@@ -49,7 +49,7 @@ for model in selected:
 if results_path.exists() and results_path.stat().st_size:
     with results_path.open(encoding="utf-8", newline="") as stream:
         header = next(csv.reader(stream, delimiter="\t"), None)
-    if header != ["model", "epoch", "question_id", "verdict", "answer"]:
+    if header != ["model", "epoch", "question_id", "attempt", "verdict", "latency_ms", "answer"]:
         raise RuntimeError("Cabeçalho de history.tsv incompatível; não será anexado histórico corrompido.")
 
 def save_json_atomic(path, value):
