@@ -60,7 +60,7 @@ int main() {
 
     // O gradiente também deve refletir a pergunta inteira no protocolo U:/IA:.
     const std::array<std::uint8_t, 13> question_gradient_sample{
-        'U', ':', 'A', 'B', 'C', 'D', 'E', 'F', 'G', '\\n', 'I', 'A', ':'
+        'U', ':', 'A', 'B', 'C', 'D', 'E', 'F', 'G', '\n', 'I', 'A', ':'
     };
     assert(compute_target_gradient(model, question_gradient_sample, 12, analytic));
     {
@@ -79,19 +79,19 @@ int main() {
     }
 
     // Perguntas longas que diferem no início não podem colapsar ao mesmo contexto.
-    const std::string prompt_a = "U: A pergunta inteira tem contexto longo?\\nIA:";
-    const std::string prompt_b = "U: B pergunta inteira tem contexto longo?\\nIA:";
+    const std::string prompt_a = "U: A pergunta inteira tem contexto longo?\nIA:";
+    const std::string prompt_b = "U: B pergunta inteira tem contexto longo?\nIA:";
     const std::vector<std::uint8_t> bytes_a(prompt_a.begin(), prompt_a.end());
     const std::vector<std::uint8_t> bytes_b(prompt_b.begin(), prompt_b.end());
     assert(forward(model, bytes_a).hidden != forward(model, bytes_b).hidden);
 
     // A geração gulosa deve parar no primeiro terminador, sem produzir bytes extras.
     Model newline_model;
-    newline_model.parameters[9664 + static_cast<std::size_t>('\\n')] = 10.0F;
+    newline_model.parameters[9664 + static_cast<std::size_t>('\n')] = 10.0F;
     const std::array<std::uint8_t, 3> generation_prompt{'I', 'A', ':'};
     const auto stopped = generate(newline_model, generation_prompt, 32);
     assert(stopped.size() == generation_prompt.size() + 1);
-    assert(stopped.back() == static_cast<std::uint8_t>('\\n'));
+    assert(stopped.back() == static_cast<std::uint8_t>('\n'));
 
     // Hiperparâmetros inválidos não podem alterar o modelo.
     Model invalid_config_model = model;
