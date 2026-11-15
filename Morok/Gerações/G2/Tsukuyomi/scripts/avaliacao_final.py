@@ -70,6 +70,37 @@ def generate(generator: Path, checkpoint: Path, dialogues: list[tuple[str, str]]
     return answers, elapsed
 
 
+
+def benchmark_category(question: str) -> str:
+    tokens = set(normalize(question))
+    if tokens & {"compare", "relacao", "diferenca", "diferença"}:
+        return "composicao"
+    if tokens & {"explique", "defina", "significa", "como", "conceito"}:
+        return "conceito"
+    if tokens & {"quantos", "quantas", "qual", "quais", "quem", "onde", "quando"}:
+        return "fato"
+    return "conversa"
+
+
+def summarize_rows(dialogues: list[tuple[str, str]], answers: list[str]) -> dict:
+    if len(dialogues) != len(answers) or not dialogues:
+        raise ValueError("A avaliação precisa de uma resposta para cada pergunta.")
+    groups: dict[str, list[dict]] = {}
+    for (question, expected), answer in zip(dialogues, answers):
+        groups.setdefault(benchmark_category(question), []).append(metrics(answer, expected))
+    summary = {}
+    for category, rows in sorted(groups.items()):
+        count = len(rows)
+        summary[category] = {
+            "questions": count,
+            "exact_matches": sum(row["exact"] for row in rows),
+            "exact_match_rate": sum(row["exact"] for row in rows) / count,
+            **{f"mean_{key}": sum(row[key] for row in rows) / count for key in
+               ("lexical_f1", "character_similarity", "consecutive_repetition", "character_diversity")},
+        }
+    return summary
+
+
 def evaluate_split(generator: Path, checkpoint: Path, dialogues: list[tuple[str, str]]) -> dict:
     answers, elapsed = generate(generator, checkpoint, dialogues)
     rows = [metrics(answer, expected) for answer, (_, expected) in zip(answers, dialogues)]
@@ -85,6 +116,7 @@ def evaluate_split(generator: Path, checkpoint: Path, dialogues: list[tuple[str,
         "questions_per_second_including_checkpoint_load": count / elapsed if elapsed > 0 else 0.0,
         "answers": [{"question": q, "expected": expected, "generated": answer, **row}
                     for (q, expected), answer, row in zip(dialogues, answers, rows)],
+        "by_skill": summarize_rows(dialogues, answers),
     }
 
 
