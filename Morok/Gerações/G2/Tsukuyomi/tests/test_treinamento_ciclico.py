@@ -11,6 +11,17 @@ import treinamento_ciclico as training
 
 
 class TrainingDataTests(unittest.TestCase):
+    def test_first_validation_cycle_starts_without_a_previous_best(self):
+        best = training.initial_validation_rank()
+        self.assertEqual(best, (-1, -1.0))
+        lr, updated, plateau, reduced = training.update_learning_rate(
+            training.INITIAL_LEARNING_RATE, best, 0, (0, 0.0)
+        )
+        self.assertEqual(updated, (0, 0.0))
+        self.assertEqual(plateau, 0)
+        self.assertFalse(reduced)
+        self.assertEqual(lr, training.INITIAL_LEARNING_RATE)
+
     def test_learning_rate_scheduler_reduces_after_three_validation_plateaus(self):
         lr = training.INITIAL_LEARNING_RATE
         best = (12, 0.5)
