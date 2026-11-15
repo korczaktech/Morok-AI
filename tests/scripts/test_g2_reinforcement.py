@@ -37,6 +37,24 @@ class G2ReinforcementTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             select_questions(questions, ["sky_is_blue", "sky_is_blue"])
 
+    def test_single_corpus_contains_all_three_feedback_prompts_and_targets(self):
+        fixture_dir = ROOT / "tests" / "fixtures" / "g2-single-document"
+        documents = sorted(fixture_dir.glob("*.txt"))
+        self.assertEqual(len(documents), 1)
+        corpus = documents[0].read_text(encoding="utf-8")
+        expected = {
+            "sky_is_blue": ("Usuario: O ceu e azul?\\nIA: ", "Sim, o ceu e azul"),
+            "mountains_high_or_low": ("Usuario: As montanhas sao altas ou baixas?\\nIA: ", "As montanhas sao altas."),
+            "grass_color": ("Usuario: Que cor e a grama?\\nIA: ", "A grama e verde."),
+        }
+        db = json.loads((ROOT / "data" / "reinforcement-g2" / "answers.json").read_text(encoding="utf-8"))
+        for question in db["questions"]:
+            prompt, target = expected[question["id"]]
+            self.assertEqual(question["prompt"], prompt)
+            self.assertIn(prompt + target, corpus)
+        self.assertEqual(len(db["episodes"]), 0)
+        self.assertEqual(db["totals"]["episodes"], 0)
+
     def test_database_is_isolated_and_has_2000_parameter_policy(self):
         db = json.loads(
             (ROOT / "data" / "reinforcement-g2" / "answers.json").read_text(encoding="utf-8")
