@@ -3,8 +3,8 @@ import runpy
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-MODULE = runpy.run_path(str(ROOT / "scripts" / "run-g1-reinforcement.py"))
+ROOT = Path(__file__).resolve().parents[4]
+MODULE = runpy.run_path(str(ROOT / "G1" / "scripts" / "reinforcement.py"))
 grade = MODULE["grade"]
 select_question = MODULE["select_question"]
 format_attempt_results = MODULE["format_attempt_results"]
@@ -54,7 +54,7 @@ class ReinforcementGraderTests(unittest.TestCase):
         ])
 
     def test_database_has_exactly_three_tasks(self):
-        database = json.loads((ROOT / "data" / "reinforcement" / "answers.json").read_text(encoding="utf-8"))
+        database = json.loads((ROOT / "G1" / "data" / "reinforcement" / "answers.json").read_text(encoding="utf-8"))
         self.assertEqual({task["id"] for task in database["questions"]}, {
             "sky_is_blue", "mountains_high_or_low", "grass_color"
         })

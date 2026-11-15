@@ -12,7 +12,7 @@ cd "$root"
 
 train_bin="${MOROK_TRAIN_BIN:-./build/morok-train}"
 generate_bin="${MOROK_GENERATE_BIN:-./build/morok_generate}"
-corpus="tests/fixtures/continual"
+corpus="G1/shared/tests/fixtures/continual"
 checkpoint="$state_dir/g1-continual-resume.morokckp"
 best_model="$state_dir/g1-continual-best.morokckp"
 metrics="$state_dir/metrics.jsonl"
@@ -23,7 +23,7 @@ status_file="$state_dir/status.json"
 
 mkdir -p "$state_dir"
 
-python3 scripts/validate-g1-corpus.py
+python3 G1/scripts/validate-corpus.py
 
 # EOS changed the meaning of the final 29 model parameters. Never resume an
 # older checkpoint whose architecture identifier predates the EOS head.
@@ -33,7 +33,7 @@ current_corpus_sha="$(python3 - <<'PY'
 import hashlib
 from pathlib import Path
 digest = hashlib.sha256()
-for path in sorted(Path("tests/fixtures/continual").glob("doc-*.txt")):
+for path in sorted(Path("G1/shared/tests/fixtures/continual").glob("doc-*.txt")):
     digest.update(path.name.encode("utf-8"))
     digest.update(path.read_bytes())
 print(digest.hexdigest())
@@ -114,11 +114,11 @@ test -s "$best_model"
 test -s "$metrics"
 printf '%s\n' "$target_epochs" > "$epoch_file"
 
-"$generate_bin" "$best_model" "tests/fixtures/continual-prompt.txt" "$generated" 128 --repetition-penalty 0.5 --repetition-window 64 --eos-threshold 0.75 --min-new-bytes 8
+"$generate_bin" "$best_model" "G1/shared/G1/shared/tests/fixtures/continual-prompt.txt" "$generated" 128 --repetition-penalty 0.5 --repetition-window 64 --eos-threshold 0.75 --min-new-bytes 8
 test -s "$generated"
 
 qa_report="$state_dir/qa-evaluation.json"
-python3 scripts/evaluate-g1-qa.py "$best_model" "$qa_report"
+python3 G1/scripts/evaluate-qa.py "$best_model" "$qa_report"
 test -s "$qa_report"
 
 # This is a diagnostic only. A lexical match is not semantic understanding
@@ -155,7 +155,7 @@ from pathlib import Path
 import sys
 
 out = Path(sys.argv[1])
-files = sorted(Path("tests/fixtures/continual").glob("doc-*.txt"))
+files = sorted(Path("G1/shared/tests/fixtures/continual").glob("doc-*.txt"))
 digest = hashlib.sha256()
 for path in files:
     digest.update(path.name.encode("utf-8"))

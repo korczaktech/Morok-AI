@@ -5,14 +5,14 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/g1-first-training.yml"
-      - "scripts/run-g1-first-training.sh"
-      - "apps/train_g1.cpp"
-      - "apps/generate_g1.cpp"
+      - "G1/scripts/first-training.sh"
+      - "G1/apps/train.cpp"
+      - "G1/apps/generate.cpp"
       - "src/model/learn/**"
       - "include/morok/model/learn/**"
       - "include/morok/model/parameters/**"
-      - "tests/fixtures/benchmark/**"
-      - "tests/acceptance/**"
+      - "G1/shared/tests/fixtures/benchmark/**"
+      - "G1/shared/tests/acceptance/**"
       - "tests/CMakeLists.txt"
       - "CMakeLists.txt"
   workflow_dispatch:
@@ -57,7 +57,7 @@ jobs:
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          bash scripts/run-g1-first-training.sh \
+          bash G1/scripts/first-training.sh \
             artifacts/training/stage20 \
             "${{ github.event.inputs.epochs || '50' }}" \
             "${{ github.event.inputs.seed || '42' }}"

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-MODULE = runpy.run_path(str(ROOT / "scripts" / "run-g2-reinforcement.py"))
+MODULE = runpy.run_path(str(ROOT / "G2" / "scripts" / "reinforcement.py"))
 grade = MODULE["grade"]
 select_questions = MODULE["select_questions"]
 is_degenerate_response = MODULE["is_degenerate_response"]
@@ -153,7 +153,7 @@ class G2ReinforcementTests(unittest.TestCase):
 
     def test_runner_uses_adaptive_training_and_reports_sequence_loss(self):
         runner = (ROOT / "scripts" / "run-g2-reinforcement.py").read_text(encoding="utf-8")
-        app = (ROOT / "apps" / "reinforce_g2.cpp").read_text(encoding="utf-8")
+        app = (ROOT / "G2" / "apps" / "reinforce.cpp").read_text(encoding="utf-8")
         self.assertIn('default=10000)', runner)
         self.assertIn('MAX_BOOTSTRAP_EPOCHS=10000', runner)
         self.assertIn('bootstrap_epochs<=MAX_BOOTSTRAP_EPOCHS', runner)
@@ -197,7 +197,7 @@ class G2ReinforcementTests(unittest.TestCase):
             select_questions(questions, ["sky_is_blue", "sky_is_blue"])
 
     def test_g2_corpus_uses_independent_documents_for_each_eos_boundary(self):
-        fixture_dir = ROOT / "tests" / "fixtures" / "g2-single-document"
+        fixture_dir = ROOT / "G2" / "tests" / "fixtures" / "g2-single-document"
         documents = sorted(fixture_dir.glob("*.txt"))
         self.assertEqual(len(documents), 3)
         expected = {
@@ -206,13 +206,13 @@ class G2ReinforcementTests(unittest.TestCase):
             "grass_color": ("Usuario: Que cor e a grama?\nIA: ", "A grama e verde."),
         }
         corpus = [path.read_text(encoding="utf-8") for path in documents]
-        db = json.loads((ROOT / "data" / "reinforcement-g2" / "answers.json").read_text(encoding="utf-8"))
+        db = json.loads((ROOT / "G2" / "data" / "reinforcement" / "answers.json").read_text(encoding="utf-8"))
         for question in db["questions"]:
             prompt, target = expected[question["id"]]
             self.assertEqual(question["prompt"], prompt)
             self.assertIn(prompt + target, corpus)
         self.assertTrue(all(not document.endswith("\n") for document in corpus))
-        trainer = (ROOT / "src" / "model" / "learn" / "g2_training.cpp").read_text(encoding="utf-8")
+        trainer = (ROOT / "G2" / "legacy" / "src" / "model" / "learn" / "g2_training.cpp").read_text(encoding="utf-8")
         self.assertEqual(trainer.count("train_all_documents=true;"), 2)
         self.assertEqual(db["totals"]["episodes"], len(db["episodes"]))
 

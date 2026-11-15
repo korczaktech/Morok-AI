@@ -7,9 +7,9 @@ on:
       - ".github/workflows/reinforcement-g1.yml"
       - "CMakeLists.txt"
       - "tests/CMakeLists.txt"
-      - "tests/scripts/test_g1_reinforcement.py"
-      - "apps/reinforce_g1.cpp"
-      - "scripts/run-g1-reinforcement.py"
+      - "G1/shared/tests/scripts/test_g1_reinforcement.py"
+      - "G1/apps/reinforce.cpp"
+      - "G1/scripts/reinforcement.py"
       - "docs/54-aprendizado-por-reforco-g1.md"
   schedule:
     - cron: "*/15 * * * *"
@@ -58,9 +58,9 @@ jobs:
         run: ctest --test-dir build --output-on-failure
       - name: Run G1 reinforcement attempts
         run: |
-          python3 scripts/run-g1-reinforcement.py \
+          python3 G1/scripts/reinforcement.py \
             --checkpoint artifacts/reinforcement-g1/model.morokckp \
-            --database data/reinforcement/answers.json \
+            --database G1/data/reinforcement/answers.json \
             --trainer build/morok-train --generator build/morok_generate \
             --reinforcer build/morok-reinforce --bootstrap-epochs 8 \
             --learning-rate 0.0001 \
@@ -70,7 +70,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/reinforcement/answers.json
+          git add G1/data/reinforcement/answers.json
           if ! git diff --cached --quiet; then
             git commit -m "Record G1 reinforcement answers and rewards"
             git fetch origin main && git rebase origin/main && git push origin HEAD:main

@@ -224,11 +224,11 @@ add_test(NAME architecture.generation_isolation
     COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tests/scripts/test_generation_isolation.py)
 set_tests_properties(architecture.generation_isolation PROPERTIES LABELS "architecture;isolation" TIMEOUT 30)
 add_test(NAME reinforcement.feedback_database
-    COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tests/scripts/test_g1_reinforcement.py)
+    COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/G1/shared/tests/scripts/test_g1_reinforcement.py)
 set_tests_properties(reinforcement.feedback_database PROPERTIES LABELS "reinforcement;python" TIMEOUT 30)
 if(MOROK_BUILD_G2)
     add_test(NAME reinforcement.g2_feedback_database
-        COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tests/scripts/test_g2_reinforcement.py)
+        COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/G2/tests/test_g2_reinforcement.py)
     set_tests_properties(reinforcement.g2_feedback_database PROPERTIES LABELS "reinforcement;g2;python" TIMEOUT 30)
 endif()
 

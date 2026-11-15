@@ -14,7 +14,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 train_bin="${MOROK_TRAIN_G2_BIN:-./build/morok-train-g2}"
 generate_bin="${MOROK_GENERATE_G2_BIN:-./build/morok-generate-g2}"
-corpus="tests/fixtures/g2-single-document"
+corpus="G2/tests/fixtures/g2-single-document"
 prefix="$output_dir/g2-model"
 prompt="$output_dir/prompt.txt"
 generated="$output_dir/generated.txt"
@@ -44,7 +44,7 @@ sha256sum "$prefix.expert-a" "$prefix.expert-b" "$generated" > "$output_dir/arti
 python3 - "$output_dir" "$epochs" "$seed" <<'PY'
 import hashlib, json, os, pathlib, platform, subprocess, sys
 out=pathlib.Path(sys.argv[1]); epochs=int(sys.argv[2]); seed=int(sys.argv[3])
-root=pathlib.Path.cwd(); corpus=sorted((root/"tests/fixtures/g2-single-document").glob("*.txt"))
+root=pathlib.Path.cwd(); corpus=sorted((root/"G2/tests/fixtures/g2-single-document").glob("*.txt"))
 digest=hashlib.sha256()
 for p in corpus:
     digest.update(p.name.encode()); digest.update(p.read_bytes())
@@ -61,7 +61,7 @@ manifest={
  "schema_version":1,"experiment_id":os.environ.get("GITHUB_RUN_ID","local-g2"),
  "status":"completed","purpose":"three-document G2 EOS-boundary engineering smoke run; not a representative language corpus",
  "model":{"generation":"G2","trainable_parameters":2000,"architecture":"two independent 1000-parameter G1 experts","language_standard":"C++20"},
- "data":{"path":"tests/fixtures/g2-single-document","license":"CC0-1.0","documents":len(corpus),
+ "data":{"path":"G2/tests/fixtures/g2-single-document","license":"CC0-1.0","documents":len(corpus),
          "bytes":sum(p.stat().st_size for p in corpus),"ordered_name_and_content_sha256":digest.hexdigest()},
  "training":{"epochs_requested":epochs,"resume_epoch":epochs+1,"seed":seed,"optimizer":"AdamW",
              "single_document_evaluation":False,"training_data_evaluation":True,"independent_qa_documents":True,"experts_trained_sequentially":True,

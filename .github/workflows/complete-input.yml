@@ -5,9 +5,9 @@ on:
     branches: [main]
     paths:
       - entrada.txt
-      - apps/complete_g1.cpp
-      - include/morok/model/**
-      - src/model/**
+      - G1/apps/complete.cpp
+      - G1/shared/include/morok/model/**
+      - G1/shared/src/model/**
       - CMakeLists.txt
       - .github/workflows/complete-input.yml
   workflow_dispatch:

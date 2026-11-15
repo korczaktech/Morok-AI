@@ -4,7 +4,8 @@ from __future__ import annotations
 import argparse, hashlib, json, os, re, subprocess, sys, tempfile, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=Path(__file__).resolve().parents[2]
+GENERATION=ROOT/"G2"
 MAX_BOOTSTRAP_EPOCHS=10000
 REQUIRED_CONCEPTS={
  "sky_is_blue":{"sim","azul"},
@@ -99,11 +100,11 @@ def atomic(p,d):
  p.parent.mkdir(parents=True,exist_ok=True); t=p.with_name(p.name+".tmp"); t.write_text(json.dumps(d,ensure_ascii=False,indent=2)+"\n",encoding="utf-8"); os.replace(t,p)
 def main():
  ap=argparse.ArgumentParser()
- ap.add_argument("--checkpoint",type=Path,required=True); ap.add_argument("--database",type=Path,default=ROOT/"data/reinforcement-g2/answers.json")
+ ap.add_argument("--checkpoint",type=Path,required=True); ap.add_argument("--database",type=Path,default=GENERATION/"data/reinforcement/answers.json")
  ap.add_argument("--trainer",type=Path,default=ROOT/"build/morok-train-g2"); ap.add_argument("--generator",type=Path,default=ROOT/"build/morok-generate-g2")
  ap.add_argument("--reinforcer",type=Path,default=ROOT/"build/morok-reinforce-g2"); ap.add_argument("--bootstrap-epochs",type=int,default=10000)
  ap.add_argument("--attempts",type=int,default=3); ap.add_argument("--questions",nargs="+",choices=sorted(TASK_CONCEPTS),default=list(TASK_CONCEPTS)); ap.add_argument("--learning-rate",type=float,default=.001)
- ap.add_argument("--results-file",type=Path,default=ROOT/"artifacts/reinforcement-g2/attempt-results.txt")
+ ap.add_argument("--results-file",type=Path,default=GENERATION/"artifacts/reinforcement/attempt-results.txt")
  ap.add_argument("--memory-replay-limit",type=int,default=32,help="number of latest persisted experiences to rehearse (0 disables replay)")
  ap.add_argument("--memory-replay-steps",type=int,default=25,help="optimizer steps per remembered experience")
  a=ap.parse_args()
@@ -124,7 +125,7 @@ def main():
  if inference_a.is_file()!=inference_b.is_file():
   raise RuntimeError("incomplete persistent G2 checkpoint: both expert files must exist")
  if not inference_a.is_file():
-  train_cmd=[str(a.trainer),str(ROOT/"tests/fixtures/g2-single-document"),str(checkpoint),str(a.bootstrap_epochs),"42","--patience",str(a.bootstrap_epochs)]
+  train_cmd=[str(a.trainer),str(GENERATION/"tests/fixtures/g2-single-document"),str(checkpoint),str(a.bootstrap_epochs),"42","--patience",str(a.bootstrap_epochs)]
   training_a=Path(str(checkpoint)+".expert-a.training")
   training_b=Path(str(checkpoint)+".expert-b.training")
   if training_a.is_file() and training_b.is_file():train_cmd.append("--resume")

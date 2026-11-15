@@ -15,9 +15,10 @@ import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-DB_DEFAULT = ROOT / "data" / "reinforcement" / "answers.json"
-CORPUS = ROOT / "tests" / "fixtures" / "continual"
+ROOT = Path(__file__).resolve().parents[2]
+GENERATION = ROOT / "G1"
+DB_DEFAULT = GENERATION / "data" / "reinforcement" / "answers.json"
+CORPUS = GENERATION / "shared" / "tests" / "fixtures" / "continual"
 SEED_ANSWERS = {
     "sky_is_blue": "Sim.",
     "mountains_high_or_low": "Altas.",
@@ -121,7 +122,7 @@ def main() -> int:
     parser.add_argument("--trainer", type=Path, default=ROOT / "build" / "morok-train")
     parser.add_argument("--bootstrap-epochs", type=int, default=8)
     parser.add_argument("--attempts", type=int, default=3)
-    parser.add_argument("--results-file", type=Path, default=ROOT / "artifacts" / "reinforcement" / "attempt-results.txt")
+    parser.add_argument("--results-file", type=Path, default=GENERATION / "artifacts" / "reinforcement" / "attempt-results.txt")
     parser.add_argument("--learning-rate", type=float, default=0.0001)
     args = parser.parse_args()
 

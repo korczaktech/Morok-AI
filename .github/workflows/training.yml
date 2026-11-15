@@ -143,7 +143,7 @@ jobs:
           MOROK_MAX_TOTAL_EPOCHS: "500"
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_SHA: ${{ github.sha }}
-        run: bash scripts/run-g1-continual-cycle.sh artifacts/continual-g1
+        run: bash G1/scripts/continual-cycle.sh artifacts/continual-g1
 
       - name: Publish resumable state and evaluation
         if: always() && steps.restore.outputs.stop != 'true'

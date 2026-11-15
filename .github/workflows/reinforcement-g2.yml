@@ -4,16 +4,16 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/reinforcement-g2.yml"
-      - "apps/reinforce_g2.cpp"
-      - "apps/generate_g2.cpp"
-      - "src/model/learn/g1_training.cpp"
-      - "src/model/learn/g2_training.cpp"
-      - "include/morok/model/learn/g1_training.hpp"
-      - "tests/unit/model/test_g2.cpp"
-      - "tests/fixtures/g2-single-document/**"
-      - "scripts/run-g2-reinforcement.py"
-      - "tests/unit/model/test_g2_reinforcement.cpp"
-      - "tests/scripts/test_g2_reinforcement.py"
+      - "G2/apps/reinforce.cpp"
+      - "G2/apps/generate.cpp"
+      - "G1/shared/src/model/learn/g1_training.cpp"
+      - "G2/legacy/src/model/learn/g2_training.cpp"
+      - "G1/shared/include/morok/model/learn/g1_training.hpp"
+      - "G2/tests/unit/test_g2.cpp"
+      - "G2/tests/fixtures/g2-single-document/**"
+      - "G2/scripts/reinforcement.py"
+      - "G2/tests/unit/test_g2_reinforcement.cpp"
+      - "G2/tests/test_g2_reinforcement.py"
       - "docs/56-aprendizado-por-reforco-g2.md"
       - "CMakeLists.txt"
       - "tests/CMakeLists.txt"
@@ -104,9 +104,9 @@ jobs:
             echo "::error::Select at least one question."
             exit 1
           fi
-          python3 scripts/run-g2-reinforcement.py \
+          python3 G2/scripts/reinforcement.py \
             --checkpoint artifacts/reinforcement-g2/model \
-            --database data/reinforcement-g2/answers.json \
+            --database G2/data/reinforcement/answers.json \
             --questions "${questions[@]}" \
             --attempts "${{ github.event_name == 'workflow_dispatch' && inputs.attempts || 3 }}" \
             --bootstrap-epochs "${{ github.event_name == 'workflow_dispatch' && inputs.epochs || 10000 }}" \
@@ -116,7 +116,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/reinforcement-g2/answers.json
+          git add G2/data/reinforcement/answers.json
           if ! git diff --cached --quiet; then
             git commit -m "Record G2 reinforcement answers and rewards"
             git fetch origin main && git rebase origin/main && git push origin HEAD:main
