@@ -54,7 +54,7 @@ Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a prim
 2. Um modelo não depende de diretórios privados de outra geração ou modelo.
 3. Componentes reutilizáveis ficam nas bibliotecas públicas da raiz, como `core/` e `tools/`, ou em outras bibliotecas públicas explicitamente aprovadas.
 4. Uma biblioteca pública não pode conter lógica específica de Mokosh, Tsukuyomi, Artemis ou Apollo.
-5. Cada modelo mantém seus próprios parâmetros, configuração, inferência, treinamento, memória especializada, agentes e testes quando necessários.
+5. Cada perfil mantém suas políticas, adaptadores, configurações e testes próprios. Parâmetros, treinamento, inferência e memória podem ser compartilhados no nível da geração quando fizerem parte do mesmo motor; um perfil nunca importa código privado de outro perfil.
 6. Não criar diretórios ou subsistemas que o modelo não utiliza.
 7. O CMake deve oferecer alvos independentes por modelo. Compilar um modelo não compila fontes privadas dos demais.
 8. Testes de isolamento verificam que os alvos não incluem fontes privadas de outros modelos.
@@ -71,7 +71,7 @@ O diretório público `include/` e a biblioteca `Morok::Core` contêm contratos 
 
 A implementação compartilhada da geração G1 está em `G1/shared/` e é compilada apenas em `Morok::G1`. Inclui o motor de parâmetros, forward pass, BPTT, otimizador, treinamento, inferência, checkpoints e adaptadores de linguagem/comunicação/aprendizado que ainda são específicos da G1.
 
-A implementação da G2 está dentro de `G2/`. `G2/engine/` contém o motor independente por especialista; `G2/model/` mantém a composição dos especialistas da G2 que compõem os dois especialistas. A G2 não importa headers nem símbolos da G1. Os alvos `Morok::G1` e `Morok::G2` dependem do Core, mas não dependem um do outro.
+A implementação da G2 está dentro de `G2/`. `G2/engine/` contém o motor independente de cada especialista; `G2/model/` implementa o modelo composto por dois especialistas. A G2 não importa headers nem símbolos da G1. Os alvos `Morok::G1` e `Morok::G2` dependem do Core, mas não dependem um do outro.
 
 Aplicações, scripts, dados de reforço, fixtures e testes específicos foram movidos para `G1/` ou `G2/`. O CMake continua na raiz como orquestrador de build e só inclui fontes da geração correspondente no alvo correspondente.
 
