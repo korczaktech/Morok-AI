@@ -41,7 +41,7 @@ def select_training_target(question_id,response,verdict):
 def build_memory_replay(episodes,limit=32):
  if not isinstance(limit,int) or limit<0 or limit>256:raise ValueError("memory replay limit must be in [0,256]")
  if limit==0:return []
- replay=[]
+ replay={}
  for episode in episodes:
   question_id=episode.get("question_id")
   update=episode.get("policy_update") or {}
@@ -62,13 +62,20 @@ def build_memory_replay(episodes,limit=32):
    continue
   prompt=episode.get("prompt","")
   if not prompt or len(target.encode("utf-8"))<2:continue
-  replay.append({"episode_id":episode.get("episode_id","legacy"),"question_id":question_id,
-                 "prompt":prompt,"target":target,"source":source,"reward":1})
- return replay[-limit:]
+  key=(question_id,prompt,target)
+  replay.pop(key,None)
+  replay[key]={"episode_id":episode.get("episode_id","legacy"),"question_id":question_id,
+               "prompt":prompt,"target":target,"source":source,"reward":1}
+ return list(replay.values())[-limit:]
 def reconcile_episode_outcomes(db):
  episodes=db["episodes"]
  for episode in episodes:
   question_id=episode.get("question_id")
+  update=episode.get("policy_update") or {}
+  if update.get("status")=="pending":
+   update["status"]="skipped"
+   update["reason"]="interrupted_before_completion"
+   episode["policy_update"]=update
   if question_id not in SEED_ANSWERS:continue
   verdict,reward,reason=grade(question_id,episode.get("answer",""))
   if is_degenerate_response(episode.get("answer","")):
