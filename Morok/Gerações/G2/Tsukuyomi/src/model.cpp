@@ -31,6 +31,56 @@ float at(const Model& model, std::size_t offset) {
     return model.parameters[offset];
 }
 
+struct QuestionFeatures {
+    std::array<float, kContextSize * kHiddenSize> values{};
+    std::array<std::size_t, kContextSize> counts{};
+    std::size_t begin{0};
+    std::size_t end{0};
+    bool available{false};
+};
+
+// A pergunta é imutável durante a geração. Preparar suas faixas uma vez evita
+// revarrer e re-agregar todos os bytes da pergunta a cada token gerado.
+QuestionFeatures prepare_question_features(
+    const Model& model, std::span<const std::uint8_t> context) {
+    QuestionFeatures result;
+    result.begin = context.size();
+    result.end = context.size();
+    for (std::size_t line = 0; line < context.size();) {
+        std::size_t end = line;
+        while (end < context.size() && context[end] != '\n' && context[end] != '\r')
+            ++end;
+        std::size_t marker = line;
+        while (marker < end && (context[marker] == ' ' || context[marker] == '\t'))
+            ++marker;
+        if (end - marker >= 2 && context[marker] == 'U' && context[marker + 1] == ':') {
+            result.begin = marker + 2;
+            result.end = end;
+        }
+        line = end;
+        while (line < context.size() && (context[line] == '\n' || context[line] == '\r'))
+            ++line;
+    }
+    if (result.begin >= result.end) return result;
+
+    result.available = true;
+    for (std::size_t position = result.begin; position < result.end; ++position) {
+        const std::size_t bucket = (result.end - 1 - position) % kContextSize;
+        ++result.counts[bucket];
+        const auto base = kEmbeddingOffset +
+            static_cast<std::size_t>(context[position]) * kHiddenSize;
+        for (std::size_t h = 0; h < kHiddenSize; ++h)
+            result.values[bucket * kHiddenSize + h] += at(model, base + h);
+    }
+    for (std::size_t bucket = 0; bucket < kContextSize; ++bucket) {
+        if (result.counts[bucket] == 0) continue;
+        const float inverse = 1.0F / static_cast<float>(result.counts[bucket]);
+        for (std::size_t h = 0; h < kHiddenSize; ++h)
+            result.values[bucket * kHiddenSize + h] *= inverse;
+    }
+    return result;
+}
+
 struct Cache {
     std::array<float, kHiddenSize> input{};
     std::array<float, kHiddenSize> activation{};
@@ -48,7 +98,8 @@ struct Cache {
 };
 
 Cache calculate(const Model& model, std::span<const std::uint8_t> context,
-                bool calculate_probabilities = true) {
+                bool calculate_probabilities = true,
+                const QuestionFeatures* prepared_question = nullptr) {
     Cache cache;
     cache.has_current = !context.empty();
     cache.current_byte = cache.has_current ? context.back() : 0;
@@ -60,52 +111,22 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
             cache.input[h] = at(model, base + h);
     }
 
-    // Quando o prompt segue o protocolo U:/IA:, usa a pergunta inteira,
-    // não apenas os últimos 13 bytes. Os bytes são agregados em 13 posições
-    // relativas compartilhadas, sem aumentar o orçamento de parâmetros.
-    std::size_t question_begin = context.size();
-    std::size_t question_end = context.size();
-    for (std::size_t line = 0; line < context.size();) {
-        std::size_t end = line;
-        while (end < context.size() && context[end] != '\n' && context[end] != '\r')
-            ++end;
-        std::size_t marker = line;
-        while (marker < end && (context[marker] == ' ' || context[marker] == '\t'))
-            ++marker;
-        if (end - marker >= 2 && context[marker] == 'U' && context[marker + 1] == ':') {
-            question_begin = marker + 2;
-            question_end = end;
-        }
-        line = end;
-        while (line < context.size() && (context[line] == '\n' || context[line] == '\r'))
-            ++line;
-    }
-
-    if (question_begin < question_end) {
+    // A inferência pode fornecer as faixas pré-calculadas da pergunta.
+    // No treinamento, elas continuam sendo calculadas com os pesos atuais.
+    const QuestionFeatures local_question = prepared_question
+        ? QuestionFeatures{} : prepare_question_features(model, context);
+    const QuestionFeatures& question = prepared_question
+        ? *prepared_question : local_question;
+    if (question.available) {
         cache.has_question_context = true;
-        cache.question_begin = question_begin;
-        cache.question_end = question_end;
-        // Cada byte contribui com seu embedding compartilhado; as 13 faixas
-        // preservam identidade lexical e posição aproximada sem novos parâmetros.
-        for (std::size_t position = question_begin; position < question_end; ++position) {
-            const std::size_t bucket = (question_end - 1 - position) % kContextSize;
-            ++cache.context_counts[bucket];
-            const auto base = kEmbeddingOffset +
-                static_cast<std::size_t>(context[position]) * kHiddenSize;
-            for (std::size_t h = 0; h < kHiddenSize; ++h)
-                cache.context_features[bucket * kHiddenSize + h] += at(model, base + h);
-        }
-        for (std::size_t j = 0; j < kContextSize; ++j) {
-            if (cache.context_counts[j] != 0) {
-                const float inverse_count = 1.0F /
-                    static_cast<float>(cache.context_counts[j]);
-                for (std::size_t h = 0; h < kHiddenSize; ++h)
-                    cache.context_features[j * kHiddenSize + h] *= inverse_count;
-            }
+        cache.question_begin = question.begin;
+        cache.question_end = question.end;
+        cache.context_features = question.values;
+        cache.context_counts = question.counts;
+        for (std::size_t j = 0; j < kContextSize; ++j)
             for (std::size_t h = 0; h < kHiddenSize; ++h)
                 cache.input[h] += cache.context_features[j * kHiddenSize + h] *
                     at(model, kContextWeightOffset + j * kHiddenSize + h);
-        }
     } else {
         const std::size_t available = context.empty() ? 0 :
             std::min(kContextSize, context.size() - 1);
@@ -113,6 +134,14 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
             const auto byte = context[context.size() - 2 - j];
             const float feature = (static_cast<float>(byte) - 127.5F) / 127.5F;
             for (std::size_t h = 0; h < kHiddenSize; ++h) {
+                cache.context_features[j * kHiddenSize + h] = feature;
+                cache.input[h] += feature *
+                    at(model, kContextWeightOffset + j * kHiddenSize + h);
+            }
+        }
+    }
+
+    for (std::size_t h = 0; h < kHiddenSize; ++h) {
                 cache.context_features[j * kHiddenSize + h] = feature;
                 cache.input[h] += feature *
                     at(model, kContextWeightOffset + j * kHiddenSize + h);
@@ -457,8 +486,10 @@ std::vector<std::uint8_t> generate(const Model& model,
         static_cast<std::size_t>(utf8.remaining) > max_new_bytes)
         return output;
 
+    const QuestionFeatures question_features = prepare_question_features(model, prompt);
     for (std::size_t i = 0; i < max_new_bytes; ++i) {
-        const auto cache = calculate(model, output, false);
+        const auto cache = calculate(model, output, false,
+            question_features.available ? &question_features : nullptr);
         std::size_t best = kVocabularySize;
         float best_logit = -std::numeric_limits<float>::infinity();
         const std::size_t slots_after = max_new_bytes - i - 1;
