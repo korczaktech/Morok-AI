@@ -16,23 +16,39 @@ std::vector<std::uint8_t> make_dialogue_target_mask(
     std::vector<std::uint8_t> mask(bytes.size(), 0);
     bool awaiting_answer = false;
     std::size_t line_start = 0;
+    // BOM UTF-8 opcional no início do arquivo.
+    if (bytes.size() >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+        line_start = 3;
     while (line_start < bytes.size()) {
         std::size_t line_end = line_start;
-        while (line_end < bytes.size() && bytes[line_end] != '\n' &&
-               bytes[line_end] != '\r')
+        while (line_end < bytes.size() && bytes[line_end] != '\\n' &&
+               bytes[line_end] != '\\r')
             ++line_end;
-        const std::size_t length = line_end - line_start;
-        if (length >= 2 && bytes[line_start] == 'U' &&
-            bytes[line_start + 1] == ':') {
+        std::size_t marker = line_start;
+        while (marker < line_end && (bytes[marker] == ' ' || bytes[marker] == '\\t'))
+            ++marker;
+        const std::size_t length = line_end - marker;
+        if (length >= 2 && bytes[marker] == 'U' && bytes[marker + 1] == ':') {
             awaiting_answer = true;
-        } else if (length >= 3 && bytes[line_start] == 'I' &&
-                   bytes[line_start + 1] == 'A' &&
-                   bytes[line_start + 2] == ':' && awaiting_answer) {
-            for (std::size_t i = line_start + 3; i < line_end; ++i)
+        } else if (length >= 3 && bytes[marker] == 'I' &&
+                   bytes[marker + 1] == 'A' && bytes[marker + 2] == ':' &&
+                   awaiting_answer) {
+            for (std::size_t i = marker + 3; i < line_end; ++i)
                 mask[i] = 1;
+            // O modelo também precisa aprender o terminador que a inferência consome.
+            std::size_t terminator = line_end;
+            if (terminator < bytes.size() && bytes[terminator] == '\\r') {
+                mask[terminator] = 1;
+                ++terminator;
+            }
+            if (terminator < bytes.size() && bytes[terminator] == '\\n')
+                mask[terminator] = 1;
             awaiting_answer = false;
         }
-        line_start = line_end + 1;
+        line_start = line_end;
+        while (line_start < bytes.size() &&
+               (bytes[line_start] == '\\r' || bytes[line_start] == '\\n'))
+            ++line_start;
     }
     if (std::none_of(mask.begin(), mask.end(),
                      [](std::uint8_t value) { return value != 0; }))
