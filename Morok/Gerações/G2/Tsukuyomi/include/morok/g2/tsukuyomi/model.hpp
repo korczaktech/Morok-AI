@@ -52,10 +52,12 @@ void initialize(Model& model, std::uint64_t seed);
 [[nodiscard]] ForwardResult forward(const Model& model,
                                     std::span<const std::uint8_t> context);
 [[nodiscard]] double evaluate_loss(const Model& model,
-                                   std::span<const std::uint8_t> bytes);
+                                   std::span<const std::uint8_t> bytes,
+                                   std::span<const std::uint8_t> target_mask = {});
 [[nodiscard]] TrainingReport train(Model& model,
                                     std::span<const std::uint8_t> bytes,
-                                    const TrainingConfig& config, TrainingState* state = nullptr);
+                                    const TrainingConfig& config, TrainingState* state = nullptr,
+                                    std::span<const std::uint8_t> target_mask = {});
 [[nodiscard]] std::vector<std::uint8_t> generate(
     const Model& model, std::span<const std::uint8_t> prompt,
     std::size_t max_new_bytes);
