@@ -6,7 +6,7 @@ on:
     paths:
       - "include/**"
       - "src/**"
-      - "G1/**"
+      - "Gerações/G1/**"
       - "tests/fuzz/**"
       - "tests/fixtures/fuzz/**"
       - "CMakeLists.txt"
@@ -16,7 +16,7 @@ on:
     paths:
       - "include/**"
       - "src/**"
-      - "G1/**"
+      - "Gerações/G1/**"
       - "tests/fuzz/**"
       - "tests/fixtures/fuzz/**"
       - "CMakeLists.txt"
@@ -62,7 +62,7 @@ jobs:
           mkdir -p build/fuzz-corpus/utf8 build/fuzz-corpus/rlah build/fuzz-corpus/checkpoint
           cp tests/fixtures/fuzz/rlah-valid.hex build/fuzz-corpus/utf8/
           cp tests/fixtures/fuzz/rlah-valid.hex build/fuzz-corpus/rlah/
-          cp G1/shared/tests/fuzz/checkpoint-valid.hex build/fuzz-corpus/checkpoint/
+          cp Gerações/G1/shared/tests/fuzz/checkpoint-valid.hex build/fuzz-corpus/checkpoint/
 
       - name: Fuzz UTF-8 parser
         run: build/fuzz/morok_fuzz_utf8 build/fuzz-corpus/utf8 -max_total_time=45 -timeout=5 -max_len=65536
