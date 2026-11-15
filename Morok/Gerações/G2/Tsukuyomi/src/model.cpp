@@ -20,6 +20,9 @@ constexpr std::size_t kOutputBiasOffset = 9664;
 constexpr std::size_t kScaleOffset = 9920;
 constexpr std::size_t kShiftOffset = 9952;
 constexpr std::size_t kStartOffset = 9984;
+constexpr std::size_t kEmbeddingWeightEnd = 8192;
+constexpr std::size_t kHiddenWeightEnd = 9216;
+constexpr std::size_t kContextWeightEnd = 9632;
 
 static_assert(kStartOffset + 16 == kParameterCount);
 static_assert(sizeof(float) == 4 && std::numeric_limits<float>::is_iec559);
@@ -185,7 +188,13 @@ void apply_adam(Model& model, const std::array<float, kParameterCount>& gradient
         state.second_moment[i] = beta2 * state.second_moment[i] + (1.0 - beta2) * g * g;
         const double m = state.first_moment[i] / correction1;
         const double v = state.second_moment[i] / correction2;
-        const double decay = config.weight_decay * model.parameters[i];
+        // Decaimento desacoplado apenas em matrizes e embeddings; biases,
+        // normalização afim e estado inicial não recebem weight decay.
+        const bool decay_parameter =
+            i < kEmbeddingWeightEnd || (i >= kHiddenWeightOffset && i < kHiddenWeightEnd) ||
+            (i >= kContextWeightOffset && i < kContextWeightEnd);
+        const double decay = decay_parameter
+            ? config.weight_decay * model.parameters[i] : 0.0;
         model.parameters[i] -= static_cast<float>(
             config.learning_rate * (m / (std::sqrt(v) + epsilon) + decay));
     }
@@ -237,12 +246,64 @@ double evaluate_loss(const Model& model, std::span<const std::uint8_t> bytes,
     return count == 0 ? 0.0 : total / static_cast<double>(count);
 }
 
+ 
+bool compute_target_gradient(const Model& model,
+                             std::span<const std::uint8_t> bytes,
+                             std::size_t target_index,
+                             std::array<float, kParameterCount>& gradient) {
+    if (target_index >= bytes.size()) return false;
+    gradient.fill(0.0F);
+    const auto cache = calculate(model, bytes.first(target_index));
+    std::array<float, kHiddenSize> hidden_gradient{};
+    for (std::size_t token = 0; token < kVocabularySize; ++token) {
+        const float delta = cache.probabilities[token] -
+            (token == bytes[target_index] ? 1.0F : 0.0F);
+        gradient[kOutputBiasOffset + token] += delta;
+        const auto base = kEmbeddingOffset + token * kHiddenSize;
+        for (std::size_t h = 0; h < kHiddenSize; ++h) {
+            gradient[base + h] += delta * cache.hidden[h];
+            hidden_gradient[h] += delta * at(model, base + h);
+        }
+    }
+    std::array<float, kHiddenSize> pre_gradient{};
+    for (std::size_t h = 0; h < kHiddenSize; ++h) {
+        gradient[kScaleOffset + h] += hidden_gradient[h] * cache.activation[h];
+        gradient[kShiftOffset + h] += hidden_gradient[h];
+        pre_gradient[h] = hidden_gradient[h] * at(model, kScaleOffset + h) *
+            (1.0F - cache.activation[h] * cache.activation[h]);
+        gradient[kHiddenBiasOffset + h] += pre_gradient[h];
+        if (cache.at_start && h < 16)
+            gradient[kStartOffset + h] += pre_gradient[h];
+    }
+    std::array<float, kHiddenSize> input_gradient{};
+    for (std::size_t h = 0; h < kHiddenSize; ++h) {
+        for (std::size_t k = 0; k < kHiddenSize; ++k) {
+            const auto index = kHiddenWeightOffset + h * kHiddenSize + k;
+            gradient[index] += pre_gradient[h] * cache.input[k];
+            input_gradient[k] += pre_gradient[h] * at(model, index);
+        }
+    }
+    if (cache.has_current) {
+        const auto base = kEmbeddingOffset + cache.current_byte * kHiddenSize;
+        for (std::size_t h = 0; h < kHiddenSize; ++h)
+            gradient[base + h] += input_gradient[h];
+    }
+    for (std::size_t j = 0; j < kContextSize; ++j) {
+        for (std::size_t h = 0; h < kHiddenSize; ++h)
+            gradient[kContextWeightOffset + j * kHiddenSize + h] +=
+                pre_gradient[h] * cache.context_features[j];
+    }
+    return true;
+}
+
 TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
                     const TrainingConfig& config, TrainingState* supplied_state,
                     std::span<const std::uint8_t> target_mask) {
     TrainingReport report;
     if (bytes.size() < 2 || config.epochs == 0 || config.batch_size == 0 ||
-        !(config.learning_rate > 0.0) || !(config.gradient_clip > 0.0) ||
+        !std::isfinite(config.learning_rate) || config.learning_rate <= 0.0 ||
+        !std::isfinite(config.weight_decay) || config.weight_decay < 0.0 ||
+        !std::isfinite(config.gradient_clip) || config.gradient_clip <= 0.0 ||
         (!target_mask.empty() && target_mask.size() != bytes.size()))
         return report;
     if (!target_mask.empty() &&
