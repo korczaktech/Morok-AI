@@ -1,10 +1,8 @@
 import http from "node:http";
 import crypto from "node:crypto";
-import { promisify } from "node:util";
 import { MongoClient } from "mongodb";
 import bcrypt from "bcryptjs";
 
-const scrypt = promisify(crypto.scrypt);
 const PORT = Number(process.env.PORT || 10000);
 const MONGODB_URI = process.env.MONGODB_URI;
 const DATABASE = process.env.MONGODB_DATABASE || "Contas";
@@ -107,21 +105,6 @@ function normalizeEmail(value) {
 
 function validEmail(email) {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-async function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const derived = await scrypt(password, salt, 64);
-  return "scrypt$" + salt + "$" + derived.toString("hex");
-}
-
-async function verifyPassword(password, stored) {
-  if (typeof stored !== "string") return false;
-  const [algorithm, salt, expectedHex] = stored.split("$");
-  if (algorithm !== "scrypt" || !salt || !/^[a-f0-9]{128}$/i.test(expectedHex || "")) return false;
-  const actual = await scrypt(password, salt, 64);
-  const expected = Buffer.from(expectedHex, "hex");
-  return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);
 }
 
 function base64url(value) {
