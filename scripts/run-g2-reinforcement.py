@@ -87,7 +87,7 @@ def reconcile_episode_outcomes(db):
  totals["incorrect"]=sum(e.get("verdict")=="incorrect" for e in episodes)
  totals["policy_updates"]=sum((e.get("policy_update") or {}).get("status")=="applied" for e in episodes)
  totals["skipped_updates"]=sum((e.get("policy_update") or {}).get("status")!="applied" for e in episodes)
- totals["oracle_demonstrations"]=sum((e.get("policy_update") or {}).get("source")=="oracle_demonstration" for e in episodes)
+ totals["oracle_demonstrations"]=sum((e.get("policy_update") or {}).get("status")=="applied" and (e.get("policy_update") or {}).get("source")=="oracle_demonstration" for e in episodes)
  for key in ("memory_replay_experiences","memory_replay_updates","memory_replay_skipped"):
   totals.setdefault(key,0)
 def run(cmd):
