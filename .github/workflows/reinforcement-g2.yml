@@ -73,6 +73,7 @@ jobs:
           QUESTION_MOUNTAINS: ${{ github.event_name != 'workflow_dispatch' || inputs.question_mountains }}
           QUESTION_GRASS: ${{ github.event_name != 'workflow_dispatch' || inputs.question_grass }}
         run: |
+          mkdir -p artifacts/reinforcement-g2
           questions=()
           [[ "$QUESTION_SKY" == "true" ]] && questions+=(sky_is_blue)
           [[ "$QUESTION_MOUNTAINS" == "true" ]] && questions+=(mountains_high_or_low)
@@ -103,7 +104,7 @@ jobs:
         with:
           name: morok-g2-reinforcement-state-v3
           path: artifacts/reinforcement-g2/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
       - name: Display attempt results
         if: always()
