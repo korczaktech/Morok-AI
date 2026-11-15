@@ -151,6 +151,33 @@ void test_learned_eos_stops_generation() {
             "EOS termination must be distinct from reaching the hard byte cap");
 }
 
+void test_repetition_penalty_breaks_single_byte_collapse() {
+    using namespace morok;
+    model::G1Parameters parameters{};
+    // Make the prediction head strongly prefer ASCII 'e' (0x65).
+    constexpr unsigned char preferred = static_cast<unsigned char>('e');
+    for (std::size_t bit = 0; bit < model::kG1PredictionBits; ++bit) {
+        const bool one = (preferred & static_cast<unsigned char>(1U << (7U - bit))) != 0;
+        parameters.c[bit] = one ? 6.0F : -6.0F;
+    }
+
+    auto prompt_result = common::Utf8Text::from_utf8("Resposta:");
+    require(prompt_result.has_value(), "collapse-test prompt must be valid UTF-8");
+    model::G1GenerationConfig config;
+    config.max_new_bytes = 8;
+    config.temperature = 0.0;
+    config.repetition_penalty = 8.0;
+    config.repetition_window = 8;
+    config.printable_only = true;
+    config.eos_threshold = 0.99;
+    const auto report = model::generate_g1(parameters, *prompt_result.value_if(), config);
+    require(report.generated_bytes == 8, "collapse test must generate the requested length");
+    require(report.continuation.string().find('e') != std::string::npos,
+            "the learned preferred byte should still be selectable");
+    require(report.continuation.string() != std::string(8, 'e'),
+            "repetition penalty must prevent a constant-byte continuation");
+}
+
 void test_invalid_limits_rejected() {
     using namespace morok;
     model::G1Parameters parameters{};
@@ -175,6 +202,7 @@ int main() {
         test_inference_checkpoint_round_trip();
         test_sampling_is_seeded_and_top_k_one_is_greedy();
         test_learned_eos_stops_generation();
+        test_repetition_penalty_breaks_single_byte_collapse();
         test_printable_mode_excludes_ascii_control_bytes();
         test_invalid_limits_rejected();
     } catch (const std::exception& error) {
