@@ -85,6 +85,54 @@ QuestionFeatures prepare_question_features(
     return result;
 }
 
+std::array<float, kHiddenSize> initial_recurrent_state(
+    const Model& model, const QuestionFeatures& question) {
+    std::array<float, kHiddenSize> state{};
+    for (std::size_t h = 0; h < kHiddenSize; ++h) {
+        float value = at(model, kHiddenBiasOffset + h);
+        if (h < 16) value += at(model, kStartOffset + h);
+        if (question.available) {
+            for (std::size_t bucket = 0; bucket < kContextSize; ++bucket)
+                value += question.values[bucket * kHiddenSize + h] *
+                    at(model, kContextWeightOffset + bucket * kHiddenSize + h);
+        }
+        state[h] = std::tanh(value);
+    }
+    return state;
+}
+
+std::array<float, kHiddenSize> advance_recurrent_state(
+    const Model& model, const std::array<float, kHiddenSize>& previous,
+    std::uint8_t byte) {
+    std::array<float, kHiddenSize> next{};
+    const auto embedding_base = kEmbeddingOffset +
+        static_cast<std::size_t>(byte) * kHiddenSize;
+    for (std::size_t h = 0; h < kHiddenSize; ++h) {
+        float value = at(model, kHiddenBiasOffset + h);
+        for (std::size_t k = 0; k < kHiddenSize; ++k)
+            value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
+                (at(model, embedding_base + k) + previous[k]);
+        next[h] = std::tanh(value);
+    }
+    return next;
+}
+
+std::array<float, kVocabularySize> logits_for_state(
+    const Model& model, const std::array<float, kHiddenSize>& state) {
+    std::array<float, kVocabularySize> logits{};
+    for (std::size_t token = 0; token < kVocabularySize; ++token) {
+        float logit = at(model, kOutputBiasOffset + token);
+        const auto base = kEmbeddingOffset + token * kHiddenSize;
+        for (std::size_t h = 0; h < kHiddenSize; ++h) {
+            const float hidden = at(model, kScaleOffset + h) * state[h] +
+                                at(model, kShiftOffset + h);
+            logit += at(model, base + h) * hidden;
+        }
+        logits[token] = logit;
+    }
+    return logits;
+}
+
 struct RecurrentStep {
     std::array<float, kHiddenSize> previous_state{};
     std::array<float, kHiddenSize> activation{};
@@ -111,25 +159,14 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
         ? QuestionFeatures{} : prepare_question_features(model, context);
     const QuestionFeatures& question = prepared_question ? *prepared_question : local_question;
 
-    std::array<float, kHiddenSize> state{}, initial_pre{};
-    for (std::size_t h = 0; h < kHiddenSize; ++h) {
-        initial_pre[h] = at(model, kHiddenBiasOffset + h);
-        if (h < 16) initial_pre[h] += at(model, kStartOffset + h);
-    }
+    std::array<float, kHiddenSize> state = initial_recurrent_state(model, question);
+    cache.initial_activation = state;
     if (question.available) {
         cache.has_question_context = true;
         cache.question_begin = question.begin;
         cache.question_end = question.end;
         cache.context_features = question.values;
         cache.context_counts = question.counts;
-        for (std::size_t bucket = 0; bucket < kContextSize; ++bucket)
-            for (std::size_t h = 0; h < kHiddenSize; ++h)
-                initial_pre[h] += question.values[bucket * kHiddenSize + h] *
-                    at(model, kContextWeightOffset + bucket * kHiddenSize + h);
-    }
-    for (std::size_t h = 0; h < kHiddenSize; ++h) {
-        cache.initial_activation[h] = std::tanh(initial_pre[h]);
-        state[h] = cache.initial_activation[h];
     }
 
     std::size_t sequence_begin = 0;
@@ -147,15 +184,7 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
         RecurrentStep step;
         step.previous_state = state;
         step.byte = context[position];
-        const auto embedding_base = kEmbeddingOffset +
-            static_cast<std::size_t>(step.byte) * kHiddenSize;
-        for (std::size_t h = 0; h < kHiddenSize; ++h) {
-            float value = at(model, kHiddenBiasOffset + h);
-            for (std::size_t k = 0; k < kHiddenSize; ++k)
-                value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
-                         (at(model, embedding_base + k) + state[k]);
-            step.activation[h] = std::tanh(value);
-        }
+        step.activation = advance_recurrent_state(model, state, step.byte);
         state = step.activation;
         if (cache.step_count == bptt_steps) {
             for (std::size_t i = 1; i < cache.step_count; ++i) cache.steps[i - 1] = cache.steps[i];
@@ -169,14 +198,11 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
     for (std::size_t h = 0; h < kHiddenSize; ++h)
         cache.hidden[h] = at(model, kScaleOffset + h) * state[h] + at(model, kShiftOffset + h);
 
+    cache.logits = logits_for_state(model, state);
     double maximum = -std::numeric_limits<double>::infinity();
-    for (std::size_t token = 0; token < kVocabularySize; ++token) {
-        float logit = at(model, kOutputBiasOffset + token);
-        const auto base = kEmbeddingOffset + token * kHiddenSize;
-        for (std::size_t h = 0; h < kHiddenSize; ++h) logit += at(model, base + h) * cache.hidden[h];
-        cache.logits[token] = logit;
-        if (calculate_probabilities) maximum = std::max(maximum, static_cast<double>(logit));
-    }
+    if (calculate_probabilities)
+        for (float logit : cache.logits)
+            maximum = std::max(maximum, static_cast<double>(logit));
     if (calculate_probabilities) {
         double denominator = 0.0;
         for (std::size_t token = 0; token < kVocabularySize; ++token) {
@@ -518,9 +544,24 @@ std::vector<std::uint8_t> generate(const Model& model,
         static_cast<std::size_t>(utf8.remaining) > max_new_bytes)
         return output;
 
-    const QuestionFeatures question_features = prepare_question_features(model, prompt);
+    const QuestionFeatures question = prepare_question_features(model, prompt);
+    std::size_t sequence_begin = 0;
+    if (question.available) {
+        sequence_begin = prompt.size();
+        for (std::size_t i = 0; i + 2 < prompt.size(); ++i) {
+            const bool line_start = i == 0 || prompt[i - 1] == '\n' ||
+                                    prompt[i - 1] == '\r';
+            if (line_start && prompt[i] == 'I' && prompt[i + 1] == 'A' &&
+                prompt[i + 2] == ':')
+                sequence_begin = i + 3;
+        }
+    }
+    auto state = initial_recurrent_state(model, question);
+    for (std::size_t position = sequence_begin; position < prompt.size(); ++position)
+        state = advance_recurrent_state(model, state, prompt[position]);
+
     for (std::size_t i = 0; i < max_new_bytes; ++i) {
-        const auto cache = calculate(model, output, false, &question_features);
+        const auto logits = logits_for_state(model, state);
         std::size_t best = kVocabularySize;
         float best_logit = -std::numeric_limits<float>::infinity();
         const std::size_t slots_after = max_new_bytes - i - 1;
@@ -529,17 +570,17 @@ std::vector<std::uint8_t> generate(const Model& model,
             const bool allowed = utf8.remaining > 0
                 ? byte >= utf8.next_min && byte <= utf8.next_max
                 : valid_utf8_start(byte, slots_after);
-            if (allowed && cache.logits[token] > best_logit) {
+            if (allowed && logits[token] > best_logit) {
                 best = token;
-                best_logit = cache.logits[token];
+                best_logit = logits[token];
             }
         }
         if (best == kVocabularySize) break;
         const auto byte = static_cast<std::uint8_t>(best);
         if (!consume_utf8(utf8, byte)) break;
         output.push_back(byte);
-        // A quebra de linha encerra a resposta; não gere bytes descartados depois dela.
         if (byte == '\n' || byte == '\r' || byte == '\0') break;
+        state = advance_recurrent_state(model, state, byte);
     }
     return output;
 }
