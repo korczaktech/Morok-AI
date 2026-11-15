@@ -406,7 +406,7 @@ bool accumulate_target_gradient(const Model& model, std::span<const std::uint8_t
     // BPTT truncado nas últimas N transições recorrentes.
     for (std::size_t reverse = cache.step_count; reverse > 0; --reverse) {
         const RecurrentStep& step = cache.steps[reverse - 1];
-        std::array<float, kHiddenSize> pre_gradient{}, previous_gradient{};
+        std::array<float, kHiddenSize> pre_gradient{}, previous_gradient{}, input_gradient{};
         for (std::size_t h = 0; h < kHiddenSize; ++h) {
             const float gate = step.retention[h];
             const float candidate = step.candidate[h];
@@ -427,11 +427,13 @@ bool accumulate_target_gradient(const Model& model, std::span<const std::uint8_t
                 const std::size_t weight = kHiddenWeightOffset + h * kHiddenSize + k;
                 gradient[weight] += pre_gradient[h] *
                     (at(model, embedding_base + k) + step.previous_state[k]);
-                previous_gradient[k] += pre_gradient[h] * at(model, weight);
+                const float contribution = pre_gradient[h] * at(model, weight);
+                previous_gradient[k] += contribution;
+                input_gradient[k] += contribution;
             }
         }
         for (std::size_t h = 0; h < kHiddenSize; ++h)
-            gradient[embedding_base + h] += previous_gradient[h];
+            gradient[embedding_base + h] += input_gradient[h];
         state_gradient = previous_gradient;
     }
 
