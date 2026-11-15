@@ -22,6 +22,7 @@ constexpr std::size_t kScaleOffset = 9920;
 constexpr std::size_t kShiftOffset = 9952;
 constexpr std::size_t kStartOffset = 9984;
 constexpr std::size_t kEmbeddingWeightEnd = 8192;
+constexpr float kAnswerContextScale = 0.025F;
 constexpr std::size_t kHiddenWeightEnd = 9216;
 constexpr std::size_t kContextWeightEnd = 9632;
 
@@ -164,8 +165,12 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
                 kContextSize, context.size() - answer_begin - 1);
             for (std::size_t j = 0; j < available; ++j) {
                 const auto byte = context[context.size() - 2 - j];
+                // Bytes crus variam aproximadamente em [-1, 1], enquanto
+                // embeddings começam na escala 0,025. Equaliza a escala dos
+                // canais para que o histórico não domine a representação da pergunta.
                 const float feature =
-                    (static_cast<float>(byte) - 127.5F) / 127.5F;
+                    ((static_cast<float>(byte) - 127.5F) / 127.5F) *
+                    kAnswerContextScale;
                 for (std::size_t h = 0; h < kHiddenSize; ++h) {
                     const std::size_t index = j * kHiddenSize + h;
                     cache.context_features[index] += feature;
