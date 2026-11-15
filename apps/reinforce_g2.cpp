@@ -50,9 +50,10 @@ int main(int argc,char** argv) {
    auto ga=morok::model::compute_g1_bptt_gradients(parameters.expert_a,sequence,64,state_a,prompt_text.size()-1);
    auto gb=morok::model::compute_g1_bptt_gradients(parameters.expert_b,sequence,64,state_b,prompt_text.size()-1);
    last_norm=std::max(ga.gradients.global_norm(),gb.gradients.global_norm()); if(n==0) first_norm=last_norm;
-   // The optimizer minimizes loss: positive reward must descend the observed sequence loss,
-   // while negative reward must ascend it and discourage the sequence.
-   for(double& v:ga.gradients.values)v*=-reward; for(double& v:gb.gradients.values)v*=-reward;
+   // The optimizer minimizes loss: positive reward descends the target loss;
+   // negative reward reverses the gradient and therefore discourages it.
+   for(double& v:ga.gradients.values)v*=reward;
+   for(double& v:gb.gradients.values)v*=reward;
    last_a=morok::model::apply_g1_optimizer_step(parameters.expert_a,ga.gradients,config,optimizer_a);
    last_b=morok::model::apply_g1_optimizer_step(parameters.expert_b,gb.gradients,config,optimizer_b);
   }
