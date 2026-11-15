@@ -578,7 +578,15 @@
   $('#confirm-accept').addEventListener('click',()=>finishConfirmation(true));
   $('#confirm-cancel').addEventListener('click',()=>finishConfirmation(false));
   el.confirm.addEventListener('cancel',event=>{event.preventDefault();finishConfirmation(false);});
+  el.confirm.addEventListener('close',()=>{if(state.confirmResolve){const resolve=state.confirmResolve;state.confirmResolve=null;resolve(false);}});
   el.confirm.addEventListener('click',event=>{if(event.target===el.confirm)finishConfirmation(false);});
+  $('#search-dialog form').addEventListener('submit',event=>event.preventDefault());
+  document.addEventListener('contextmenu',event=>{
+    event.preventDefault();
+    const row=event.target.closest('.history-item');
+    const menuButton=row?.querySelector('.history-menu');
+    if(menuButton)openContextMenu({currentTarget:menuButton},row.dataset.id);
+  });
   $('#menu-toggle').addEventListener('click',openSidebar);
   $('#sidebar-close').addEventListener('click',closeSidebar);
   el.backdrop.addEventListener('click',closeSidebar);
