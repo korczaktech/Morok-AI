@@ -85,19 +85,19 @@ while not all(completed.get(model, False) for model in selected):
             model, question, "1",
         ], check=True)
         with temporary_results.open(encoding="utf-8", newline="") as stream:
-            rows = list(csv.DictReader(stream, delimiter="\\t"))
+            rows = list(csv.DictReader(stream, delimiter="\t"))
         if len(rows) != 1:
             raise RuntimeError(f"{model}: esperado exatamente um resultado; recebidos {len(rows)}.")
         row = rows[0]
         is_correct = row["verdict"] == "correct"
         epochs[model] = epoch
         completed[model] = is_correct
-        epochs_path.write_text(json.dumps(epochs, ensure_ascii=False, indent=2) + "\\n")
-        completed_path.write_text(json.dumps(completed, ensure_ascii=False, indent=2) + "\\n")
+        epochs_path.write_text(json.dumps(epochs, ensure_ascii=False, indent=2) + "\n")
+        completed_path.write_text(json.dumps(completed, ensure_ascii=False, indent=2) + "\n")
 
         header_needed = not results_path.exists()
         with results_path.open("a", encoding="utf-8", newline="") as stream:
-            writer = csv.writer(stream, delimiter="\\t")
+            writer = csv.writer(stream, delimiter="\t")
             if header_needed:
                 writer.writerow(["model", "epoch", "question_id", "verdict", "answer"])
             writer.writerow([model, epoch, question, row["verdict"], row["answer"]])
@@ -108,8 +108,8 @@ while not all(completed.get(model, False) for model in selected):
 
 success = all(completed.get(model, False) for model in selected)
 with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-    output.write("continue=" + ("false" if success else "true") + "\\n")
-    output.write("success=" + ("true" if success else "false") + "\\n")
+    output.write("continue=" + ("false" if success else "true") + "\n")
+    output.write("success=" + ("true" if success else "false") + "\n")
 
 if success:
     print("Todos os modelos selecionados produziram uma resposta considerada correta.", flush=True)
