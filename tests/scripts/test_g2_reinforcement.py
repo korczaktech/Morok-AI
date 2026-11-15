@@ -94,7 +94,7 @@ class G2ReinforcementTests(unittest.TestCase):
         self.assertEqual(replay[0]["source"], "oracle_demonstration")
 
     def test_memory_replay_deduplicates_repeated_question_targets(self):
-        prompt = "Usuario: O ceu e azul?\\nIA: "
+        prompt = "Usuario: O ceu e azul?\nIA: "
         episodes = [
             {"episode_id": "older", "question_id": "sky_is_blue", "prompt": prompt,
              "initial_answer": "Sim, o ceu e azul",
