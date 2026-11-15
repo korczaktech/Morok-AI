@@ -35,6 +35,8 @@ struct G1EosResult {
 // final_state is immediately before consuming the final target byte; overlap
 // that target as the next window's first context byte to preserve continuity.
 // The maximum window is bounded to 512 target bytes to cap the temporary tape.
+// previous_context_byte supplies the byte immediately before bytes[0] when
+// continuing a document, so the first lexical boundary feature remains exact.
 [[nodiscard]] G1BpttResult compute_g1_bptt_gradients(
     const G1Parameters& parameters,
     std::span<const std::uint8_t> bytes,
