@@ -7,24 +7,12 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 G2_CODE = [
     ROOT / "G2" / "engine",
-    ROOT / "include" / "morok" / "model" / "g2_forward.hpp",
-    ROOT / "include" / "morok" / "model" / "parameters" / "g2_parameters.hpp",
-    ROOT / "include" / "morok" / "model" / "learn" / "g2_checkpoint.hpp",
-    ROOT / "include" / "morok" / "model" / "learn" / "g2_training.hpp",
-    ROOT / "include" / "morok" / "model" / "learn" / "g2_generation.hpp",
-    ROOT / "src" / "model" / "g2_forward.cpp",
-    ROOT / "src" / "model" / "parameters" / "g2_parameters.cpp",
-    ROOT / "src" / "model" / "learn" / "g2_checkpoint.cpp",
-    ROOT / "src" / "model" / "learn" / "g2_training.cpp",
-    ROOT / "src" / "model" / "learn" / "g2_generation.cpp",
-    ROOT / "apps" / "train_g2.cpp",
-    ROOT / "apps" / "generate_g2.cpp",
-    ROOT / "apps" / "reinforce_g2.cpp",
-    ROOT / "tests" / "unit" / "model" / "test_g2.cpp",
-    ROOT / "tests" / "unit" / "model" / "test_g2_reinforcement.cpp",
+    ROOT / "G2" / "legacy",
+    ROOT / "G2" / "apps",
+    ROOT / "G2" / "tests",
 ]
 FORBIDDEN = re.compile(
-    r"morok/model/(?:g1_forward|parameters/g1_parameters|learn/g1_)"
+    r"morok/model/(?:g1_forward|parameters/g1_parameters|learn/g1_)|morok/g1/"
     r"|\b(?:G1Parameters|G1State|G1Checkpoint|G1TrainingConfig|"
     r"G1GenerationConfig|train_g1_corpus|generate_g1|advance_g1_state|"
     r"compute_g1_bptt_gradients|apply_g1_optimizer_step)\b"
@@ -53,6 +41,10 @@ def main() -> int:
         violations.append("CMakeLists.txt: G2 engine sources are not part of Morok::G2")
     if "Morok::G1" in g2:
         violations.append("CMakeLists.txt: Morok::G2 links Morok::G1")
+    if any(token in core for token in ("G1/shared/src/", "G2/engine/src/", "G2/legacy/src/")):
+        violations.append("CMakeLists.txt: generation-specific source compiled into Morok::Core")
+    if "G1/shared/src/" not in cmake.split("add_library(morok_g1 STATIC", 1)[1].split("add_library(Morok::G1", 1)[0]:
+        violations.append("CMakeLists.txt: G1 shared engine sources are not part of Morok::G1")
     if violations:
         print("Generation isolation violations:")
         for item in violations:

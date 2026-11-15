@@ -42,7 +42,7 @@ def main() -> int:
     checkpoint = Path(sys.argv[1])
     report_path = Path(sys.argv[2])
     generator = Path(__file__).resolve().parents[1] / "build" / "morok_generate"
-    cases_path = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "continual-eval" / "cases.json"
+    cases_path = Path(__file__).resolve().parents[1] / "shared" / "tests" / "fixtures" / "continual-eval" / "cases.json"
     if not checkpoint.is_file() or not generator.is_file():
         raise SystemExit("checkpoint or morok_generate executable not found")
     cases = json.loads(cases_path.read_text(encoding="utf-8"))

@@ -10,7 +10,7 @@ from pathlib import Path
 
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
-    corpus = root / "tests" / "fixtures" / "continual"
+    corpus = root / "shared" / "tests" / "fixtures" / "continual"
     manifest_path = corpus / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("version") != 2:

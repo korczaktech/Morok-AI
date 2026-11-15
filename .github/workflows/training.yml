@@ -57,7 +57,7 @@ jobs:
           import hashlib
           from pathlib import Path
           digest = hashlib.sha256()
-          for path in sorted(Path("tests/fixtures/continual").glob("doc-*.txt")):
+          for path in sorted(Path("G1/shared/tests/fixtures/continual").glob("doc-*.txt")):
               digest.update(path.name.encode("utf-8"))
               digest.update(path.read_bytes())
           print(digest.hexdigest())
@@ -83,7 +83,7 @@ jobs:
               print("")
           PY
           )"
-          current_corpus_documents="$(find tests/fixtures/continual -maxdepth 1 -type f -name 'doc-*.txt' | wc -l | tr -d ' ')"
+          current_corpus_documents="$(find G1/shared/tests/fixtures/continual -maxdepth 1 -type f -name 'doc-*.txt' | wc -l | tr -d ' ')"
           stored_corpus_documents="$(python3 - artifacts/continual-g1/status.json <<'PY'
           import json
           import sys

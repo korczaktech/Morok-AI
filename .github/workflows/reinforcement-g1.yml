@@ -7,7 +7,7 @@ on:
       - ".github/workflows/reinforcement-g1.yml"
       - "CMakeLists.txt"
       - "tests/CMakeLists.txt"
-      - "G1/shared/tests/scripts/test_g1_reinforcement.py"
+      - "G1/shared/G1/shared/tests/scripts/test_g1_reinforcement.py"
       - "G1/apps/reinforce.cpp"
       - "G1/scripts/reinforcement.py"
       - "docs/54-aprendizado-por-reforco-g1.md"

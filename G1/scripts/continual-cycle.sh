@@ -114,7 +114,7 @@ test -s "$best_model"
 test -s "$metrics"
 printf '%s\n' "$target_epochs" > "$epoch_file"
 
-"$generate_bin" "$best_model" "G1/shared/G1/shared/tests/fixtures/continual-prompt.txt" "$generated" 128 --repetition-penalty 0.5 --repetition-window 64 --eos-threshold 0.75 --min-new-bytes 8
+"$generate_bin" "$best_model" "G1/shared/tests/fixtures/continual-prompt.txt" "$generated" 128 --repetition-penalty 0.5 --repetition-window 64 --eos-threshold 0.75 --min-new-bytes 8
 test -s "$generated"
 
 qa_report="$state_dir/qa-evaluation.json"

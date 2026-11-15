@@ -87,7 +87,7 @@ out = pathlib.Path(sys.argv[1])
 epochs = int(sys.argv[2])
 seed = int(sys.argv[3])
 root = pathlib.Path.cwd()
-files = sorted((root / "tests/fixtures/benchmark").glob("*.txt"))
+files = sorted((root / "G1/shared/tests/fixtures/benchmark").glob("*.txt"))
 digest = hashlib.sha256()
 for path in files:
     digest.update(path.name.encode("utf-8"))
@@ -110,7 +110,7 @@ manifest = {
     "model": {"generation": "G1", "trainable_parameters": 1000, "language_standard": "C++20"},
     "data": {
         "name": "Morok versioned synthetic benchmark fixture",
-        "path": "tests/fixtures/benchmark",
+        "path": "G1/shared/tests/fixtures/benchmark",
         "license": "CC0-1.0",
         "source": "repository-generated technical fixture",
         "documents": len(files),
