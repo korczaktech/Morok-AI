@@ -35,7 +35,7 @@
       state.displayName = typeof saved.displayName === 'string' ? saved.displayName.slice(0,32) : 'Visitante';
       state.generation = saved.generation === 'G1' ? 'G1' : 'G1';
       state.model = ['Tsukuyomi','Apollo','Mokosh'].includes(saved.model) ? saved.model : 'Tsukuyomi';
-      try { state.authSession = JSON.parse(sessionStorage.getItem('morok.auth.session') || 'null'); } catch { state.authSession = null; }
+      try { state.authSession = JSON.parse(localStorage.getItem('morok.auth.session') || sessionStorage.getItem('morok.auth.session') || 'null'); } catch { state.authSession = null; }
     } catch { localStorage.removeItem(STORAGE_KEY); }
     if (!state.conversations.some(c => c.id === state.activeId)) state.activeId = null;
   }
@@ -316,17 +316,21 @@
       cache: 'no-store'
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || 'Falha na autenticação (' + response.status + ').');
+    if (!response.ok) { const error = new Error(data.error || 'Falha na autenticação (' + response.status + ').'); error.status = response.status; throw error; }
     return data;
   }
   function openAuth(mode='login') {
     state.authMode=mode; setAuthMode(mode);
     $('#auth-email').value=state.authSession?.user?.email || '';
     $('#auth-password').value='';
+    $('#auth-name').value=state.authSession?.user?.name || '';
     $('#auth-message').textContent='';
     $('#auth-logout').hidden=!state.authSession;
     $('#auth-submit').hidden=!!state.authSession;
     $('#auth-email').disabled=!!state.authSession;
+    $('#auth-name').hidden=!!state.authSession || mode!=='signup';
+    $('#auth-name').disabled=!!state.authSession || mode!=='signup';
+    $('#auth-name-label').hidden=!!state.authSession || mode!=='signup';
     $('#auth-password').hidden=!!state.authSession;
     $('#auth-forgot').hidden=!!state.authSession;
     $$('.auth-tab').forEach(tab=>tab.hidden=!!state.authSession);
@@ -338,6 +342,10 @@
     $$('.auth-tab').forEach(tab=>tab.classList.toggle('active',tab.dataset.authMode===mode));
     $('#auth-title').textContent=mode==='signup'?'Criar sua conta':'Entrar na sua conta';
     $('#auth-submit').textContent=mode==='signup'?'Criar conta':'Entrar';
+    $('#auth-name').hidden=mode!=='signup';
+    $('#auth-name').disabled=mode!=='signup';
+    $('#auth-name-label').hidden=mode!=='signup';
+    $('#auth-name').required=mode==='signup';
     $('#auth-password').autocomplete=mode==='signup'?'new-password':'current-password';
     $('#auth-forgot').hidden=mode!=='login';
   }
@@ -346,7 +354,7 @@
       session.expires_at = Math.floor(Date.now()/1000) + Number(session.expires_in);
     }
     state.authSession=session;
-    try { if(session) sessionStorage.setItem('morok.auth.session',JSON.stringify(session)); else sessionStorage.removeItem('morok.auth.session'); } catch {}
+    try { if(session) { localStorage.setItem('morok.auth.session',JSON.stringify(session)); sessionStorage.removeItem('morok.auth.session'); } else { localStorage.removeItem('morok.auth.session'); sessionStorage.removeItem('morok.auth.session'); } } catch {}
     if(session?.user?.name) state.displayName=session.user.name.slice(0,32);
     else if(session?.user?.email) state.displayName=session.user.email.split('@')[0].slice(0,32);
     updateProfile(); persist();
@@ -361,17 +369,18 @@
     try {
       const data=await authRequest('/auth/me',{method:'GET',token:session.access_token});
       if(data.user) { state.authSession.user=data.user; saveAuthSession(state.authSession); }
-    } catch { saveAuthSession(null); }
+    } catch(error) { if(error.status===401) saveAuthSession(null); else updateProfile(); }
   }
   async function submitAuth() {
-    const email=$('#auth-email').value.trim(); const password=$('#auth-password').value;
+    const email=$('#auth-email').value.trim(); const password=$('#auth-password').value; const name=$('#auth-name').value.trim();
     const message=$('#auth-message'); message.className='auth-message'; message.textContent='Conectando ao servidor de contas…';
     if(!email || !email.includes('@')) { message.classList.add('error'); message.textContent='Informe um e-mail válido.'; return; }
     if(password.length<8) { message.classList.add('error'); message.textContent='A senha deve ter pelo menos 8 caracteres.'; return; }
+    if(state.authMode==='signup' && !name) { message.classList.add('error'); message.textContent='Informe seu nome.'; return; }
     $('#auth-submit').disabled=true;
     try {
       const path=state.authMode==='signup'?'/auth/signup':'/auth/login';
-      const data=await authRequest(path,{body:{email,password}});
+      const data=await authRequest(path,{body:state.authMode==='signup'?{email,password,name}:{email,password}});
       saveAuthSession(data);
       message.classList.add('success');
       message.textContent=state.authMode==='signup'?'Conta criada e salva no MongoDB.':'Login realizado.';
@@ -387,10 +396,10 @@
   }
   async function logout() {
     try { if(state.authSession?.access_token) await authRequest('/auth/logout',{token:state.authSession.access_token}); } catch {}
-    saveAuthSession(null); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
+    saveAuthSession(null); state.displayName='Visitante'; updateProfile(); persist(); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
   }
   $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
-  $('#auth-submit').addEventListener('click',event=>{event.preventDefault();submitAuth();});
+  $('#auth-form').addEventListener('submit',event=>{event.preventDefault();submitAuth();});
   $('#auth-forgot').addEventListener('click',recoverPassword);
   $('#auth-logout').addEventListener('click',logout);
 
@@ -402,7 +411,7 @@
   $('#sidebar-close').addEventListener('click',closeSidebar);
   el.backdrop.addEventListener('click',closeSidebar);
   $('#settings-open').addEventListener('click',openSettings);
-  $('#profile-button').addEventListener('click',()=>{if(state.authSession?.user){openAuth('login');}else{openAuth('login');}});
+  $('#profile-button').addEventListener('click',()=>openAuth('login'));
   $('#profile-save').addEventListener('click',()=>{const name=$('#display-name').value.trim();state.displayName=name||'Visitante';updateProfile();persist();});
   $('#model-select').addEventListener('click',()=>{const pop=$('#model-popover');pop.hidden=!pop.hidden;if(!pop.hidden){$('#generation-list').hidden=false;$('#model-submenu').hidden=true;}$('#model-select').setAttribute('aria-expanded',String(!pop.hidden));});
   function updateModelMenu() {
