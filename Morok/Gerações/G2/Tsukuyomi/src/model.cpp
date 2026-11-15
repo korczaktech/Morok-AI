@@ -121,10 +121,8 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
         cache.has_question_context = true;
         cache.question_begin = question.begin;
         cache.question_end = question.end;
-        if (!prepared_question) {
-            cache.context_features = question.values;
-            cache.context_counts = question.counts;
-        }
+        cache.context_features = question.values;
+        cache.context_counts = question.counts;
         for (std::size_t j = 0; j < kContextSize; ++j) {
             for (std::size_t h = 0; h < kHiddenSize; ++h) {
                 const float feature = prepared_question
@@ -144,6 +142,35 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
                 cache.context_features[j * kHiddenSize + h] = feature;
                 cache.input[h] += feature *
                     at(model, kContextWeightOffset + j * kHiddenSize + h);
+            }
+        }
+    }
+
+    // Em diálogos U:/IA:, os últimos bytes da resposta anterior também são
+    // contexto do próximo byte. Antes, a rede recebia somente o byte atual,
+    // tornando impossível aprender dependências entre caracteres sucessivos.
+    if (question.available && context.size() >= 3) {
+        std::size_t answer_begin = context.size();
+        for (std::size_t i = 0; i + 2 < context.size(); ++i) {
+            const bool line_start = i == 0 || context[i - 1] == '\\n' ||
+                                    context[i - 1] == '\\r';
+            if (line_start && context[i] == 'I' && context[i + 1] == 'A' &&
+                context[i + 2] == ':')
+                answer_begin = i + 3;
+        }
+        if (answer_begin < context.size()) {
+            const std::size_t available = std::min(
+                kContextSize, context.size() - answer_begin - 1);
+            for (std::size_t j = 0; j < available; ++j) {
+                const auto byte = context[context.size() - 2 - j];
+                const float feature =
+                    (static_cast<float>(byte) - 127.5F) / 127.5F;
+                for (std::size_t h = 0; h < kHiddenSize; ++h) {
+                    const std::size_t index = j * kHiddenSize + h;
+                    cache.context_features[index] += feature;
+                    cache.input[h] += feature *
+                        at(model, kContextWeightOffset + j * kHiddenSize + h);
+                }
             }
         }
     }
