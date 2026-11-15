@@ -43,19 +43,17 @@
         <div class="topbar-left">
           <button class="icon-button menu-toggle" id="menu-toggle" aria-label="Abrir menu" title="Abrir menu">☰</button>
           <div class="model-select-wrap">
-            <button class="model-select" id="model-select" aria-haspopup="true" aria-expanded="false"><span class="model-glyph"></span><span id="model-select-label">G1 · Tsukuyomi</span><span class="chevron">⌄</span></button>
+            <button class="model-select" id="model-select" aria-haspopup="true" aria-expanded="false"><span class="model-glyph"></span><span id="model-select-label">Morok</span><span class="chevron">⌄</span></button>
             <div class="model-popover generation-menu" id="model-popover" hidden>
-              <div class="generation-list" id="generation-list"><div class="popover-label">1 · ESCOLHA A GERAÇÃO</div>
-              <button class="generation-option selected" data-generation="G1"><span class="generation-mark">G1</span><span><strong>Geração 1</strong><small>Motor implementado · 1.000 parâmetros</small></span><span class="check">✓</span></button>
-              <button class="generation-option unavailable" data-generation="G2" disabled><span class="generation-mark">G2</span><span><strong>Geração 2</strong><small>Tsukuyomi 0.1 · integração pública pendente</small></span><span class="lock-mark">—</span></button>
-              <button class="generation-option unavailable" data-generation="G3" disabled><span class="generation-mark">G3</span><span><strong>Geração 3</strong><small>Em desenvolvimento · indisponível</small></span><span class="lock-mark">—</span></button></div>
-              <div class="model-submenu" id="model-submenu" hidden><button class="generation-back" id="generation-back" type="button">← Todas as gerações</button>
-                <div class="popover-label">2 · ESCOLHA O MODELO DA G1</div>
+              <div class="generation-list" id="generation-list"><div class="popover-label">MODELO DISPONÍVEL</div>
+              <button class="generation-option selected" data-generation="G1"><span class="generation-mark">M</span><span><strong>Morok</strong><small>Assistente padrão</small></span><span class="check">✓</span></button></div>
+              <div class="model-submenu" id="model-submenu" hidden><button class="generation-back" id="generation-back" type="button">← Voltar</button>
+                <div class="popover-label">PERFIS</div>
                 <button class="profile-option selected" data-model="Tsukuyomi"><span class="profile-symbol tsukuyomi"></span><span><strong>Tsukuyomi</strong><small>Agente único · perfil de referência</small></span><span class="check">✓</span></button>
                 <button class="profile-option" data-model="Apollo"><span class="profile-symbol apollo"></span><span><strong>Apollo</strong><small>Perfil orientado à velocidade</small></span><span class="check">✓</span></button>
                 <button class="profile-option" data-model="Mokosh"><span class="profile-symbol mokosh"></span><span><strong>Mokosh</strong><small>Eficiência e baixo consumo</small></span><span class="check">✓</span></button>
               </div>
-              <p class="model-notice">A API atual carrega um único checkpoint G1 e ainda não oferece roteamento por perfil. A seleção visual não altera o checkpoint em execução.</p>
+              <p class="model-notice">Mais opções de personalização estarão disponíveis em breve.</p>
             </div>
           </div>
         </div>
@@ -64,7 +62,7 @@
       <section class="workspace" id="workspace">
         <section class="welcome" id="welcome">
           <div class="welcome-orb"><span></span></div>
-          <div class="eyebrow">INTELIGÊNCIA EM DESENVOLVIMENTO</div>
+          <div class="eyebrow">ASSISTENTE MOROK</div>
           <h1>O que vamos<br><span>explorar hoje?</span></h1>
           <p class="welcome-description">Um espaço para organizar ideias, fazer perguntas e acompanhar a evolução do Morok.</p>
           <div class="suggestions">
@@ -98,8 +96,8 @@
     <form method="dialog" class="dialog-card" id="settings-form">
       <div class="dialog-heading"><div><div class="dialog-eyebrow">PREFERÊNCIAS</div><h2>Configurações</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar">×</button></div>
       <section class="settings-section"><h3>Aparência</h3><label class="setting-row"><span><strong>Tema</strong><small>Escolha como o Morok aparece.</small></span><select id="theme-select"><option value="dark">Escuro</option><option value="light">Claro</option><option value="system">Sistema</option></select></label></section>
-      <section class="settings-section"><h3>Conta e autenticação</h3><p class="field-help">O cadastro e o login usam a API do Morok. As contas ficam no MongoDB Atlas, na database <strong>Contas</strong>, com senhas protegidas por hash.</p><button class="secondary-button" id="auth-open" type="button">Entrar ou criar conta</button><span class="test-result" id="auth-config-result"></span></section>
-      <section class="settings-section"><h3>Conexão com o Morok</h3><label class="field-label" for="api-url">Endereço da API</label><input class="text-field" id="api-url" type="url" placeholder="https://api.seudominio.com" autocomplete="url"><p class="field-help">O servidor deve disponibilizar <code>GET /health</code> e <code>POST /v1/chat</code> com CORS habilitado. O servidor C++ atual é local, sem TLS ou autenticação; não o exponha diretamente à internet.</p><button class="secondary-button" id="test-connection" type="button">Testar conexão</button><span class="test-result" id="test-result" role="status"></span></section>
+      <section class="settings-section"><h3>Conta</h3><p class="field-help">Gerencie seu acesso e suas preferências de conta.</p><button class="secondary-button" id="auth-open" type="button">Entrar ou criar conta</button></section>
+      <section class="settings-section"><h3>Conexão</h3><p class="field-help">A conexão com o Morok é configurada automaticamente.</p></section>
       <section class="settings-section"><h3>Dados locais</h3><p class="field-help">Conversas, preferências e anexos de texto são armazenados apenas neste navegador.</p><button class="danger-button" id="clear-data" type="button">Apagar todas as conversas deste dispositivo</button></section>
       <div class="dialog-footer"><span>Morok Web · Interface experimental</span><button class="primary-button" id="save-settings" value="save">Salvar alterações</button></div>
     </form>
