@@ -11,6 +11,11 @@ import treinamento_ciclico as training
 
 
 class TrainingDataTests(unittest.TestCase):
+    def test_continuous_training_stops_on_first_correct_single_question(self):
+        self.assertTrue(training.should_stop(True, 1, 1))
+        self.assertFalse(training.should_stop(True, 0, 1))
+        self.assertFalse(training.should_stop(True, 1, 2))
+        self.assertFalse(training.should_stop(False, 1, 1))
     def test_split_sizes(self):
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "treinamento.txt")), 32)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "validacao.txt")), 40)
