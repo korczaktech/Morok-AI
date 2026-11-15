@@ -58,7 +58,7 @@ try: cpu=subprocess.check_output("grep -m1 'model name' /proc/cpuinfo | cut -d: 
 except Exception: cpu=platform.processor()
 manifest={
  "schema_version":1,"experiment_id":os.environ.get("GITHUB_RUN_ID","local-g2"),
- "status":"completed","purpose":"first G2 engineering training run; versioned synthetic fixture only",
+ "status":"completed","purpose":"single-document G2 engineering smoke run; not a representative language corpus",
  "model":{"generation":"G2","trainable_parameters":2000,"architecture":"two independent 1000-parameter G1 experts","language_standard":"C++20"},
  "data":{"path":"tests/fixtures/benchmark","license":"CC0-1.0","documents":len(corpus),
          "bytes":sum(p.stat().st_size for p in corpus),"ordered_name_and_content_sha256":digest.hexdigest()},
@@ -72,7 +72,7 @@ manifest={
  "code":{"commit":os.environ.get("GITHUB_SHA","local"),"compiler":subprocess.check_output(["c++","--version"],text=True).splitlines()[0]},
  "environment":{"os":platform.platform(),"architecture":platform.machine(),"cpu":cpu,"logical_cpu_count":os.cpu_count()},
  "artifacts":{"checkpoint_a":"g2-model.expert-a","checkpoint_b":"g2-model.expert-b","generated_output":"generated.txt","resource_usage":"resource-usage.txt"},
- "limitations":["Synthetic fixture is not a natural-language corpus.","Metrics do not establish conversational quality or generalization.","CI runner memory does not validate operation on physical 4 GB hardware."]
+ "limitations":["The one-document corpus is a smoke fixture, not a representative natural-language corpus.","Single-document validation and test metrics reuse training data and do not measure generalization.","Metrics do not establish conversational quality or generalization.","CI runner memory does not validate operation on physical 4 GB hardware."]
 }
 (out/"manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+"\n")
 PY
