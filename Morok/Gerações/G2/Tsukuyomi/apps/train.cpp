@@ -1,14 +1,45 @@
 #include "morok/g2/tsukuyomi/model.hpp"
 
+#include <algorithm>
 #include <charconv>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <span>
 #include <string>
 #include <vector>
 
 namespace {
+std::vector<std::uint8_t> make_dialogue_target_mask(
+    const std::vector<std::uint8_t>& bytes) {
+    std::vector<std::uint8_t> mask(bytes.size(), 0);
+    bool awaiting_answer = false;
+    std::size_t line_start = 0;
+    while (line_start < bytes.size()) {
+        std::size_t line_end = line_start;
+        while (line_end < bytes.size() && bytes[line_end] != '\n' &&
+               bytes[line_end] != '\r')
+            ++line_end;
+        const std::size_t length = line_end - line_start;
+        if (length >= 2 && bytes[line_start] == 'U' &&
+            bytes[line_start + 1] == ':') {
+            awaiting_answer = true;
+        } else if (length >= 3 && bytes[line_start] == 'I' &&
+                   bytes[line_start + 1] == 'A' &&
+                   bytes[line_start + 2] == ':' && awaiting_answer) {
+            for (std::size_t i = line_start + 3; i < line_end; ++i)
+                mask[i] = 1;
+            awaiting_answer = false;
+        }
+        line_start = line_end + 1;
+    }
+    if (std::none_of(mask.begin(), mask.end(),
+                     [](std::uint8_t value) { return value != 0; }))
+        return {};
+    return mask;
+}
+
 bool parse_size(const char* text, std::size_t& value) {
     const std::string input(text ? text : "");
     const auto result = std::from_chars(input.data(),
@@ -86,7 +117,9 @@ int main(int argc, char** argv) {
         morok::g2::tsukuyomi::initialize(model, config.seed);
     }
 
-    const auto report = morok::g2::tsukuyomi::train(model, bytes, config, &optimizer_state);
+    const auto target_mask = make_dialogue_target_mask(bytes);
+    const auto report = morok::g2::tsukuyomi::train(
+        model, bytes, config, &optimizer_state, target_mask);
     if (report.epochs_completed != config.epochs ||
         !morok::g2::tsukuyomi::save_checkpoint(model, argv[2]) ||
         !morok::g2::tsukuyomi::save_training_state(optimizer_state, optimizer_path)) {
@@ -99,6 +132,7 @@ int main(int argc, char** argv) {
               << morok::g2::tsukuyomi::kParameterCount << '\n'
               << "Modo: " << (resume ? "continuação" : "inicialização") << '\n'
               << "Épocas: " << report.epochs_completed << '\n'
+              << "Objetivo: " << (target_mask.empty() ? "todos os bytes" : "somente respostas IA:") << '\n'
               << "Mini-lote: " << config.batch_size << '\n'
               << "Atualizações Adam: " << optimizer_state.step << '\n'
               << "Bytes-alvo: " << report.target_bytes << '\n'
