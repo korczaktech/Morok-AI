@@ -193,6 +193,46 @@ int main() {
     for (std::size_t i = 9216; i < 9632; ++i)
         assert(with_decay.parameters[i] != without_decay.parameters[i]);
 
+    // Auditoria de Adam: primeiro passo, bias correction e clipping global.
+    {
+        Model adam_model;
+        initialize(adam_model, 456);
+        std::array<std::uint8_t, 6> adam_mask{};
+        constexpr std::size_t target = 3;
+        adam_mask[target] = 1;
+        std::array<float, kParameterCount> raw_gradient{};
+        assert(compute_target_gradient(adam_model, gradient_sample, target, raw_gradient));
+        double norm_squared = 0.0;
+        for (const float value : raw_gradient)
+            norm_squared += static_cast<double>(value) * value;
+        const double norm = std::sqrt(norm_squared);
+        TrainingConfig adam_config;
+        adam_config.epochs = 1;
+        adam_config.batch_size = 1;
+        adam_config.learning_rate = 0.001;
+        adam_config.weight_decay = 0.0;
+        adam_config.gradient_clip = 0.5;
+        TrainingState adam_state;
+        const std::size_t audited_parameter = 9664 + gradient_sample[target];
+        const double clipped_gradient = raw_gradient[audited_parameter] *
+            std::min(1.0, adam_config.gradient_clip / norm);
+        const double expected_parameter =
+            adam_model.parameters[audited_parameter] -
+            adam_config.learning_rate * clipped_gradient /
+                (std::abs(clipped_gradient) + 1.0e-8);
+        const auto adam_report = train(
+            adam_model, gradient_sample, adam_config, &adam_state, adam_mask);
+        assert(adam_report.epochs_completed == 1);
+        assert(adam_report.target_bytes == 1);
+        assert(adam_state.step == 1);
+        assert(std::abs(adam_model.parameters[audited_parameter] -
+                        expected_parameter) < 1.0e-7);
+        assert(std::abs(adam_state.first_moment[audited_parameter] -
+                        0.1 * clipped_gradient) < 1.0e-7);
+        assert(std::abs(adam_state.second_moment[audited_parameter] -
+                        0.001 * clipped_gradient * clipped_gradient) < 1.0e-9);
+    }
+
     const auto before = evaluate_loss(model, sample);
     assert(std::isfinite(before) && before > 0.0);
 
