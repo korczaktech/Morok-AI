@@ -121,7 +121,6 @@ bool is_correct(const std::string& raw_answer, const Question& question) {
     const std::vector<std::string_view> negative_openers{
         "nao", "no", "not", "never", "nunca"
     };
-    if (starts_with_any(answer, negative_openers)) return false;
 
     if (question.id == std::string_view("greeting")) {
         return has_any(answer, {"ola", "oi", "hello", "hi", "hola", "buenas"});
@@ -131,18 +130,24 @@ bool is_correct(const std::string& raw_answer, const Question& question) {
         question.id == std::string_view("english_sky") ||
         question.id == std::string_view("spanish_sky")) {
         const std::vector<std::string_view> target{"azul", "blue"};
-        if (has_negated_target(answer, target)) return false;
-        if (has_any(answer, {"vermelho", "red"})) return false;
+        const std::vector<std::string_view> conflicts{"vermelho", "red"};
+        if (starts_with_any(answer, negative_openers) ||
+            has_negated_target(answer, target)) return false;
+        if (has_any(answer, conflicts) &&
+            !has_negated_target(answer, conflicts)) return false;
         return has_any(answer, target);
     }
 
     if (question.id == std::string_view("grass_color") ||
         question.id == std::string_view("multi_turn")) {
         const std::vector<std::string_view> target{"verde", "green"};
+        const std::vector<std::string_view> conflicts{
+            "azul", "blue", "vermelho", "red", "amarelo",
+            "yellow", "marrom", "brown", "preto", "black"
+        };
         if (has_negated_target(answer, target)) return false;
-        if (has_any(answer, {"azul", "blue", "vermelho", "red", "amarelo",
-                             "yellow", "marrom", "brown", "preto", "black"}))
-            return false;
+        if (has_any(answer, conflicts) &&
+            !has_negated_target(answer, conflicts)) return false;
         return has_any(answer, target);
     }
 
@@ -150,10 +155,15 @@ bool is_correct(const std::string& raw_answer, const Question& question) {
         const std::vector<std::string_view> target{
             "alta", "altas", "alto", "altos", "high", "tall", "elevadas", "elevados"
         };
+        const std::vector<std::string_view> conflicts{
+            "baixa", "baixas", "baixo", "baixos", "low",
+            "short", "pequenas", "pequenos"
+        };
         if (has_negated_target(answer, target)) return false;
-        if (has_any(answer, {"baixa", "baixas", "baixo", "baixos", "low",
-                             "short", "pequenas", "pequenos"}))
-            return false;
+        if (starts_with_any(answer, negative_openers) &&
+            !has_negated_target(answer, conflicts)) return false;
+        if (has_any(answer, conflicts) &&
+            !has_negated_target(answer, conflicts)) return false;
         return has_any(answer, target);
     }
     return false;
@@ -179,14 +189,17 @@ bool run_self_tests() {
         {"sky_is_blue", "The sky is blue.", true},
         {"sky_is_blue", "Não, o céu não é azul.", false},
         {"sky_is_blue", "O céu é vermelho.", false},
+        {"sky_is_blue", "O céu não é vermelho, é azul.", true},
         {"grass_color", "A grama geralmente é verde.", true},
         {"grass_color", "Verde.", true},
         {"grass_color", "Sim, é verde.", true},
         {"grass_color", "A grama não é verde.", false},
         {"grass_color", "A grama é amarela.", false},
+        {"grass_color", "A grama não é azul, é verde.", true},
         {"mountains_high_or_low", "Sim, muitas montanhas são altas.", true},
         {"mountains_high_or_low", "Yes, they are tall.", true},
         {"mountains_high_or_low", "Não, são baixas.", false},
+        {"mountains_high_or_low", "Não são baixas, são altas.", true},
         {"greeting", "Olá!", true},
         {"greeting", "Hello there!", true},
         {"greeting", "Até amanhã.", false},
