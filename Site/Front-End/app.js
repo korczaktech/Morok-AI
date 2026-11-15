@@ -3,8 +3,9 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const STORAGE_KEY = 'morok.web.state.v2';
+  const AUTH_API_URL = 'https://morok-accounts-api.onrender.com';
   const MAX_LOCAL_BYTES = 3_500_000;
-  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: '', supabaseUrl: '', supabaseKey: '', authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
+  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: '', authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
   const el = {
     app: $('#app'), sidebar: $('#sidebar'), backdrop: $('#backdrop'), history: $('#history-list'),
     welcome: $('#welcome'), conversation: $('#conversation'), input: $('#message-input'), composer: $('#composer'),
@@ -19,7 +20,7 @@
   function titleFrom(text) { const clean = text.replace(/\s+/g, ' ').trim(); return clean.length > 34 ? clean.slice(0, 34).trimEnd() + '…' : clean || 'Nova conversa'; }
   function persist() {
     try {
-      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, apiUrl: state.apiUrl, displayName: state.displayName, supabaseUrl: state.supabaseUrl, supabaseKey: state.supabaseKey, generation: state.generation, model: state.model });
+      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, apiUrl: state.apiUrl, displayName: state.displayName, generation: state.generation, model: state.model });
       if (payload.length > MAX_LOCAL_BYTES) { toast('O histórico local está cheio. Exclua conversas antigas.'); return; }
       localStorage.setItem(STORAGE_KEY, payload);
     } catch (error) { toast('Não foi possível salvar no navegador. Verifique o espaço disponível.'); }
@@ -32,8 +33,6 @@
       state.theme = ['dark','light','system'].includes(saved.theme) ? saved.theme : 'dark';
       state.apiUrl = typeof saved.apiUrl === 'string' ? saved.apiUrl : '';
       state.displayName = typeof saved.displayName === 'string' ? saved.displayName.slice(0,32) : 'Visitante';
-      state.supabaseUrl = typeof saved.supabaseUrl === 'string' ? saved.supabaseUrl : '';
-      state.supabaseKey = typeof saved.supabaseKey === 'string' ? saved.supabaseKey : '';
       state.generation = saved.generation === 'G1' ? 'G1' : 'G1';
       state.model = ['Tsukuyomi','Apollo','Mokosh'].includes(saved.model) ? saved.model : 'Tsukuyomi';
       try { state.authSession = JSON.parse(sessionStorage.getItem('morok.auth.session') || 'null'); } catch { state.authSession = null; }
@@ -281,7 +280,7 @@
     el.pill.querySelector('span').textContent = status === 'online' ? 'Conectado' : status === 'wait' ? 'Conectando' : 'Desconectado';
   }
   function openSettings() {
-    $('#api-url').value = state.apiUrl; $('#theme-select').value = state.theme; $('#supabase-url').value = state.supabaseUrl; $('#supabase-key').value = state.supabaseKey; $('#test-result').textContent = ''; $('#auth-config-result').textContent = state.supabaseUrl && state.supabaseKey ? 'Supabase configurado.' : 'Configure o projeto Supabase para habilitar contas.';
+    $('#api-url').value = state.apiUrl; $('#theme-select').value = state.theme; $('#test-result').textContent = ''; $('#auth-config-result').textContent = 'Autenticação conectada ao MongoDB Atlas.';
     el.settings.showModal();
   }
   function saveSettings() {
@@ -290,15 +289,7 @@
       try { const parsed = new URL(url); if (!['https:','http:'].includes(parsed.protocol)) throw new Error(); }
       catch { toast('Informe uma URL válida começando com https:// ou http://.'); return false; }
     }
-    const sbUrl = $('#supabase-url').value.trim();
-    const sbKey = $('#supabase-key').value.trim();
-    if (sbUrl) {
-      try { const parsed = new URL(sbUrl); if (!['https:','http:'].includes(parsed.protocol)) throw new Error(); }
-      catch { toast('URL do Supabase inválida.'); return false; }
-    }
     state.apiUrl = url.replace(/\/+$/,'');
-    state.supabaseUrl = sbUrl.replace(/\/+$/,'');
-    state.supabaseKey = sbKey;
     state.theme = $('#theme-select').value;
     applyTheme(); persist(); el.settings.close(); checkHealth(); toast('Configurações salvas.'); return true;
   }
@@ -313,7 +304,21 @@
   }
 
 
-  function authConfigReady() { return !!(state.supabaseUrl && state.supabaseKey); }
+  async function authRequest(path, options={}) {
+    const response = await fetch(AUTH_API_URL + path, {
+      method: options.method || 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.token ? { Authorization: 'Bearer ' + options.token } : {})
+      },
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      mode: 'cors',
+      cache: 'no-store'
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Falha na autenticação (' + response.status + ').');
+    return data;
+  }
   function openAuth(mode='login') {
     state.authMode=mode; setAuthMode(mode);
     $('#auth-email').value=state.authSession?.user?.email || '';
@@ -336,57 +341,52 @@
     $('#auth-password').autocomplete=mode==='signup'?'new-password':'current-password';
     $('#auth-forgot').hidden=mode!=='login';
   }
-  async function supabaseAuth(path, options={}) {
-    if(!authConfigReady()) throw new Error('Configure a URL e a chave publicável do Supabase em Configurações.');
-    const response=await fetch(state.supabaseUrl+'/auth/v1/'+path,{method:options.method||'POST',headers:{'Content-Type':'application/json','apikey':state.supabaseKey,...(options.token?{Authorization:'Bearer '+options.token}:{})},body:options.body===undefined?undefined:JSON.stringify(options.body)});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok) throw new Error(data.msg||data.message||data.error_description||data.error||'Falha na autenticação ('+response.status+').');
-    return data;
-  }
   function saveAuthSession(session) {
+    if (session?.access_token && session?.expires_in) {
+      session.expires_at = Math.floor(Date.now()/1000) + Number(session.expires_in);
+    }
     state.authSession=session;
     try { if(session) sessionStorage.setItem('morok.auth.session',JSON.stringify(session)); else sessionStorage.removeItem('morok.auth.session'); } catch {}
-    if(session?.user?.email) state.displayName=session.user.email.split('@')[0].slice(0,32);
+    if(session?.user?.name) state.displayName=session.user.name.slice(0,32);
+    else if(session?.user?.email) state.displayName=session.user.email.split('@')[0].slice(0,32);
     updateProfile(); persist();
   }
   async function refreshAuthSession() {
     const session=state.authSession;
-    if(!session?.refresh_token) return;
-    const expiresAt=Number(session.expires_at||0);
-    if(expiresAt && expiresAt>Date.now()/1000+90) return;
-    try {
-      const refreshed=await supabaseAuth('token?grant_type=refresh_token',{body:{refresh_token:session.refresh_token}});
-      saveAuthSession(refreshed);
-    } catch {
+    if(!session?.access_token) return;
+    if(Number(session.expires_at || 0) <= Date.now()/1000) {
       saveAuthSession(null);
+      return;
     }
+    try {
+      const data=await authRequest('/auth/me',{method:'GET',token:session.access_token});
+      if(data.user) { state.authSession.user=data.user; saveAuthSession(state.authSession); }
+    } catch { saveAuthSession(null); }
   }
   async function submitAuth() {
     const email=$('#auth-email').value.trim(); const password=$('#auth-password').value;
-    const message=$('#auth-message'); message.className='auth-message'; message.textContent='Conectando ao Supabase…';
+    const message=$('#auth-message'); message.className='auth-message'; message.textContent='Conectando ao servidor de contas…';
     if(!email || !email.includes('@')) { message.classList.add('error'); message.textContent='Informe um e-mail válido.'; return; }
     if(password.length<8) { message.classList.add('error'); message.textContent='A senha deve ter pelo menos 8 caracteres.'; return; }
     $('#auth-submit').disabled=true;
     try {
-      if(state.authMode==='signup') {
-        const data=await supabaseAuth('signup',{body:{email,password}});
-        if(data.access_token) { saveAuthSession(data); message.classList.add('success'); message.textContent='Conta criada e sessão iniciada.'; setTimeout(()=>el.auth.close(),700); }
-        else { message.classList.add('success'); message.textContent='Cadastro recebido. Confirme o e-mail enviado pelo Supabase e depois entre.'; }
-      } else {
-        const data=await supabaseAuth('token?grant_type=password',{body:{email,password}});
-        saveAuthSession(data); message.classList.add('success'); message.textContent='Login realizado.'; setTimeout(()=>el.auth.close(),500);
-      }
+      const path=state.authMode==='signup'?'/auth/signup':'/auth/login';
+      const data=await authRequest(path,{body:{email,password}});
+      saveAuthSession(data);
+      message.classList.add('success');
+      message.textContent=state.authMode==='signup'?'Conta criada e salva no MongoDB.':'Login realizado.';
+      setTimeout(()=>el.auth.close(),500);
     } catch(error) { message.classList.add('error'); message.textContent=error.message; }
     finally { $('#auth-submit').disabled=false; }
   }
   async function recoverPassword() {
     const email=$('#auth-email').value.trim(); const message=$('#auth-message');
-    if(!email || !email.includes('@')) { message.className='auth-message error'; message.textContent='Informe seu e-mail para receber o link de recuperação.'; return; }
-    try { await supabaseAuth('recover',{body:{email}}); message.className='auth-message success'; message.textContent='Se a conta existir, o Supabase enviará instruções de recuperação.'; }
+    if(!email || !email.includes('@')) { message.className='auth-message error'; message.textContent='Informe um e-mail válido.'; return; }
+    try { await authRequest('/auth/recover',{body:{email}}); message.className='auth-message success'; message.textContent='Se a conta existir, enviaremos instruções.'; }
     catch(error) { message.className='auth-message error'; message.textContent=error.message; }
   }
   async function logout() {
-    try { if(state.authSession?.access_token) await supabaseAuth('logout',{token:state.authSession.access_token}); } catch {}
+    try { if(state.authSession?.access_token) await authRequest('/auth/logout',{token:state.authSession.access_token}); } catch {}
     saveAuthSession(null); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
   }
   $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
