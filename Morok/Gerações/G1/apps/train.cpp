@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
             else if (option == "--export-best") config.best_model_path = value;
             else if (option == "--patience")
                 config.patience = static_cast<std::size_t>(
-                    parse_unsigned(value, "patience", 1, 10000));
+                    parse_unsigned(value, "patience", 1, 1000000));
             else if (option == "--truncation")
                 config.truncation_length = static_cast<std::size_t>(
                     parse_unsigned(value, "truncation", 1, 128));
