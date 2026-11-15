@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -86,13 +87,28 @@ int main(int argc, char** argv) {
         morok::model::G1OptimizerStepResult last_step{};
         for (std::size_t iteration = 0; iteration < update_steps; ++iteration) {
             morok::model::G1State initial_state{};
+            bool has_previous_byte = false;
+            std::uint8_t previous_byte = 0;
             for (std::size_t i = 0; i + 1 < prompt.size(); ++i) {
+                const auto byte = static_cast<std::uint8_t>(
+                    static_cast<unsigned char>(prompt[i]));
+                const bool separator = morok::model::is_g1_token_separator(byte);
+                const bool token_start = !separator &&
+                    (!has_previous_byte ||
+                     morok::model::is_g1_token_separator(previous_byte));
                 morok::model::advance_g1_state(
-                    checkpoint.parameters, initial_state,
-                    static_cast<std::uint8_t>(static_cast<unsigned char>(prompt[i])));
+                    checkpoint.parameters, initial_state, byte, token_start, separator);
+                previous_byte = byte;
+                has_previous_byte = true;
             }
+            const std::optional<std::uint8_t> previous_context_byte =
+                prompt.size() >= 2U
+                    ? std::optional<std::uint8_t>(static_cast<std::uint8_t>(
+                        static_cast<unsigned char>(prompt[prompt.size() - 2U])))
+                    : std::nullopt;
             const auto result = morok::model::compute_g1_bptt_gradients(
-                checkpoint.parameters, sequence, 64, initial_state, prompt.size() - 1);
+                checkpoint.parameters, sequence, 64, initial_state, prompt.size() - 1,
+                previous_context_byte);
             last_gradient_norm = result.gradients.global_norm();
             if (iteration == 0) first_gradient_norm = last_gradient_norm;
             morok::model::G1Gradients rewarded = result.gradients;
