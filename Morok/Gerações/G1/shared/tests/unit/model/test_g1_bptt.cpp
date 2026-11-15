@@ -56,7 +56,11 @@ double reference_loss(const morok::model::G1Parameters& parameters,
     G1State state = initial_state;
     double total = 0.0;
     for (std::size_t target = 1; target < bytes.size(); ++target) {
-        advance_g1_state(parameters, state, bytes[target - 1]);
+        const auto observed = bytes[target - 1];
+        const bool separator = is_g1_token_separator(observed);
+        const bool token_start = !separator &&
+            (target < 2U || is_g1_token_separator(bytes[target - 2U]));
+        advance_g1_state(parameters, state, observed, token_start, separator);
         total += evaluate_g1_next_byte(parameters, state, bytes[target])
                      .negative_log_likelihood_nats;
     }
