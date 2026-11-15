@@ -20,7 +20,7 @@
   function titleFrom(text) { const clean = text.replace(/\s+/g, ' ').trim(); return clean.length > 34 ? clean.slice(0, 34).trimEnd() + '…' : clean || 'Nova conversa'; }
   function persist() {
     try {
-      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, apiUrl: state.apiUrl, displayName: state.displayName, generation: state.generation, model: state.model });
+      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, displayName: state.displayName, generation: state.generation, model: state.model });
       if (payload.length > MAX_LOCAL_BYTES) { toast('O histórico local está cheio. Exclua conversas antigas.'); return; }
       localStorage.setItem(STORAGE_KEY, payload);
     } catch (error) { toast('Não foi possível salvar no navegador. Verifique o espaço disponível.'); }
@@ -291,18 +291,12 @@
     el.pill.querySelector('span').textContent = status === 'online' ? 'Conectado' : status === 'wait' ? 'Conectando' : 'Desconectado';
   }
   function openSettings() {
-    $('#api-url').value = state.apiUrl; $('#theme-select').value = state.theme; $('#test-result').textContent = ''; $('#auth-config-result').textContent = 'Autenticação conectada ao MongoDB Atlas.';
+    $('#theme-select').value = state.theme;
     el.settings.showModal();
   }
   function saveSettings() {
-    const url = $('#api-url').value.trim();
-    if (url) {
-      try { const parsed = new URL(url); if (!['https:','http:'].includes(parsed.protocol)) throw new Error(); }
-      catch { toast('Informe uma URL válida começando com https:// ou http://.'); return false; }
-    }
-    state.apiUrl = (url || AUTH_API_URL).replace(/\/+$/,'');
     state.theme = $('#theme-select').value;
-    applyTheme(); persist(); el.settings.close(); checkHealth(); toast('Configurações salvas.'); return true;
+    applyTheme(); persist(); el.settings.close(); toast('Preferências salvas.'); return true;
   }
   function addFiles(files) {
     for (const file of files) {
@@ -461,7 +455,7 @@
       saveAuthSession(data);
       await loadRemoteConversations();
       message.classList.add('success');
-      message.textContent=state.authMode==='signup'?'Conta criada e salva no MongoDB.':'Login realizado.';
+      message.textContent=state.authMode==='signup'?'Conta criada com sucesso.':'Login realizado.';
       setTimeout(()=>el.auth.close(),500);
     } catch(error) { message.classList.add('error'); message.textContent=error.message; }
     finally { $('#auth-submit').disabled=false; }
@@ -500,13 +494,12 @@
   }
   $$('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;updateModelMenu();$('#generation-list').hidden=true;$('#model-submenu').hidden=false;persist();}));
   $('#generation-back').addEventListener('click',()=>{$('#model-submenu').hidden=true;$('#generation-list').hidden=false;});
-  $$('[data-model]').forEach(button=>button.addEventListener('click',()=>{state.model=button.dataset.model;updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Perfil selecionado: '+state.generation+' · '+state.model+'. O servidor ainda usa o checkpoint carregado.');}));
+  $$('[data-model]').forEach(button=>button.addEventListener('click',()=>{state.model=button.dataset.model;updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Perfil de exibição atualizado.');}));
   document.addEventListener('click',event=>{if(!event.target.closest('.model-select-wrap')){$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');}if(!event.target.closest('.context-menu')&&!event.target.closest('.history-menu'))closeContextMenu();});
   el.context.addEventListener('click',event=>{const action=event.target.dataset.action;if(action==='rename')renameConversation(state.contextId);if(action==='delete')deleteConversation(state.contextId);closeContextMenu();});
   $('#rename-save').addEventListener('click',()=>{const conversation=state.conversations.find(c=>c.id===state.renameId);if(conversation){conversation.title=$('#rename-input').value.trim()||'Nova conversa';conversation.updatedAt=now();persist();renderHistory();}state.renameId=null;});
   $('#save-settings').addEventListener('click',event=>{event.preventDefault();saveSettings();});
   $('#auth-open').addEventListener('click',()=>{el.settings.close();openAuth('login');});
-  $('#test-connection').addEventListener('click',async()=>{const url=$('#api-url').value.trim();state.apiUrl=(url || AUTH_API_URL).replace(/\/+$/,'');const ok=await checkHealth();$('#test-result').textContent=ok?'Servidor respondeu corretamente.':'Falha de conexão. Confira URL, HTTPS e CORS.';});
   $('#status-refresh').addEventListener('click',()=>checkHealth(true));
   $('#clear-data').addEventListener('click',()=>{if(!confirm('Apagar todas as conversas e preferências locais?'))return;state.conversations=[];state.activeId=null;state.displayName='Visitante';state.attachments=[];persist();renderHistory();renderConversation();updateProfile();renderAttachments();toast('Dados locais apagados.');});
   $('#attach-button').addEventListener('click',()=>el.file.click());
