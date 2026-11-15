@@ -36,7 +36,7 @@ int main() {
         const auto generated=generate_g2(p,*prompt.value_if(),generation);
         if(generated.generated_bytes>2)throw std::runtime_error("G2 generation exceeded its byte bound");
         const auto corpus=dir/"corpus"; std::filesystem::create_directories(corpus);
-        for(int i=0;i<3;++i){std::ofstream f(corpus/(std::to_string(i)+".txt"));f<<"Este e um documento de teste da geracao dois. Numero "<<i<<".\n";}
+        {std::ofstream f(corpus/"single.txt");f<<"Usuario: O ceu e azul?\nIA: Sim, o ceu e azul\n";}
         G2TrainingConfig training; training.base.corpus_directory=corpus;
         training.base.max_epochs=1; training.base.patience=5; training.base.truncation_length=8;
         training.checkpoint_prefix=dir/"trained";
@@ -44,6 +44,8 @@ int main() {
         const auto report=train_g2_corpus(training,trained);
         if(report.expert_a.best_epoch!=1||report.expert_b.best_epoch!=1)
             throw std::runtime_error("both G2 experts must complete one training epoch");
+        if(!report.expert_a.single_document_evaluation||!report.expert_b.single_document_evaluation)
+            throw std::runtime_error("both G2 experts must support a single-document corpus");
         if(load_g2_checkpoint(training.checkpoint_prefix).flatten()!=trained.flatten())
             throw std::runtime_error("trained G2 checkpoint does not match trained parameters");
         training.base.max_epochs=2; training.resume=true;
