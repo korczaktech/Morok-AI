@@ -18,6 +18,20 @@ LR_REDUCE_FACTOR = 0.5
 LR_PLATEAU_CYCLES = 5
 
 
+def update_learning_rate(current: float, best_bpb: float, plateau: int,
+                         observed_bpb: float) -> tuple[float, float, int, bool]:
+    """Reduz o LR após cinco ciclos sem melhora mensurável de train_bpb."""
+    if not (observed_bpb >= 0.0):
+        raise ValueError("train_bpb observado precisa ser não negativo.")
+    if observed_bpb + 1.0e-6 < best_bpb:
+        return current, observed_bpb, 0, False
+    plateau += 1
+    if plateau >= LR_PLATEAU_CYCLES and current > MIN_LEARNING_RATE:
+        reduced = max(MIN_LEARNING_RATE, current * LR_REDUCE_FACTOR)
+        return reduced, best_bpb, 0, reduced < current
+    return current, best_bpb, plateau, False
+
+
 def should_stop(continuous: bool, correct_count: int, total: int) -> bool:
     """No modo contínuo, encerra assim que a questão selecionada estiver correta."""
     return continuous and total > 0 and correct_count == total
@@ -200,14 +214,10 @@ def main() -> int:
             )
             if bpb_match:
                 train_bpb = float(bpb_match.group(1))
-                if train_bpb + 1.0e-6 < best_train_bpb:
-                    best_train_bpb = train_bpb
-                    plateau_cycles = 0
-                else:
-                    plateau_cycles += 1
-                if plateau_cycles >= LR_PLATEAU_CYCLES and learning_rate > MIN_LEARNING_RATE:
-                    learning_rate = max(MIN_LEARNING_RATE, learning_rate * LR_REDUCE_FACTOR)
-                    plateau_cycles = 0
+                learning_rate, best_train_bpb, plateau_cycles, reduced = update_learning_rate(
+                    learning_rate, best_train_bpb, plateau_cycles, train_bpb
+                )
+                if reduced:
                     print(
                         f"Scheduler: train_bpb sem melhora; learning rate reduzido para {learning_rate:.6f}.",
                         flush=True,
