@@ -44,6 +44,12 @@ morok-g2-tsukuyomi-train corpus.bin tsukuyomi-g2-v0.1.ckpt 10 42
 
 Argumentos: arquivo de corpus, caminho do checkpoint, épocas opcionais e seed opcional.
 
+## Auditoria matemática
+
+A disposição dos 10.000 parâmetros é protegida por asserções estáticas encadeadas: cada bloco começa exatamente após o anterior e o último termina no limite do orçamento. Os testes comparam gradientes analíticos e diferenças finitas em representantes dos embeddings compartilhados de entrada/saída, projeção oculta, canais de contexto da pergunta e da resposta, biases, escala, deslocamento e estado inicial. Também verificam o gradiente dos embeddings da pergunta. Um teste independente confere o primeiro passo do Adam, as correções de bias dos momentos e o clipping pela norma global contra o valor numérico esperado. Outros testes cobrem acumulação em mini-lotes, retomada determinística, serialização dos momentos e weight decay seletivo.
+
+Esses testes verificam a derivada da função atual em pontos representativos; não significam uma prova formal de todos os 10.000 valores para qualquer estado possível. O treinamento continua sendo uma soma de gradientes de previsões locais independentes: não há retropropagação através das previsões anteriores nem BPTT. A janela de bytes anteriores é entrada direta da previsão, não um estado recorrente treinado no tempo.
+
 ## Configuração padrão do ciclo de treinamento
 
 - 1 época por ciclo.
