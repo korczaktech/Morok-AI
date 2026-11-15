@@ -71,17 +71,17 @@ on:
         description: "Executar Tsukuyomi"
         type: boolean
         required: true
-        default: true
+        default: false
       model_apollo:
         description: "Executar Apollo"
         type: boolean
         required: true
-        default: true
+        default: false
       model_mokosh:
         description: "Executar Mokosh"
         type: boolean
         required: true
-        default: true
+        default: false
       model_tsukuyomi_max:
         description: "Executar Tsukuyomi Max (rede neural unificada da G1)"
         type: boolean
