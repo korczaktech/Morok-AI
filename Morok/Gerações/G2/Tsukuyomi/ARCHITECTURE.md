@@ -32,7 +32,7 @@ A previsão é causal: ao prever o byte na posição t, o modelo só recebe byte
 | Estado inicial | 16 | 16 |
 | **Total** | | **10.000** |
 
-Os offsets e a soma são verificados por asserção estática no código. O checkpoint rejeita versões, contagens, checksums e valores não finitos incompatíveis.
+Os offsets e a soma são verificados por asserção estática no código. O checkpoint rejeita versões, contagens, checksums e valores não finitos incompatíveis. A versão 2 do formato interno impede carregar pesos treinados com a representação contextual escalar anterior; a identidade pública do Tsukuyomi continua 0.1.
 
 ## Treinamento
 
@@ -56,7 +56,7 @@ A geração restringe transições para manter UTF-8 válido quando o prompt é 
 
 ## Checkpoint
 
-Formato binário MOROKG2T, versão 1, contagem explícita de 10.000 floats e checksum FNV-1a de 64 bits. O carregamento ocorre em estrutura temporária e só substitui o modelo ativo depois de validar o arquivo integral.
+Formato binário MOROKG2T, versão 2, contagem explícita de 10.000 floats e checksum FNV-1a de 64 bits. O carregamento ocorre em estrutura temporária e só substitui o modelo ativo depois de validar o arquivo integral.
 
 ## Limitações conhecidas do v0.1
 
