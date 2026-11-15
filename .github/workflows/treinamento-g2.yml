@@ -16,7 +16,7 @@ on:
         required: true
         default: 1
       tentativas:
-        description: "Quantidade de ciclos quando o treinamento contínuo estiver desligado"
+        description: "Número máximo de ciclos de treinamento"
         type: number
         required: true
         default: 10
@@ -24,7 +24,7 @@ on:
         description: "Quantidade de perguntas de validação (1 a 40)"
         type: number
         required: true
-        default: 1
+        default: 40
       treinamento_continuo:
         description: "Parar antecipadamente se todas as perguntas estiverem corretas (limite de tentativas permanece ativo)"
         type: boolean
