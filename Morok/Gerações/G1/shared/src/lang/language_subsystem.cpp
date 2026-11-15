@@ -1,7 +1,5 @@
 #include "morok/lang/language_subsystem.hpp"
-#include "morok/g1/tsukuyomi/profile.hpp"
-#include "morok/g1/apollo/profile.hpp"
-#include "morok/g1/mokosh/profile.hpp"
+#include "morok/g1/profile_policy.hpp"
 
 #include <algorithm>
 #include <array>
@@ -106,24 +104,11 @@ DetectedLanguage identify_language(std::string_view text) {
 model::G1GenerationReport generate_for_profile(
     const model::G1Parameters& parameters, const common::Utf8Text& prompt,
     LanguageProfile profile, std::size_t max_new_bytes) {
-    switch (profile) {
-    case LanguageProfile::tsukuyomi: {
-        g1::tsukuyomi::Policy policy{};
-        policy.max_new_bytes = max_new_bytes;
-        return g1::tsukuyomi::generate(parameters, prompt, policy);
-    }
-    case LanguageProfile::apollo: {
-        g1::apollo::Policy policy{};
-        policy.max_new_bytes = max_new_bytes;
-        return g1::apollo::generate(parameters, prompt, policy);
-    }
-    case LanguageProfile::mokosh: {
-        g1::mokosh::Policy policy{};
-        policy.max_new_bytes = max_new_bytes;
-        return g1::mokosh::generate(parameters, prompt, policy);
-    }
-    }
-    throw std::invalid_argument("unknown IA-LANG G1 profile");
+    g1::ProfileKind kind = g1::ProfileKind::tsukuyomi;
+    if (profile == LanguageProfile::apollo) kind = g1::ProfileKind::apollo;
+    else if (profile == LanguageProfile::mokosh) kind = g1::ProfileKind::mokosh;
+    const auto config = g1::make_generation_config(kind, max_new_bytes, 42);
+    return model::generate_g1(parameters, prompt, config);
 }
 
 } // namespace
