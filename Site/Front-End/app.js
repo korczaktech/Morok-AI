@@ -290,7 +290,7 @@
       try { const parsed = new URL(url); if (!['https:','http:'].includes(parsed.protocol)) throw new Error(); }
       catch { toast('Informe uma URL válida começando com https:// ou http://.'); return false; }
     }
-    state.apiUrl = url.replace(/\/+$/,'');
+    state.apiUrl = (url || AUTH_API_URL).replace(/\/+$/,'');
     state.theme = $('#theme-select').value;
     applyTheme(); persist(); el.settings.close(); checkHealth(); toast('Configurações salvas.'); return true;
   }
@@ -465,7 +465,7 @@
   $('#rename-save').addEventListener('click',()=>{const conversation=state.conversations.find(c=>c.id===state.renameId);if(conversation){conversation.title=$('#rename-input').value.trim()||'Nova conversa';conversation.updatedAt=now();persist();renderHistory();}state.renameId=null;});
   $('#save-settings').addEventListener('click',event=>{event.preventDefault();saveSettings();});
   $('#auth-open').addEventListener('click',()=>{el.settings.close();openAuth('login');});
-  $('#test-connection').addEventListener('click',async()=>{const url=$('#api-url').value.trim();if(url){state.apiUrl=url.replace(/\/+$/,'');}const ok=await checkHealth();$('#test-result').textContent=ok?'Servidor respondeu corretamente.':'Falha de conexão. Confira URL, HTTPS e CORS.';});
+  $('#test-connection').addEventListener('click',async()=>{const url=$('#api-url').value.trim();state.apiUrl=(url || AUTH_API_URL).replace(/\/+$/,'');const ok=await checkHealth();$('#test-result').textContent=ok?'Servidor respondeu corretamente.':'Falha de conexão. Confira URL, HTTPS e CORS.';});
   $('#status-refresh').addEventListener('click',()=>checkHealth(true));
   $('#clear-data').addEventListener('click',()=>{if(!confirm('Apagar todas as conversas e preferências locais?'))return;state.conversations=[];state.activeId=null;state.displayName='Visitante';state.attachments=[];persist();renderHistory();renderConversation();updateProfile();renderAttachments();toast('Dados locais apagados.');});
   $('#attach-button').addEventListener('click',()=>el.file.click());
