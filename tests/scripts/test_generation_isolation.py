@@ -8,17 +8,17 @@ ROOT = Path(__file__).resolve().parents[2]
 PROFILES = ("Mokosh", "Tsukuyomi", "Artemis", "Apollo")
 
 G1_CODE = [
-    ROOT / "G1" / "shared",
-    ROOT / "G1" / "apps",
-    ROOT / "G1" / "tests",
-    *(ROOT / "G1" / profile for profile in PROFILES),
+    ROOT / "Gerações" / "G1" / "shared",
+    ROOT / "Gerações" / "G1" / "apps",
+    ROOT / "Gerações" / "G1" / "tests",
+    *(ROOT / "Gerações" / "G1" / profile for profile in PROFILES),
 ]
 G2_CODE = [
-    ROOT / "G2" / "engine",
-    ROOT / "G2" / "model",
-    ROOT / "G2" / "apps",
-    ROOT / "G2" / "tests",
-    *(ROOT / "G2" / profile for profile in PROFILES),
+    ROOT / "Gerações" / "G2" / "engine",
+    ROOT / "Gerações" / "G2" / "model",
+    ROOT / "Gerações" / "G2" / "apps",
+    ROOT / "Gerações" / "G2" / "tests",
+    *(ROOT / "Gerações" / "G2" / profile for profile in PROFILES),
 ]
 
 FORBIDDEN_G1 = re.compile(
