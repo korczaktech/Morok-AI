@@ -36,9 +36,17 @@ int main() {
     const std::string prompt = "Pergunta: Que cor e a grama?\nResposta: ";
     const std::string response = "verde";
     G1State state{};
+    bool has_previous = false;
+    std::uint8_t previous = 0;
     for (std::size_t i = 0; i + 1 < prompt.size(); ++i) {
-        advance_g1_state(initial, state,
-            static_cast<std::uint8_t>(static_cast<unsigned char>(prompt[i])));
+        const auto byte = static_cast<std::uint8_t>(
+            static_cast<unsigned char>(prompt[i]));
+        const bool separator = is_g1_token_separator(byte);
+        const bool token_start = !separator &&
+            (!has_previous || is_g1_token_separator(previous));
+        advance_g1_state(initial, state, byte, token_start, separator);
+        previous = byte;
+        has_previous = true;
     }
 
     std::vector<std::uint8_t> sequence;
@@ -46,8 +54,10 @@ int main() {
         static_cast<unsigned char>(prompt.back())));
     for (const unsigned char byte : response) sequence.push_back(byte);
 
+    const auto previous_context = static_cast<std::uint8_t>(
+        static_cast<unsigned char>(prompt[prompt.size() - 2]));
     const auto result = compute_g1_bptt_gradients(
-        initial, sequence, 64, state, prompt.size() - 1);
+        initial, sequence, 64, state, prompt.size() - 1, previous_context);
     assert(result.target_byte_count == response.size());
     assert(std::isfinite(result.gradients.global_norm()));
     assert(result.gradients.global_norm() > 0.0);
