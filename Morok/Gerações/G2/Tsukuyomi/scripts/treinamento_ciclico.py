@@ -19,6 +19,17 @@ def should_stop(continuous: bool, correct_count: int, total: int) -> bool:
     return continuous and total > 0 and correct_count == total
 
 
+def select_validation_questions(train_dialogues, validation_pool, count):
+    """Prioriza perguntas cuja resposta de referência existe nos 32 exemplos de treino."""
+    known_answers = {tuple(normalize(answer)) for _, answer in train_dialogues}
+    candidates = [
+        dialogue for dialogue in validation_pool
+        if tuple(normalize(dialogue[1])) in known_answers
+    ]
+    selected_pool = candidates if count == 1 and candidates else validation_pool
+    return selected_pool[:count]
+
+
 def normalize(text: str) -> list[str]:
     text = unicodedata.normalize("NFKD", text.casefold())
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
@@ -135,7 +146,7 @@ def main() -> int:
             f"O banco de validação precisa conter exatamente 40 questões; "
             f"foram encontradas {len(validation_pool)}."
         )
-    validation = validation_pool[:question_count]
+    validation = select_validation_questions(train_dialogues, validation_pool, question_count)
     test = read_dialogues(test_corpus)
     checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
     output = Path("build/g2/respostas-tsukuyomi.md")
