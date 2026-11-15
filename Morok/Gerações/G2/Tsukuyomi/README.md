@@ -44,7 +44,7 @@ O corpus é um arquivo binário de 2 bytes a 512 MiB. O modelo não inclui corpu
 
 ## Treinamento cíclico pelo GitHub Actions
 
-O workflow manual **Treinamento — G2** fica disponível na aba Actions. Ele oferece:
+O workflow manual **Treinamento — G2** fica disponível na aba Actions. O padrão executa 20 épocas por tentativa, até 10 tentativas (200 épocas no total), avalia 40 perguntas por tentativa e mantém o treinamento contínuo desativado. O limite de 200 épocas também é validado pelo executor. Ele oferece:
 
 - Checkbox para habilitar o Tsukuyomi.
 - **Épocas:** passagens completas pelo corpus em cada ciclo.
@@ -55,7 +55,7 @@ O primeiro ciclo inicializa o modelo. Os ciclos seguintes carregam os parâmetro
 
 O avaliador é determinístico: remove diferenças de caixa, acentuação e pontuação e aprova somente igualdade lexical normalizada. O F1 lexical é exibido apenas como diagnóstico e nunca aprova sozinho uma resposta, reduzindo aprovações falsas por coincidência de palavras. Ainda não há avaliação semântica real: paráfrases corretas podem ser rejeitadas. A aprovação indica correspondência normalizada ao gabarito, não prova de compreensão.
 
-O treinamento acumula gradientes em mini-lotes de 16 bytes-alvo por padrão, reduzindo as atualizações do Adam. A retropropagação temporal é truncada em 13 etapas por padrão (configurável entre 1 e 13), enquanto o forward percorre sequencialmente todo o histórico disponível. O learning rate inicial é 0,001 (0,1%); o executor cíclico reduz pela metade após cinco ciclos sem melhora da pontuação de validação (80% respostas exatas + 20% F1 lexical médio), até 0,00005; Adam usa β1=0,9, β2=0,999 e epsilon=1e-8, com clipping global 1,0 e weight decay seletivo 0,00001. Não há dropout na versão 0.1; o scheduler é controlado pelo executor cíclico e reduz o learning rate quando a pontuação de validação deixa de melhorar. O estado do Adam é salvo em arquivo separado com versão e checksum, junto do checkpoint. O formato binário do checkpoint é a versão interna 7 para rejeitar pesos antigos incompatíveis; o Tsukuyomi continua na versão pública 0.1. A retomada exige os dois arquivos válidos. O workflow tem limite operacional de seis horas, portanto uma execução contínua pode ser interrompida pelo limite do GitHub Actions antes de atingir a aprovação da questão selecionada.
+O treinamento acumula gradientes em mini-lotes de 16 bytes-alvo por padrão, reduzindo as atualizações do Adam. A retropropagação temporal é truncada em 13 etapas por padrão (configurável entre 1 e 13), enquanto o forward percorre sequencialmente todo o histórico disponível. O learning rate inicial é 0,001 (0,1%); o executor cíclico reduz pela metade após cinco ciclos sem melhora da pontuação de validação (80% respostas exatas + 20% F1 lexical médio), até 0,00005; Adam usa β1=0,9, β2=0,999 e epsilon=1e-8, com clipping global 1,0 e weight decay seletivo 0,00001. Não há dropout na versão 0.1; o scheduler é controlado pelo executor cíclico e reduz o learning rate quando a pontuação de validação deixa de melhorar. O estado do Adam é salvo em arquivo separado com versão e checksum, junto do checkpoint. O formato binário do checkpoint é a versão interna 7 para rejeitar pesos antigos incompatíveis; o Tsukuyomi continua na versão pública 0.1. A retomada exige os dois arquivos válidos. O workflow tem limite operacional de seis horas. A execução padrão é finita e não ativa treinamento contínuo.
 
 ## Escopo e limitações
 
