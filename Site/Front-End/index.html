@@ -40,10 +40,10 @@
           <div class="model-select-wrap">
             <button class="model-select" id="model-select" aria-haspopup="true" aria-expanded="false"><span class="model-glyph"></span><span id="model-select-label">G1 · Tsukuyomi</span><span class="chevron">⌄</span></button>
             <div class="model-popover generation-menu" id="model-popover" hidden>
-              <div class="popover-label">1 · ESCOLHA A GERAÇÃO</div>
+              <div class="generation-list" id="generation-list"><div class="popover-label">1 · ESCOLHA A GERAÇÃO</div>
               <button class="generation-option selected" data-generation="G1"><span class="generation-mark">G1</span><span><strong>Geração 1</strong><small>Motor implementado · 1.000 parâmetros</small></span><span class="check">✓</span></button>
-              <button class="generation-option unavailable" data-generation="G3" disabled><span class="generation-mark">G3</span><span><strong>Geração 3</strong><small>Em desenvolvimento · indisponível</small></span><span class="lock-mark">—</span></button>
-              <div class="model-submenu">
+              <button class="generation-option unavailable" data-generation="G3" disabled><span class="generation-mark">G3</span><span><strong>Geração 3</strong><small>Em desenvolvimento · indisponível</small></span><span class="lock-mark">—</span></button></div>
+              <div class="model-submenu" id="model-submenu" hidden><button class="generation-back" id="generation-back" type="button">← Todas as gerações</button>
                 <div class="popover-label">2 · ESCOLHA O MODELO DA G1</div>
                 <button class="profile-option selected" data-model="Tsukuyomi"><span class="profile-symbol tsukuyomi"></span><span><strong>Tsukuyomi</strong><small>Agente único · perfil de referência</small></span><span class="check">✓</span></button>
                 <button class="profile-option" data-model="Apollo"><span class="profile-symbol apollo"></span><span><strong>Apollo</strong><small>Perfil orientado à velocidade</small></span><span class="check">✓</span></button>
