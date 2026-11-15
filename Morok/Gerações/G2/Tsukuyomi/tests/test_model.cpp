@@ -108,15 +108,15 @@ int main() {
 
     // A resposta anterior precisa influenciar a previsão: pergunta e último
     // byte iguais, mas histórico de resposta diferente, devem gerar estados distintos.
-    const std::string history_a = "U: Q\\nIA:ab";
-    const std::string history_b = "U: Q\\nIA:zb";
+    const std::string history_a = "U: Q\nIA:ab";
+    const std::string history_b = "U: Q\nIA:zb";
     const std::vector<std::uint8_t> history_bytes_a(history_a.begin(), history_a.end());
     const std::vector<std::uint8_t> history_bytes_b(history_b.begin(), history_b.end());
     assert(forward(model, history_bytes_a).hidden !=
            forward(model, history_bytes_b).hidden);
 
     // O gradiente da projeção contextual inclui o byte anterior da resposta.
-    const std::string history_target = "U: Q\\nIA:abc";
+    const std::string history_target = "U: Q\nIA:abc";
     const std::vector<std::uint8_t> history_target_bytes(
         history_target.begin(), history_target.end());
     const std::size_t history_target_index = history_target_bytes.size() - 1;
