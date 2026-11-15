@@ -78,9 +78,9 @@ void run_profile(const char* name, const morok::model::G1Parameters& parameters,
             const auto normalized_answer = normalize(answer);
             const bool correct = !expected.empty() &&
                 normalized_answer.find(expected) != std::string::npos;
-            output << name << '\\t' << question.id << '\\t' << attempt << '\\t'
-                   << (correct ? "correct" : "incorrect") << '\\t'
-                   << latency_ms << '\\t' << answer << '\\n';
+            output << name << '\t' << question.id << '\t' << attempt << '\t'
+                   << (correct ? "correct" : "incorrect") << '\t'
+                   << latency_ms << '\t' << answer << '\n';
             if (!output) throw std::runtime_error("failed writing evaluation attempt");
         }
     }
