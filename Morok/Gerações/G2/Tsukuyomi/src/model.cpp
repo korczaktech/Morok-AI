@@ -37,8 +37,12 @@ struct Cache {
     std::array<float, kHiddenSize> hidden{};
     std::array<float, kVocabularySize> probabilities{};
     std::array<float, kVocabularySize> logits{};
-    std::array<float, kContextSize> context_features{};
+    std::array<float, kContextSize * kHiddenSize> context_features{};
+    std::array<std::size_t, kContextSize> context_counts{};
+    std::size_t question_begin{0};
+    std::size_t question_end{0};
     std::size_t current_byte{0};
+    bool has_question_context{false};
     bool has_current{false};
     bool at_start{false};
 };
@@ -78,21 +82,29 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
     }
 
     if (question_begin < question_end) {
-        std::array<std::size_t, kContextSize> counts{};
+        cache.has_question_context = true;
+        cache.question_begin = question_begin;
+        cache.question_end = question_end;
+        // Cada byte contribui com seu embedding compartilhado; as 13 faixas
+        // preservam identidade lexical e posição aproximada sem novos parâmetros.
         for (std::size_t position = question_begin; position < question_end; ++position) {
             const std::size_t bucket = (question_end - 1 - position) % kContextSize;
-            const float feature =
-                (static_cast<float>(context[position]) - 127.5F) / 127.5F;
-            cache.context_features[bucket] += feature;
-            ++counts[bucket];
+            ++cache.context_counts[bucket];
+            const auto base = kEmbeddingOffset +
+                static_cast<std::size_t>(context[position]) * kHiddenSize;
+            for (std::size_t h = 0; h < kHiddenSize; ++h)
+                cache.context_features[bucket * kHiddenSize + h] += at(model, base + h);
         }
         for (std::size_t j = 0; j < kContextSize; ++j) {
-            if (counts[j] != 0)
-                cache.context_features[j] /= static_cast<float>(counts[j]);
-            for (std::size_t h = 0; h < kHiddenSize; ++h) {
-                cache.input[h] += cache.context_features[j] *
-                    at(model, kContextWeightOffset + j * kHiddenSize + h);
+            if (cache.context_counts[j] != 0) {
+                const float inverse_count = 1.0F /
+                    static_cast<float>(cache.context_counts[j]);
+                for (std::size_t h = 0; h < kHiddenSize; ++h)
+                    cache.context_features[j * kHiddenSize + h] *= inverse_count;
             }
+            for (std::size_t h = 0; h < kHiddenSize; ++h)
+                cache.input[h] += cache.context_features[j * kHiddenSize + h] *
+                    at(model, kContextWeightOffset + j * kHiddenSize + h);
         }
     } else {
         const std::size_t available = context.empty() ? 0 :
@@ -100,8 +112,8 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
         for (std::size_t j = 0; j < available; ++j) {
             const auto byte = context[context.size() - 2 - j];
             const float feature = (static_cast<float>(byte) - 127.5F) / 127.5F;
-            cache.context_features[j] = feature;
             for (std::size_t h = 0; h < kHiddenSize; ++h) {
+                cache.context_features[j * kHiddenSize + h] = feature;
                 cache.input[h] += feature *
                     at(model, kContextWeightOffset + j * kHiddenSize + h);
             }
@@ -335,7 +347,23 @@ bool accumulate_target_gradient(const Model& model,
     for (std::size_t j = 0; j < kContextSize; ++j) {
         for (std::size_t h = 0; h < kHiddenSize; ++h)
             gradient[kContextWeightOffset + j * kHiddenSize + h] +=
-                pre_gradient[h] * cache.context_features[j];
+                pre_gradient[h] * cache.context_features[j * kHiddenSize + h];
+    }
+    if (cache.has_question_context) {
+        for (std::size_t position = cache.question_begin;
+             position < cache.question_end; ++position) {
+            const std::size_t bucket =
+                (cache.question_end - 1 - position) % kContextSize;
+            const auto base = kEmbeddingOffset +
+                static_cast<std::size_t>(bytes[position]) * kHiddenSize;
+            const float inverse_count = 1.0F /
+                static_cast<float>(cache.context_counts[bucket]);
+            for (std::size_t h = 0; h < kHiddenSize; ++h) {
+                const auto weight = at(model,
+                    kContextWeightOffset + bucket * kHiddenSize + h);
+                gradient[base + h] += input_gradient[h] * weight * inverse_count;
+            }
+        }
     }
     return true;
 }
