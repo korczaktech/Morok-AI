@@ -138,7 +138,7 @@ async function createToken(account) {
   }));
   const unsigned = header + "." + payload;
   const signature = crypto.createHmac("sha256", JWT_SECRET).update(unsigned).digest("base64url");
-  await sessions.insertOne({ jti, accountId: account.accountId, createdAt: new Date(), expiresAt });
+  await sessions.insertOne({ jti, accountId: account.id, createdAt: new Date(), expiresAt });
   return unsigned + "." + signature;
 }
 
