@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - "G3/**"
+      - "Gerações/G3/**"
       - "MODELOS.md"
       - ".github/workflows/g3.yml"
   pull_request:
     paths:
-      - "G3/**"
+      - "Gerações/G3/**"
       - "MODELOS.md"
       - ".github/workflows/g3.yml"
   workflow_dispatch:
@@ -36,12 +36,12 @@ jobs:
           import re
           import sys
 
-          root = Path("G3")
+          root = Path("Gerações/G3")
           profiles = ("Mokosh", "Tsukuyomi", "Artemis", "Apollo")
           errors = []
 
           if not (root / "README.md").is_file():
-              errors.append("G3/README.md is missing")
+              errors.append("Gerações/G3/README.md is missing")
 
           for profile in profiles:
               readme = root / profile / "README.md"
@@ -55,7 +55,7 @@ jobs:
           forbidden = re.compile(r"morok::g[12]::|morok/g[12]/|G[12]/")
           for path in source_files:
               if forbidden.search(path.read_text(encoding="utf-8")):
-                  errors.append(f"{path} imports or references a private G1/G2 API")
+                  errors.append(f"{path} imports or references a private Gerações/G1/G2 API")
 
           if errors:
               print("\n".join(f"- {error}" for error in errors), file=sys.stderr)
