@@ -1,6 +1,8 @@
 name: Treinamento — G2
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       tsukuyomi:
@@ -12,12 +14,12 @@ on:
         description: "Épocas por ciclo (passagens completas pelo corpus)"
         type: number
         required: true
-        default: 10
+        default: 200
       tentativas:
         description: "Quantidade de ciclos quando o treinamento contínuo estiver desligado"
         type: number
         required: true
-        default: 1
+        default: 10
       treinamento_continuo:
         description: "Continuar até obter 10 ciclos consecutivos com todas as respostas corretas"
         type: boolean
@@ -33,7 +35,7 @@ concurrency:
 
 jobs:
   tsukuyomi:
-    if: ${{ inputs.tsukuyomi }}
+    if: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -86,9 +88,9 @@ jobs:
       - name: Executar treinamento cíclico e responder todas as perguntas
         working-directory: Morok
         env:
-          EPOCAS: ${{ inputs.epocas }}
-          TENTATIVAS: ${{ inputs.tentativas }}
-          TREINAMENTO_CONTINUO: ${{ inputs.treinamento_continuo }}
+          EPOCAS: ${{ inputs.epocas || 200 }}
+          TENTATIVAS: ${{ inputs.tentativas || 10 }}
+          TREINAMENTO_CONTINUO: ${{ inputs.treinamento_continuo || false }}
         run: |
           CONTINUO=0
           if [ "$TREINAMENTO_CONTINUO" = "true" ]; then CONTINUO=1; fi
@@ -123,7 +125,7 @@ jobs:
           retention-days: 30
 
   nenhum-modelo-selecionado:
-    if: ${{ !inputs.tsukuyomi }}
+    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.tsukuyomi }}
     runs-on: ubuntu-24.04
     steps:
       - name: Informar seleção vazia
