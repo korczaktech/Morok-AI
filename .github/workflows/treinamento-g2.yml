@@ -1,0 +1,105 @@
+name: Treinamento — G2
+
+on:
+  workflow_dispatch:
+    inputs:
+      tsukuyomi:
+        description: "Treinar o Tsukuyomi"
+        type: boolean
+        required: true
+        default: true
+      epocas:
+        description: "Épocas por ciclo (passagens completas pelo corpus)"
+        type: number
+        required: true
+        default: 10
+      tentativas:
+        description: "Ciclos de resposta (cada ciclo responde a todas as perguntas)"
+        type: number
+        required: true
+        default: 1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: treinamento-g2-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  tsukuyomi:
+    if: ${{ inputs.tsukuyomi }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validar parâmetros
+        env:
+          EPOCAS: ${{ inputs.epocas }}
+          TENTATIVAS: ${{ inputs.tentativas }}
+        run: |
+          python3 - <<'PY'
+          import os
+          for name in ("EPOCAS", "TENTATIVAS"):
+              value = int(os.environ[name])
+              if value < 1:
+                  raise SystemExit(f"{name} precisa ser maior que zero.")
+          PY
+
+      - name: Instalar dependências
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build libsqlite3-dev
+
+      - name: Configurar
+        working-directory: Morok
+        run: >-
+          cmake -S . -B build/g2 -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DMOROK_BUILD_TESTS=ON
+          -DMOROK_BUILD_APPS=ON
+
+      - name: Compilar Tsukuyomi G2
+        working-directory: Morok
+        run: >-
+          cmake --build build/g2 --parallel 2
+          --target morok_g2_tsukuyomi
+          morok_g2_tsukuyomi_train
+          morok_g2_tsukuyomi_generate
+          morok_test_g2_tsukuyomi
+
+      - name: Testar Tsukuyomi G2
+        working-directory: Morok
+        run: ctest --test-dir build/g2 -R "g2.tsukuyomi.model|architecture.generation_isolation" --output-on-failure
+
+      - name: Executar treinamento cíclico e responder todas as perguntas
+        working-directory: Morok
+        env:
+          EPOCAS: ${{ inputs.epocas }}
+          TENTATIVAS: ${{ inputs.tentativas }}
+        run: |
+          python3 "Gerações/G2/Tsukuyomi/scripts/treinamento_ciclico.py" \
+            build/g2/morok-g2-tsukuyomi-train \
+            build/g2/morok-g2-tsukuyomi-generate \
+            "Gerações/G2/Tsukuyomi/data/treinamento-inicial.txt" \
+            "$EPOCAS" "$TENTATIVAS"
+
+      - name: Publicar checkpoint e respostas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsukuyomi-g2-treinamento-${{ github.run_id }}
+          path: |
+            Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
+            Morok/build/g2/respostas-tsukuyomi.md
+          if-no-files-found: warn
+          retention-days: 30
+
+  nenhum-modelo-selecionado:
+    if: ${{ !inputs.tsukuyomi }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Informar seleção vazia
+        run: echo "Nenhum modelo G2 foi selecionado para treinamento."
