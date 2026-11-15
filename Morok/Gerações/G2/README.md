@@ -1,9 +1,16 @@
 # G2
 
-A segunda geração organiza três perfis de modelo:
+A segunda geração organiza três perfis de modelo, com orçamentos definidos:
 
-- **Apollo:** modelo comum, equilibrado para uso geral.
-- **Tsukuyomi:** modelo mais avançado, destinado a tarefas complexas e ao máximo de capacidade.
-- **Mokosh:** modelo rápido, otimizado para baixa latência e menor custo computacional.
+| Modelo | Perfil | Parâmetros |
+|---|---|---:|
+| **Tsukuyomi** | Mais avançado | 10.000 |
+| **Apollo** | Comum / uso geral | 5.000 |
+| **Mokosh** | Rápido | 2.000 |
+| **Total** | | **17.000** |
 
-Essas são as especificações funcionais gerais. Arquiteturas, parâmetros, treinamento e metas quantitativas serão definidos e validados em suas documentações próprias.
+- **Tsukuyomi:** prioriza capacidade e tarefas complexas.
+- **Apollo:** busca equilíbrio para uso geral.
+- **Mokosh:** prioriza velocidade, baixa latência e menor custo computacional.
+
+As quantidades são especificações de projeto, não parâmetros já implementados ou treinados. A arquitetura e a distribuição dos parâmetros serão definidas em cada modelo.
