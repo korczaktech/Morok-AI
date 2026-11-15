@@ -28,7 +28,9 @@ int main(int argc,char** argv) {
                  <<"\nexpert_a_resumed="<<(r.expert_a.resumed?"true":"false")
                  <<"\nexpert_b_resumed="<<(r.expert_b.resumed?"true":"false")
                  <<"\nexpert_a_single_document_evaluation="<<(r.expert_a.single_document_evaluation?"true":"false")
-                 <<"\nexpert_b_single_document_evaluation="<<(r.expert_b.single_document_evaluation?"true":"false")<<"\n";
+                 <<"\nexpert_b_single_document_evaluation="<<(r.expert_b.single_document_evaluation?"true":"false")
+                 <<"\nexpert_a_training_data_evaluation="<<(r.expert_a.training_data_evaluation?"true":"false")
+                 <<"\nexpert_b_training_data_evaluation="<<(r.expert_b.training_data_evaluation?"true":"false")<<"\n";
         return 0;
     } catch(const std::exception& e){std::cerr<<"morok-train-g2: "<<e.what()<<'\n';return 1;}
 }
