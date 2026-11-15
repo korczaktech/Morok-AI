@@ -10,10 +10,12 @@ const DATABASE = process.env.MONGODB_DATABASE || "Contas";
 const APP_DATABASE = process.env.MONGODB_APP_DATABASE || "Morok-AI";
 const COLLECTION = process.env.MONGODB_COLLECTION || "morok_accounts";
 const JWT_SECRET = process.env.JWT_SECRET;
-const ALLOWED_ORIGINS = new Set(
-  (process.env.CORS_ORIGINS || "https://korczaktech.github.io")
-    .split(",").map((value) => value.trim()).filter(Boolean)
-);
+const ALLOWED_ORIGINS = new Set([
+  ...((process.env.CORS_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean)),
+  "https://morokai.korczaktech.com.br",
+  "https://www.morokai.korczaktech.com.br",
+  "https://korczaktech.github.io"
+]);
 
 if (!MONGODB_URI || !JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error("MONGODB_URI e JWT_SECRET (mínimo 32 caracteres) são obrigatórios.");
