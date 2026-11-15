@@ -112,7 +112,7 @@ jobs:
               raise SystemExit(0)
 
           with results.open(encoding="utf-8", newline="") as stream:
-              rows = list(csv.DictReader(stream, delimiter="\\t"))
+              rows = list(csv.DictReader(stream, delimiter="\t"))
 
           expected = {(profile, qid) for profile in profiles for qid in questions}
           actual = {(row["profile"], row["question_id"]) for row in rows}
@@ -125,8 +125,8 @@ jobs:
           def table(headers, body):
               lines = ["| " + " | ".join(headers) + " |",
                        "| " + " | ".join("---" for _ in headers) + " |"]
-              lines.extend("| " + " | ".join(str(cell).replace("|", "\\\\|").replace("\\n", " ")) + " |" for cell in body)
-              return "\\n".join(lines) + "\\n"
+              lines.extend("| " + " | ".join(str(cell).replace("|", "\\|").replace("\n", " ")) + " |" for cell in body)
+              return "\n".join(lines) + "\n"
 
           for row in rows:
               row["latency_ms"] = float(row["latency_ms"])
@@ -161,7 +161,7 @@ jobs:
 
                   # Annotations are individual messages; Markdown tables do not render in annotations.
                   level = "notice" if row["correct"] else "warning"
-                  safe = answer.replace("%", "%25").replace("\\r", "%0D").replace("\\n", "%0A").replace(":", "%3A").replace(",", "%2C")
+                  safe = answer.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A").replace(":", "%3A").replace(",", "%2C")
                   print(f"::{level} title={profile} - {label}::{verdict}; resposta: {safe}; latência: {row['latency_ms']:.3f} ms")
 
           report = [
@@ -178,7 +178,7 @@ jobs:
               "## Avaliação individual de cada resposta",
               table(["Modelo", "Pergunta", "Resposta", "Estado", "Tempo"], detailed),
           ]
-          rendered = "\\n".join(report) + "\\n"
+          rendered = "\n".join(report) + "\n"
           if summary_path:
               with open(summary_path, "a", encoding="utf-8") as summary:
                   summary.write(rendered)
