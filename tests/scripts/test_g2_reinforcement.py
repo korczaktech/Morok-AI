@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MODULE = runpy.run_path(str(ROOT / "scripts" / "run-g2-reinforcement.py"))
 grade = MODULE["grade"]
+select_questions = MODULE["select_questions"]
 
 
 class G2ReinforcementTests(unittest.TestCase):
@@ -17,6 +18,17 @@ class G2ReinforcementTests(unittest.TestCase):
     def test_rejects_negation_and_wrong_concept(self):
         self.assertEqual(grade("sky_is_blue", "Não, o céu não é azul.")[0:2], ("incorrect", -1))
         self.assertEqual(grade("mountains_high_or_low", "As montanhas são baixas.")[0:2], ("incorrect", -1))
+
+    def test_question_selection_keeps_database_order_and_rejects_empty_or_unknown(self):
+        questions = [{"id": "sky_is_blue"}, {"id": "grass_color"}, {"id": "mountains_high_or_low"}]
+        self.assertEqual([q["id"] for q in select_questions(questions, ["grass_color", "sky_is_blue"])],
+                         ["sky_is_blue", "grass_color"])
+        with self.assertRaises(ValueError):
+            select_questions(questions, [])
+        with self.assertRaises(ValueError):
+            select_questions(questions, ["unknown"])
+        with self.assertRaises(ValueError):
+            select_questions(questions, ["sky_is_blue", "sky_is_blue"])
 
     def test_database_is_isolated_and_has_2000_parameter_policy(self):
         db = json.loads(
