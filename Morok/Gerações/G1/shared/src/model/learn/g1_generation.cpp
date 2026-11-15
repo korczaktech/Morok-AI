@@ -94,6 +94,7 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
     morok::lang::rlah::Segmenter rlah_segmenter(rlah_config);
 
     bool stopped_by_eos = false;
+    std::array<double, 256> rlah_bias_cache{};
     for (std::size_t position = 0; position < config.max_new_bytes; ++position) {
         if (generated.size() >= config.min_new_bytes && utf8.remaining == 0) {
             std::size_t bucket = 0;
@@ -122,8 +123,9 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
         std::vector<Candidate> candidates;
         candidates.reserve(256);
 
-        std::array<double, 256> rlah_bias{};
+        if (config.rlah_bias_strength <= 0.0) rlah_bias_cache.fill(0.0);
         if (config.rlah_bias_strength > 0.0 && position % 8U == 0U) {
+            rlah_bias_cache.fill(0.0);
             std::vector<std::uint8_t> context;
             const auto prompt_bytes = prompt.string();
             constexpr std::size_t context_limit = 4096;
@@ -148,8 +150,8 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
                                    segment.bytes.begin() + static_cast<std::ptrdiff_t>(prefix_size),
                                    context.end() - static_cast<std::ptrdiff_t>(prefix_size))) {
                         const auto next_byte = segment.bytes.back();
-                        rlah_bias[next_byte] = std::max(
-                            rlah_bias[next_byte],
+                        rlah_bias_cache[next_byte] = std::max(
+                            rlah_bias_cache[next_byte],
                             static_cast<double>(std::clamp(segment.utility, 0.0F, 1.0F)));
                     }
                 }
@@ -181,7 +183,7 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
                         adjusted_loss += config.repetition_penalty;
                 }
             }
-            adjusted_loss -= config.rlah_bias_strength * rlah_bias[byte];
+            adjusted_loss -= config.rlah_bias_strength * rlah_bias_cache[byte];
             candidates.push_back(Candidate{byte, adjusted_loss, candidate_state});
         }
 
