@@ -488,8 +488,10 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
 
     for (std::size_t epoch = 0; epoch < config.epochs; ++epoch) {
         std::uint64_t epoch_targets = 0;
-        // Embaralha a ordem das atualizações, nunca o texto ou o contexto causal.
-        // A semente derivada do Adam mantém a retomada determinística.
+        // Reinicia a ordem canônica antes do shuffle para equivalência entre
+        // treinamento contínuo e retomada em checkpoints.
+        std::sort(target_order.begin(), target_order.end());
+        // Embaralha as atualizações, nunca o texto nem o contexto causal.
         std::mt19937_64 shuffle_rng(
             config.seed ^ (state.step + 0x9E3779B97F4A7C15ULL));
         std::shuffle(target_order.begin(), target_order.end(), shuffle_rng);
