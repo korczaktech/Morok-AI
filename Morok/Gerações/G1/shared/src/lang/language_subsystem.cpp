@@ -282,7 +282,7 @@ common::Status LanguageSubsystem::observe(
     try {
         auto candidate_messages = session_messages_.at(key);
         candidate_messages.push_back(
-            ConversationMessage{ConversationRole::user, normalized, detected});
+            ConversationMessage{ConversationRole::user, normalized, detected, tokenize_text(normalized)});
         auto serialized = serialize_conversation(candidate_messages);
         if (serialized.size() > language_config_.max_context_bytes) {
             return common::Status::failure(common::Error::make(
@@ -334,7 +334,7 @@ common::Result<LanguageGeneration> LanguageSubsystem::generate(
         auto candidate_messages = session_messages_.at(key);
         candidate_messages.push_back(
             ConversationMessage{ConversationRole::assistant, std::move(answer),
-                                session_languages_.at(key)});
+                                session_languages_.at(key), tokenize_text(generated.continuation.view())});
         auto serialized = serialize_conversation(candidate_messages);
         if (serialized.size() > language_config_.max_context_bytes) {
             return common::Result<LanguageGeneration>::failure(common::Error::make(
@@ -344,10 +344,15 @@ common::Result<LanguageGeneration> LanguageSubsystem::generate(
         }
         session_messages_.at(key) = std::move(candidate_messages);
         session_contexts_.at(key) = std::move(serialized);
+        const std::size_t input_token_count =
+            session_messages_.at(key).size() >= 2U
+                ? session_messages_.at(key)[session_messages_.at(key).size() - 2U].tokens.size()
+                : 0U;
         LanguageGeneration result{
             generated.continuation, generated.generated_bytes,
             generated.candidate_evaluations, generated.reached_byte_limit,
-            session_languages_.at(key)};
+            session_languages_.at(key), input_token_count,
+            tokenize_text(generated.continuation.view()).size()};
         return common::Result<LanguageGeneration>::success(std::move(result));
     } catch (const std::bad_alloc&) {
         return common::Result<LanguageGeneration>::failure(common::Error::make(
