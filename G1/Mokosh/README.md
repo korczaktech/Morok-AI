@@ -1,9 +1,7 @@
 # Mokosh — G1
 
-Prioriza eficiência e baixo consumo de memória, processamento e energia.
+Perfil orientado a eficiência e baixo consumo.
 
-Implementação exclusiva de Mokosh na geração G1. Não deve importar código privado de outro modelo. Dependências compartilhadas devem permanecer nas bibliotecas públicas da raiz.
+**Implementado:** política de geração própria, limites de saída conservadores, penalidade de repetição, alvo CMake `Morok::G1::Mokosh` e teste isolado.
 
-**Estado:** diretório inicial de organização. A implementação será migrada após o inventário de dependências e a separação dos alvos CMake.
-
-Especificação: [MODELOS.md](../../MODELOS.md).
+Mokosh utiliza o motor-base da G1. Não importa código privado de Tsukuyomi, Artemis ou Apollo.

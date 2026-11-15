@@ -1,9 +1,7 @@
 # Tsukuyomi — G1
 
-⚫ Modelo de identidade escura/preta que opera com exatamente um agente.
+⚫ Perfil escuro que opera com exatamente um agente.
 
-Implementação exclusiva de Tsukuyomi na geração G1. Não deve importar código privado de outro modelo. Dependências compartilhadas devem permanecer nas bibliotecas públicas da raiz.
+**Implementado:** contrato com `kAgentCount = 1`, política greedy de agente único, alvo CMake `Morok::G1::Tsukuyomi` e teste isolado.
 
-**Estado:** diretório inicial de organização. A implementação será migrada após o inventário de dependências e a separação dos alvos CMake.
-
-Especificação: [MODELOS.md](../../MODELOS.md).
+Tsukuyomi utiliza o motor-base da G1 como seu único agente. Não importa código privado dos outros perfis.

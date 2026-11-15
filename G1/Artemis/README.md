@@ -1,9 +1,7 @@
 # Artemis — G1
 
-Modelo multiagente que utiliza mais de dois agentes (mínimo de três).
+Perfil multiagente que utiliza mais de dois agentes.
 
-Implementação exclusiva de Artemis na geração G1. Não deve importar código privado de outro modelo. Dependências compartilhadas devem permanecer nas bibliotecas públicas da raiz.
+**Implementado:** execução de três agentes G1 independentes, sementes separadas, alvo CMake `Morok::G1::Artemis` e teste isolado.
 
-**Estado:** diretório inicial de organização. A implementação será migrada após o inventário de dependências e a separação dos alvos CMake.
-
-Especificação: [MODELOS.md](../../MODELOS.md).
+A coordenação futura poderá combinar os relatórios dos agentes; a implementação atual executa os três e devolve seus resultados separadamente. Não importa código privado dos outros perfis.
