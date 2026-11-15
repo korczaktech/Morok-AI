@@ -30,7 +30,7 @@ class TrainingDataTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             corpus = Path(directory) / "dialogue.txt"
             corpus.write_bytes(
-                b"\\xef\\xbb\\xbf  U: pergunta\\r\\n  IA: resposta\\r\\n"
+                b"\xef\xbb\xbf  U: pergunta\r\n  IA: resposta\r\n"
             )
             self.assertEqual(training.read_dialogues(corpus), [("pergunta", "resposta")])
 
