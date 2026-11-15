@@ -56,10 +56,11 @@ Esses testes verificam a derivada da função atual em pontos representativos; n
 
 ## Configuração padrão do ciclo de treinamento
 
-- 1 época por ciclo.
-- 10 ciclos no máximo (10 épocas totais).
+- 20 épocas por tentativa.
+- 10 tentativas no máximo (200 épocas totais por execução).
 - 40 perguntas de validação por ciclo.
 - Treinamento contínuo desativado por padrão.
+- Limite total validado tanto no workflow quanto no executor: `épocas × tentativas <= 200`.
 - O workflow de push só executa treinamento quando a mensagem do commit contém `[train-g2]`; os demais pushes apenas validam e compilam.
 - O checkpoint final é restaurado do ciclo com melhor pontuação de validação, junto com os momentos Adam correspondentes.
 
