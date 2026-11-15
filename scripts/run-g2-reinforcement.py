@@ -28,21 +28,21 @@ def main():
  ap.add_argument("--checkpoint",type=Path,required=True); ap.add_argument("--database",type=Path,default=ROOT/"data/reinforcement-g2/answers.json")
  ap.add_argument("--trainer",type=Path,default=ROOT/"build/morok-train-g2"); ap.add_argument("--generator",type=Path,default=ROOT/"build/morok-generate-g2")
  ap.add_argument("--reinforcer",type=Path,default=ROOT/"build/morok-reinforce-g2"); ap.add_argument("--bootstrap-epochs",type=int,default=8)
- ap.add_argument("--attempts",type=int,default=3); ap.add_argument("--learning-rate",type=float,default=.0001)
+ ap.add_argument("--attempts",type=int,default=3); ap.add_argument("--questions",nargs="+",choices=sorted(TASK_CONCEPTS),default=list(TASK_CONCEPTS)); ap.add_argument("--learning-rate",type=float,default=.0001)
  ap.add_argument("--results-file",type=Path,default=ROOT/"artifacts/reinforcement-g2/attempt-results.txt")
  a=ap.parse_args()
- if not 1<=a.attempts<=100 or not 1<=a.bootstrap_epochs<=100:raise ValueError("attempts and bootstrap epochs must be in [1,100]")
+ if not 1<=a.attempts<=100 or not 1<=a.bootstrap_epochs<=100:raise ValueError("attempts and bootstrap epochs must be in [1,100]")\n if not a.questions or len(a.questions)!=len(set(a.questions)):raise ValueError("select at least one unique question")
  if not a.database.is_file():raise FileNotFoundError(a.database)
  db=json.loads(a.database.read_text(encoding="utf-8"))
  if db.get("schema_version")!=1 or {q["id"] for q in db["questions"]}!=set(TASK_CONCEPTS):raise ValueError("invalid G2 feedback database")
  a.checkpoint.parent.mkdir(parents=True,exist_ok=True)
  if not Path(str(a.checkpoint)+".expert-a").is_file() or not Path(str(a.checkpoint)+".expert-b").is_file():
   run([str(a.trainer),str(ROOT/"tests/fixtures/g2-single-document"),str(a.checkpoint),str(a.bootstrap_epochs),"42"])
- run_id=os.environ.get("GITHUB_RUN_ID","local"); run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT","1"); results=[]
+ selected_questions=[q for q in db["questions"] if q["id"] in set(a.questions)]\n run_id=os.environ.get("GITHUB_RUN_ID","local"); run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT","1"); results=[]
  with tempfile.TemporaryDirectory(prefix="morok-g2-reinforcement-") as td:
   tmp=Path(td)
   for i in range(a.attempts):
-   q=db["questions"][i%len(db["questions"])]; prompt=tmp/"prompt.txt"; answer=tmp/"answer.txt"; prompt.write_text(q["prompt"],encoding="utf-8")
+   q=selected_questions[i%len(selected_questions)]; prompt=tmp/"prompt.txt"; answer=tmp/"answer.txt"; prompt.write_text(q["prompt"],encoding="utf-8")
    before=digest(Path(str(a.checkpoint)+".expert-a"))+digest(Path(str(a.checkpoint)+".expert-b"))
    run([str(a.generator),str(a.checkpoint),str(prompt),str(answer),"48"])
    response=answer.read_text(encoding="utf-8"); verdict,reward,reason=grade(q["id"],response); episode_no=len(db["episodes"])+1
@@ -57,7 +57,7 @@ def main():
    results.append({"attempt":i+1,"question_id":q["id"],"answer":response,"verdict":verdict,"reward":reward,"policy_update":episode["policy_update"]["status"]})
  lines=[f"{x['attempt']}. {x['answer'].replace(chr(10),' ').strip() or '[resposta vazia]'} - {'correto' if x['verdict']=='correct' else 'errado'}" for x in results]
  a.results_file.parent.mkdir(parents=True,exist_ok=True); a.results_file.write_text("\n".join(lines)+"\n",encoding="utf-8")
- report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"results":results,"totals":db["totals"],"trainable_parameters":2000}
+ report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"selected_questions":[q["id"] for q in selected_questions],"results":results,"totals":db["totals"],"trainable_parameters":2000}
  summary=os.environ.get("GITHUB_STEP_SUMMARY")
  if summary:
   with open(summary,"a",encoding="utf-8") as f:
