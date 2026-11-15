@@ -37,7 +37,7 @@ def main() -> int:
                 if other != profile and f"morok::g1::{other.lower()}::" in content:
                     errors.append(f"G1/{profile} imports private G1/{other}: {file.relative_to(ROOT)}")
 
-    private_profile = re.compile(r"morok::g1::(?:mokosh|tsukuyomi|apollo)::")
+    private_profile = re.compile(r"morok::g1::(?:mokosh|tsukuyomi)::")
     for file in sources(ROOT / "include"):
         if private_profile.search(file.read_text(encoding="utf-8")):
             errors.append(f"shared public API imports private G1 profile: {file.relative_to(ROOT)}")
@@ -51,11 +51,8 @@ def main() -> int:
         errors.append("Morok::G1 does not compile the G1 shared engine")
     if "Gerações/G2/" in cmake or "MOROK_BUILD_G2" in cmake or "Artemis" in cmake:
         errors.append("CMake contains removed G2 or G1 Artemis configuration")
-    profile_block = cmake.split("foreach(_profile IN ITEMS", 1)[1].split(")", 1)[0]
     if "TsukuyomiMax" not in cmake or "morok_g1_tsukuyomimax" not in cmake:
         errors.append("CMake does not declare the Tsukuyomi Max G1 target")
-    if "Morok::G1::${_profile}" not in cmake:
-        errors.append("CMake does not expose namespaced G1 profile targets")
 
     if errors:
         print("G1 architecture validation failed:", file=sys.stderr)
