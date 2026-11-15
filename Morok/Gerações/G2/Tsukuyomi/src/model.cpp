@@ -591,7 +591,7 @@ bool load_checkpoint(Model& model, const std::filesystem::path& path) {
     stream.read(reinterpret_cast<char*>(&count), sizeof(count));
     stream.read(reinterpret_cast<char*>(&expected_hash), sizeof(expected_hash));
     if (!stream || std::memcmp(magic, "MOROKG2T", 8) != 0 ||
-        version != kModelVersion || count != kParameterCount)
+        version != kCheckpointFormatVersion || count != kParameterCount)
         return false;
     stream.read(reinterpret_cast<char*>(candidate.parameters.data()),
                 static_cast<std::streamsize>(sizeof(float) * kParameterCount));
