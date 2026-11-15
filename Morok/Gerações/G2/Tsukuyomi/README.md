@@ -74,3 +74,4 @@ Para treinar usando esse material, a partir de Morok/:
 build/g2/morok-g2-tsukuyomi-train "Gerações/G2/Tsukuyomi/data/treinamento.txt" build/g2/tsukuyomi-inicial.ckpt 10 42
 
 O arquivo é um corpus de modelagem de linguagem, não um conjunto de pares supervisionados com rótulos separados. O modelo aprende a prever a sequência inteira de bytes, incluindo os prefixos U: e IA:; isso não garante que ele aprenda a seguir o formato de diálogo ou responder corretamente a cada pergunta. A qualidade deve ser medida em exemplos que não estejam no corpus.
+\nO executor cíclico mantém o melhor checkpoint e os momentos Adam correspondentes segundo a validação, restaura esse par antes do teste reservado e verifica métricas finitas, épocas concluídas e bytes-alvo processados em cada ciclo.\n
