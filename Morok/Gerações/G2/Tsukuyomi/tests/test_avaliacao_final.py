@@ -46,6 +46,12 @@ class FinalEvaluationTests(unittest.TestCase):
         self.assertFalse(training & validation)
         self.assertFalse(training & test)
         self.assertFalse(validation & test)
+        train_questions = {question for question, _ in training}
+        validation_questions = {question for question, _ in validation}
+        test_questions = {question for question, _ in test}
+        self.assertFalse(train_questions & validation_questions)
+        self.assertFalse(train_questions & test_questions)
+        self.assertFalse(validation_questions & test_questions)
 
     def test_corpora_keep_validation_and_test_sizes(self):
         data = SCRIPT.parents[1] / "data"
