@@ -787,3 +787,35 @@ h1 span,.welcome h1 span{
 @media(max-width:760px){
   .sidebar{height:100dvh;max-height:100dvh;overflow-y:auto;padding-bottom:max(15px,env(safe-area-inset-bottom))}
 }
+
+
+/* Original Morok SVG icon system */
+.ui-icon{display:block;width:1.2em;height:1.2em;flex:0 0 auto;overflow:visible;}
+[data-icon],.line-icon,.plus,.more,.nav-chevron,.chevron,.check,.profile-symbol,.model-glyph{display:inline-flex;align-items:center;justify-content:center;}
+.line-icon .ui-icon{width:18px;height:18px;stroke-width:1.65}
+.plus .ui-icon{width:17px;height:17px;stroke-width:1.9}
+.icon-button .ui-icon{width:17px;height:17px}
+.status-refresh .ui-icon{width:15px;height:15px}
+.more .ui-icon,.history-menu .ui-icon{width:17px;height:17px}
+.nav-chevron .ui-icon,.chevron .ui-icon{width:13px;height:13px;transition:transform .18s ease}
+.check .ui-icon{width:15px;height:15px;color:#b58ad8}
+.model-glyph .ui-icon{width:17px;height:17px;color:#c4a0e3}
+.profile-symbol .ui-icon{width:19px;height:19px}
+.brand-mark .ui-icon{width:23px;height:23px;stroke-width:1.8}
+.message-avatar .ui-icon{width:19px;height:19px}
+.message-file .ui-icon{width:14px;height:14px;vertical-align:middle;margin-right:5px;display:inline-block}
+.message-action{display:inline-flex;align-items:center;gap:6px}
+.message-action .ui-icon{width:14px;height:14px}
+.tool-button [data-icon] .ui-icon{width:16px;height:16px}
+.send-button [data-icon] .ui-icon,.send-button .ui-icon{width:18px;height:18px}
+.suggestion>span .ui-icon{width:19px;height:19px}
+.welcome-orb{display:grid;place-items:center}
+.welcome-orb .ui-icon{width:54px;height:54px;stroke:#a77bcf;stroke-width:1.15}
+.generation-back{display:inline-flex;align-items:center;gap:7px}
+.generation-back .ui-icon{width:15px;height:15px}
+.upload-card{display:flex;align-items:center;justify-content:center;gap:9px}
+.upload-card .ui-icon{width:20px;height:20px}
+.task-row .icon-button .ui-icon{width:14px;height:14px}
+.site-select-trigger::after{content:none}
+.site-select-trigger .ui-icon{width:14px;height:14px;margin-left:12px;color:var(--muted)}
+:root[data-theme="light"] .ui-icon{color:inherit}
