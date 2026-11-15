@@ -165,6 +165,10 @@ jobs:
               "sky_is_blue": "O céu é azul?",
               "grass_color": "Qual a cor da grama?",
               "mountains_high_or_low": "As montanhas são altas?",
+              "greeting": "Saudação",
+              "english_sky": "O céu é azul? (inglês)",
+              "spanish_sky": "O céu é azul? (espanhol)",
+              "multi_turn": "Diálogo com múltiplos turnos",
           }
           if not results.is_file():
               message = "Nenhuma avaliação foi produzida; verifique a etapa de treinamento."
