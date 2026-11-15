@@ -223,7 +223,7 @@ std::size_t recurrent_sequence_begin(std::span<const std::uint8_t> context,
     if (!has_question) return 0;
     std::size_t begin = context.size();
     for (std::size_t i = 0; i + 2 < context.size(); ++i) {
-        const bool line_start = i == 0 || context[i - 1] == '\\n' || context[i - 1] == '\\r';
+        const bool line_start = i == 0 || context[i - 1] == '\n' || context[i - 1] == '\r';
         if (line_start && context[i] == 'I' && context[i + 1] == 'A' && context[i + 2] == ':')
             begin = i + 3;
     }
