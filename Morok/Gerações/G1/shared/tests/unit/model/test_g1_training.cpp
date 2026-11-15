@@ -43,8 +43,12 @@ void incremental_state_continuity(){
   req(std::abs(first.final_state.fast[i]-expected.fast[i])<1e-6F,"fast state mismatch at BPTT boundary");
   req(std::abs(first.final_state.slow[i]-expected.slow[i])<1e-6F,"slow state mismatch at BPTT boundary");
  }
- auto second=morok::model::compute_g1_bptt_gradients(p,std::span<const std::uint8_t>(bytes.data()+8,9),8,first.final_state);
- for(std::size_t i=8;i<16;++i)morok::model::advance_g1_state(p,expected,bytes[i]);
+ auto second=morok::model::compute_g1_bptt_gradients(p,std::span<const std::uint8_t>(bytes.data()+8,9),8,first.final_state,8,bytes[7]);
+ for(std::size_t i=8;i<16;++i){
+  const bool separator=morok::model::is_g1_token_separator(bytes[i]);
+  const bool token_start=!separator&&morok::model::is_g1_token_separator(bytes[i-1]);
+  morok::model::advance_g1_state(p,expected,bytes[i],token_start,separator);
+ }
  for(std::size_t i=0;i<11;++i){
   req(std::abs(second.final_state.fast[i]-expected.fast[i])<1e-6F,"overlapped fast state mismatch");
   req(std::abs(second.final_state.slow[i]-expected.slow[i])<1e-6F,"overlapped slow state mismatch");
