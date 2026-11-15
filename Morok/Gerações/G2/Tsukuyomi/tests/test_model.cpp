@@ -124,7 +124,7 @@ int main() {
         for (std::size_t h = 0; h < kHiddenSize; ++h)
             memory_model.parameters[9920 + h] = 1.0F;
         memory_model.parameters[9632] = 0.2F;
-        memory_model.parameters[8192] = 1.0F;
+        memory_model.parameters[8192] = 8.0F;
         memory_model.parameters[static_cast<std::size_t>('a') * kHiddenSize] = 0.8F;
         memory_model.parameters[static_cast<std::size_t>('z') * kHiddenSize] = -0.8F;
         std::string memory_a = "U: Q\\nIA:a";
