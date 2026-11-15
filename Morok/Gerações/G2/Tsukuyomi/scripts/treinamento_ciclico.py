@@ -10,6 +10,7 @@ import time
 import unicodedata
 
 MAX_RESPONSE_BYTES = 160
+MAX_VALIDATION_QUESTIONS = 40
 
 
 def normalize(text: str) -> list[str]:
@@ -84,10 +85,10 @@ def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
 
 
 def main() -> int:
-    if len(sys.argv) != 9:
+    if len(sys.argv) != 10:
         print(
             "Uso: treinamento_ciclico.py <treinador> <gerador> <treino> "
-            "<validacao> <teste> <epocas> <tentativas> <continuo:0|1>",
+            "<validacao> <teste> <epocas> <tentativas> <continuo:0|1> <questoes:1..40>",
             file=sys.stderr,
         )
         return 2
@@ -97,11 +98,20 @@ def main() -> int:
     )
     epochs, attempts = int(sys.argv[6]), int(sys.argv[7])
     continuous = sys.argv[8] == "1"
+    question_count = int(sys.argv[9])
     if epochs < 1 or attempts < 1:
         raise ValueError("Épocas e tentativas precisam ser maiores que zero.")
+    if not 1 <= question_count <= MAX_VALIDATION_QUESTIONS:
+        raise ValueError("A quantidade de questões precisa estar entre 1 e 40.")
 
     train_dialogues = read_dialogues(train_corpus)
-    validation = read_dialogues(validation_corpus)
+    validation_pool = read_dialogues(validation_corpus)
+    if len(validation_pool) != MAX_VALIDATION_QUESTIONS:
+        raise RuntimeError(
+            f"O banco de validação precisa conter exatamente 40 questões; "
+            f"foram encontradas {len(validation_pool)}."
+        )
+    validation = validation_pool[:question_count]
     test = read_dialogues(test_corpus)
     checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
     output = Path("build/g2/respostas-tsukuyomi.md")
@@ -113,7 +123,8 @@ def main() -> int:
     with output.open("w", encoding="utf-8") as report:
         report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
         report.write(f"- Diálogos de treinamento: {len(train_dialogues)}\n")
-        report.write(f"- Perguntas de validação: {len(validation)}\n")
+        report.write(f"- Banco de validação disponível: {len(validation_pool)}\n")
+        report.write(f"- Questões selecionadas: {question_count}\n")
         report.write(f"- Perguntas de teste reservado: {len(test)}\n")
         report.write(f"- Épocas por ciclo: {epochs}\n")
         report.write(f"- Modo contínuo: {'ativado' if continuous else 'desativado'}\n")
