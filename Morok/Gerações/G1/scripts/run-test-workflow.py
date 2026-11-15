@@ -35,17 +35,28 @@ if question not in valid_questions:
 
 completed_path = state / "completed.json"
 epochs_path = state / "epochs.json"
+streaks_path = state / "streaks.json"
 results_path = state / "history.tsv"
 completed = json.loads(completed_path.read_text(encoding="utf-8")) if completed_path.exists() else {}
 epochs = json.loads(epochs_path.read_text(encoding="utf-8")) if epochs_path.exists() else {}
-if not isinstance(completed, dict) or not isinstance(epochs, dict):
-    raise RuntimeError("Estado de treinamento inválido: completed.json/epochs.json devem conter objetos JSON.")
+streaks = json.loads(streaks_path.read_text(encoding="utf-8")) if streaks_path.exists() else {}
+if not isinstance(completed, dict) or not isinstance(epochs, dict) or not isinstance(streaks, dict):
+    raise RuntimeError("Estado de treinamento inválido: completed.json, epochs.json e streaks.json devem conter objetos JSON.")
+# Estados antigos aprovavam com apenas um acerto. Reinicia essa aprovação
+# quando ainda não existe histórico de sequências consecutivas.
+if not streaks_path.exists():
+    for model in selected:
+        completed[model] = False
+        streaks[model] = 0
 for model in selected:
     value = epochs.get(model, 0)
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise RuntimeError(f"Contador de épocas inválido para {model}.")
     if model in completed and not isinstance(completed[model], bool):
         raise RuntimeError(f"Estado de conclusão inválido para {model}.")
+    streak = streaks.get(model, 0)
+    if isinstance(streak, bool) or not isinstance(streak, int) or not 0 <= streak <= 100:
+        raise RuntimeError(f"Contador de acertos consecutivos inválido para {model}.")
 if results_path.exists() and results_path.stat().st_size:
     with results_path.open(encoding="utf-8", newline="") as stream:
         reader = csv.DictReader(stream, delimiter="\t")
@@ -143,6 +154,8 @@ while not all(completed.get(model, False) for model in selected):
             raise RuntimeError(f"{model}: esperado exatamente 100 resultados; recebidos {len(rows)}.")
         required = {"profile", "question_id", "attempt", "verdict", "latency_ms", "answer"}
         correct_attempts = 0
+        current_streak = int(streaks.get(model, 0))
+        reached_target = False
         for expected_attempt, row in enumerate(rows, start=1):
             if not required.issubset(row):
                 raise RuntimeError(f"{model}: resultado TSV sem as colunas obrigatórias.")
@@ -155,13 +168,22 @@ while not all(completed.get(model, False) for model in selected):
                 raise RuntimeError(f"{model}: latência ausente na tentativa {expected_attempt}.")
             if row["verdict"] == "correct":
                 correct_attempts += 1
+                if not reached_target:
+                    current_streak += 1
+                    if current_streak >= 100:
+                        current_streak = 100
+                        reached_target = True
+            elif not reached_target:
+                current_streak = 0
 
-        is_correct = correct_attempts > 0
+        is_correct = reached_target
 
         # Persiste os contadores e o estado de conclusão antes do histórico legível.
         epochs[model] = epoch
         completed[model] = is_correct
+        streaks[model] = current_streak
         save_json_atomic(epochs_path, epochs)
+        save_json_atomic(streaks_path, streaks)
         save_json_atomic(completed_path, completed)
 
         header_needed = not results_path.exists() or results_path.stat().st_size == 0
@@ -174,8 +196,9 @@ while not all(completed.get(model, False) for model in selected):
                                  row["verdict"], row["latency_ms"], row["answer"]])
             stream.flush()
             os.fsync(stream.fileno())
-        print(f"[{model}] épocas={epoch}; acertos={correct_attempts}/100; "
-              f"estado={'APROVADO' if is_correct else 'não aprovado'}; "
+        print(f"[{model}] épocas={epoch}; acertos no lote={correct_attempts}/100; "
+              f"sequência atual={current_streak}/100; "
+              f"estado={'APROVADO' if is_correct else 'em treinamento'}; "
               f"última saída={rows[-1]['answer']!r}", flush=True)
 
         if all(completed.get(name, False) for name in selected):
@@ -189,6 +212,6 @@ with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
     output.write("success=" + ("true" if success else "false") + "\n")
 
 if success:
-    print("Todos os modelos selecionados produziram uma resposta considerada correta.", flush=True)
+    print("Todos os modelos selecionados acertaram 100 respostas consecutivas.", flush=True)
 else:
     print("Janela desta execução encerrada; os checkpoints serão preservados e outro ciclo será iniciado.", flush=True)
