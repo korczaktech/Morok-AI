@@ -50,8 +50,10 @@ int main() {
     TrainingState resumed_state;
     TrainingConfig one_epoch;
     one_epoch.epochs = 1;
+    one_epoch.batch_size = 4;
     TrainingConfig two_epochs;
     two_epochs.epochs = 2;
+    two_epochs.batch_size = 4;
     const auto full_report = train(uninterrupted, sample, two_epochs,
                                    &uninterrupted_state);
     const auto first_report = train(resumed, sample, one_epoch, &resumed_state);
@@ -62,7 +64,7 @@ int main() {
     assert(uninterrupted_state.first_moment == resumed_state.first_moment);
     assert(uninterrupted_state.second_moment == resumed_state.second_moment);
     assert(uninterrupted_state.step == resumed_state.step);
-    assert(resumed_state.step == sample.size() * 2);
+    assert(resumed_state.step == 4);
 
     const auto optimizer_path = std::filesystem::temp_directory_path() /
                                "morok-tsukuyomi-g2-v0.1.adam";
