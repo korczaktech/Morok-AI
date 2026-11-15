@@ -51,7 +51,7 @@ std::string answer_for(const morok::g2::tsukuyomi::Model& model,
 }
 
 int main(int argc, char** argv) {
-    const bool batch = argc == 4 && std::string(argv[1]) == "--batch";
+    const bool batch = argc >= 2 && std::string(argv[1]) == "--batch";
     if ((batch && argc != 4) || (!batch && (argc < 4 || argc > 18))) {
         std::cerr << "Uso: morok-g2-tsukuyomi-generate <checkpoint> <prompt> <max_bytes>\n"
                   << "Ou: morok-g2-tsukuyomi-generate --batch <checkpoint> <max_bytes>\n";
