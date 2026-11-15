@@ -21,7 +21,7 @@ on:
         required: true
         default: 10
       questoes:
-        description: "Quantidade de questões para a IA tentar resolver (1 a 40)"
+        description: "Questões para avaliação; com 1, seleciona uma resposta presente no treino (1 a 40)"
         type: number
         required: true
         default: 1
