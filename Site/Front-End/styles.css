@@ -834,3 +834,89 @@ kbd [data-icon]{display:inline-flex;vertical-align:middle}
 .profile-symbol.mokosh{background:#0c1d17;box-shadow:0 0 12px #79c5a320;}
 .profile-symbol .ui-icon{width:18px;height:18px;}
 .welcome-orb .ui-icon{width:76%;height:76%;max-width:54px;max-height:54px;}
+
+
+/* Prevent menus and dialog cards from colliding with surrounding interface */
+.dialog[open]{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  max-height:calc(100dvh - 28px);
+  overscroll-behavior:contain;
+}
+.dialog>.dialog-card{
+  min-width:0;
+  max-height:calc(100dvh - 30px);
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#43205f transparent;
+}
+.workspace-dialog[open]{
+  display:flex;
+}
+.workspace-dialog>.dialog-card{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  max-height:min(85dvh,720px);
+  overflow:hidden;
+}
+.workspace-dialog .dialog-heading{
+  flex:0 0 auto;
+}
+.workspace-dialog .workspace-page{
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:2px 5px 4px 0;
+  scrollbar-width:thin;
+  scrollbar-color:#43205f transparent;
+}
+.profile-menu{
+  position:fixed;
+  left:14px;
+  right:auto;
+  bottom:72px;
+  width:min(244px,calc(100vw - 28px));
+  max-height:calc(100dvh - 92px);
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  z-index:100;
+}
+.model-popover{
+  width:min(280px,calc(100vw - 24px));
+  max-height:calc(100dvh - 84px);
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.context-menu{
+  max-width:calc(100vw - 16px);
+  max-height:calc(100dvh - 16px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.site-select-menu{
+  max-height:min(220px,40dvh);
+  overscroll-behavior:contain;
+}
+@media(max-width:760px){
+  .profile-menu{
+    left:12px;
+    bottom:calc(72px + env(safe-area-inset-bottom));
+    width:min(254px,calc(100vw - 24px));
+    max-height:calc(100dvh - 100px - env(safe-area-inset-bottom));
+  }
+  .workspace-dialog>.dialog-card{
+    max-height:calc(100dvh - 42px);
+  }
+}
+@media(max-height:560px){
+  .dialog[open]{max-height:calc(100dvh - 16px)}
+  .dialog>.dialog-card{max-height:calc(100dvh - 18px)}
+  .profile-menu{bottom:64px;max-height:calc(100dvh - 76px)}
+}
