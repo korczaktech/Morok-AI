@@ -9,12 +9,12 @@
 - Orçamento exato: 10.000 parâmetros treináveis
 - Vocabulário: 256 valores de byte
 - Dimensão oculta: 32
-- Contexto causal: byte corrente mais pergunta completa agregada em 13 faixas posicionais
+- Contexto causal: byte corrente, pergunta agregada em 13 faixas e até 13 bytes anteriores da resposta
 - Implementação: C++20, sem pesos pré-treinados e sem dependência de modelos externos
 
 ## Arquitetura
 
-O v0.1 é um modelo neural autoregressivo de bytes com embeddings de entrada/saída compartilhados. O byte corrente é convertido em um vetor de 32 dimensões. Em prompts U:/IA:, todos os bytes da pergunta são convertidos pelos embeddings compartilhados e agregados em 13 faixas posicionais de 32 dimensões; a projeção posicional aprendida combina essas faixas. Isso preserva identidade de bytes e posição aproximada, embora ainda haja colisões dentro das faixas. A soma passa por uma projeção oculta, tangente hiperbólica e transformação afim aprendida. A cabeça de saída calcula 256 logits usando a própria matriz de embeddings, compartilhada com a entrada.
+O v0.1 é um modelo neural autoregressivo de bytes com embeddings de entrada/saída compartilhados. O byte corrente é convertido em um vetor de 32 dimensões. Em prompts U:/IA:, todos os bytes da pergunta são convertidos pelos embeddings compartilhados e agregados em 13 faixas posicionais de 32 dimensões; a projeção posicional aprendida combina essas faixas. Isso preserva identidade de bytes e posição aproximada, embora ainda haja colisões dentro das faixas. Durante a resposta, até 13 bytes anteriores da própria resposta também entram em faixas causais, usando a mesma projeção contextual. Assim, previsões deixam de depender somente do último byte: o modelo passa a receber uma janela curta da sequência que está produzindo. A soma passa por uma projeção oculta, tangente hiperbólica e transformação afim aprendida. A cabeça de saída calcula 256 logits usando a própria matriz de embeddings, compartilhada com a entrada.
 
 A previsão é causal: ao prever o byte na posição t, o modelo só recebe bytes anteriores a t. A primeira previsão usa um vetor inicial treinável. A distribuição de saída usa softmax estável e a função objetivo é entropia cruzada categórica.
 
@@ -36,7 +36,7 @@ Os offsets e a soma são verificados por asserção estática no código. O chec
 
 ## Treinamento
 
-O treinador percorre o corpus byte a byte e atualiza os parâmetros com gradientes da entropia cruzada, Adam, clipping global e weight decay. Em corpora com pares U:/IA:, o executável cria uma máscara que seleciona somente os bytes posteriores ao prefixo IA: como alvos de treinamento; os bytes da pergunta continuam disponíveis como contexto. Em arquivos sem pares de diálogo reconhecidos, todos os bytes continuam sendo alvos. Os gradientes são acumulados em mini-lotes (16 alvos por padrão) e aplicados uma vez por lote. O estado do Adam (momentos de primeira e segunda ordem e contador global de atualizações) é serializado separadamente e restaurado na retomada. O learning rate inicial é 0,001 (0,1%); o executor cíclico o reduz pela metade após cinco ciclos sem melhora de train_bpb, até 0,00005; Adam usa β1=0,9, β2=0,999 e epsilon=1e-8. O clipping limita a norma global a 1,0. O weight decay padrão é 0,00001 e atua somente em embeddings e matrizes, não em biases, escala, deslocamento ou estado inicial. O relatório expõe loss e train_bpb calculados sobre os alvos selecionados. O gradiente analítico é compartilhado entre treinamento e diagnóstico e possui testes de diferenças finitas para os principais blocos de parâmetros. A pergunta inteira participa do contexto e recebe gradientes pelos embeddings compartilhados. A agregação em 13 faixas é uma compressão com colisões, não uma memória sequencial exata. A geração não propaga gradientes através dos bytes gerados (sem BPTT). O executável limita o corpus a 512 MiB.
+O treinador percorre o corpus byte a byte e atualiza os parâmetros com gradientes da entropia cruzada, Adam, clipping global e weight decay. Em corpora com pares U:/IA:, o executável cria uma máscara que seleciona somente os bytes posteriores ao prefixo IA: como alvos de treinamento; os bytes da pergunta continuam disponíveis como contexto. Em arquivos sem pares de diálogo reconhecidos, todos os bytes continuam sendo alvos. Os gradientes são acumulados em mini-lotes (16 alvos por padrão) e aplicados uma vez por lote. O estado do Adam (momentos de primeira e segunda ordem e contador global de atualizações) é serializado separadamente e restaurado na retomada. O learning rate inicial é 0,001 (0,1%); o executor cíclico o reduz pela metade após cinco ciclos sem melhora de train_bpb, até 0,00005; Adam usa β1=0,9, β2=0,999 e epsilon=1e-8. O clipping limita a norma global a 1,0. O weight decay padrão é 0,00001 e atua somente em embeddings e matrizes, não em biases, escala, deslocamento ou estado inicial. O relatório expõe loss e train_bpb calculados sobre os alvos selecionados. O gradiente analítico é compartilhado entre treinamento e diagnóstico e possui testes de diferenças finitas para os principais blocos de parâmetros. A pergunta inteira participa do contexto e recebe gradientes pelos embeddings compartilhados. Os bytes anteriores da resposta são fornecidos como contexto causal local e atualizam a projeção contextual. A agregação da pergunta em 13 faixas é uma compressão com colisões, não uma memória sequencial exata. A geração não propaga gradientes através dos bytes gerados (sem BPTT). O executável limita o corpus a 512 MiB.
 
 Comando:
 
@@ -45,10 +45,10 @@ morok-g2-tsukuyomi-train corpus.bin tsukuyomi-g2-v0.1.ckpt 10 42
 Argumentos: arquivo de corpus, caminho do checkpoint, épocas opcionais e seed opcional.
 
 ## Inferência
-A geração prepara uma única vez as 13 faixas da pergunta imutável e as reutiliza durante a geração autoregressiva. Isso elimina a varredura e a agregação repetidas da pergunta a cada byte gerado, sem alterar pesos, logits ou o orçamento de parâmetros. Para prompts sem marcador U:, a preparação registra a ausência do contexto e evita repetir a busca pelo marcador.
+A geração prepara uma única vez as 13 faixas da pergunta imutável e as reutiliza durante a geração autoregressiva. A cada passo, os bytes anteriores da resposta são incorporados à janela causal; assim, o contexto da pergunta é cacheado, mas o histórico da resposta é atualizado. Para prompts sem marcador U:, a preparação registra a ausência do contexto e evita repetir a busca pelo marcador.
 
 
-A geração é autoregressiva e greedy. Cada byte gerado passa a integrar o contexto das previsões seguintes. A CLI oferece modo batch: carrega o checkpoint uma vez e atende várias perguntas recebidas por stdin. A saída de resposta é encerrada no primeiro LF/CR/NUL ou no limite configurado (1 a 4.096 bytes); o workflow usa 160 bytes.
+A geração é autoregressiva e greedy. Cada byte gerado passa a integrar a janela causal de até 13 bytes usada nas previsões seguintes. A CLI oferece modo batch: carrega o checkpoint uma vez e atende várias perguntas recebidas por stdin. A saída de resposta é encerrada no primeiro LF/CR/NUL ou no limite configurado (1 a 4.096 bytes); o workflow usa 160 bytes.
 
 Comando:
 
