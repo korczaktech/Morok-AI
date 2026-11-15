@@ -572,7 +572,7 @@
 
   $('#new-chat').addEventListener('click',createConversation);
   $('#brand-home').addEventListener('click',event=>{event.preventDefault();state.activeId=null;persist();renderHistory();renderConversation();closeSidebar();el.input.focus();});
-  $('#all-chats').addEventListener('click',()=>{renderHistory('');$('.side-action').forEach(item=>item.classList.remove('active'));$('#all-chats').classList.add('active');closeSidebar();});
+  $('#all-chats').addEventListener('click',()=>{renderHistory('');$$('.side-action').forEach(item=>item.classList.remove('active'));$('#all-chats').classList.add('active');closeSidebar();});
   $('#search-open').addEventListener('click',()=>{closeSidebar();openSearch();});
   $('#conversation-search-input').addEventListener('input',event=>renderSearchResults(event.target.value));
   $('#confirm-accept').addEventListener('click',()=>finishConfirmation(true));
@@ -595,7 +595,7 @@
   $('#profile-menu').addEventListener('click',event=>{const button=event.target.closest('[data-profile-action]');if(button)handleProfileAction(button.dataset.profileAction);});
   document.addEventListener('click',event=>{if(!event.target.closest('#profile-button')&&!event.target.closest('#profile-menu'))closeProfileMenu();});
   $('#more-options-toggle').addEventListener('click',()=>{const submenu=$('#side-submenu');submenu.hidden=!submenu.hidden;$('#more-options-toggle').setAttribute('aria-expanded',String(!submenu.hidden));});
-  $('[data-workspace-page]').forEach(button=>button.addEventListener('click',()=>{ $('.side-action').forEach(item=>item.classList.remove('active'));button.classList.add('active');openWorkspacePage(button.dataset.workspacePage);closeSidebar();}));
+  $$('[data-workspace-page]').forEach(button=>button.addEventListener('click',()=>{ $$('.side-action').forEach(item=>item.classList.remove('active'));button.classList.add('active');openWorkspacePage(button.dataset.workspacePage);closeSidebar();}));
   $('#workspace-close').addEventListener('click',()=>workspaceDialog.close());
   workspaceDialog.addEventListener('click',event=>{if(event.target===workspaceDialog)workspaceDialog.close();});
   $('#workspace-page').addEventListener('submit',event=>{if(event.target.id==='task-form'){event.preventDefault();const value=$('#task-input').value.trim();if(value){state.tasks.unshift({text:value,done:false});persist();openWorkspacePage('tasks');}}});
