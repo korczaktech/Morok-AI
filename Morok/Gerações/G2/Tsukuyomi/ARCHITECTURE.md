@@ -36,7 +36,7 @@ Os offsets e a soma são verificados por asserção estática no código. O chec
 
 ## Treinamento
 
-O treinador percorre o corpus byte a byte e atualiza os parâmetros com gradientes da entropia cruzada, Adam, clipping global e weight decay. A implementação v0.1 usa contexto finito e atualizações por alvo; não usa BPTT nem treinamento online. O executável limita o corpus a 512 MiB para manter o consumo de memória previsível.
+O treinador percorre o corpus byte a byte e atualiza os parâmetros com gradientes da entropia cruzada, Adam, clipping global e weight decay. O relatório expõe loss em nats e train_bpb (bits por byte). A implementação v0.1 usa contexto finito e atualizações por alvo; não usa BPTT nem treinamento online. O executável limita o corpus a 512 MiB para manter o consumo de memória previsível.
 
 Comando:
 
@@ -52,7 +52,7 @@ Comando:
 
 morok-g2-tsukuyomi-generate tsukuyomi-g2-v0.1.ckpt "Olá" 120
 
-A saída é uma sequência de bytes. O modelo não garante, nesta versão, UTF-8 válido nem qualidade linguística; essa validação é parte dos critérios experimentais pendentes.
+A geração restringe transições para manter UTF-8 válido quando o prompt é UTF-8 válido e há espaço para concluir sequências multibyte. Isso garante codificação, não qualidade linguística.
 
 ## Checkpoint
 
@@ -63,7 +63,7 @@ Formato binário MOROKG2T, versão 1, contagem explícita de 10.000 floats e che
 - Contexto limitado a 13 bytes anteriores e ao byte corrente.
 - Sem atenção, recorrência, BPTT, memória externa ou subsistemas cognitivos G2.
 - Sem tokenizer; a entrada é byte-level.
-- Sem garantia de UTF-8 na geração.
+- O treinador aceita bytes arbitrários; a CLI de geração exige prompt UTF-8 válido para produzir continuação útil.
 - Sem corpus natural embutido, benchmark linguístico ou alegação de compreensão.
 - O checkpoint armazena pesos, mas não o estado do otimizador; retomada exata de treinamento ainda não está disponível.
 
