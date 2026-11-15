@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <span>
 
-namespace morok::model {
+namespace morok::g2::engine {
 
 inline constexpr std::size_t kG2ExpertMaxBpttTruncationLength = 128;
 
@@ -47,4 +47,4 @@ struct G2ExpertEosResult {
     const G2ExpertParameters& parameters, const G2ExpertState& state,
     std::size_t context_length, bool should_stop);
 
-} // namespace morok::model
+} // namespace morok::g2::engine

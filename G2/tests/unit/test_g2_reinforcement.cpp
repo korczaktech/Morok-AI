@@ -1,13 +1,14 @@
 #include "morok/g2/engine/bptt.hpp"
-#include "morok/model/learn/g2_checkpoint.hpp"
+#include "morok/g2/model/learn/g2_checkpoint.hpp"
 #include "morok/g2/engine/optimizer.hpp"
-#include "morok/model/parameters/g2_parameters.hpp"
+#include "morok/g2/model/parameters/g2_parameters.hpp"
 #include <filesystem>
 #include <stdexcept>
 #include <string>
 #include <vector>
 int main(){
- using namespace morok::model;
+ using namespace morok::g2::model;
+ using namespace morok::g2::engine;
  const auto dir=std::filesystem::temp_directory_path()/"morok-g2-reinforcement-test";
  try{
   std::filesystem::remove_all(dir); std::filesystem::create_directories(dir);

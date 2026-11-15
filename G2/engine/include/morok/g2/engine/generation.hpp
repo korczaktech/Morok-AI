@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace morok::model {
+namespace morok::g2::engine {
 
 struct G2ExpertGenerationConfig {
     std::size_t max_new_bytes{256};
@@ -38,4 +38,4 @@ struct G2ExpertGenerationReport {
     const common::Utf8Text& prompt,
     const G2ExpertGenerationConfig& config = {});
 
-} // namespace morok::model
+} // namespace morok::g2::engine

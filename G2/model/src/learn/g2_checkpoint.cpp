@@ -1,7 +1,8 @@
-#include "morok/model/learn/g2_checkpoint.hpp"
+#include "morok/g2/model/learn/g2_checkpoint.hpp"
 #include "morok/g2/engine/checkpoint.hpp"
 #include <stdexcept>
-namespace morok::model {
+namespace morok::g2::model {
+using namespace ::morok::g2::engine;
 void save_g2_checkpoint(const std::filesystem::path& path,const G2Parameters& p) {
     if(path.empty()) throw std::invalid_argument("G2 checkpoint path is empty");
     G2ExpertCheckpoint a; a.parameters=p.expert_a; a.metadata="kind=inference\ngeneration=G2\nexpert=A\ntrainable_parameters=2000";

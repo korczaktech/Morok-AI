@@ -1,5 +1,5 @@
-#include "morok/model/learn/g2_training.hpp"
-#include "morok/model/parameters/g2_parameters.hpp"
+#include "morok/g2/model/learn/g2_training.hpp"
+#include "morok/g2/model/parameters/g2_parameters.hpp"
 #include <cstdint>
 #include <exception>
 #include <iostream>
@@ -8,7 +8,7 @@
 int main(int argc,char** argv) {
     if(argc<3){std::cerr<<"uso: morok-train-g2 <corpus-dir> <checkpoint-prefix> [epochs] [seed] [--resume]\n";return 2;}
     try {
-        morok::model::G2TrainingConfig c; c.base.corpus_directory=argv[1]; c.checkpoint_prefix=argv[2];
+        morok::g2::model::G2TrainingConfig c; c.base.corpus_directory=argv[1]; c.checkpoint_prefix=argv[2];
         bool epochs_seen=false,seed_seen=false;
         for(int i=3;i<argc;++i) {
             const std::string arg=argv[i];
@@ -18,8 +18,8 @@ int main(int argc,char** argv) {
             else if(!seed_seen) { c.base.seed=std::stoull(arg); seed_seen=true; }
             else throw std::invalid_argument("argumento desconhecido: "+arg);
         }
-        morok::model::G2Parameters p; morok::model::initialize_g2_parameters(p,c.base.seed);
-        const auto r=morok::model::train_g2_corpus(c,p);
+        morok::g2::model::G2Parameters p; morok::g2::model::initialize_g2_parameters(p,c.base.seed);
+        const auto r=morok::g2::model::train_g2_corpus(c,p);
         std::cout<<"generation=G2\ntrainable_parameters="<<p.parameter_count()
                  <<"\nexpert_a_validation_bpb="<<r.expert_a.best_validation_bpb
                  <<"\nexpert_b_validation_bpb="<<r.expert_b.best_validation_bpb

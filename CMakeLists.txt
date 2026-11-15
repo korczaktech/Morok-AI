@@ -84,11 +84,11 @@ endforeach()
 # G2 is an optional, separate library. G1-only builds do not compile G2 sources.
 if(MOROK_BUILD_G2)
     add_library(morok_g2 STATIC
-        G2/legacy/src/model/parameters/g2_parameters.cpp
-        G2/legacy/src/model/g2_forward.cpp
-        G2/legacy/src/model/learn/g2_checkpoint.cpp
-        G2/legacy/src/model/learn/g2_training.cpp
-        G2/legacy/src/model/learn/g2_generation.cpp
+        G2/model/src/parameters/g2_parameters.cpp
+        G2/model/src/g2_forward.cpp
+        G2/model/src/learn/g2_checkpoint.cpp
+        G2/model/src/learn/g2_training.cpp
+        G2/model/src/learn/g2_generation.cpp
         G2/engine/src/parameters.cpp
         G2/engine/src/forward.cpp
         G2/engine/src/bptt.cpp
@@ -102,7 +102,7 @@ if(MOROK_BUILD_G2)
     target_include_directories(morok_g2 PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G2/engine/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G2/legacy/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G2/model/include>
         $<INSTALL_INTERFACE:include>)
     target_link_libraries(morok_g2 PUBLIC Morok::Core PRIVATE morok_build_options)
     morok_enable_sanitizers(morok_g2)

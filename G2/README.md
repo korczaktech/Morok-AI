@@ -1,15 +1,15 @@
 # G2
 
-A geração G2 possui uma biblioteca executável independente, compilada como `Morok::G2`.
+A G2 é uma geração independente. Seu código não inclui nem referencia símbolos privados da G1 ou da G3.
 
-- `engine/include` e `engine/src`: motor por especialista, com parâmetros, estado recorrente, forward pass, BPTT, otimizador, checkpoints, treinamento e geração.
-- `legacy/include` e `legacy/src`: adaptadores da G2 que agrupam os dois especialistas em um modelo G2.
-- `apps`: treinamento, inferência e reforço.
-- `scripts`: treinamento e reforço.
-- `data`: histórico de respostas e recompensas.
-- `tests` e `fixtures`: testes e corpus da G2.
-- `Mokosh/`, `Tsukuyomi/`, `Artemis/`, `Apollo/`: diretórios dos quatro perfis.
+- `engine/include` e `engine/src`: motor recorrente de especialista, BPTT, otimizador, checkpoints, treinamento e geração. O namespace é `morok::g2::engine`.
+- `model/include` e `model/src`: composição dos especialistas em um modelo G2, parâmetros agregados, inferência, treinamento e persistência. O namespace é `morok::g2::model`.
+- `apps`: executáveis de treinamento, geração e reforço exclusivos da G2.
+- `scripts`: fluxos de treinamento e reforço da G2.
+- `data`: dados de reforço da G2.
+- `tests`: testes e fixtures específicos da G2.
+- `Mokosh/`, `Tsukuyomi/`, `Artemis/`, `Apollo/`: implementações e testes dos perfis da G2.
 
-O motor da G2 não inclui nem chama código privado da G1. Os perfis ainda precisam de implementações e alvos próprios; o motor G2 atual não é apresentado como quatro modelos independentes.
+Os quatro perfis são alvos separados no CMake: `Morok::G2::Mokosh`, `Morok::G2::Tsukuyomi`, `Morok::G2::Artemis` e `Morok::G2::Apollo`. Cada perfil depende somente do motor e da composição da própria G2 e da infraestrutura pública neutra.
 
 Consulte [MODELOS.md](../MODELOS.md).

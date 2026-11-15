@@ -1,5 +1,6 @@
-#include "morok/model/parameters/g2_parameters.hpp"
-namespace morok::model {
+#include "morok/g2/model/parameters/g2_parameters.hpp"
+namespace morok::g2::model {
+using namespace ::morok::g2::engine;
 std::array<float, kG2ParameterCount> G2Parameters::flatten() const {
     std::array<float, kG2ParameterCount> result{};
     const auto a = expert_a.flatten();

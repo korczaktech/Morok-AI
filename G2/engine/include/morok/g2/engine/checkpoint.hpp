@@ -6,7 +6,7 @@
 #include <span>
 #include <string>
 #include <vector>
-namespace morok::model {
+namespace morok::g2::engine {
 struct G2ExpertCheckpoint {
  G2ExpertParameters parameters{};
  G2ExpertOptimizerState optimizer{G2ExpertAdamWState{}};
@@ -23,4 +23,4 @@ struct G2ExpertCheckpoint {
 [[nodiscard]] std::uint32_t g2_expert_crc32(std::span<const std::byte>) noexcept;
 void save_g2_expert_checkpoint(const std::filesystem::path&,const G2ExpertCheckpoint&);
 [[nodiscard]] G2ExpertCheckpoint load_g2_expert_checkpoint(const std::filesystem::path&);
-} // namespace morok::model
+} // namespace morok::g2::engine

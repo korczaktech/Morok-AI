@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <type_traits>
 #include <vector>
-namespace morok::model { namespace {
+namespace morok::g2::engine { namespace {
 using Bytes=std::vector<std::byte>;
 constexpr std::array<char,8> magic{'M','O','R','O','K','C','K','P'};
 constexpr std::array<char,32> arch=[] {std::array<char,32>a{};constexpr char s[]="RLAH-G2-fastslow-d11-bit8-eos";for(std::size_t i=0;i<sizeof(s)-1;++i)a[i]=s[i];return a;}();
@@ -78,4 +78,4 @@ G2ExpertCheckpoint load_g2_expert_checkpoint(const std::filesystem::path&path){
  if(flags&4U){auto count=get<std::uint32_t>(b,p);if(count>100000)throw std::runtime_error("cursor excede limite");c.document_order.reserve(count);for(std::uint32_t i=0;i<count;++i)c.document_order.push_back(get<std::uint32_t>(b,p));c.document_position=get<std::uint32_t>(b,p);c.byte_offset=get<std::uint64_t>(b,p);if(c.document_position>count)throw std::runtime_error("posição de cursor inválida");}
  if(p+mb!=b.size())throw std::runtime_error("bytes extras/truncados após metadados");c.metadata.assign(reinterpret_cast<const char*>(b.data()+p),mb);if(!valid_utf8(c.metadata))throw std::runtime_error("checkpoint metadata is not valid UTF-8");return c;
 }
-} // namespace morok::model
+} // namespace morok::g2::engine

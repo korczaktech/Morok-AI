@@ -10,7 +10,7 @@
 #include <utility>
 #include <variant>
 
-namespace morok::model {
+namespace morok::g2::engine {
 namespace {
 
 void validate_config(const G2ExpertOptimizerConfig& c) {
@@ -194,4 +194,4 @@ G2ExpertOptimizerStepResult apply_g2_expert_optimizer_step(
     };
 }
 
-} // namespace morok::model
+} // namespace morok::g2::engine

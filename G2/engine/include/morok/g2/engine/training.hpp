@@ -6,7 +6,7 @@
 #include <functional>
 #include <string>
 #include <vector>
-namespace morok::model {
+namespace morok::g2::engine {
 struct G2ExpertTrainingConfig {
  std::filesystem::path corpus_directory{}, checkpoint_path{}, resume_from_checkpoint{}, metrics_log_path{}, best_model_path{};
  std::size_t max_epochs{50}, patience{5}, truncation_length{64};
@@ -39,4 +39,4 @@ struct G2ExpertTrainingReport {
  std::vector<G2ExpertEpochMetrics> epochs{};
 };
 [[nodiscard]] G2ExpertTrainingReport train_g2_expert_corpus(const G2ExpertTrainingConfig&, G2ExpertParameters&);
-} // namespace morok::model
+} // namespace morok::g2::engine

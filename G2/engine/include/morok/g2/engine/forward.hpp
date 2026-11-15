@@ -5,7 +5,7 @@
 #include <array>
 #include <cstdint>
 
-namespace morok::model {
+namespace morok::g2::engine {
 
 struct G2ExpertState {
     std::array<float, kG2ExpertFastStateDimension> fast{};
@@ -49,4 +49,4 @@ void advance_g2_expert_state(const G2ExpertParameters& parameters, G2ExpertState
                                                   const G2ExpertState& state,
                                                   std::uint8_t target_byte);
 
-} // namespace morok::model
+} // namespace morok::g2::engine

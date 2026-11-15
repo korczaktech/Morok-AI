@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <span>
 
-namespace morok::model {
+namespace morok::g2::engine {
 namespace {
 
 std::uint64_t splitmix64_next(std::uint64_t& state) noexcept {
@@ -126,4 +126,4 @@ void initialize_g2_expert_parameters(G2ExpertParameters& parameters, std::uint64
     parameters.theta_len.fill(-4.0F);
 }
 
-} // namespace morok::model
+} // namespace morok::g2::engine

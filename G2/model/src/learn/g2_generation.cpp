@@ -1,8 +1,9 @@
-#include "morok/model/learn/g2_generation.hpp"
-#include "morok/model/g2_forward.hpp"
+#include "morok/g2/model/learn/g2_generation.hpp"
+#include "morok/g2/model/g2_forward.hpp"
 #include "morok/g2/engine/generation.hpp"
 #include <cstdint>
-namespace morok::model {
+namespace morok::g2::model {
+using namespace ::morok::g2::engine;
 namespace {
 double score(const G2Parameters& p,const common::Utf8Text& prompt,const common::Utf8Text& text) {
     G2State state;

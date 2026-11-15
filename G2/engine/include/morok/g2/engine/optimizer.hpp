@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <variant>
 
-namespace morok::model {
+namespace morok::g2::engine {
 
 enum class G2ExpertOptimizerKind : std::uint8_t {
     AdamW = 1,
@@ -61,4 +61,4 @@ struct G2ExpertOptimizerStepResult {
 
 [[nodiscard]] bool g2_expert_parameter_uses_weight_decay(std::size_t canonical_index) noexcept;
 
-} // namespace morok::model
+} // namespace morok::g2::engine

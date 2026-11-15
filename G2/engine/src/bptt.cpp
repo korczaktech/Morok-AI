@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace morok::model {
+namespace morok::g2::engine {
 namespace {
 
 constexpr std::size_t D = kG2ExpertInputDimension;
@@ -382,4 +382,4 @@ G2ExpertEosResult compute_g2_expert_eos_gradients(const G2ExpertParameters& para
     return result;
 }
 
-} // namespace morok::model
+} // namespace morok::g2::engine

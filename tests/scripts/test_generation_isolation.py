@@ -7,7 +7,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 G2_CODE = [
     ROOT / "G2" / "engine",
-    ROOT / "G2" / "legacy",
+    ROOT / "G2" / "model",
     ROOT / "G2" / "apps",
     ROOT / "G2" / "tests",
 ]
@@ -41,7 +41,7 @@ def main() -> int:
         violations.append("CMakeLists.txt: G2 engine sources are not part of Morok::G2")
     if "Morok::G1" in g2:
         violations.append("CMakeLists.txt: Morok::G2 links Morok::G1")
-    if any(token in core for token in ("G1/shared/src/", "G2/engine/src/", "G2/legacy/src/")):
+    if any(token in core for token in ("G1/shared/src/", "G2/engine/src/", "G2/model/src/")):
         violations.append("CMakeLists.txt: generation-specific source compiled into Morok::Core")
     if "G1/shared/src/" not in cmake.split("add_library(morok_g1 STATIC", 1)[1].split("add_library(Morok::G1", 1)[0]:
         violations.append("CMakeLists.txt: G1 shared engine sources are not part of Morok::G1")

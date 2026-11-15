@@ -20,7 +20,7 @@
 #include <unistd.h>
 #include <cerrno>
 #include <cstring>
-namespace morok::model { namespace {
+namespace morok::g2::engine { namespace {
 constexpr std::size_t kRead=64U*1024U;
 constexpr double kLn2=0.693147180559945309417232121458176568;
 constexpr std::uint64_t kOffset=14695981039346656037ULL,kPrime=1099511628211ULL;
@@ -195,4 +195,4 @@ G2ExpertTrainingReport train_g2_expert_corpus(const G2ExpertTrainingConfig&c,G2E
      save_g2_expert_checkpoint(c.best_model_path, model);
  } if(c.cancellation_requested&&c.cancellation_requested())throw std::runtime_error("training cancelled"); {std::ostringstream line;line<<std::setprecision(17)<<"{\"event\":\"finished\",\"best_epoch\":"<<out.best_epoch<<",\"validation_bpb\":"<<out.best_validation_bpb<<",\"test_bpb\":"<<out.test_bpb<<",\"resumed\":"<<(out.resumed?"true":"false")<<"}";append_jsonl(c.metrics_log_path,line.str());}return out;
 }
-} // namespace morok::model
+} // namespace morok::g2::engine

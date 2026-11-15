@@ -53,17 +53,17 @@ O diretório público `include/` e a biblioteca `Morok::Core` contêm contratos 
 
 A implementação compartilhada da geração G1 está em `G1/shared/` e é compilada apenas em `Morok::G1`. Inclui o motor de parâmetros, forward pass, BPTT, otimizador, treinamento, inferência, checkpoints e adaptadores de linguagem/comunicação/aprendizado que ainda são específicos da G1.
 
-A implementação da G2 está dentro de `G2/`. `G2/engine/` contém o motor independente por especialista; `G2/legacy/` mantém os adaptadores da G2 que compõem os dois especialistas. A G2 não importa headers nem símbolos da G1. Os alvos `Morok::G1` e `Morok::G2` dependem do Core, mas não dependem um do outro.
+A implementação da G2 está dentro de `G2/`. `G2/engine/` contém o motor independente por especialista; `G2/model/` mantém a composição dos especialistas da G2 que compõem os dois especialistas. A G2 não importa headers nem símbolos da G1. Os alvos `Morok::G1` e `Morok::G2` dependem do Core, mas não dependem um do outro.
 
 Aplicações, scripts, dados de reforço, fixtures e testes específicos foram movidos para `G1/` ou `G2/`. O CMake continua na raiz como orquestrador de build e só inclui fontes da geração correspondente no alvo correspondente.
 
 ## Estado dos perfis
 
-As pastas `G1/{Mokosh,Tsukuyomi,Artemis,Apollo}` e `G2/{Mokosh,Tsukuyomi,Artemis,Apollo}` ainda contêm especificações iniciais, não implementações completas e independentes. Os motores atuais são motores compartilhados no nível da geração; ainda faltam os adaptadores, políticas e alvos independentes de cada perfil. A existência de uma pasta ou README não significa que o perfil esteja funcional.
+G1 e G2 possuem alvos CMake independentes para Mokosh, Tsukuyomi, Artemis e Apollo. Cada perfil mantém suas políticas e código exclusivo dentro de seu próprio diretório, com testes próprios. Os motores e adaptadores comuns a todos os perfis de uma geração permanecem no diretório interno dessa geração, fora dos diretórios dos perfis. Artemis expõe três agentes; Tsukuyomi expõe exatamente um. Mokosh e Apollo possuem políticas distintas de geração.
 
 G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de G1 ou G2 dentro da G3.
 
-A migração física da base G1/G2 foi feita, mas a migração total só pode ser considerada concluída depois de implementar os perfis, eliminar todos os caminhos históricos restantes, e obter CI, testes, sanitizers, fuzzing e workflows de treinamento/reforço verdes no commit final.
+A migração de diretórios e namespaces mantém as implementações específicas dentro de cada geração, os perfis dentro de seus diretórios, e a infraestrutura realmente comum na raiz. A validação local de compilação e testes deve ser executada antes de considerar a migração encerrada.
 
 ## Modelo removido
 Hephaestus não faz parte da arquitetura aprovada.

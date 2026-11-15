@@ -11,7 +11,7 @@
 #include <utility>
 #include <vector>
 
-namespace morok::model {
+namespace morok::g2::engine {
 namespace {
 
 struct Utf8State {
@@ -173,4 +173,4 @@ G2ExpertGenerationReport generate_g2_expert(const G2ExpertParameters& parameters
     return report;
 }
 
-} // namespace morok::model
+} // namespace morok::g2::engine

@@ -1,7 +1,8 @@
-#include "morok/model/learn/g2_training.hpp"
-#include "morok/model/learn/g2_checkpoint.hpp"
+#include "morok/g2/model/learn/g2_training.hpp"
+#include "morok/g2/model/learn/g2_checkpoint.hpp"
 #include <stdexcept>
-namespace morok::model {
+namespace morok::g2::model {
+using namespace ::morok::g2::engine;
 G2TrainingReport train_g2_corpus(const G2TrainingConfig& config,G2Parameters& p) {
     if(config.checkpoint_prefix.empty()) throw std::invalid_argument("G2 checkpoint_prefix is required");
     auto a=config.base;

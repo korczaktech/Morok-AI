@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <stdexcept>
 
-namespace morok::model {
+namespace morok::g2::engine {
 namespace {
 
 constexpr std::size_t kDimension = kG2ExpertInputDimension;
@@ -187,4 +187,4 @@ G2ExpertEvaluation evaluate_g2_expert_next_byte(const G2ExpertParameters& parame
     return evaluation;
 }
 
-} // namespace morok::model
+} // namespace morok::g2::engine

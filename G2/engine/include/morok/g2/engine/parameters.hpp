@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <span>
 
-namespace morok::model {
+namespace morok::g2::engine {
 
 inline constexpr std::size_t kG2ExpertInputDimension = 11;
 inline constexpr std::size_t kG2ExpertFastStateDimension = 11;
@@ -55,4 +55,4 @@ struct G2ExpertParameters {
 
 void initialize_g2_expert_parameters(G2ExpertParameters& parameters, std::uint64_t seed);
 
-} // namespace morok::model
+} // namespace morok::g2::engine

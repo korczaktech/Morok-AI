@@ -1,8 +1,8 @@
-#include "morok/model/g2_forward.hpp"
-#include "morok/model/learn/g2_checkpoint.hpp"
-#include "morok/model/learn/g2_generation.hpp"
-#include "morok/model/learn/g2_training.hpp"
-#include "morok/model/parameters/g2_parameters.hpp"
+#include "morok/g2/model/g2_forward.hpp"
+#include "morok/g2/model/learn/g2_checkpoint.hpp"
+#include "morok/g2/model/learn/g2_generation.hpp"
+#include "morok/g2/model/learn/g2_training.hpp"
+#include "morok/g2/model/parameters/g2_parameters.hpp"
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -12,7 +12,8 @@
 int main() {
     const auto dir=std::filesystem::temp_directory_path()/"morok-g2-test";
     try {
-        using namespace morok::model;
+        using namespace morok::g2::model;
+        using namespace morok::g2::engine;
         std::filesystem::remove_all(dir);
         static_assert(G2Parameters::parameter_count()==2000);
         G2Parameters p; initialize_g2_parameters(p,42);

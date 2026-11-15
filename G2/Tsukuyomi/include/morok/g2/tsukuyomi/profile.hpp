@@ -1,6 +1,6 @@
 #pragma once
 #include "morok/common/utf8_text.hpp"
-#include "morok/model/learn/g2_generation.hpp"
+#include "morok/g2/model/learn/g2_generation.hpp"
 #include <cstddef>
 #include <cstdint>
 namespace morok::g2::tsukuyomi {

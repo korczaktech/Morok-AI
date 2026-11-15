@@ -1,7 +1,8 @@
-#include "morok/model/g2_forward.hpp"
+#include "morok/g2/model/g2_forward.hpp"
 #include <cmath>
 #include <stdexcept>
-namespace morok::model {
+namespace morok::g2::model {
+using namespace ::morok::g2::engine;
 void advance_g2_state(const G2Parameters& p,G2State& s,std::uint8_t b) {
     advance_g2_expert_state(p.expert_a,s.expert_a,b);
     advance_g2_expert_state(p.expert_b,s.expert_b,b);
