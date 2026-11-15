@@ -52,6 +52,8 @@ int main(int argc,char** argv) {
   const auto before=parameters.flatten(); double first_norm=0,last_norm=0;
   const double loss_before=(target_loss(parameters.expert_a,prompt_text,response_text)+target_loss(parameters.expert_b,prompt_text,response_text))*0.5;
   morok::model::G1OptimizerStepResult last_a{},last_b{};
+  std::size_t applied_steps=0;
+  double current_loss=loss_before;
   for(std::size_t n=0;n<steps;++n) {
    morok::model::G1State state_a{},state_b{};
    for(std::size_t i=0;i+1<prompt_text.size();++i) {
@@ -62,12 +64,28 @@ int main(int argc,char** argv) {
    auto ga=morok::model::compute_g1_bptt_gradients(parameters.expert_a,sequence,64,state_a,prompt_text.size()-1);
    auto gb=morok::model::compute_g1_bptt_gradients(parameters.expert_b,sequence,64,state_b,prompt_text.size()-1);
    last_norm=std::max(ga.gradients.global_norm(),gb.gradients.global_norm()); if(n==0) first_norm=last_norm;
-   // The optimizer minimizes loss: positive reward descends the target loss;
-   // negative reward reverses the gradient and therefore discourages it.
+   // Positive reward minimizes the demonstrated sequence loss; negative reward maximizes it.
    for(double& v:ga.gradients.values)v*=reward;
    for(double& v:gb.gradients.values)v*=reward;
-   last_a=morok::model::apply_g1_optimizer_step(parameters.expert_a,ga.gradients,config,optimizer_a);
-   last_b=morok::model::apply_g1_optimizer_step(parameters.expert_b,gb.gradients,config,optimizer_b);
+   const auto saved_a=parameters.expert_a, saved_b=parameters.expert_b;
+   const auto saved_optimizer_a=optimizer_a, saved_optimizer_b=optimizer_b;
+   bool accepted=false;
+   for(unsigned int retry=0;retry<10;++retry) {
+    config.learning_rate=lr*std::pow(0.5,static_cast<double>(retry));
+    auto candidate_a=saved_a, candidate_b=saved_b;
+    auto candidate_optimizer_a=saved_optimizer_a, candidate_optimizer_b=saved_optimizer_b;
+    const auto step_a=morok::model::apply_g1_optimizer_step(candidate_a,ga.gradients,config,candidate_optimizer_a);
+    const auto step_b=morok::model::apply_g1_optimizer_step(candidate_b,gb.gradients,config,candidate_optimizer_b);
+    const double candidate_loss=(target_loss(candidate_a,prompt_text,response_text)+target_loss(candidate_b,prompt_text,response_text))*0.5;
+    const bool improved=reward>0.0?candidate_loss<current_loss:candidate_loss>current_loss;
+    if(improved) {
+     parameters.expert_a=std::move(candidate_a); parameters.expert_b=std::move(candidate_b);
+     optimizer_a=std::move(candidate_optimizer_a); optimizer_b=std::move(candidate_optimizer_b);
+     last_a=step_a; last_b=step_b; current_loss=candidate_loss; accepted=true; ++applied_steps; break;
+    }
+   }
+   config.learning_rate=lr;
+   if(!accepted) break;
   }
   const double loss_after=(target_loss(parameters.expert_a,prompt_text,response_text)+target_loss(parameters.expert_b,prompt_text,response_text))*0.5;
   const auto after=parameters.flatten(); double delta2=0;
@@ -76,7 +94,7 @@ int main(int argc,char** argv) {
   std::cout<<"{\"generation\":\"G2\",\"reward\":"<<(reward>0?1:-1)<<",\"target_bytes\":"<<response_text.size()
    <<",\"gradient_norm_first\":"<<first_norm<<",\"gradient_norm_last\":"<<last_norm
    <<",\"target_loss_before\":"<<loss_before<<",\"target_loss_after\":"<<loss_after
-   <<",\"target_loss_delta\":"<<(loss_after-loss_before)<<",\"parameter_delta_l2\":"<<std::sqrt(delta2)<<",\"optimizer\":\"AdamW\",\"optimizer_steps_per_expert\":"<<steps
+   <<",\"target_loss_delta\":"<<(loss_after-loss_before)<<",\"parameter_delta_l2\":"<<std::sqrt(delta2)<<",\"optimizer\":\"AdamW\",\"optimizer_steps_per_expert\":"<<applied_steps
    <<",\"expert_a_optimizer_step\":"<<last_a.step<<",\"expert_b_optimizer_step\":"<<last_b.step
    <<",\"trainable_parameters\":"<<morok::model::kG2ParameterCount<<"}\n";
   return 0;
