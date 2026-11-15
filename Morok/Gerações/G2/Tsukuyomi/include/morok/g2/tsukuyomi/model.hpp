@@ -14,7 +14,7 @@ inline constexpr std::size_t kHiddenSize = 32;
 inline constexpr std::size_t kContextSize = 13;
 inline constexpr std::size_t kParameterCount = 10000;
 // Versão do formato binário do checkpoint; a versão pública do modelo permanece 0.1.
-inline constexpr std::uint32_t kCheckpointFormatVersion = 3;
+inline constexpr std::uint32_t kCheckpointFormatVersion = 4;
 
 struct Model {
     std::array<float, kParameterCount> parameters{};
