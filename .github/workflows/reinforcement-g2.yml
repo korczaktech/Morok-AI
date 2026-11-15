@@ -43,7 +43,7 @@ on:
         description: "Bootstrap epochs per expert"
         required: true
         type: number
-        default: 100
+        default: 1000
 permissions:
   contents: write
   actions: read
