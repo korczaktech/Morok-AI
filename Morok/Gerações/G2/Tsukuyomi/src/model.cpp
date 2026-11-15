@@ -219,11 +219,15 @@ ForwardResult forward(const Model& model,
     return result;
 }
 
-double evaluate_loss(const Model& model, std::span<const std::uint8_t> bytes) {
+double evaluate_loss(const Model& model, std::span<const std::uint8_t> bytes,
+                     std::span<const std::uint8_t> target_mask) {
     if (bytes.size() < 2) return 0.0;
+    if (!target_mask.empty() && target_mask.size() != bytes.size())
+        return std::numeric_limits<double>::infinity();
     double total = 0.0;
     std::uint64_t count = 0;
     for (std::size_t target = 0; target < bytes.size(); ++target) {
+        if (!target_mask.empty() && target_mask[target] == 0) continue;
         const auto cache = calculate(model, bytes.first(target));
         const double probability = std::max(
             static_cast<double>(cache.probabilities[bytes[target]]), 1.0e-30);
@@ -234,13 +238,18 @@ double evaluate_loss(const Model& model, std::span<const std::uint8_t> bytes) {
 }
 
 TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
-                    const TrainingConfig& config, TrainingState* supplied_state) {
+                    const TrainingConfig& config, TrainingState* supplied_state,
+                    std::span<const std::uint8_t> target_mask) {
     TrainingReport report;
     if (bytes.size() < 2 || config.epochs == 0 || config.batch_size == 0 ||
-        !(config.learning_rate > 0.0) || !(config.gradient_clip > 0.0))
+        !(config.learning_rate > 0.0) || !(config.gradient_clip > 0.0) ||
+        (!target_mask.empty() && target_mask.size() != bytes.size()))
+        return report;
+    if (!target_mask.empty() &&
+        std::none_of(target_mask.begin(), target_mask.end(), [](std::uint8_t value) { return value != 0; }))
         return report;
 
-    report.initial_loss = evaluate_loss(model, bytes);
+    report.initial_loss = evaluate_loss(model, bytes, target_mask);
     report.initial_bpb = report.initial_loss / std::log(2.0);
     TrainingState local_state;
     TrainingState& state = supplied_state ? *supplied_state : local_state;
@@ -257,7 +266,9 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
     };
 
     for (std::size_t epoch = 0; epoch < config.epochs; ++epoch) {
+        std::uint64_t epoch_targets = 0;
         for (std::size_t target = 0; target < bytes.size(); ++target) {
+            if (!target_mask.empty() && target_mask[target] == 0) continue;
             const auto context = bytes.first(target);
             const auto cache = calculate(model, context);
 
@@ -311,14 +322,15 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
             }
 
             ++accumulated_targets;
+            ++epoch_targets;
             if (accumulated_targets >= config.batch_size) apply_batch();
         }
         apply_batch();
         ++report.epochs_completed;
-        report.target_bytes += bytes.size();
+        report.target_bytes += epoch_targets;
     }
 
-    report.final_loss = evaluate_loss(model, bytes);
+    report.final_loss = evaluate_loss(model, bytes, target_mask);
     report.final_bpb = report.final_loss / std::log(2.0);
     return report;
 }
