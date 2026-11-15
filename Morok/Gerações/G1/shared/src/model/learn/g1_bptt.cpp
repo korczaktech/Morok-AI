@@ -93,9 +93,11 @@ std::array<double, C> join(const std::array<double, D>& fast,
 }
 
 StepCache forward_step(const G1Parameters& p, const G1State& state,
-                       std::uint8_t observed, std::uint8_t target, std::size_t context_length) {
+                       std::uint8_t observed, std::uint8_t target,
+                       std::size_t context_length, bool token_start,
+                       bool token_separator) {
     StepCache cache{};
-    const auto encoded = encode_g1_byte(observed);
+    const auto encoded = encode_g1_byte(observed, token_start, token_separator);
     for (std::size_t i = 0; i < D; ++i) {
         cache.input[i] = encoded[i];
         cache.fast_previous[i] = state.fast[i];
@@ -274,7 +276,8 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
                                        std::span<const std::uint8_t> bytes,
                                        std::size_t truncation_length,
                                        const G1State& initial_state,
-                                       std::size_t context_offset) {
+                                       std::size_t context_offset,
+                                       std::optional<std::uint8_t> previous_context_byte) {
     if (bytes.size() < 2) {
         throw std::invalid_argument("BPTT requires at least two bytes");
     }
@@ -306,8 +309,17 @@ G1BpttResult compute_g1_bptt_gradients(const G1Parameters& parameters,
              target_index < end_target; ++target_index) {
             if (context_offset > std::numeric_limits<std::size_t>::max() - target_index)
                 throw std::overflow_error("BPTT context length overflow");
-            auto step = forward_step(parameters, state, bytes[target_index - 1],
-                                     bytes[target_index], context_offset + target_index);
+            const std::size_t observed_index = target_index - 1U;
+            const std::uint8_t observed = bytes[observed_index];
+            const bool has_previous = observed_index > 0U || previous_context_byte.has_value();
+            const std::uint8_t previous = observed_index > 0U
+                ? bytes[observed_index - 1U] : previous_context_byte.value_or(0U);
+            const bool token_separator = is_g1_token_separator(observed);
+            const bool token_start = !token_separator &&
+                (!has_previous || is_g1_token_separator(previous));
+            auto step = forward_step(parameters, state, observed, bytes[target_index],
+                                     context_offset + target_index, token_start,
+                                     token_separator);
             tape.push_back(step);
             for (std::size_t i = 0; i < D; ++i) {
                 state.fast[i] = static_cast<float>(step.fast[i]);
