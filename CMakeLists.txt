@@ -67,6 +67,20 @@ target_include_directories(morok_g1 PUBLIC
 target_link_libraries(morok_g1 PUBLIC Morok::Core PRIVATE morok_build_options)
 morok_enable_sanitizers(morok_g1)
 
+# Each G1 profile is a private target that may use the G1 shared engine,
+# but never another profile's implementation.
+foreach(_profile IN ITEMS Mokosh Tsukuyomi Artemis Apollo)
+    string(TOLOWER "${_profile}" _profile_lower)
+    add_library(morok_g1_${_profile_lower} STATIC
+        G1/${_profile}/src/profile.cpp)
+    add_library(Morok::G1::${_profile} ALIAS morok_g1_${_profile_lower})
+    target_compile_features(morok_g1_${_profile_lower} PUBLIC cxx_std_20)
+    target_include_directories(morok_g1_${_profile_lower} PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G1/${_profile}/include>)
+    target_link_libraries(morok_g1_${_profile_lower} PUBLIC Morok::G1 PRIVATE morok_build_options)
+    morok_enable_sanitizers(morok_g1_${_profile_lower})
+endforeach()
+
 # G2 is an optional, separate library. G1-only builds do not compile G2 sources.
 if(MOROK_BUILD_G2)
     add_library(morok_g2 STATIC
