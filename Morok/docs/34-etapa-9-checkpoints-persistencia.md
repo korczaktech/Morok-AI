@@ -8,7 +8,7 @@ Permitir que um treinamento G1 seja interrompido e retomado sem reinicializar pa
 
 - Magic de 8 bytes: `MOROKCKP`.
 - Versão 1, cabeçalho fixo de 104 bytes, little-endian.
-- `architecture_id`: `RLAH-G1-fastslow-d11-bit8`, preenchido com NUL até 32 bytes.
+- `architecture_id`: `RLAH-G1-fastslow-d11-lex-eos`, preenchido com NUL até 32 bytes.
 - Inventário obrigatório de 1.000 parâmetros em FP32.
 - Parâmetros na ordem canônica G1.
 - Estado AdamW: 1.000 valores FP32 de primeiro momento + 1.000 de segundo momento (8.000 bytes).
