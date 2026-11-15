@@ -65,7 +65,7 @@ int main() {
 
     // Varredura estratificada de diferenças finitas ao longo dos 10.000 offsets.
     {
-        const std::string broad_text = "U: ABCDEFGH\\nIA:xy";
+        const std::string broad_text = "U: ABCDEFGH\nIA:xy";
         const std::vector<std::uint8_t> broad_bytes(broad_text.begin(), broad_text.end());
         const std::size_t target = broad_bytes.size() - 1;
         std::vector<std::uint8_t> mask(broad_bytes.size(), 0);
