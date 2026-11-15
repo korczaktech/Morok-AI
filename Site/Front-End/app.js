@@ -332,7 +332,7 @@
     $('#auth-name').disabled=!!state.authSession || mode!=='signup';
     $('#auth-name-label').hidden=!!state.authSession || mode!=='signup';
     $('#auth-password').hidden=!!state.authSession;
-    $('#auth-forgot').hidden=!!state.authSession;
+    $('#auth-forgot').hidden=true;
     $$('.auth-tab').forEach(tab=>tab.hidden=!!state.authSession);
     $('#auth-title').textContent=state.authSession?'Conta conectada':'Entrar na sua conta';
     el.auth.showModal();
@@ -347,7 +347,7 @@
     $('#auth-name-label').hidden=mode!=='signup';
     $('#auth-name').required=mode==='signup';
     $('#auth-password').autocomplete=mode==='signup'?'new-password':'current-password';
-    $('#auth-forgot').hidden=mode!=='login';
+    $('#auth-forgot').hidden=true;
   }
   function saveAuthSession(session) {
     if (session?.access_token && session?.expires_in) {
@@ -388,19 +388,12 @@
     } catch(error) { message.classList.add('error'); message.textContent=error.message; }
     finally { $('#auth-submit').disabled=false; }
   }
-  async function recoverPassword() {
-    const email=$('#auth-email').value.trim(); const message=$('#auth-message');
-    if(!email || !email.includes('@')) { message.className='auth-message error'; message.textContent='Informe um e-mail válido.'; return; }
-    try { await authRequest('/auth/recover',{body:{email}}); message.className='auth-message success'; message.textContent='Se a conta existir, enviaremos instruções.'; }
-    catch(error) { message.className='auth-message error'; message.textContent=error.message; }
-  }
   async function logout() {
     try { if(state.authSession?.access_token) await authRequest('/auth/logout',{token:state.authSession.access_token}); } catch {}
     saveAuthSession(null); state.displayName='Visitante'; updateProfile(); persist(); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
   }
   $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
   $('#auth-form').addEventListener('submit',event=>{event.preventDefault();submitAuth();});
-  $('#auth-forgot').addEventListener('click',recoverPassword);
   $('#auth-logout').addEventListener('click',logout);
 
   $('#new-chat').addEventListener('click',createConversation);
