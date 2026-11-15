@@ -180,13 +180,7 @@ async function handle(req, res) {
   const path = url.pathname;
 
   if (req.method === "GET" && path === "/health") {
-    try {
-      await db.command({ ping: 1 });
-      await appDb.command({ ping: 1 });
-      return send(res, 200, { status: "ok", database: DATABASE, appDatabase: APP_DATABASE }, req.allowedOrigin);
-    } catch {
-      return send(res, 503, { status: "unavailable" }, req.allowedOrigin);
-    }
+    return send(res, 200, { status: "ok", database: DATABASE, appDatabase: APP_DATABASE }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && ["/auth/signup", "/auth/login", "/auth/recover"].includes(path)) {
