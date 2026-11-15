@@ -210,7 +210,7 @@ set_tests_properties(acceptance.g1_training_checkpoint_generation
 add_executable(morok_acceptance_seven_subsystems
     acceptance/end_to_end/test_seven_subsystems.cpp)
 target_link_libraries(morok_acceptance_seven_subsystems
-    PRIVATE Morok::Core morok_build_options SQLite::SQLite3)
+    PRIVATE Morok::G1 morok_build_options SQLite::SQLite3)
 target_compile_definitions(morok_acceptance_seven_subsystems PRIVATE
     MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 morok_enable_sanitizers(morok_acceptance_seven_subsystems)
