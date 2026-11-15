@@ -53,6 +53,10 @@ jobs:
                   raise SystemExit(f"{name} precisa ser maior que zero.")
           PY
 
+      - name: Validar conjuntos e avaliador
+        working-directory: Morok
+        run: python3 -m unittest discover -s "Gerações/G2/Tsukuyomi/tests" -p "test_*.py" -v
+
       - name: Instalar dependências
         run: |
           sudo apt-get update
