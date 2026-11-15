@@ -171,6 +171,23 @@ int main() {
     const auto negative_decay_report = train(invalid_config_model, sample, invalid_config);
     assert(negative_decay_report.epochs_completed == 0);
     assert(invalid_config_model.parameters == model.parameters);
+    invalid_config.weight_decay = 0.0;
+    invalid_config.learning_rate = std::numeric_limits<double>::infinity();
+    assert(train(invalid_config_model, sample, invalid_config).epochs_completed == 0);
+    invalid_config.learning_rate = 0.001;
+    invalid_config.gradient_clip = std::numeric_limits<double>::quiet_NaN();
+    assert(train(invalid_config_model, sample, invalid_config).epochs_completed == 0);
+    invalid_config.gradient_clip = 1.0;
+    invalid_config.batch_size = 0;
+    assert(train(invalid_config_model, sample, invalid_config).epochs_completed == 0);
+    invalid_config.batch_size = 1;
+    const std::array<std::uint8_t, 1> invalid_mask{1};
+    assert(train(invalid_config_model, sample, invalid_config, nullptr,
+                 invalid_mask).epochs_completed == 0);
+    const std::array<std::uint8_t, 6> empty_mask{};
+    assert(train(invalid_config_model, sample, invalid_config, nullptr,
+                 empty_mask).epochs_completed == 0);
+    assert(invalid_config_model.parameters == model.parameters);
 
     // Weight decay altera matrizes, mas deixa biases e parâmetros afins intactos.
     Model without_decay;
