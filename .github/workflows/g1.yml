@@ -126,9 +126,9 @@ jobs:
               lines = ["| " + " | ".join(headers) + " |",
                        "| " + " | ".join("---" for _ in headers) + " |"]
               for row in body:
-                  cells = [str(cell).replace("|", "\\|").replace("\\r", " ").replace("\\n", " ") for cell in row]
+                  cells = [str(cell).replace("|", "\\|").replace("\r", " ").replace("\n", " ") for cell in row]
                   lines.append("| " + " | ".join(cells) + " |")
-              return "\\n".join(lines) + "\\n"
+              return "\n".join(lines) + "\n"
 
           def display_answer(answer):
               # Preserve the model's exact output without allowing control/private-use
