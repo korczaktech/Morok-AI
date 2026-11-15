@@ -62,6 +62,21 @@ def evaluate(answer: str, expected: str) -> tuple[bool, float]:
     return actual == reference, score
 
 
+
+def generation_diagnostics(answer: str) -> tuple[float, float]:
+    """Retorna proporção de repetição consecutiva e diversidade de caracteres."""
+    if not answer:
+        return 0.0, 0.0
+    longest_run = 1
+    current_run = 1
+    for previous, current in zip(answer, answer[1:]):
+        current_run = current_run + 1 if current == previous else 1
+        longest_run = max(longest_run, current_run)
+    repetition = longest_run / len(answer)
+    diversity = len(set(answer)) / len(answer)
+    return repetition, diversity
+
+
 def read_dialogues(corpus: Path) -> list[tuple[str, str]]:
     dialogues = []
     question = None
@@ -126,7 +141,10 @@ def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
             report.write(f"#### {index}. {question}\n\n")
             report.write(f"- Resposta gerada: {answer or '(vazia)'}\n")
             report.write(f"- Gabarito: {expected}\n")
+            repetition, diversity = generation_diagnostics(answer)
             report.write(f"- Correspondência lexical: {score:.1%}\n")
+            report.write(f"- Maior sequência repetida: {repetition:.1%} da resposta\n")
+            report.write(f"- Diversidade de caracteres: {diversity:.1%}\n")
             report.write(f"- Resultado: **{verdict}**\n\n")
 
     return len(correct_items), len(results)
