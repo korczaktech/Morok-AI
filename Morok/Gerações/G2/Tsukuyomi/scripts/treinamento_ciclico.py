@@ -34,7 +34,7 @@ def evaluate(answer: str, expected: str) -> tuple[bool, float]:
 def read_dialogues(corpus: Path) -> list[tuple[str, str]]:
     dialogues = []
     question = None
-    for raw in corpus.read_text(encoding="utf-8").splitlines():
+    for raw in corpus.read_text(encoding="utf-8-sig").splitlines():
         line = raw.strip()
         if line.startswith("U:"):
             question = line[2:].strip()
