@@ -778,7 +778,7 @@ bool load_training_state(TrainingState& state,
     stream.read(reinterpret_cast<char*>(&step), sizeof(step));
     stream.read(reinterpret_cast<char*>(&expected_hash), sizeof(expected_hash));
     if (!stream || std::memcmp(magic, "MOROKADM", 8) != 0 ||
-        version != 7 || count != kParameterCount)
+        version != 8 || count != kParameterCount)
         return false;
     candidate.step = step;
     stream.read(reinterpret_cast<char*>(candidate.first_moment.data()),
