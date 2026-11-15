@@ -29,6 +29,8 @@ cmake --build build/g2 --target morok_g2_tsukuyomi morok_g2_tsukuyomi_train moro
 ctest --test-dir build/g2 -R g2.tsukuyomi.model --output-on-failure
 
 ## Treinamento e inferência
+Na inferência, as 13 faixas da pergunta são preparadas uma única vez por prompt e reutilizadas em todos os bytes gerados. Isso remove a varredura e a agregação repetidas da pergunta dentro do loop autoregressivo, sem alterar arquitetura, pesos ou os 10.000 parâmetros.
+
 
 build/g2/morok-g2-tsukuyomi-train corpus.bin tsukuyomi-g2-v0.1.ckpt 10 42
 
