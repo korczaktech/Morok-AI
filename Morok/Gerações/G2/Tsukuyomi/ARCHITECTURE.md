@@ -36,7 +36,7 @@ Os canais auxiliares reutilizam 13 linhas da própria tabela de embeddings (byte
 | Estado inicial | 16 | 16 |
 | **Total** | | **10.000** |
 
-Os offsets e a soma são verificados por asserção estática no código. O checkpoint rejeita versões, contagens, checksums e valores não finitos incompatíveis. A versão 8 do formato interno impede carregar pesos treinados com a arquitetura feedforward anterior; a identidade pública do Tsukuyomi continua 0.1.
+Os offsets e a soma são verificados por asserção estática no código. O checkpoint rejeita versões, contagens, checksums e valores não finitos incompatíveis. A versão 8 do formato interno impede carregar pesos treinados com a agregação posicional cíclica anterior; a identidade pública do Tsukuyomi continua 0.1.
 
 ## Treinamento
 
