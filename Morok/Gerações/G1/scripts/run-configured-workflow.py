@@ -58,7 +58,7 @@ for profile_index, profile in enumerate(profiles):
         "--log", str(metrics),
         "--export-best", str(candidate),
         "--patience", "50",
-        "--truncation", "64",
+        "--truncation", "256",
         "--optimizer", "adamw",
         "--learning-rate", "0.001",
     ], check=True)
