@@ -12,17 +12,52 @@ namespace morok::lang {
 namespace {
 
 std::string normalize_input(std::string_view input) {
+    std::string folded(input);
+    const auto replace_all = [&folded](std::string_view from, char to) {
+        std::size_t position = 0;
+        while ((position = folded.find(from, position)) != std::string::npos) {
+            folded.replace(position, from.size(), 1, to);
+            ++position;
+        }
+    };
+    for (const auto& [forms, base] : std::array<std::pair<std::string_view, char>, 9>{{
+        {"áàâãäÁÀÂÃÄ", 'a'}, {"éèêëÉÈÊË", 'e'}, {"íìîïÍÌÎÏ", 'i'},
+        {"óòôõöÓÒÔÕÖ", 'o'}, {"úùûüÚÙÛÜ", 'u'}, {"çÇ", 'c'},
+        {"ñÑ", 'n'}, {"ýÿÝŸ", 'y'}, {"œŒ", 'o'}
+    }}) {
+        (void)forms;
+        (void)base;
+    }
+    const std::array<std::pair<std::string_view, char>, 28> accents{{
+        {"á",'a'},{"à",'a'},{"â",'a'},{"ã",'a'},{"ä",'a'},
+        {"Á",'a'},{"À",'a'},{"Â",'a'},{"Ã",'a'},{"Ä",'a'},
+        {"é",'e'},{"è",'e'},{"ê",'e'},{"ë",'e'},{"É",'e'},{"È",'e'},{"Ê",'e'},{"Ë",'e'},
+        {"í",'i'},{"ì",'i'},{"î",'i'},{"ï",'i'},{"Í",'i'},{"Ì",'i'},{"Î",'i'},{"Ï",'i'},
+        {"ç",'c'},{"Ç",'c'}
+    }};
+    for (const auto& [from, to] : accents) replace_all(from, to);
+    const std::array<std::pair<std::string_view, char>, 14> more_accents{{
+        {"ó",'o'},{"ò",'o'},{"ô",'o'},{"õ",'o'},{"ö",'o'},{"Ó",'o'},{"Ò",'o'},
+        {"Ô",'o'},{"Õ",'o'},{"Ö",'o'},{"ú",'u'},{"ù",'u'},{"û",'u'},{"ü",'u'}
+    }};
+    for (const auto& [from, to] : more_accents) replace_all(from, to);
+    const std::array<std::pair<std::string_view, char>, 5> final_accents{{
+        {"Ú",'u'},{"Ù",'u'},{"Û",'u'},{"Ü",'u'},{"ñ",'n'}
+    }};
+    for (const auto& [from, to] : final_accents) replace_all(from, to);
+
     std::string output;
-    output.reserve(input.size());
+    output.reserve(folded.size());
     bool pending_space = false;
-    for (const unsigned char byte : input) {
+    for (const unsigned char byte : folded) {
         if (byte == '\r' || byte == '\n' || byte == '\t' || byte == ' ') {
             pending_space = !output.empty();
             continue;
         }
         if (pending_space) output.push_back(' ');
         pending_space = false;
-        output.push_back(static_cast<char>(byte));
+        output.push_back(static_cast<char>(byte < 128U
+            ? std::tolower(byte) : byte));
     }
     return output;
 }
@@ -51,9 +86,9 @@ DetectedLanguage identify_language(std::string_view text) {
         return matches;
     };
 
-    const auto pt = count({"que", "não", "uma", "com", "para", "como", "você", "olá", "sim", "qual", "céu"});
+    const auto pt = count({"que", "nao", "uma", "com", "para", "como", "voce", "ola", "sim", "qual", "ceu"});
     const auto en = count({"the", "is", "are", "what", "with", "you", "hello", "yes", "how"});
-    const auto es = count({"que", "no", "una", "con", "para", "como", "hola", "sí", "qué", "el", "es", "cielo", "azul"});
+    const auto es = count({"que", "no", "una", "con", "para", "como", "hola", "si", "que", "el", "es", "cielo", "azul"});
     if (pt == 0 && en == 0 && es == 0) return DetectedLanguage::unknown;
     if (pt >= en && pt >= es) return DetectedLanguage::portuguese;
     if (en >= es) return DetectedLanguage::english;
