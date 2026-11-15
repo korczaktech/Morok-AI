@@ -137,6 +137,7 @@ model::G1GenerationReport generate_for_profile(
     g1::ProfileKind kind = g1::ProfileKind::tsukuyomi;
     if (profile == LanguageProfile::apollo) kind = g1::ProfileKind::apollo;
     else if (profile == LanguageProfile::mokosh) kind = g1::ProfileKind::mokosh;
+    else if (profile == LanguageProfile::tsukuyomi_max) kind = g1::ProfileKind::tsukuyomi_max;
     const auto config = g1::make_generation_config(kind, max_new_bytes, 42);
     return model::generate_g1(parameters, prompt, config);
 }
@@ -308,8 +309,10 @@ common::Result<LanguageGeneration> LanguageSubsystem::generate(
     std::lock_guard lock(mutex_);
     const auto valid = validate_request_locked(request);
     if (!valid) return common::Result<LanguageGeneration>::failure(*valid.error_if());
-    const std::size_t profile_limit = language_config_.profile == LanguageProfile::apollo
-        ? 512U : (language_config_.profile == LanguageProfile::mokosh ? 128U : 256U);
+    const std::size_t profile_limit =
+        (language_config_.profile == LanguageProfile::apollo ||
+         language_config_.profile == LanguageProfile::tsukuyomi_max)
+            ? 512U : (language_config_.profile == LanguageProfile::mokosh ? 128U : 256U);
     if (max_new_bytes == 0 || !resource_limits_.permits_generation(max_new_bytes) ||
         max_new_bytes > profile_limit) {
         return common::Result<LanguageGeneration>::failure(common::Error::make(
