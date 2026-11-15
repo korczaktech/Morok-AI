@@ -20,6 +20,11 @@ on:
         type: number
         required: true
         default: 10
+      questoes:
+        description: "Quantidade de questões para a IA tentar resolver (1 a 40)"
+        type: number
+        required: true
+        default: 40
       treinamento_continuo:
         description: "Continuar até obter 10 ciclos consecutivos com todas as respostas corretas"
         type: boolean
@@ -46,6 +51,7 @@ jobs:
         env:
           EPOCAS: ${{ inputs.epocas || 200 }}
           TENTATIVAS: ${{ inputs.tentativas || 10 }}
+          QUESTOES: ${{ inputs.questoes || 40 }}
         run: |
           python3 - <<'PY'
           import os
@@ -53,6 +59,9 @@ jobs:
               value = int(os.environ[name])
               if value < 1:
                   raise SystemExit(f"{name} precisa ser maior que zero.")
+          questoes = int(os.environ["QUESTOES"])
+          if not 1 <= questoes <= 40:
+              raise SystemExit("QUESTOES precisa estar entre 1 e 40.")
           PY
 
       - name: Validar conjuntos e avaliador
@@ -85,11 +94,12 @@ jobs:
         working-directory: Morok
         run: ctest --test-dir build/g2 -R "g2.tsukuyomi.model|architecture.generation_isolation" --output-on-failure
 
-      - name: Executar treinamento cíclico e responder todas as perguntas
+      - name: Executar treinamento cíclico e responder todas as perguntas selecionadas
         working-directory: Morok
         env:
           EPOCAS: ${{ inputs.epocas || 200 }}
           TENTATIVAS: ${{ inputs.tentativas || 10 }}
+          QUESTOES: ${{ inputs.questoes || 40 }}
           TREINAMENTO_CONTINUO: ${{ inputs.treinamento_continuo || false }}
         run: |
           CONTINUO=0
@@ -100,7 +110,7 @@ jobs:
             "Gerações/G2/Tsukuyomi/data/treinamento.txt" \
             "Gerações/G2/Tsukuyomi/data/validacao.txt" \
             "Gerações/G2/Tsukuyomi/data/teste.txt" \
-            "$EPOCAS" "$TENTATIVAS" "$CONTINUO"
+            "$EPOCAS" "$TENTATIVAS" "$CONTINUO" "$QUESTOES"
 
       - name: Publicar tabela de respostas e annotations G2
         if: always()
