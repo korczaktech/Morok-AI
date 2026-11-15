@@ -19,12 +19,7 @@ out.mkdir(parents=True, exist_ok=True)
 attempts = int(os.environ["G1_ATTEMPTS"])
 epochs = int(os.environ["G1_EPOCHS"])
 seed = int(os.environ.get("G1_SEED", "42"))
-profile_inputs = (
-    ("Tsukuyomi", "TSUKUYOMI"),
-    ("Apollo", "APOLLO"),
-    ("Mokosh", "MOKOSH"),
-    ("TsukuyomiMax", "TSUKUYOMI_MAX"),
-)
+profile_inputs = (("TsukuyomiMax", "TSUKUYOMI_MAX"),)
 profiles = [name for name, key in profile_inputs
             if os.environ.get("G1_MODEL_" + key, "false").lower() == "true"]
 question_map = {
