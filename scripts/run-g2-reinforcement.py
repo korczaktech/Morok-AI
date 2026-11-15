@@ -54,14 +54,17 @@ def main():
  db=json.loads(a.database.read_text(encoding="utf-8"))
  if db.get("schema_version")!=1 or {q["id"] for q in db["questions"]}!=set(TASK_CONCEPTS):raise ValueError("invalid G2 feedback database")
  a.checkpoint.parent.mkdir(parents=True,exist_ok=True)
- inference_a=Path(str(a.checkpoint)+".expert-a")
- inference_b=Path(str(a.checkpoint)+".expert-b")
+ # Versioned prefix prevents silently reusing checkpoints trained with the old optimizer.
+ checkpoint=Path(str(a.checkpoint)+".v2")
+ inference_a=Path(str(checkpoint)+".expert-a")
+ inference_b=Path(str(checkpoint)+".expert-b")
+ checkpoint_reused=inference_a.is_file() and inference_b.is_file()
  if inference_a.is_file()!=inference_b.is_file():
   raise RuntimeError("incomplete persistent G2 checkpoint: both expert files must exist")
  if not inference_a.is_file():
-  train_cmd=[str(a.trainer),str(ROOT/"tests/fixtures/g2-single-document"),str(a.checkpoint),str(a.bootstrap_epochs),"42"]
-  training_a=Path(str(a.checkpoint)+".expert-a.training")
-  training_b=Path(str(a.checkpoint)+".expert-b.training")
+  train_cmd=[str(a.trainer),str(ROOT/"tests/fixtures/g2-single-document"),str(checkpoint),str(a.bootstrap_epochs),"42"]
+  training_a=Path(str(checkpoint)+".expert-a.training")
+  training_b=Path(str(checkpoint)+".expert-b.training")
   if training_a.is_file() and training_b.is_file():train_cmd.append("--resume")
   run(train_cmd)
   if not inference_a.is_file() or not inference_b.is_file():
@@ -73,7 +76,7 @@ def main():
   for i in range(a.attempts):
    q=selected_questions[i%len(selected_questions)]; prompt=tmp/"prompt.txt"; answer=tmp/"answer.txt"; answer_file=answer; prompt.write_text(q["prompt"],encoding="utf-8")
    before=digest(inference_a)+digest(inference_b)
-   run([str(a.generator),str(a.checkpoint),str(prompt),str(answer),"48"])
+   run([str(a.generator),str(checkpoint),str(prompt),str(answer),"48"])
    response=answer.read_text(encoding="utf-8"); verdict,reward,reason=grade(q["id"],response)
    if is_degenerate_response(response):verdict,reward,reason="incorrect",-1,"degenerate_repetition"
    episode_no=len(db["episodes"])+1
@@ -82,7 +85,7 @@ def main():
    training_target,training_source=select_training_target(q["id"],response,verdict)
    if training_source=="oracle_demonstration":answer_file.write_text(training_target,encoding="utf-8")
    if len(training_target.encode("utf-8"))>=2:
-    report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate),"100"]))
+    report=json.loads(run([str(a.reinforcer),str(checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate),"100"]))
     target_loss_decreased=report.get("target_loss_after",float("inf")) < report.get("target_loss_before",float("-inf"))
     if not target_loss_decreased:
      raise RuntimeError("G2 update did not reduce the target sequence loss; refusing to record a successful update")
@@ -96,7 +99,7 @@ def main():
  lines=[f"{x['attempt']}. {x['answer'].replace(chr(10),' ').strip() or '[resposta vazia]'} - {'correto' if x['verdict']=='correct' else 'errado'}" for x in results]
  a.results_file.parent.mkdir(parents=True,exist_ok=True); a.results_file.write_text("\n".join(lines)+"\n",encoding="utf-8")
  correct_count=sum(x["verdict"]=="correct" for x in results)
- report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"selected_questions":[q["id"] for q in selected_questions],"results":results,"correct_in_this_run":correct_count,"behavioral_gate":"passed" if correct_count else "failed","totals":db["totals"],"trainable_parameters":2000,"checkpoint_reused":True}
+ report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"selected_questions":[q["id"] for q in selected_questions],"results":results,"correct_in_this_run":correct_count,"behavioral_gate":"passed" if correct_count else "failed","totals":db["totals"],"trainable_parameters":2000,"checkpoint_reused":checkpoint_reused,"checkpoint_version":"v2"}
  summary=os.environ.get("GITHUB_STEP_SUMMARY")
  if summary:
   with open(summary,"a",encoding="utf-8") as f:
