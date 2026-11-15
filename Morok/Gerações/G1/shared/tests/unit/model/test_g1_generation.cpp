@@ -185,12 +185,18 @@ void test_shared_profile_generation_policies() {
     require(tsukuyomi.max_new_bytes == 256, "Tsukuyomi must retain its 256-byte cap");
     require(tsukuyomi.top_k == 0 && tsukuyomi.temperature == 0.8,
             "Tsukuyomi policy must be centralized");
+    require(tsukuyomi.repetition_penalty == 0.0,
+            "Tsukuyomi must not penalize repeated bytes");
     const auto apollo = g1::make_generation_config(g1::ProfileKind::apollo, 900, 8);
     require(apollo.max_new_bytes == 512, "Apollo must retain its 512-byte cap");
+    require(apollo.repetition_penalty == 0.0,
+            "Apollo must not penalize repeated bytes");
     const auto mokosh = g1::make_generation_config(g1::ProfileKind::mokosh, 900, 9, 3);
     require(mokosh.max_new_bytes == 128, "Mokosh must retain its 128-byte cap");
     require(mokosh.top_k == 3 && mokosh.temperature == 0.7,
             "Mokosh must honor the configured top-k policy");
+    require(mokosh.repetition_penalty == 0.0,
+            "Mokosh must not penalize repeated bytes");
     require(mokosh.rlah_bias_strength > 0.0,
             "RLAH prior must be enabled in the inference policy");
     const auto max = g1::make_generation_config(
@@ -199,6 +205,8 @@ void test_shared_profile_generation_policies() {
             "Tsukuyomi Max must support the unified 512-byte response limit");
     require(max.top_k == 16 && max.temperature == 0.75,
             "Tsukuyomi Max must use its balanced unified generation policy");
+    require(max.repetition_penalty == 0.0,
+            "Tsukuyomi Max must not penalize repeated bytes");
 }
 
 void test_invalid_limits_rejected() {
