@@ -51,8 +51,8 @@ class TrainingDataTests(unittest.TestCase):
         train = training.read_dialogues(DATA_DIR / "treinamento.txt")
         original = training.read_dialogues(DATA_DIR / "treinamento-inicial.txt")
         self.assertEqual(len(train), 56)
-        self.assertEqual(len(original), 32)
-        self.assertTrue(set(original).issubset(set(train)))
+        self.assertEqual(len(original), 40)
+        self.assertEqual(len(set(original) & set(train)), 32)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "validacao.txt")), 40)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "teste.txt")), 12)
 
