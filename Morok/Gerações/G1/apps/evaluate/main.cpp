@@ -62,18 +62,24 @@ int main(int argc, char** argv) {
             if (!valid) throw std::runtime_error("invalid UTF-8 in " + path.string());
             if (raw.size() < 2) continue;
             morok::model::G1State state{};
+            auto previous = static_cast<std::uint8_t>(
+                static_cast<unsigned char>(raw.front()));
+            const bool first_separator = morok::model::is_g1_token_separator(previous);
             morok::model::advance_g1_state(
-                checkpoint.parameters, state,
-                static_cast<std::uint8_t>(static_cast<unsigned char>(raw.front())));
+                checkpoint.parameters, state, previous, !first_separator, first_separator);
             for (std::size_t i = 1; i < raw.size(); ++i) {
+                const auto current = static_cast<std::uint8_t>(
+                    static_cast<unsigned char>(raw[i]));
                 const auto score = morok::model::evaluate_g1_next_byte(
-                    checkpoint.parameters, state,
-                    static_cast<std::uint8_t>(static_cast<unsigned char>(raw[i])));
+                    checkpoint.parameters, state, current);
                 total_nats += score.negative_log_likelihood_nats;
                 ++targets;
+                const bool separator = morok::model::is_g1_token_separator(current);
+                const bool token_start = !separator &&
+                    morok::model::is_g1_token_separator(previous);
                 morok::model::advance_g1_state(
-                    checkpoint.parameters, state,
-                    static_cast<std::uint8_t>(static_cast<unsigned char>(raw[i])));
+                    checkpoint.parameters, state, current, token_start, separator);
+                previous = current;
             }
             ++evaluated_documents;
         }
