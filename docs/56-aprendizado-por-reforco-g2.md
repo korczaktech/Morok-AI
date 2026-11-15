@@ -44,7 +44,7 @@ Respostas incompletas, negativas ou degeneradas não recebem recompensa positiva
 
 O runner não apaga mais os checkpoints de inferência a cada execução. Se os dois checkpoints de especialistas já existirem, o treinamento continua a partir desses pesos. Se ambos não existirem, o runner faz o bootstrap; se existir apenas um, interrompe com erro para evitar um par inconsistente.
 
-Os checkpoints de treinamento do bootstrap também podem ser retomados com `--resume` quando ambos estiverem disponíveis. O banco de episódios permanece separado dos pesos do modelo.
+Os checkpoints de treinamento do bootstrap também podem ser retomados com `--resume` quando ambos estiverem disponíveis. O banco de episódios permanece separado dos pesos do modelo. Checkpoints produzidos por versões anteriores à correção do sinal do gradiente devem ser descartados uma única vez antes de executar a versão corrigida; caso contrário, o runner continuará a partir dos pesos antigos.
 
 ## Limitações
 
