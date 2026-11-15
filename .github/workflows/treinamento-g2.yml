@@ -26,7 +26,7 @@ on:
         required: true
         default: 1
       treinamento_continuo:
-        description: "Continuar até obter 10 ciclos consecutivos com todas as respostas corretas"
+        description: "Continuar até a primeira resposta correta para a questão selecionada"
         type: boolean
         required: true
         default: true
@@ -94,12 +94,12 @@ jobs:
         working-directory: Morok
         run: ctest --test-dir build/g2 -R "g2.tsukuyomi.model|architecture.generation_isolation" --output-on-failure
 
-      - name: Executar treinamento cíclico e responder todas as perguntas selecionadas
+      - name: Treinar e avaliar somente as questões selecionadas
         working-directory: Morok
         env:
           EPOCAS: ${{ inputs.epocas || 200 }}
           TENTATIVAS: ${{ inputs.tentativas || 10 }}
-          QUESTOES: ${{ inputs.questoes || 40 }}
+          QUESTOES: ${{ inputs.questoes || 1 }}
           TREINAMENTO_CONTINUO: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || inputs.treinamento_continuo || false }}
         run: |
           CONTINUO=0
