@@ -36,16 +36,23 @@ int main() {
         const auto generated=generate_g2(p,*prompt.value_if(),generation);
         if(generated.generated_bytes>2)throw std::runtime_error("G2 generation exceeded its byte bound");
         const auto corpus=dir/"corpus"; std::filesystem::create_directories(corpus);
-        {std::ofstream f(corpus/"single.txt");f<<"Usuario: O ceu e azul?\nIA: Sim, o ceu e azul\n";}
+        {std::ofstream f(corpus/"doc-01.txt");f<<"Usuario: O ceu e azul?\\nIA: Sim, o ceu e azul";}
+        {std::ofstream f(corpus/"doc-02.txt");f<<"Usuario: As montanhas sao altas ou baixas?\\nIA: As montanhas sao altas.";}
+        {std::ofstream f(corpus/"doc-03.txt");f<<"Usuario: Que cor e a grama?\\nIA: A grama e verde.";}
         G2TrainingConfig training; training.base.corpus_directory=corpus;
-        training.base.max_epochs=1; training.base.patience=5; training.base.truncation_length=8;
+        training.base.max_epochs=1; training.base.patience=5; training.base.truncation_length=128;
+        training.base.train_all_documents=true;
         training.checkpoint_prefix=dir/"trained";
         G2Parameters trained; initialize_g2_parameters(trained,7);
         const auto report=train_g2_corpus(training,trained);
         if(report.expert_a.best_epoch!=1||report.expert_b.best_epoch!=1)
             throw std::runtime_error("both G2 experts must complete one training epoch");
-        if(!report.expert_a.single_document_evaluation||!report.expert_b.single_document_evaluation)
-            throw std::runtime_error("both G2 experts must support a single-document corpus");
+        if(report.expert_a.training_documents!=3||report.expert_b.training_documents!=3)
+            throw std::runtime_error("both G2 experts must train on all three independent QA documents");
+        if(!report.expert_a.training_data_evaluation||!report.expert_b.training_data_evaluation)
+            throw std::runtime_error("G2 smoke training must report that evaluation reuses training documents");
+        if(report.expert_a.single_document_evaluation||report.expert_b.single_document_evaluation)
+            throw std::runtime_error("three QA documents must not be mislabeled as a single-document corpus");
         if(load_g2_checkpoint(training.checkpoint_prefix).flatten()!=trained.flatten())
             throw std::runtime_error("trained G2 checkpoint does not match trained parameters");
         training.base.max_epochs=2; training.resume=true;
