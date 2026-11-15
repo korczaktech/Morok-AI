@@ -42,6 +42,8 @@ int main() {
     assert(generated);
     assert(generated.value_if()->generated_bytes <= 4);
     assert(generated.value_if()->input_language == lang::DetectedLanguage::portuguese);
+    assert(generated.value_if()->input_token_count == 4);
+    assert(generated.value_if()->output_token_count <= generated.value_if()->generated_bytes);
     assert(generated.value_if()->text.size_bytes() ==
            generated.value_if()->generated_bytes);
     assert(common::Utf8Text::from_utf8(
@@ -54,6 +56,14 @@ int main() {
     assert(second_generated);
     assert(second_generated.value_if()->text.size_bytes() <= 4);
     assert(second_generated.value_if()->input_language == lang::DetectedLanguage::english);
+    assert(second_generated.value_if()->input_token_count == 5);
+
+    auto followup = common::Utf8Text::from_utf8("E a grama?");
+    assert(followup);
+    assert(language.observe(*request.value_if(), *followup.value_if()));
+    auto followup_generated = language.generate(*request.value_if(), 4);
+    assert(followup_generated);
+    assert(followup_generated.value_if()->input_token_count == 4);
 
     auto oversized = language.generate(*request.value_if(), 9);
     assert(!oversized);
@@ -87,6 +97,7 @@ int main() {
     auto spanish_generated = language.generate(*spanish_request.value_if(), 4);
     assert(spanish_generated);
     assert(spanish_generated.value_if()->input_language == lang::DetectedLanguage::spanish);
+    assert(spanish_generated.value_if()->input_token_count == 6);
     assert(language.close_session(sessions, *third.value_if()));
 
     assert(language.close_session(sessions, *second.value_if()));
