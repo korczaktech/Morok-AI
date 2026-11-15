@@ -443,7 +443,7 @@
   // Start API health check before optional UI bindings.
   restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); checkHealth(); refreshAuthSession();
 
-  $('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
+  $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
   $('#auth-form').addEventListener('submit',event=>{event.preventDefault();if(event.submitter && event.submitter.id!=='auth-submit')return;submitAuth();});
   $('#auth-logout').addEventListener('click',logout);
 
@@ -463,7 +463,7 @@
     $$$('[data-generation]').forEach(button=>button.classList.toggle('selected',button.dataset.generation===state.generation));
     $$('[data-model]').forEach(button=>button.classList.toggle('selected',button.dataset.model===state.model));
   }
-  $('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;updateModelMenu();$('#generation-list').hidden=true;$('#model-submenu').hidden=false;persist();}));
+  $$('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;updateModelMenu();$('#generation-list').hidden=true;$('#model-submenu').hidden=false;persist();}));
   $('#generation-back').addEventListener('click',()=>{$('#model-submenu').hidden=true;$('#generation-list').hidden=false;});
   $$('[data-model]').forEach(button=>button.addEventListener('click',()=>{state.model=button.dataset.model;updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Perfil selecionado: '+state.generation+' · '+state.model+'. O servidor ainda usa o checkpoint carregado.');}));
   document.addEventListener('click',event=>{if(!event.target.closest('.model-select-wrap')){$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');}if(!event.target.closest('.context-menu')&&!event.target.closest('.history-menu'))closeContextMenu();});
