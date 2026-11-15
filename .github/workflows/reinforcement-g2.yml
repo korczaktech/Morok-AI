@@ -70,8 +70,9 @@ jobs:
             if [[ -f artifacts/reinforcement-g2/model.v3.expert-a && -f artifacts/reinforcement-g2/model.v3.expert-b ]]; then
               echo "Restored G2 v3 checkpoints from workflow run $previous_run."
             elif [[ -f artifacts/reinforcement-g2/model.v3.expert-a || -f artifacts/reinforcement-g2/model.v3.expert-b ]]; then
-              echo "::error::Previous G2 artifact contains an incomplete v3 expert pair."
-              exit 1
+              echo "::warning::Previous G2 artifact has an incomplete expert pair; discarding both files and bootstrapping fresh."
+              rm -f artifacts/reinforcement-g2/model.v3.expert-a artifacts/reinforcement-g2/model.v3.expert-b
+              rm -f artifacts/reinforcement-g2/model.v2*
             else
               rm -f artifacts/reinforcement-g2/model.v2*
               echo "Previous artifact predates independent QA/EOS training; starting fresh with v3."

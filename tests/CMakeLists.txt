@@ -37,58 +37,58 @@ endif()
 add_executable(morok_test_g1_parameters
     unit/model/test_g1_parameters.cpp
 )
-target_link_libraries(morok_test_g1_parameters PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_g1_parameters PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_parameters)
 add_test(NAME model.g1_parameters COMMAND morok_test_g1_parameters)
 
 add_executable(morok_test_g1_forward
     unit/model/test_g1_forward.cpp
 )
-target_link_libraries(morok_test_g1_forward PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_g1_forward PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_forward)
 add_test(NAME model.g1_forward COMMAND morok_test_g1_forward)
 
 add_executable(morok_test_g1_bptt
     unit/model/test_g1_bptt.cpp
 )
-target_link_libraries(morok_test_g1_bptt PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_g1_bptt PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_bptt)
 add_test(NAME model.g1_bptt COMMAND morok_test_g1_bptt)
 
 add_executable(morok_test_g1_reinforcement unit/model/test_g1_reinforcement.cpp)
-target_link_libraries(morok_test_g1_reinforcement PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_g1_reinforcement PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_reinforcement)
 add_test(NAME model.g1_reinforcement COMMAND morok_test_g1_reinforcement)
 
 add_executable(morok_test_g1_optimizer
     unit/model/test_g1_optimizer.cpp
 )
-target_link_libraries(morok_test_g1_optimizer PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_g1_optimizer PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_optimizer)
 add_test(NAME model.g1_optimizer COMMAND morok_test_g1_optimizer)
 
 add_executable(morok_test_g1_training unit/model/test_g1_training.cpp)
-target_link_libraries(morok_test_g1_training PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_g1_training PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_training)
 add_test(NAME model.g1_training COMMAND morok_test_g1_training)
 
 add_executable(morok_test_g1_checkpoint unit/model/test_g1_checkpoint.cpp)
-target_link_libraries(morok_test_g1_checkpoint PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_g1_checkpoint PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_checkpoint)
 add_test(NAME model.g1_checkpoint COMMAND morok_test_g1_checkpoint)
 
 add_executable(morok_test_g1_benchmark unit/model/test_g1_benchmark.cpp)
-target_link_libraries(morok_test_g1_benchmark PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_g1_benchmark PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_benchmark)
 add_test(NAME model.g1_benchmark COMMAND morok_test_g1_benchmark)
 
 add_executable(morok_test_g1_generation unit/model/test_g1_generation.cpp)
-target_link_libraries(morok_test_g1_generation PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_g1_generation PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_generation)
 add_test(NAME model.g1_generation COMMAND morok_test_g1_generation)
 
 add_executable(morok_test_g1_evaluation unit/model/test_g1_evaluation.cpp)
-target_link_libraries(morok_test_g1_evaluation PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_g1_evaluation PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_evaluation)
 add_test(NAME model.g1_evaluation COMMAND morok_test_g1_evaluation)
 
@@ -181,7 +181,7 @@ set_tests_properties(property.model_invariants PROPERTIES LABELS "property;fast"
 
 add_executable(morok_test_training_generation_pipeline
     integration/model_training_generation_pipeline.cpp)
-target_link_libraries(morok_test_training_generation_pipeline PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_training_generation_pipeline PRIVATE Morok::G1 morok_build_options)
 target_compile_definitions(morok_test_training_generation_pipeline PRIVATE
     MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 morok_enable_sanitizers(morok_test_training_generation_pipeline)
@@ -198,7 +198,7 @@ set_tests_properties(regression.runtime_rollback PROPERTIES LABELS "regression;c
 
 # Stage 19: acceptance coverage across the G1 artifact flow and seven subsystems.
 add_executable(morok_acceptance_g1 acceptance/g1/test_g1_acceptance.cpp)
-target_link_libraries(morok_acceptance_g1 PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_acceptance_g1 PRIVATE Morok::G1 morok_build_options)
 target_compile_definitions(morok_acceptance_g1 PRIVATE
     MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 morok_enable_sanitizers(morok_acceptance_g1)

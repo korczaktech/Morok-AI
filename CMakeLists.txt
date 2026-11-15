@@ -26,13 +26,10 @@ add_library(morok_core STATIC
     src/common/timestamp.cpp
     src/common/utf8_text.cpp
     src/memory/memory_store.cpp
-    src/lang/language_subsystem.cpp
     src/lang/rlah/segmenter.cpp
-    src/comm/communication_subsystem.cpp
     src/reason/reasoning_subsystem.cpp
     src/tools/tool_subsystem.cpp
     src/security/security_subsystem.cpp
-    src/learn/learning_subsystem.cpp
 )
 add_library(Morok::Core ALIAS morok_core)
 
@@ -48,6 +45,9 @@ morok_enable_sanitizers(morok_core)
 
 # G1 is a private generation library; the public core contains only shared infrastructure.
 add_library(morok_g1 STATIC
+    src/lang/language_subsystem.cpp
+    src/comm/communication_subsystem.cpp
+    src/learn/learning_subsystem.cpp
     src/model/parameters/g1_parameters.cpp
     src/model/g1_forward.cpp
     src/model/learn/g1_bptt.cpp
