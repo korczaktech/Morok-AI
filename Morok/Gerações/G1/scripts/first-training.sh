@@ -19,7 +19,7 @@ cd "$root"
 
 train_bin="${MOROK_TRAIN_BIN:-./build/morok-train}"
 generate_bin="${MOROK_GENERATE_BIN:-./build/morok_generate}"
-corpus="Gerações/G1/shared/tests/fixtures/benchmark"
+corpus="Gerações/Gerações/G1/shared/tests/fixtures/benchmark"
 checkpoint="$output_dir/g1-resume.morokckp"
 best_model="$output_dir/g1-best.morokckp"
 metrics="$output_dir/metrics.jsonl"
@@ -87,7 +87,7 @@ out = pathlib.Path(sys.argv[1])
 epochs = int(sys.argv[2])
 seed = int(sys.argv[3])
 root = pathlib.Path.cwd()
-files = sorted((root / "G1/shared/tests/fixtures/benchmark").glob("*.txt"))
+files = sorted((root / "Gerações/G1/shared/tests/fixtures/benchmark").glob("*.txt"))
 digest = hashlib.sha256()
 for path in files:
     digest.update(path.name.encode("utf-8"))
@@ -110,7 +110,7 @@ manifest = {
     "model": {"generation": "G1", "trainable_parameters": 1000, "language_standard": "C++20"},
     "data": {
         "name": "Morok versioned synthetic benchmark fixture",
-        "path": "G1/shared/tests/fixtures/benchmark",
+        "path": "Gerações/G1/shared/tests/fixtures/benchmark",
         "license": "CC0-1.0",
         "source": "repository-generated technical fixture",
         "documents": len(files),

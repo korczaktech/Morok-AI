@@ -42,7 +42,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes ninja-build libsqlite3-dev
 
-      - name: Configure G1 without G2
+      - name: Configure G1
         working-directory: Morok
         run: >-
           cmake -S . -B build/g1 -G Ninja

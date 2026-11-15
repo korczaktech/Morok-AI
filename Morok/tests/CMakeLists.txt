@@ -165,7 +165,7 @@ add_executable(morok_test_training_generation_pipeline
     ../Gerações/G1/shared/tests/integration/model_training_generation_pipeline.cpp)
 target_link_libraries(morok_test_training_generation_pipeline PRIVATE Morok::G1 morok_build_options)
 target_compile_definitions(morok_test_training_generation_pipeline PRIVATE
-    MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}/Gerações/G1/shared")
 morok_enable_sanitizers(morok_test_training_generation_pipeline)
 add_test(NAME integration.training_generation_pipeline
     COMMAND morok_test_training_generation_pipeline)
@@ -182,7 +182,7 @@ set_tests_properties(regression.runtime_rollback PROPERTIES LABELS "regression;c
 add_executable(morok_acceptance_g1 ../Gerações/G1/shared/tests/acceptance/test_g1_acceptance.cpp)
 target_link_libraries(morok_acceptance_g1 PRIVATE Morok::G1 morok_build_options)
 target_compile_definitions(morok_acceptance_g1 PRIVATE
-    MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}/Gerações/G1/shared")
 morok_enable_sanitizers(morok_acceptance_g1)
 add_test(NAME acceptance.g1_training_checkpoint_generation
     COMMAND morok_acceptance_g1)
@@ -194,7 +194,7 @@ add_executable(morok_acceptance_seven_subsystems
 target_link_libraries(morok_acceptance_seven_subsystems
     PRIVATE Morok::G1 morok_build_options SQLite::SQLite3)
 target_compile_definitions(morok_acceptance_seven_subsystems PRIVATE
-    MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}/Gerações/G1/shared")
 morok_enable_sanitizers(morok_acceptance_seven_subsystems)
 add_test(NAME acceptance.seven_subsystems
     COMMAND morok_acceptance_seven_subsystems)

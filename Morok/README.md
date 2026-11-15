@@ -97,7 +97,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 
 - Etapa 19 — Testes de aceitação: os fluxos de aceitação da G1 e da integração do Core estão registrados. A execução após a migração ainda está pendente.
 
-- Etapa 20 — Primeiro treinamento completo da G1: runner reproduzível, scripts de treino, retomada, checkpoint de inferência, geração UTF-8, manifesto e hashes estão implementados. Os workflows foram removidos; a execução manual, corpus natural/licenciado e medição em hardware físico de 4 GB permanecem pendentes.
+- Etapa 20 — Primeiro treinamento completo da G1: runner reproduzível, scripts de treino, retomada, checkpoint de inferência, geração UTF-8, manifesto e hashes estão implementados. O workflow `G1` executa build, testes e o primeiro treinamento com retomada. Corpus natural/licenciado e medição em hardware físico de 4 GB permanecem pendentes.
 
 - Etapa 12 — IA-TOOLS: registro, descoberta, esquema tipado, allowlist, grants de capacidade, confirmação de efeitos colaterais, validação UTF-8 e de tipos, limites de concorrência/entrada/saída/tempo, captura de exceções, auditoria injetável e lifecycle IA-CORE implementados. Teste `tools.tool_subsystem` registrado no CTest. Isolamento de processo/OS e interrupção forçada de handlers não fazem parte desta versão; handlers devem ser código confiável. Consulte [Etapa 12 — IA-TOOLS](docs/45-etapa-12-ia-tools.md).
 
@@ -137,4 +137,4 @@ Toda hipótese deve ser testável. Uma otimização só será considerada válid
 ## Aprendizado por reforço
 
 - **Reinforcement-G1** ([script](Gerações/G1/scripts/reinforcement.py), [histórico](Gerações/G1/data/reinforcement/answers.json)): atualiza os 1.000 parâmetros da G1, com checkpoint e artefatos próprios. Usa três perguntas controladas, avaliador lexical e gradiente reward-weighted baseado em BPTT; isso não demonstra compreensão semântica geral. Consulte [Experimento G1](docs/54-aprendizado-por-reforco-g1.md).
-Os scripts de reforço são independentes e ficam dentro de suas respectivas gerações. Nenhum workflow de GitHub Actions está ativo no momento.
+Os scripts de reforço são independentes e ficam dentro de suas respectivas gerações. Os workflows ativos estão em `.github/workflows/` na raiz do repositório.
