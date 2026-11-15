@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstring>
 #include <fstream>
+#include <iterator>
 #include <limits>
 #include <random>
 #include <string>
@@ -22,9 +23,6 @@ constexpr std::size_t kStartOffset = 9984;
 
 static_assert(kStartOffset + 16 == kParameterCount);
 
-float& at(Model& model, std::size_t offset) {
-    return model.parameters[offset];
-}
 float at(const Model& model, std::size_t offset) {
     return model.parameters[offset];
 }
