@@ -133,7 +133,7 @@ int main() {
         const double loss_plus = evaluate_loss(plus, history_target_bytes, history_mask);
         const double loss_minus = evaluate_loss(minus, history_target_bytes, history_mask);
         const double numerical = (loss_plus - loss_minus) / (2.0 * epsilon);
-        assert(std::abs(numerical - analytic[9216]) <=
+        assert(std::abs(numerical - analytic[9232]) <=
                3.0e-2 + 3.0e-2 * std::abs(numerical));
     }
 
