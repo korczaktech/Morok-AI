@@ -101,6 +101,7 @@ def main():
  ap.add_argument("--memory-replay-steps",type=int,default=25,help="optimizer steps per remembered experience")
  a=ap.parse_args()
  a.results_file.parent.mkdir(parents=True,exist_ok=True)
+ if a.results_file.exists():a.results_file.unlink()
  if not 1<=a.attempts<=10 or not 1<=a.bootstrap_epochs<=MAX_BOOTSTRAP_EPOCHS:raise ValueError(f"attempts must be in [1,10] and bootstrap epochs in [1,{MAX_BOOTSTRAP_EPOCHS}]")
  if not a.questions or len(a.questions)!=len(set(a.questions)):raise ValueError("select at least one unique question")
  if not 0<=a.memory_replay_limit<=256 or not 1<=a.memory_replay_steps<=1000:raise ValueError("memory replay limit must be in [0,256] and replay steps in [1,1000]")
