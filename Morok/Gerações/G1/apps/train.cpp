@@ -39,7 +39,7 @@ void usage() {
         << "  --log <path>           Append epoch metrics as JSONL\n"
         << "  --export-best <path>   Export the best validation checkpoint\n"
         << "  --patience <n>         Early-stopping patience (1..10000)\n"
-        << "  --truncation <n>       BPTT window in bytes (1..128)\n"
+        << "  --truncation <n>       BPTT window in bytes (1..512)\n"
         << "  --optimizer <name>     adamw or sgd\n"
         << "  --learning-rate <n>    Positive finite learning rate\n";
 }
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
                     parse_unsigned(value, "patience", 1, 1000000));
             else if (option == "--truncation")
                 config.truncation_length = static_cast<std::size_t>(
-                    parse_unsigned(value, "truncation", 1, 128));
+                    parse_unsigned(value, "truncation", 1, 512));
             else if (option == "--learning-rate")
                 config.optimizer.learning_rate = parse_positive_double(value, "learning-rate");
             else if (option == "--optimizer") {
