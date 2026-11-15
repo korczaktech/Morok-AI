@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080a10">
+  <meta name="description" content="Morok AI — pesquisa e desenvolvimento de uma inteligência artificial própria, experimental e treinada do zero.">
+  <title>Morok AI — Inteligência construída do zero</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+    :root{color-scheme:dark;--bg:#080a10;--panel:#10141e;--panel2:#151b28;--line:rgba(190,205,255,.12);--text:#f2f4fb;--muted:#9aa4b8;--cyan:#8ce8e0;--violet:#a99aff;--max:1160px}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 78% 8%,rgba(103,87,190,.16),transparent 34%),radial-gradient(ellipse at 8% 35%,rgba(55,169,164,.09),transparent 28%),var(--bg);color:var(--text);font-family:Manrope,system-ui,sans-serif;line-height:1.6}
+    a{color:inherit;text-decoration:none}.wrap{width:min(var(--max),calc(100% - 48px));margin:auto}.mono{font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase}
+    header{height:82px;border-bottom:1px solid var(--line);display:flex;align-items:center;position:relative;z-index:5;background:rgba(8,10,16,.72);backdrop-filter:blur(18px)}
+    .nav{display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:-.04em;font-size:19px}.mark{width:34px;height:34px;border:1px solid rgba(140,232,224,.45);border-radius:11px;display:grid;place-items:center;color:var(--cyan);font-size:17px;background:linear-gradient(145deg,rgba(140,232,224,.16),rgba(169,154,255,.12));box-shadow:0 0 28px rgba(140,232,224,.1)}
+    .links{display:flex;align-items:center;gap:30px;color:var(--muted);font-size:13px}.links a:hover{color:var(--text)}.nav-cta,.button{border:1px solid rgba(140,232,224,.38);border-radius:9px;padding:11px 16px;font-size:13px;font-weight:700;transition:.2s}.nav-cta:hover,.button.primary:hover{background:var(--cyan);color:#071012;transform:translateY(-2px)}
+    .menu{display:none;background:none;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font:inherit}
+    .hero{padding:112px 0 86px;position:relative;overflow:hidden}.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;align-items:center;gap:64px}.eyebrow{display:inline-flex;align-items:center;gap:10px;color:var(--cyan);font-size:11px}.dot{width:7px;height:7px;background:var(--cyan);border-radius:50%;box-shadow:0 0 14px var(--cyan)}
+    h1{font-size:clamp(48px,6.7vw,82px);line-height:1.02;letter-spacing:-.075em;margin:22px 0 24px;font-weight:800}h1 span{background:linear-gradient(100deg,var(--cyan),#b8b1ff 75%);background-clip:text;color:transparent}.lead{font-size:17px;line-height:1.8;color:var(--muted);max-width:590px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}.button{display:inline-flex;align-items:center;gap:10px;padding:14px 19px}.button.primary{background:var(--cyan);color:#071012;border-color:var(--cyan)}.button.secondary{border-color:var(--line);color:var(--text)}.button.secondary:hover{border-color:rgba(169,154,255,.6);background:rgba(169,154,255,.08)}
+    .visual{min-height:390px;position:relative;display:grid;place-items:center}.orb{width:min(340px,78vw);aspect-ratio:1;border-radius:50%;position:relative;background:radial-gradient(circle at 38% 35%,rgba(140,232,224,.28),transparent 20%),radial-gradient(circle at 62% 60%,rgba(169,154,255,.23),transparent 28%),radial-gradient(circle,rgba(25,34,52,.9),rgba(8,10,16,.2) 67%);border:1px solid rgba(169,154,255,.2);box-shadow:inset 0 0 70px rgba(140,232,224,.07),0 0 100px rgba(117,105,210,.12)}
+    .orb:before,.orb:after{content:"";position:absolute;inset:9%;border:1px solid rgba(140,232,224,.22);border-radius:50%;transform:rotateX(68deg) rotate(-28deg)}.orb:after{inset:20%;border-color:rgba(169,154,255,.32);transform:rotateX(68deg) rotate(42deg)}.core{position:absolute;inset:37%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e0fffa,#6ac9c2 24%,#55508f 64%,#171b2b);box-shadow:0 0 55px rgba(140,232,224,.45),0 0 110px rgba(169,154,255,.25)}
+    .orbit-label{position:absolute;padding:9px 12px;border:1px solid var(--line);background:rgba(16,20,30,.8);backdrop-filter:blur(12px);border-radius:8px;font:10px 'DM Mono',monospace;color:#c6cee0}.label-a{top:14%;right:0}.label-b{bottom:17%;left:-2%}.label-c{bottom:4%;right:9%}
+    .stats{border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:25px 0}.stat{padding:4px 25px;border-right:1px solid var(--line)}.stat:first-child{padding-left:0}.stat:last-child{border:0}.stat strong{display:block;font-size:26px;letter-spacing:-.05em}.stat span{font-size:11px;color:var(--muted)}
+    section{padding:100px 0}.section-head{max-width:650px;margin-bottom:42px}.kicker{color:var(--cyan);font-size:10px}.section-head h2{font-size:clamp(32px,4vw,48px);letter-spacing:-.06em;line-height:1.1;margin:14px 0}.section-head p{color:var(--muted);font-size:15px}
+    .principles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{background:linear-gradient(145deg,rgba(21,27,40,.92),rgba(13,17,26,.88));border:1px solid var(--line);border-radius:15px;padding:26px;min-height:210px}.icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--cyan);background:rgba(140,232,224,.09);border:1px solid rgba(140,232,224,.16);font-size:17px}.card h3{margin:22px 0 8px;font-size:17px;letter-spacing:-.03em}.card p{margin:0;color:var(--muted);font-size:13px;line-height:1.8}
+    .models{background:linear-gradient(180deg,transparent,rgba(18,23,36,.62),transparent)}.model-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.model{border:1px solid var(--line);border-radius:15px;padding:25px;background:rgba(13,17,26,.7);transition:.2s}.model:hover{transform:translateY(-4px);border-color:rgba(140,232,224,.35)}.model-top{display:flex;align-items:center;justify-content:space-between}.model h3{font-size:22px;letter-spacing:-.05em;margin:20px 0 7px}.model p{color:var(--muted);font-size:13px;min-height:66px}.tag{font:9px 'DM Mono',monospace;color:var(--cyan);border:1px solid rgba(140,232,224,.2);border-radius:20px;padding:5px 8px}.model small{color:#778399;font:10px 'DM Mono',monospace}
+    .roadmap{display:grid;grid-template-columns:.8fr 1.2fr;gap:70px;align-items:start}.roadmap-copy p{color:var(--muted);font-size:14px}.steps{border-left:1px solid rgba(140,232,224,.25);padding-left:28px}.step{position:relative;padding:0 0 28px}.step:before{content:"";position:absolute;width:8px;height:8px;background:var(--cyan);border-radius:50%;left:-33px;top:7px;box-shadow:0 0 14px rgba(140,232,224,.5)}.step strong{font-size:14px}.step p{margin:5px 0 0;color:var(--muted);font-size:12px}
+    .closing{border:1px solid rgba(169,154,255,.2);border-radius:18px;padding:52px;background:radial-gradient(ellipse at 90% 10%,rgba(169,154,255,.14),transparent 45%),linear-gradient(120deg,rgba(140,232,224,.07),rgba(16,20,30,.8));display:flex;justify-content:space-between;align-items:center;gap:30px}.closing h2{font-size:clamp(28px,4vw,42px);letter-spacing:-.06em;margin:0 0 8px}.closing p{color:var(--muted);margin:0;font-size:13px}
+    footer{border-top:1px solid var(--line);padding:28px 0;color:var(--muted);font-size:11px}.footer-inner{display:flex;justify-content:space-between;gap:20px;align-items:center}.footer-links{display:flex;gap:20px}.footer-links a:hover{color:var(--text)}
+    @media(max-width:800px){.hero-grid{grid-template-columns:1fr;gap:10px}.hero{padding:80px 0 60px}.visual{min-height:320px}.principles,.model-grid{grid-template-columns:1fr 1fr}.roadmap{grid-template-columns:1fr;gap:32px}.stats{grid-template-columns:1fr 1fr;row-gap:20px}.stat:nth-child(2){border:0}.stat:nth-child(3){padding-left:0}.closing{padding:34px;align-items:flex-start;flex-direction:column}}
+    @media(max-width:560px){.wrap{width:min(var(--max),calc(100% - 32px))}.links{display:none;position:absolute;top:81px;left:0;right:0;padding:22px 24px;background:#0d111a;border-bottom:1px solid var(--line);flex-direction:column;align-items:flex-start}.links.open{display:flex}.nav-cta{display:none}.menu{display:block}.principles,.model-grid{grid-template-columns:1fr}.hero{padding-top:66px}h1{font-size:52px}.lead{font-size:15px}.visual{min-height:280px}.orb{width:250px}.stats{padding:20px 0}.stat{padding:4px 12px}.stat strong{font-size:22px}section{padding:72px 0}.footer-inner{align-items:flex-start;flex-direction:column}.closing .button{width:100%;justify-content:center}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <a class="brand" href="#inicio" aria-label="Morok AI, início"><span class="mark">M</span><span>morok<span style="color:var(--cyan)">.</span>ai</span></a>
+      <nav class="links" id="nav-links" aria-label="Navegação principal">
+        <a href="#projeto">Projeto</a><a href="#modelos">Modelos</a><a href="#arquitetura">Arquitetura</a><a href="#estado">Estado atual</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noreferrer">Ver repositório ↗</a>
+      <button class="menu" id="menu-button" aria-expanded="false" aria-controls="nav-links">Menu</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="wrap hero-grid">
+        <div>
+          <div class="eyebrow mono"><span class="dot"></span> Pesquisa independente em inteligência artificial</div>
+          <h1>Inteligência<br>construída <span>do zero.</span></h1>
+          <p class="lead">Morok é um projeto experimental para pesquisar e desenvolver uma IA própria: arquitetura independente, treinamento sem pesos pré-treinados e engenharia orientada por evidências.</p>
+          <div class="actions">
+            <a class="button primary" href="#projeto">Conheça o projeto <span>↓</span></a>
+            <a class="button secondary" href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noreferrer">Explorar no GitHub ↗</a>
+          </div>
+        </div>
+        <div class="visual" aria-label="Representação abstrata do núcleo Morok">
+          <div class="orb"><div class="core"></div></div>
+          <span class="orbit-label label-a">RLAH / CORE</span>
+          <span class="orbit-label label-b">LEARN · REASON</span>
+          <span class="orbit-label label-c">C++20</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <div class="stats">
+        <div class="stat"><strong>1.000</strong><span>parâmetros treináveis na G1</span></div>
+        <div class="stat"><strong>C++20</strong><span>linguagem principal</span></div>
+        <div class="stat"><strong>Do zero</strong><span>sem pesos pré-treinados</span></div>
+        <div class="stat"><strong>4 GB</strong><span>alvo inicial de memória</span></div>
+      </div>
+    </div>
+
+    <section id="projeto">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker mono">01 / O projeto</div>
+          <h2>Menos promessas.<br>Mais experimentos.</h2>
+          <p>O Morok não parte da ideia de que uma arquitetura é melhor por definição. Cada hipótese precisa ser implementada, medida e comparada em condições reproduzíveis.</p>
+        </div>
+        <div class="principles">
+          <article class="card"><div class="icon">⌘</div><h3>Arquitetura própria</h3><p>Um sistema experimental modular, com modelo, inferência, treinamento, representação linguística e subsistemas cognitivos separados.</p></article>
+          <article class="card"><div class="icon">◈</div><h3>Eficiência mensurável</h3><p>Baixo consumo de memória e processamento são objetivos de engenharia, avaliados com benchmarks e condições documentadas.</p></article>
+          <article class="card"><div class="icon">⌁</div><h3>Pesquisa reproduzível</h3><p>Treinamentos, checkpoints, métricas e experimentos organizados para permitir análise, comparação e evolução controlada.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="models" id="modelos">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker mono">02 / Perfis da G1</div>
+          <h2>Três abordagens.<br>Uma base experimental.</h2>
+          <p>Os perfis compartilham o motor da geração, mas possuem objetivos e políticas próprios.</p>
+        </div>
+        <div class="model-grid">
+          <article class="model"><div class="model-top"><span class="tag">EFICIÊNCIA</span><span>◌</span></div><h3>Mokosh</h3><p>Prioriza uma execução econômica, reduzindo memória, processamento e energia quando possível.</p><small>G1 / LOW RESOURCE</small></article>
+          <article class="model"><div class="model-top"><span class="tag">AGENTE ÚNICO</span><span>⚫</span></div><h3>Tsukuyomi</h3><p>Opera com exatamente um agente, com execução individual e autocontida.</p><small>G1 / SINGLE AGENT</small></article>
+          <article class="model"><div class="model-top"><span class="tag">BAIXA LATÊNCIA</span><span>↗</span></div><h3>Apollo</h3><p>Busca reduzir o tempo até a primeira resposta e o tempo total de inferência.</p><small>G1 / SPEED</small></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="arquitetura">
+      <div class="wrap roadmap">
+        <div class="roadmap-copy">
+          <div class="kicker mono">03 / Arquitetura</div>
+          <h2 style="font-size:clamp(32px,4vw,48px);letter-spacing:-.06em;line-height:1.1;margin:14px 0">Um sistema em construção, por camadas.</h2>
+          <p>A arquitetura separa responsabilidades para que cada subsistema possa evoluir e ser validado sem misturar componentes específicos dos modelos.</p>
+          <a class="button secondary" href="https://github.com/korczaktech/Morok-AI/tree/main/Morok/docs" target="_blank" rel="noreferrer">Ler documentação ↗</a>
+        </div>
+        <div class="steps">
+          <div class="step"><strong>IA-CORE</strong><p>Orquestração, ciclo de vida, sessões e contratos compartilhados.</p></div>
+          <div class="step"><strong>IA-LANG · IA-MEM</strong><p>Representação e processamento de linguagem; armazenamento e recuperação de memória.</p></div>
+          <div class="step"><strong>IA-REAS · IA-LEARN</strong><p>Execução de tarefas estruturadas e experimentos de aprendizado.</p></div>
+          <div class="step"><strong>IA-COMM · IA-TOOLS</strong><p>Comunicação, integração de ferramentas e políticas de autorização.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="estado">
+      <div class="wrap">
+        <div class="closing">
+          <div><div class="kicker mono">Projeto experimental em evolução</div><h2>Acompanhe o desenvolvimento.</h2><p>Consulte o código, as decisões técnicas e os resultados documentados no repositório.</p></div>
+          <a class="button primary" href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noreferrer">Acessar Morok AI ↗</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-inner">
+      <a class="brand" href="#inicio"><span class="mark">M</span><span>morok<span style="color:var(--cyan)">.</span>ai</span></a>
+      <span>Pesquisa independente. Engenharia orientada por evidências.</span>
+      <div class="footer-links"><a href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noreferrer">GitHub ↗</a><a href="#inicio">Voltar ao topo ↑</a></div>
+    </div>
+  </footer>
+  <script>
+    const menuButton = document.getElementById('menu-button');
+    const navLinks = document.getElementById('nav-links');
+    menuButton.addEventListener('click', () => {
+      const isOpen = navLinks.classList.toggle('open');
+      menuButton.setAttribute('aria-expanded', String(isOpen));
+    });
+    navLinks.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+      navLinks.classList.remove('open');
+      menuButton.setAttribute('aria-expanded', 'false');
+    }));
+  </script>
+</body>
+</html>
