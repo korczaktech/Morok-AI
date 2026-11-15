@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run independently configured G1 training and repeated QA attempts per profile."""
+"""Train each selected G1 profile on the curated Portuguese QA corpus and evaluate it."""
 import csv
 import os
 import subprocess
@@ -10,7 +10,7 @@ root = Path(__file__).resolve().parents[3]
 build = root / "build" / "g1"
 train = Path(os.environ.get("MOROK_TRAIN_BIN", build / "morok-train"))
 evaluate = build / "morok-g1-profile-evaluate"
-corpus = root / "Gerações/G1/shared/tests/fixtures/benchmark"
+corpus = root / "Gerações/G1/shared/tests/fixtures/continual"
 out = root / "artifacts/g1-first-training"
 out.mkdir(parents=True, exist_ok=True)
 
