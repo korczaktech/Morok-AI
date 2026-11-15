@@ -135,6 +135,21 @@
       <div class="workspace-page" id="workspace-page"></div>
     </div>
   </dialog>
+  <dialog class="dialog compact-dialog" id="search-dialog">
+    <form method="dialog" class="dialog-card search-card">
+      <div class="dialog-heading"><div><div class="dialog-eyebrow">HISTÓRICO</div><h2>Buscar conversas</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar">×</button></div>
+      <input class="text-field" id="conversation-search-input" type="search" maxlength="120" placeholder="Buscar por título ou mensagem..." autocomplete="off">
+      <div class="search-results" id="conversation-search-results"><div class="workspace-empty">Digite para pesquisar suas conversas.</div></div>
+      <div class="dialog-footer"><button class="secondary-button dialog-close" value="cancel">Fechar</button></div>
+    </form>
+  </dialog>
+  <dialog class="dialog compact-dialog" id="confirm-dialog">
+    <form method="dialog" class="dialog-card">
+      <div class="dialog-heading"><div><div class="dialog-eyebrow">CONFIRMAÇÃO</div><h2 id="confirm-title">Confirmar ação</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar">×</button></div>
+      <p class="field-help" id="confirm-message"></p>
+      <div class="dialog-footer"><button class="secondary-button" id="confirm-cancel" type="button">Cancelar</button><button class="danger-button" id="confirm-accept" type="button">Confirmar</button></div>
+    </form>
+  </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="context-menu" id="context-menu" hidden><button data-action="rename">Renomear</button><button data-action="delete" class="context-danger">Excluir conversa</button></div>
 </body>
