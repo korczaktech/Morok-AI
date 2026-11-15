@@ -5,8 +5,6 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <iterator>
-#include <limits>
 #include <string>
 #include <vector>
 
@@ -20,8 +18,8 @@ bool parse_size(const char* text, std::size_t& value) {
 }
 
 int main(int argc, char** argv) {
-    if (argc < 3 || argc > 5) {
-        std::cerr << "Uso: morok-g2-tsukuyomi-train <corpus.bin> <checkpoint> [epocas] [seed]\n";
+    if (argc < 3 || argc > 6) {
+        std::cerr << "Uso: morok-g2-tsukuyomi-train <corpus.bin> <checkpoint> [epocas] [seed] [--resume]\n";
         return 2;
     }
 
@@ -66,8 +64,22 @@ int main(int argc, char** argv) {
         config.seed = seed;
     }
 
+    const bool resume = argc == 6 && std::string(argv[5]) == "--resume";
+    if (argc == 6 && !resume) {
+        std::cerr << "Opção inválida: use --resume.\n";
+        return 2;
+    }
+
     morok::g2::tsukuyomi::Model model;
-    morok::g2::tsukuyomi::initialize(model, config.seed);
+    if (resume) {
+        if (!morok::g2::tsukuyomi::load_checkpoint(model, argv[2])) {
+            std::cerr << "Não foi possível retomar: checkpoint ausente ou inválido.\n";
+            return 1;
+        }
+    } else {
+        morok::g2::tsukuyomi::initialize(model, config.seed);
+    }
+
     const auto report = morok::g2::tsukuyomi::train(model, bytes, config);
     if (report.epochs_completed != config.epochs ||
         !morok::g2::tsukuyomi::save_checkpoint(model, argv[2])) {
@@ -78,6 +90,7 @@ int main(int argc, char** argv) {
     std::cout << "Tsukuyomi G2 v0.1\n"
               << "Parâmetros: "
               << morok::g2::tsukuyomi::kParameterCount << '\n'
+              << "Modo: " << (resume ? "continuação" : "inicialização") << '\n'
               << "Épocas: " << report.epochs_completed << '\n'
               << "Bytes-alvo: " << report.target_bytes << '\n'
               << "Loss inicial: " << report.initial_loss << '\n'
