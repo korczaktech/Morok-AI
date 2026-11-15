@@ -25,6 +25,7 @@ struct ConversationMessage final {
     ConversationRole role{ConversationRole::user};
     std::string text;
     DetectedLanguage language{DetectedLanguage::unknown};
+    std::vector<std::string> tokens;
 };
 
 struct LanguageConfig final {
@@ -38,6 +39,8 @@ struct LanguageGeneration final {
     std::size_t candidate_evaluations{0};
     bool reached_byte_limit{false};
     DetectedLanguage input_language{DetectedLanguage::unknown};
+    std::size_t input_token_count{0};
+    std::size_t output_token_count{0};
 };
 
 class LanguageSubsystem final {
