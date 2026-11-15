@@ -78,6 +78,12 @@ jobs:
           MOROK_GENERATE_BIN=./build/g1/morok_generate \
             bash Gerações/G1/scripts/first-training.sh artifacts/g1-first-training 2 42
 
+      - name: Evaluate all G1 profiles and publish answers and latency
+        working-directory: Morok
+        run: |
+          ./build/g1/morok-g1-profile-evaluate artifacts/g1-first-training/g1-best.morokckp artifacts/g1-first-training/profile-results.tsv
+          python3 Gerações/G1/scripts/report-profile-evaluation.py artifacts/g1-first-training/profile-results.tsv artifacts/g1-first-training/profile-evaluation.md
+
       - name: Upload G1 training artifacts
         if: always()
         uses: actions/upload-artifact@v4
