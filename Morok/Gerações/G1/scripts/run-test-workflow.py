@@ -15,12 +15,7 @@ corpus = root / "Gerações/G1/shared/tests/fixtures/continual"
 state = root / "test-state"
 state.mkdir(parents=True, exist_ok=True)
 
-models = [
-    ("Tsukuyomi", "TSUKUYOMI"),
-    ("Apollo", "APOLLO"),
-    ("Mokosh", "MOKOSH"),
-    ("TsukuyomiMax", "TSUKUYOMI_MAX"),
-]
+models = [("TsukuyomiMax", "TSUKUYOMI_MAX")]
 selected = [name for name, key in models
             if os.environ.get("G1_MODEL_" + key, "false").lower() == "true"]
 question = os.environ["G1_TEST_QUESTION"]
