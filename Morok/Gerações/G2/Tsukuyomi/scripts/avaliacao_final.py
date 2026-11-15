@@ -75,7 +75,7 @@ def benchmark_category(question: str) -> str:
     tokens = set(normalize(question))
     if tokens & {"compare", "relacao", "diferenca", "diferença"}:
         return "composicao"
-    if tokens & {"explique", "defina", "significa", "como", "conceito"}:
+    if tokens & {"explique", "defina", "significa", "como", "conceito"} or {"que", "e"}.issubset(tokens):
         return "conceito"
     if tokens & {"quantos", "quantas", "qual", "quais", "quem", "onde", "quando"}:
         return "fato"
