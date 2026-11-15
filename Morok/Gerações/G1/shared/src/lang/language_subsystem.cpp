@@ -56,6 +56,35 @@ std::string normalize_input(std::string_view input) {
     return output;
 }
 
+std::vector<std::string> tokenize_text(std::string_view text) {
+    std::vector<std::string> tokens;
+    std::string current;
+    const auto flush = [&] { if (!current.empty()) { tokens.push_back(std::move(current)); current.clear(); } };
+    for (std::size_t i = 0; i < text.size();) {
+        const auto byte = static_cast<unsigned char>(text[i]);
+        if (byte < 0x80U) {
+            if (std::isspace(byte)) { flush(); ++i; }
+            else if (std::ispunct(byte)) { flush(); tokens.emplace_back(1, static_cast<char>(byte)); ++i; }
+            else { current.push_back(static_cast<char>(byte)); ++i; }
+            continue;
+        }
+        std::size_t punctuation_bytes = 0;
+        if (i + 1 < text.size() && byte == 0xC2U) {
+            const auto next = static_cast<unsigned char>(text[i + 1]);
+            if (next == 0xA1U || next == 0xBFU || next == 0xABU || next == 0xBBU) punctuation_bytes = 2;
+        } else if (i + 2 < text.size() && byte == 0xE2U && static_cast<unsigned char>(text[i + 1]) == 0x80U) {
+            const auto next = static_cast<unsigned char>(text[i + 2]);
+            if ((next >= 0x98U && next <= 0x9FU) || next == 0x93U || next == 0x94U || next == 0xA6U) punctuation_bytes = 3;
+        }
+        if (punctuation_bytes != 0) { flush(); tokens.emplace_back(text.substr(i, punctuation_bytes)); i += punctuation_bytes; continue; }
+        const std::size_t length = byte < 0xE0U ? 2U : (byte < 0xF0U ? 3U : 4U);
+        const auto available = std::min(length, text.size() - i);
+        current.append(text.substr(i, available)); i += available;
+    }
+    flush();
+    return tokens;
+}
+
 std::string serialize_conversation(
     const std::vector<ConversationMessage>& messages) {
     std::string serialized;
