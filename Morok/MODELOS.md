@@ -63,13 +63,13 @@ O diretório público `include/` e a biblioteca `Morok::Core` contêm contratos 
 
 A implementação compartilhada da geração G1 está em `Gerações/G1/shared/` e é compilada apenas em `Morok::G1`. Inclui o motor de parâmetros, forward pass, BPTT, otimizador, treinamento, inferência, checkpoints e adaptadores de linguagem/comunicação/aprendizado que ainda são específicos da G1.
 
-Aplicações, scripts, dados de reforço, fixtures e testes específicos foram movidos para `Gerações/G1/` ou `Gerações/G2/`. O CMake continua na raiz como orquestrador de build e só inclui fontes da geração correspondente no alvo correspondente.
+Aplicações, scripts, dados de reforço, fixtures e testes específicos da geração mantida ficam dentro de `Gerações/G1/`. O CMake continua na raiz como orquestrador de build.
 
 ## Estado dos perfis
 
 G1 possui alvos CMake independentes para Mokosh, Tsukuyomi e Apollo. Cada perfil mantém suas políticas e código exclusivo dentro de seu próprio diretório, com testes próprios. Os motores e adaptadores comuns aos perfis de uma geração permanecem no diretório interno dessa geração, fora dos diretórios dos perfis. Na G1, Tsukuyomi preserva a execução atual de agente único; Apollo é o perfil de velocidade; Mokosh deriva da base de Tsukuyomi, com processamento de raciocínio mais demorado e treinamento com mais épocas. Artemis não existe na G1.
 
-G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de G1 ou G2 dentro da G3.
+G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de outras gerações dentro da G3.
 
 A organização mantém as implementações específicas dentro de cada geração, os perfis dentro de seus diretórios, e a infraestrutura realmente comum na raiz. A validação local de compilação e testes deve ser executada antes de considerar a migração encerrada.
 

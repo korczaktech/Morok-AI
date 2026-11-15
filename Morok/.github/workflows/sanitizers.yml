@@ -17,7 +17,6 @@ on:
       - "include/**"
       - "src/**"
       - "Gerações/G1/**"
-      - "Gerações/G2/**"
       - "tests/**"
       - "CMakeLists.txt"
       - "CMakePresets.json"

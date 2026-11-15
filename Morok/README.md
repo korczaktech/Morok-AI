@@ -83,7 +83,6 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 51. [Etapa 20 — Primeiro treinamento completo da G1](docs/52-etapa-20-primeiro-treinamento-g1.md)
 52. [Experimento de aprendizado por reforço da G1](docs/54-aprendizado-por-reforco-g1.md)
 53. [Geração 2](docs/55-geracao-2.md)
-54. [Aprendizado por reforço da G2](docs/56-aprendizado-por-reforco-g2.md)
 
 ## Estado atual
 
