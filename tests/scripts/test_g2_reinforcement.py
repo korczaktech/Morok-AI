@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MODULE = runpy.run_path(str(ROOT / "scripts" / "run-g2-reinforcement.py"))
 grade = MODULE["grade"]
 select_questions = MODULE["select_questions"]
+is_degenerate_response = MODULE["is_degenerate_response"]
 
 
 class G2ReinforcementTests(unittest.TestCase):
@@ -18,6 +19,12 @@ class G2ReinforcementTests(unittest.TestCase):
     def test_rejects_negation_and_wrong_concept(self):
         self.assertEqual(grade("sky_is_blue", "Não, o céu não é azul.")[0:2], ("incorrect", -1))
         self.assertEqual(grade("mountains_high_or_low", "As montanhas são baixas.")[0:2], ("incorrect", -1))
+
+    def test_degenerate_output_detector_rejects_repeated_characters(self):
+        self.assertTrue(is_degenerate_response("aaaaaaaaaaaaaaaaaaaaaaaa"))
+        self.assertTrue(is_degenerate_response("eeeeeeeeeeaeeeeeeeeeeee"))
+        self.assertFalse(is_degenerate_response("Sim, o céu é azul."))
+        self.assertFalse(is_degenerate_response("altas"))
 
     def test_question_selection_keeps_database_order_and_rejects_empty_or_unknown(self):
         questions = [{"id": "sky_is_blue"}, {"id": "grass_color"}, {"id": "mountains_high_or_low"}]
