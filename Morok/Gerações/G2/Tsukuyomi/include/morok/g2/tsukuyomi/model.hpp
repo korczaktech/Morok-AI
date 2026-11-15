@@ -26,6 +26,7 @@ struct ForwardResult {
 
 struct TrainingConfig {
     std::size_t epochs{1};
+    std::size_t batch_size{16};
     double learning_rate{0.001};
     double weight_decay{0.00001};
     double gradient_clip{1.0};
