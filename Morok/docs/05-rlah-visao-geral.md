@@ -1,7 +1,7 @@
 # 5. RLAH — Representação Latente Adaptativa Hierárquica
 
 **Nome provisório:** RLAH  
-**Estado:** hipótese de pesquisa, não validada.
+**Estado:** integração experimental parcial na G1; ganhos de qualidade ainda não validados.
 
 > **Atualização normativa:** este documento registra a motivação original. Para a G1, as definições matemáticas e operacionais posteriores nos documentos 13–18 prevalecem. Em particular, a G1 usa reconstrução estrutural sem perdas como restrição rígida; não treina um decoder neural de reconstrução nem aplica o termo antigo μ L_reconstrução.
 
@@ -45,7 +45,10 @@ A G1 usa L_total = L_pred + λ_group L_group. L_group treina apenas o pontuador 
 - Frequência não significa utilidade preditiva.
 - Atualização frequente pode ser cara e instável.
 - Sequências de bytes podem ser maiores que sequências subword convencionais.
-- A segmentação G1 ainda não altera o caminho preditivo byte a byte; não atribuir ganhos end-to-end sem variante integrada.
+- A G1 agora integra sinais lexicais de início de token/separador nas três features auxiliares do preditor e usa candidatos RLAH como viés de continuação no decoder de inferência.
+- O núcleo continua prevendo bytes; não há IDs de tokens substituindo bytes.
+- O segmentador RLAH não participa do BPTT nem treina seu pontuador no loop principal. O viés de inferência usa a utilidade heurística dos candidatos ativos.
+- A integração está funcional, mas ainda não demonstrou melhora de BPB ou compreensão; a avaliação recente dos três perfis teve 0 acertos em 63 tentativas.
 
 ## 5.7 Originalidade
 
