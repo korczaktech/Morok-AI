@@ -89,7 +89,6 @@ LinguisticFeatures linguistic_features(std::uint8_t byte, std::uint8_t previous)
     return result;
 }
 
-QuestionFeatures dummy_question_features_marker;
 struct QuestionFeatures {
     std::array<float, kContextSize * kHiddenSize> values{};
     std::array<std::size_t, kContextSize> counts{};
