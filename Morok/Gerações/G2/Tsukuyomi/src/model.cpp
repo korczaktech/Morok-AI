@@ -214,8 +214,77 @@ struct Cache {
     std::array<std::size_t, kContextSize> context_counts{};
     std::array<RecurrentStep, kBpttTruncation> steps{};
     std::size_t step_count{0}, question_begin{0}, question_end{0};
+    std::size_t sequence_begin{0}, processed_position{0}, total_steps{0};
     bool has_question_context{false}, history_truncated{false};
 };
+
+std::size_t recurrent_sequence_begin(std::span<const std::uint8_t> context,
+                                     bool has_question) {
+    if (!has_question) return 0;
+    std::size_t begin = context.size();
+    for (std::size_t i = 0; i + 2 < context.size(); ++i) {
+        const bool line_start = i == 0 || context[i - 1] == '\\n' || context[i - 1] == '\\r';
+        if (line_start && context[i] == 'I' && context[i + 1] == 'A' && context[i + 2] == ':')
+            begin = i + 3;
+    }
+    return begin;
+}
+
+void append_recurrent_step(const Model& model, std::span<const std::uint8_t> context,
+                           std::size_t position, std::size_t bptt_steps, Cache& cache) {
+    RecurrentStep step;
+    step.previous_state = cache.activation;
+    step.byte = context[position];
+    const auto previous = position == 0 ? static_cast<std::uint8_t>(' ') : context[position - 1];
+    const auto features = linguistic_features(step.byte, previous);
+    step.category_feature = features.category;
+    step.boundary_feature = features.boundary;
+    const auto embedding_base = kEmbeddingOffset + static_cast<std::size_t>(step.byte) * kHiddenSize;
+    const auto category_base = kEmbeddingOffset + static_cast<std::size_t>(step.category_feature) * kHiddenSize;
+    const auto boundary_base = kEmbeddingOffset + static_cast<std::size_t>(step.boundary_feature) * kHiddenSize;
+    for (std::size_t h = 0; h < kHiddenSize; ++h) {
+        float value = at(model, kHiddenBiasOffset + h);
+        for (std::size_t k = 0; k < kHiddenSize; ++k)
+            value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
+                (at(model, embedding_base + k) + at(model, category_base + k) +
+                 at(model, boundary_base + k) + cache.activation[k]);
+        step.candidate[h] = std::tanh(value);
+        step.retention[h] = 1.0F / (1.0F + std::exp(-value));
+        step.activation[h] = step.retention[h] * cache.activation[h] +
+            (1.0F - step.retention[h]) * step.candidate[h];
+    }
+    cache.activation = step.activation;
+    if (cache.step_count == bptt_steps) {
+        for (std::size_t i = 1; i < cache.step_count; ++i) cache.steps[i - 1] = cache.steps[i];
+        --cache.step_count;
+    }
+    cache.steps[cache.step_count++] = step;
+    ++cache.total_steps;
+}
+
+void finish_cache(const Model& model, Cache& cache, bool calculate_probabilities) {
+    cache.history_truncated = cache.total_steps > cache.step_count;
+    for (std::size_t h = 0; h < kHiddenSize; ++h)
+        cache.hidden[h] = at(model, kScaleOffset + h) * cache.activation[h] +
+                          at(model, kShiftOffset + h);
+    cache.logits = logits_for_state(model, cache.activation);
+    cache.probabilities.fill(0.0F);
+    if (!calculate_probabilities) return;
+    double maximum = -std::numeric_limits<double>::infinity();
+    for (std::size_t token = 0; token < kVocabularySize; ++token)
+        if (!reserved_feature_byte(static_cast<std::uint8_t>(token)))
+            maximum = std::max(maximum, static_cast<double>(cache.logits[token]));
+    double denominator = 0.0;
+    for (std::size_t token = 0; token < kVocabularySize; ++token) {
+        if (reserved_feature_byte(static_cast<std::uint8_t>(token))) continue;
+        const double value = std::exp(static_cast<double>(cache.logits[token]) - maximum);
+        cache.probabilities[token] = static_cast<float>(value);
+        denominator += value;
+    }
+    if (denominator > 0.0)
+        for (auto& probability : cache.probabilities)
+            probability = static_cast<float>(probability / denominator);
+}
 
 Cache calculate(const Model& model, std::span<const std::uint8_t> context,
                 bool calculate_probabilities = true,
@@ -227,8 +296,8 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
         ? QuestionFeatures{} : prepare_question_features(model, context);
     const QuestionFeatures& question = prepared_question ? *prepared_question : local_question;
 
-    std::array<float, kHiddenSize> state = initial_recurrent_state(model, question);
-    cache.initial_activation = state;
+    cache.activation = initial_recurrent_state(model, question);
+    cache.initial_activation = cache.activation;
     if (question.available) {
         cache.has_question_context = true;
         cache.question_begin = question.begin;
@@ -236,80 +305,31 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
         cache.context_features = question.values;
         cache.context_counts = question.counts;
     }
-
-    std::size_t sequence_begin = 0;
-    if (question.available) {
-        sequence_begin = context.size();
-        for (std::size_t i = 0; i + 2 < context.size(); ++i) {
-            const bool line_start = i == 0 || context[i - 1] == '\n' || context[i - 1] == '\r';
-            if (line_start && context[i] == 'I' && context[i + 1] == 'A' && context[i + 2] == ':')
-                sequence_begin = i + 3;
-        }
-    }
-
-    std::size_t total_steps = 0;
-    for (std::size_t position = sequence_begin; position < context.size(); ++position) {
-        RecurrentStep step;
-        step.previous_state = state;
-        step.byte = context[position];
-        const auto features = linguistic_features(step.byte,
-            position == sequence_begin ? (position == 0 ? static_cast<std::uint8_t>(' ')
-                                                       : context[position - 1])
-                                       : context[position - 1]);
-        step.category_feature = features.category;
-        step.boundary_feature = features.boundary;
-        const auto embedding_base = kEmbeddingOffset +
-            static_cast<std::size_t>(step.byte) * kHiddenSize;
-        const auto category_base = kEmbeddingOffset +
-            static_cast<std::size_t>(step.category_feature) * kHiddenSize;
-        const auto boundary_base = kEmbeddingOffset +
-            static_cast<std::size_t>(step.boundary_feature) * kHiddenSize;
-        for (std::size_t h = 0; h < kHiddenSize; ++h) {
-            float value = at(model, kHiddenBiasOffset + h);
-            for (std::size_t k = 0; k < kHiddenSize; ++k)
-                value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
-                    (at(model, embedding_base + k) + at(model, category_base + k) +
-                     at(model, boundary_base + k) + state[k]);
-            step.candidate[h] = std::tanh(value);
-            step.retention[h] = 1.0F / (1.0F + std::exp(-value));
-            step.activation[h] = step.retention[h] * state[h] +
-                (1.0F - step.retention[h]) * step.candidate[h];
-        }
-        state = step.activation;
-        if (cache.step_count == bptt_steps) {
-            for (std::size_t i = 1; i < cache.step_count; ++i) cache.steps[i - 1] = cache.steps[i];
-            --cache.step_count;
-        }
-        cache.steps[cache.step_count++] = step;
-        ++total_steps;
-    }
-    cache.history_truncated = total_steps > cache.step_count;
-    cache.activation = state;
-    for (std::size_t h = 0; h < kHiddenSize; ++h)
-        cache.hidden[h] = at(model, kScaleOffset + h) * state[h] + at(model, kShiftOffset + h);
-
-    cache.logits = logits_for_state(model, state);
-    double maximum = -std::numeric_limits<double>::infinity();
-    if (calculate_probabilities)
-        for (std::size_t token = 0; token < kVocabularySize; ++token)
-            if (!reserved_feature_byte(static_cast<std::uint8_t>(token)))
-                maximum = std::max(maximum, static_cast<double>(cache.logits[token]));
-    if (calculate_probabilities) {
-        double denominator = 0.0;
-        for (std::size_t token = 0; token < kVocabularySize; ++token) {
-            if (reserved_feature_byte(static_cast<std::uint8_t>(token))) {
-                cache.probabilities[token] = 0.0F;
-                continue;
-            }
-            const double value = std::exp(static_cast<double>(cache.logits[token]) - maximum);
-            cache.probabilities[token] = static_cast<float>(value);
-            denominator += value;
-        }
-        if (denominator > 0.0)
-            for (auto& probability : cache.probabilities)
-                probability = static_cast<float>(probability / denominator);
-    }
+    cache.sequence_begin = recurrent_sequence_begin(context, question.available);
+    cache.processed_position = cache.sequence_begin;
+    for (std::size_t position = cache.sequence_begin; position < context.size(); ++position)
+        append_recurrent_step(model, context, position, bptt_steps, cache);
+    cache.processed_position = context.size();
+    finish_cache(model, cache, calculate_probabilities);
     return cache;
+}
+
+bool extend_cache(const Model& model, std::span<const std::uint8_t> context,
+                  std::size_t bptt_steps, Cache& cache) {
+    bptt_steps = std::clamp<std::size_t>(bptt_steps, 1, kBpttTruncation);
+    if (context.size() < cache.processed_position) return false;
+    const QuestionFeatures question = prepare_question_features(model, context);
+    if (question.available != cache.has_question_context) return false;
+    if (question.available &&
+        (question.begin != cache.question_begin || question.end != cache.question_end))
+        return false;
+    if (recurrent_sequence_begin(context, question.available) != cache.sequence_begin)
+        return false;
+    for (std::size_t position = cache.processed_position; position < context.size(); ++position)
+        append_recurrent_step(model, context, position, bptt_steps, cache);
+    cache.processed_position = context.size();
+    finish_cache(model, cache, true);
+    return true;
 }
 
 struct Utf8State {
