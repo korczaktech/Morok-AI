@@ -1,8 +1,2 @@
 Usuario: O ceu e azul?
 IA: Sim, o ceu e azul
-
-Usuario: As montanhas sao altas ou baixas?
-IA: As montanhas sao altas.
-
-Usuario: Que cor e a grama?
-IA: A grama e verde.
