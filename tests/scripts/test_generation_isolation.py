@@ -27,7 +27,7 @@ FORBIDDEN_G1 = re.compile(
     r"advance_g2_state|advance_g2_expert_state)\b"
 )
 FORBIDDEN_G2 = re.compile(
-    r"morok/model/|morok::model::|morok/g1/|morok::g1::|"
+    r"morok/model/(?:g1_forward|parameters/g1_parameters|learn/g1_)|morok::model::|morok/g1/|morok::g1::|"
     r"\b(?:G1Parameters|G1State|G1Checkpoint|G1TrainingConfig|"
     r"G1GenerationConfig|train_g1_corpus|generate_g1|advance_g1_state|"
     r"compute_g1_bptt_gradients|apply_g1_optimizer_step)\b"
