@@ -305,10 +305,7 @@ common::Result<LanguageGeneration> LanguageSubsystem::generate(
     std::lock_guard lock(mutex_);
     const auto valid = validate_request_locked(request);
     if (!valid) return common::Result<LanguageGeneration>::failure(*valid.error_if());
-    const std::size_t profile_limit =
-        (language_config_.profile == LanguageProfile::apollo ||
-         language_config_.profile == LanguageProfile::tsukuyomi_max)
-            ? 512U : (language_config_.profile == LanguageProfile::mokosh ? 128U : 256U);
+    constexpr std::size_t profile_limit = 512U;
     if (max_new_bytes == 0 || !resource_limits_.permits_generation(max_new_bytes) ||
         max_new_bytes > profile_limit) {
         return common::Result<LanguageGeneration>::failure(common::Error::make(
