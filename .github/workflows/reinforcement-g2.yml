@@ -11,7 +11,6 @@ on:
       - "tests/unit/model/test_g2.cpp"
       - "tests/fixtures/g2-single-document/**"
       - "scripts/run-g2-reinforcement.py"
-      - "data/reinforcement-g2/answers.json"
       - "tests/unit/model/test_g2_reinforcement.cpp"
       - "tests/scripts/test_g2_reinforcement.py"
       - "docs/56-aprendizado-por-reforco-g2.md"
