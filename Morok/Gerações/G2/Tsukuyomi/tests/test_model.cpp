@@ -19,7 +19,7 @@ int main() {
     using namespace morok::g2::tsukuyomi;
 
     static_assert(kParameterCount == 10000);
-    static_assert(kCheckpointFormatVersion == 4);
+    static_assert(kCheckpointFormatVersion == 5);
     Model model;
     initialize(model, 1234);
     Model same_seed;
@@ -106,11 +106,11 @@ int main() {
     const std::vector<std::uint8_t> bytes_b(prompt_b.begin(), prompt_b.end());
     assert(forward(model, bytes_a).hidden != forward(model, bytes_b).hidden);
 
-    // O canal de histórico da resposta não pode alterar uma pergunta ainda sem resposta.
-    Model answer_channel_changed = model;
-    answer_channel_changed.parameters[9232] += 0.5F;
-    assert(forward(model, bytes_a).hidden ==
-           forward(answer_channel_changed, bytes_a).hidden);
+    // A matriz recorrente compartilhada altera o estado após processar a sequência.
+    Model recurrent_changed = model;
+    recurrent_changed.parameters[8192] += 0.5F;
+    assert(forward(model, bytes_a).hidden !=
+           forward(recurrent_changed, bytes_a).hidden);
 
     // A resposta anterior precisa influenciar a previsão: pergunta e último
     // byte iguais, mas histórico de resposta diferente, devem gerar estados distintos.
@@ -120,6 +120,14 @@ int main() {
     const std::vector<std::uint8_t> history_bytes_b(history_b.begin(), history_b.end());
     assert(forward(model, history_bytes_a).hidden !=
            forward(model, history_bytes_b).hidden);
+
+    // A ordem dos bytes anteriores importa: o estado é recorrente, não uma soma sem ordem.
+    const std::string ordered_a = "U: Q\\nIA:abc";
+    const std::string ordered_b = "U: Q\\nIA:acb";
+    const std::vector<std::uint8_t> ordered_bytes_a(ordered_a.begin(), ordered_a.end());
+    const std::vector<std::uint8_t> ordered_bytes_b(ordered_b.begin(), ordered_b.end());
+    assert(forward(model, ordered_bytes_a).hidden !=
+           forward(model, ordered_bytes_b).hidden);
 
     // O gradiente da projeção contextual inclui o byte anterior da resposta.
     const std::string history_target = "U: Q\nIA:abc";
@@ -181,6 +189,9 @@ int main() {
     invalid_config.batch_size = 0;
     assert(train(invalid_config_model, sample, invalid_config).epochs_completed == 0);
     invalid_config.batch_size = 1;
+    invalid_config.bptt_steps = kBpttTruncation + 1;
+    assert(train(invalid_config_model, sample, invalid_config).epochs_completed == 0);
+    invalid_config.bptt_steps = kBpttTruncation;
     const std::array<std::uint8_t, 1> invalid_mask{1};
     assert(train(invalid_config_model, sample, invalid_config, nullptr,
                  invalid_mask).epochs_completed == 0);
@@ -302,6 +313,32 @@ int main() {
     assert(restored_optimizer.first_moment == resumed_state.first_moment);
     assert(restored_optimizer.second_moment == resumed_state.second_moment);
     assert(restored_optimizer.step == resumed_state.step);
+
+    // BPTT com janela 1 e janela completa devem propagar sinais diferentes.
+    {
+        const std::string temporal_text = "U: Q\\nIA:abcdef";
+        const std::vector<std::uint8_t> temporal_bytes(
+            temporal_text.begin(), temporal_text.end());
+        std::vector<std::uint8_t> final_byte_mask(temporal_bytes.size(), 0);
+        final_byte_mask.back() = 1;
+        Model truncated_one, truncated_full;
+        initialize(truncated_one, 654);
+        initialize(truncated_full, 654);
+        TrainingConfig one_step_config;
+        one_step_config.epochs = 1;
+        one_step_config.batch_size = 1;
+        one_step_config.bptt_steps = 1;
+        one_step_config.weight_decay = 0.0;
+        TrainingConfig full_window_config = one_step_config;
+        full_window_config.bptt_steps = kBpttTruncation;
+        const auto one_step_report = train(
+            truncated_one, temporal_bytes, one_step_config, nullptr, final_byte_mask);
+        const auto full_window_report = train(
+            truncated_full, temporal_bytes, full_window_config, nullptr, final_byte_mask);
+        assert(one_step_report.epochs_completed == 1);
+        assert(full_window_report.epochs_completed == 1);
+        assert(truncated_one.parameters != truncated_full.parameters);
+    }
 
     // O treinamento supervisionado atualiza somente os bytes marcados como resposta.
     const std::array<std::uint8_t, 9> dialogue{
