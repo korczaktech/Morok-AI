@@ -94,7 +94,7 @@ endif()
 
 if(MOROK_BUILD_APPS)
     add_executable(morok_cli apps/morok-cli/main.cpp)
-    target_link_libraries(morok_cli PRIVATE Morok::Core morok_build_options)
+    target_link_libraries(morok_cli PRIVATE Morok::G1 morok_build_options)
     set_target_properties(morok_cli PROPERTIES OUTPUT_NAME "morok-cli")
     morok_enable_sanitizers(morok_cli)
 
