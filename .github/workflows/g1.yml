@@ -21,6 +21,47 @@ on:
       - "Morok/cmake/**"
       - ".github/workflows/g1.yml"
   workflow_dispatch:
+    inputs:
+      attempts:
+        description: "Tentativas por pergunta e por modelo (1–1000)"
+        type: number
+        required: true
+        default: 1
+      epochs:
+        description: "Épocas de treinamento por modelo (1–1000000)"
+        type: number
+        required: true
+        default: 2
+      question_sky:
+        description: "O céu é azul?"
+        type: boolean
+        required: true
+        default: true
+      question_grass:
+        description: "Qual a cor da grama?"
+        type: boolean
+        required: true
+        default: true
+      question_mountains:
+        description: "As montanhas são altas?"
+        type: boolean
+        required: true
+        default: true
+      model_tsukuyomi:
+        description: "Executar Tsukuyomi"
+        type: boolean
+        required: true
+        default: true
+      model_apollo:
+        description: "Executar Apollo"
+        type: boolean
+        required: true
+        default: true
+      model_mokosh:
+        description: "Executar Mokosh"
+        type: boolean
+        required: true
+        default: true
 
 permissions:
   contents: read
