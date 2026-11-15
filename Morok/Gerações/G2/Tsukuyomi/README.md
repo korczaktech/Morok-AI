@@ -46,10 +46,10 @@ O workflow manual **Treinamento — G2** fica disponível na aba Actions. Ele of
 
 - Checkbox para habilitar o Tsukuyomi.
 - **Épocas:** passagens completas pelo corpus em cada ciclo.
-- **Tentativas:** quantidade de ciclos quando o treinamento contínuo estiver desligado. Em cada ciclo, o modelo treina pelas épocas configuradas e gera uma resposta para cada pergunta com seu gabarito IA: no corpus.
+- **Tentativas:** quantidade de ciclos quando o treinamento contínuo estiver desligado. Em cada ciclo, o modelo treina pelas épocas configuradas usando somente os bytes das respostas IA: e avalia as quatro perguntas do conjunto de validação.
 - **Treinamento contínuo:** checkbox opcional. Quando ativada, ignora o limite fixo de tentativas e continua até obter 10 ciclos consecutivos em que todas as perguntas atinjam o critério de aprovação. Um ciclo com qualquer resposta reprovada zera a sequência.
 
-O primeiro ciclo inicializa o modelo. Os ciclos seguintes carregam os parâmetros e o estado completo do Adam (primeiro e segundo momentos e contador de passos), evitando reiniciar o otimizador. O gerador é iniciado uma vez por ciclo, carrega o checkpoint uma única vez e responde às 40 perguntas em lote. Cada resposta termina no primeiro fim de linha gerado ou ao atingir 96 bytes. O relatório mostra resposta gerada, gabarito, correspondência lexical, resultado por pergunta e duração do ciclo; o resumo é publicado na execução e os arquivos do modelo, do Adam e do relatório ficam disponíveis como artefatos.
+O primeiro ciclo inicializa o modelo. Os ciclos seguintes carregam os parâmetros e o estado completo do Adam (primeiro e segundo momentos e contador de passos), evitando reiniciar o otimizador. O gerador é iniciado uma vez por ciclo e carrega o checkpoint uma única vez. A validação usa quatro perguntas separadas do treinamento; o teste reservado contém outras quatro perguntas e só é consultado uma vez, após o treinamento. Cada resposta termina no primeiro fim de linha gerado ou ao atingir 160 bytes. O relatório mostra respostas, gabaritos, correspondência lexical e resultado por pergunta; os arquivos do modelo, do Adam e do relatório ficam disponíveis como artefatos.
 
 O avaliador atual é determinístico e compara palavras normalizadas preservando a frequência de cada palavra (F1 de pelo menos 90%, ou igualdade após normalização). Isso permite uma verificação automática reproduzível, mas não equivale a compreensão semântica e pode rejeitar paráfrases corretas ou aceitar coincidências lexicais. A aprovação deve ser interpretada como correspondência ao gabarito, não como prova de inteligência ou entendimento.
 
@@ -57,15 +57,15 @@ O treinamento acumula gradientes em mini-lotes de 16 bytes-alvo por padrão, red
 
 ## Escopo e limitações
 
-A versão 0.1 é um pipeline funcional de modelo de linguagem byte-level, não uma demonstração de raciocínio geral. O contexto é finito; não há BPTT, memória externa, tokenizer, subsistemas cognitivos G2, retomada do estado do otimizador ou qualidade linguística comprovada. A geração preserva UTF-8 válido para prompts válidos. Qualidade linguística depende de treinamento e avaliação com corpus apropriado. Consulte ARCHITECTURE.md.
+A versão 0.1 continua sendo um modelo byte-level com contexto finito de 14 bytes; a identidade e o orçamento de 10.000 parâmetros não foram alterados. O treinador agora aplica uma máscara de alvos em corpora U:/IA: e calcula a perda somente sobre os bytes das respostas IA:, mantendo o contexto anterior disponível. Isso torna o objetivo mais direcionado à resposta, mas não resolve a limitação de contexto: o modelo ainda não consegue reter a pergunta inteira quando ela excede a janela efetiva.
 
-O pipeline ainda é supervisionado por previsão do próximo byte; não é RL. A comparação automática das respostas não fornece recompensa ao modelo nem atualiza os pesos durante a avaliação. O contexto efetivo permanece em 14 bytes, uma limitação importante para relacionar perguntas completas às respostas.
+Ainda não há recorrência, BPTT, atenção, memória externa ou Reinforcement Learning (RL). A avaliação lexical não fornece recompensa ao modelo nem atualiza os pesos. A geração preserva UTF-8 válido para prompts válidos, mas isso não comprova qualidade linguística ou compreensão. Consulte ARCHITECTURE.md.
 
 O orçamento é conferido estaticamente e representa parâmetros implementados, não qualidade ou desempenho comprovados.
 
 ## Corpus conversacional inicial
 
-O diretório data/ contém treinamento-inicial.txt, com 40 pares de diálogo em português e 4.439 bytes em UTF-8 (aproximadamente 4,33 KiB). Os exemplos apresentam identidade, geração, versão, capacidades, limitações e conceitos básicos do projeto Morok.
+O diretório data/ mantém treinamento-inicial.txt como corpus original de referência, com 40 pares de diálogo em português e 4.439 bytes em UTF-8. Para o workflow, os diálogos foram separados deterministicamente em treinamento.txt (32 pares), validacao.txt (4 pares) e teste.txt (4 pares), sem perguntas repetidas entre os conjuntos. A validação acompanha os ciclos; o teste reservado só é executado ao final.
 
 Para treinar usando esse material, a partir de Morok/:
 
