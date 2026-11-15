@@ -16,7 +16,7 @@
 
 ## Arquitetura
 
-O v0.1 é um modelo neural autoregressivo de bytes com embeddings de entrada/saída compartilhados, enriquecidos por dois canais linguísticos aprendidos e uma RNN de 32 dimensões. A pergunta em prompts U:/IA: é convertida pelos embeddings compartilhados e agregada em 13 faixas posicionais; a projeção contextual condiciona o estado oculto inicial. Cada byte anterior da resposta é processado com seu embedding bruto, um protótipo de categoria linguística e um protótipo de fronteira contextual, todos somados ao estado anterior e a matriz 32×32 compartilhada projeta essa soma, seguida de bias. A pré-ativação compartilhada produz um candidato tanh e uma porta sigmoide de retenção. O novo estado combina o estado anterior e o candidato: `h_t = r_t * h_(t-1) + (1-r_t) * tanh(z_t)`, com `r_t = sigmoid(z_t)`. Assim, a rede aprende uma taxa de atualização/esquecimento por dimensão sem adicionar matrizes ou parâmetros. A mesma matriz é reutilizada em todas as etapas temporais, evitando adicionar parâmetros. Essa célula é uma recorrência com retenção aprendida, não uma implementação GRU/LSTM. O estado final passa por escala e deslocamento aprendidos; a cabeça de saída calcula 256 logits usando a matriz de embeddings compartilhada.
+O v0.1 é um modelo neural autoregressivo de bytes com embeddings de entrada/saída compartilhados, enriquecidos por dois canais linguísticos aprendidos e uma RNN de 32 dimensões. A pergunta em prompts U:/IA: é convertida pelos embeddings compartilhados e agregada em 13 faixas posicionais; a projeção contextual condiciona o estado oculto inicial. Cada byte anterior da resposta é processado com seu embedding bruto, um protótipo de categoria linguística e um protótipo de fronteira contextual. Esses três vetores são somados ao estado anterior e projetados pela matriz 32×32 compartilhada, seguida de bias. A pré-ativação compartilhada produz um candidato tanh e uma porta sigmoide de retenção. A pré-ativação é `z_t = W(e_byte + e_categoria + e_fronteira + h_(t-1)) + b`. O novo estado combina o estado anterior e o candidato: `h_t = r_t * h_(t-1) + (1-r_t) * tanh(z_t)`, com `r_t = sigmoid(z_t)`. Assim, a rede aprende uma taxa de atualização/esquecimento por dimensão sem adicionar matrizes ou parâmetros. A mesma matriz é reutilizada em todas as etapas temporais, evitando adicionar parâmetros. Essa célula é uma recorrência com retenção aprendida, não uma implementação GRU/LSTM. O estado final passa por escala e deslocamento aprendidos; a cabeça de saída calcula 256 logits usando a matriz de embeddings compartilhada.
 
 A previsão é causal: ao prever o byte na posição t, o modelo só recebe bytes anteriores a t. O estado oculto transporta informação temporal entre bytes e a porta de retenção permite conservar componentes úteis por mais de 13 bytes. Durante o treinamento, a derivada da perda atravessa até 13 transições recorrentes anteriores por Truncated Backpropagation Through Time (TBPTT). Quando a sequência é maior que a janela, o forward processa o histórico inteiro e a memória pode persistir, mas o gradiente é interrompido no limite configurado; portanto, o modelo não recebe crédito direto de uma perda atual para transições anteriores a essa janela. A distribuição de saída usa softmax estável e a função objetivo é entropia cruzada categórica.
 
@@ -78,13 +78,13 @@ A geração restringe transições para manter UTF-8 válido quando o prompt é 
 
 ## Checkpoint
 
-Formato binário MOROKG2T, versão 6, contagem explícita de 10.000 floats e checksum FNV-1a de 64 bits. O carregamento ocorre em estrutura temporária e só substitui o modelo ativo depois de validar o arquivo integral.
+Formato binário MOROKG2T, versão 7, contagem explícita de 10.000 floats e checksum FNV-1a de 64 bits. O carregamento ocorre em estrutura temporária e só substitui o modelo ativo depois de validar o arquivo integral.
 
 ## Limitações conhecidas do v0.1
 
 - A pergunta inteira é agregada em 13 faixas posicionais; a compressão perde detalhes de ordem quando várias posições caem na mesma faixa.
 - Sem dropout: a versão 0.1 não aplica mascaramento estocástico; regularização fica restrita ao weight decay seletivo e clipping.
-- Sem atenção, portas GRU/LSTM, memória externa ou subsistemas cognitivos G2. A recorrência atual é uma RNN tanh simples com matriz compartilhada.
+- Sem atenção, portas GRU/LSTM, memória externa ou subsistemas cognitivos G2. A recorrência atual usa candidato tanh e retenção sigmoide com matriz compartilhada.
 - A máscara supervisionada seleciona os bytes de resposta; a pergunta condiciona o estado inicial por embeddings compartilhados e faixas posicionais, cuja compressão ainda perde detalhes de ordem.
 - O pipeline atual usa entropia cruzada supervisionada; ainda não implementa Reinforcement Learning (RL) nem recompensa semântica.
 - Sem tokenizer; a entrada continua byte-level, com categorias linguísticas auxiliares aprendidas a partir de embeddings compartilhados.
