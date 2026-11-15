@@ -5,6 +5,11 @@ on:
     paths:
       - ".github/workflows/reinforcement-g2.yml"
       - "apps/reinforce_g2.cpp"
+      - "src/model/learn/g1_training.cpp"
+      - "src/model/learn/g2_training.cpp"
+      - "include/morok/model/learn/g1_training.hpp"
+      - "tests/unit/model/test_g2.cpp"
+      - "tests/fixtures/g2-single-document/**"
       - "scripts/run-g2-reinforcement.py"
       - "tests/unit/model/test_g2_reinforcement.cpp"
       - "tests/scripts/test_g2_reinforcement.py"
