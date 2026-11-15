@@ -14,9 +14,6 @@ Morok-AI/
     ├── Gerações/
     │   ├── G1/
     │   │   ├── shared/          # motor e subsistemas exclusivos da G1
-    │   │   ├── Mokosh/
-    │   │   ├── Tsukuyomi/
-    │   │   ├── Apollo/
     │   │   └── TsukuyomiMax/
     │   └── G3/                  # estrutura documental
     ├── apps/
@@ -29,20 +26,11 @@ As pastas públicas da raiz abrigam somente capacidades realmente compartilhadas
 
 ## Modelos
 
-### Mokosh — eficiência e baixo consumo
-Modelo orientado a uma execução mais calma e econômica. Prioriza reduzir memória, processamento e energia, mantendo qualidade suficiente para a tarefa. Deve evitar agentes e operações adicionais sem benefício mensurável.
-
-### Tsukuyomi ⚫ — agente único
-Modelo de identidade visual escura/preta. Opera com exatamente um agente. Não delega tarefas a agentes adicionais nem forma equipes de agentes; prioriza execução individual e autocontida.
-
 ### Artemis — arquitetura multiagente
 Modelo destinado a tarefas que se beneficiam de colaboração. Deve utilizar mais de dois agentes, portanto no mínimo três agentes ativos na arquitetura de execução. Coordenação, divisão de tarefas e consolidação de resultados pertencem à implementação exclusiva de Artemis.
 
 ### Tsukuyomi Max — rede neural unificada da G1
-Modelo neural central da geração G1. Utiliza um único conjunto de parâmetros e um checkpoint próprio para aprender os diferentes tipos de pergunta e diálogos da geração, sem separar a rede por perfil de tarefa. Os demais perfis continuam disponíveis como configurações/modelos independentes para experimentação e comparação.
-
-### Apollo — baixa latência
-Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a primeira resposta e o tempo total de inferência. Pode usar mais recursos quando isso produzir redução de latência medida e reproduzível.
+Modelo neural central da geração G1. Utiliza um único conjunto de parâmetros e um checkpoint próprio para aprender os diferentes tipos de pergunta e diálogos da geração, sem separar a rede por perfil de tarefa. Tsukuyomi Max é o único modelo mantido na G1.
 
 ## Regras de isolamento
 
