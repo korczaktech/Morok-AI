@@ -1,5 +1,6 @@
 #include "morok/g2/tsukuyomi/model.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
