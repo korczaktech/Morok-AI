@@ -23,28 +23,28 @@ enum class ProfileKind { tsukuyomi, apollo, mokosh, tsukuyomi_max };
         config.max_new_bytes = std::clamp<std::size_t>(requested_bytes, 1, 256);
         config.temperature = 0.8;
         config.top_k = 0;
-        config.repetition_penalty = 0.35;
+        config.repetition_penalty = 0.0;
         config.repetition_window = 48;
         break;
     case ProfileKind::apollo:
         config.max_new_bytes = std::clamp<std::size_t>(requested_bytes, 1, 512);
         config.temperature = 0.8;
         config.top_k = 0;
-        config.repetition_penalty = 0.35;
+        config.repetition_penalty = 0.0;
         config.repetition_window = 48;
         break;
     case ProfileKind::mokosh:
         config.max_new_bytes = std::clamp<std::size_t>(requested_bytes, 1, 128);
         config.temperature = 0.7;
         config.top_k = mokosh_top_k;
-        config.repetition_penalty = 0.35;
+        config.repetition_penalty = 0.0;
         config.repetition_window = 32;
         break;
     case ProfileKind::tsukuyomi_max:
         config.max_new_bytes = std::clamp<std::size_t>(requested_bytes, 1, 512);
         config.temperature = 0.75;
         config.top_k = 16;
-        config.repetition_penalty = 0.4;
+        config.repetition_penalty = 0.0;
         config.repetition_window = 64;
         break;
     }
