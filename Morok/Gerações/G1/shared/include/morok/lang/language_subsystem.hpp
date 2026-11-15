@@ -16,8 +16,12 @@
 
 namespace morok::lang {
 
+enum class LanguageProfile { tsukuyomi, apollo, mokosh };
+enum class DetectedLanguage { portuguese, english, spanish, unknown };
+
 struct LanguageConfig final {
     std::size_t max_context_bytes{64U * 1024U};
+    LanguageProfile profile{LanguageProfile::tsukuyomi};
 };
 
 struct LanguageGeneration final {
@@ -25,6 +29,7 @@ struct LanguageGeneration final {
     std::size_t generated_bytes{0};
     std::size_t candidate_evaluations{0};
     bool reached_byte_limit{false};
+    DetectedLanguage input_language{DetectedLanguage::unknown};
 };
 
 class LanguageSubsystem final {
@@ -34,21 +39,15 @@ public:
 
     [[nodiscard]] common::Status initialize(const core::RuntimeConfig& config);
     [[nodiscard]] common::Status shutdown() noexcept;
-
     [[nodiscard]] common::Result<common::SessionId> create_session(
         core::SessionRegistry& registry);
-    [[nodiscard]] common::Status reset_session(
-        const common::SessionId& session_id);
+    [[nodiscard]] common::Status reset_session(const common::SessionId& session_id);
     [[nodiscard]] common::Status observe(
-        const core::RequestContext& request,
-        const common::Utf8Text& text);
+        const core::RequestContext& request, const common::Utf8Text& text);
     [[nodiscard]] common::Result<LanguageGeneration> generate(
-        const core::RequestContext& request,
-        std::size_t max_new_bytes);
+        const core::RequestContext& request, std::size_t max_new_bytes);
     [[nodiscard]] common::Status close_session(
-        core::SessionRegistry& registry,
-        const common::SessionId& session_id);
-
+        core::SessionRegistry& registry, const common::SessionId& session_id);
     [[nodiscard]] core::Runtime::Initializer initializer();
     [[nodiscard]] core::Runtime::Shutdown shutdown_callback();
     [[nodiscard]] bool initialized() const noexcept;
@@ -64,6 +63,7 @@ private:
     std::size_t max_sessions_{1};
     mutable std::mutex mutex_;
     std::unordered_map<std::string, std::string> session_contexts_;
+    std::unordered_map<std::string, DetectedLanguage> session_languages_;
     bool initialized_{false};
 };
 
