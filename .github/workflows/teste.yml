@@ -91,7 +91,7 @@ jobs:
         working-directory: Morok
         run: build/g1/morok-g1-profile-evaluate --self-test
 
-      - name: Train one epoch and test one response per selected model
+      - name: Train 100 epochs and test 100 responses per selected model
         id: loop
         working-directory: Morok
         env:
@@ -119,7 +119,7 @@ jobs:
             {
               echo "# Teste G1"
               echo
-              echo "Uma época e uma tentativa por modelo em cada ciclo. O ciclo termina quando todos os modelos selecionados acertarem."
+              echo "100 épocas e 100 tentativas por modelo em cada ciclo. Cada modelo é aprovado ao acertar pelo menos uma das 100 respostas; o ciclo continua até todos os modelos selecionados serem aprovados."
               echo
               echo '~~~'
               cat test-state/history.tsv
