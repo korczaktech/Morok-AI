@@ -59,7 +59,7 @@ Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a prim
 
 ## Relação entre gerações
 
-Os perfis são definidos por geração. Na G1 existem Tsukuyomi, Apollo, Mokosh e Tsukuyomi Max; Artemis não faz parte dessa geração. A quantidade de parâmetros, mecanismos cognitivos e capacidades será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
+Os modelos são definidos por geração. A G1 possui somente Tsukuyomi Max. A quantidade de parâmetros, mecanismos cognitivos e capacidades será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
 
 ## Organização real do código
 
@@ -71,7 +71,7 @@ Aplicações, scripts, dados de reforço, fixtures e testes específicos da gera
 
 ## Estado dos perfis
 
-G1 possui alvos CMake independentes para Mokosh, Tsukuyomi, Apollo e Tsukuyomi Max. Cada perfil mantém suas políticas e código exclusivo dentro de seu próprio diretório, com testes próprios. Os motores e adaptadores comuns aos perfis de uma geração permanecem no diretório interno dessa geração, fora dos diretórios dos perfis. Na G1, Tsukuyomi preserva a execução atual de agente único; Apollo é o perfil de velocidade; Mokosh deriva da base de Tsukuyomi, com processamento de raciocínio mais demorado e treinamento com mais épocas. Tsukuyomi Max é a rede neural unificada da G1, com checkpoint próprio. Artemis não existe na G1.
+G1 possui somente o alvo CMake de Tsukuyomi Max. O modelo mantém suas políticas e implementação exclusiva em `Gerações/G1/TsukuyomiMax/`; o motor e os adaptadores compartilhados permanecem em `Gerações/G1/shared/`.
 
 G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de outras gerações dentro da G3.
 
