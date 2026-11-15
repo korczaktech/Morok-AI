@@ -2,9 +2,12 @@
 """Treinamento cíclico com validação e teste independentes do Tsukuyomi G2 0.1."""
 
 from collections import Counter
+import math
+import os
 from pathlib import Path
 import re
 import subprocess
+import shutil
 import sys
 import time
 import unicodedata
@@ -30,6 +33,28 @@ def update_learning_rate(current: float, best_score: float, plateau: int,
         reduced = max(MIN_LEARNING_RATE, current * LR_REDUCE_FACTOR)
         return reduced, best_score, 0, reduced < current
     return current, best_score, plateau, False
+
+
+def save_best_state(checkpoint: Path, optimizer_state: Path,
+                    best_checkpoint: Path, best_optimizer_state: Path) -> None:
+    """Salva pesos e momentos Adam como um único estado lógico de melhor validação."""
+    if not checkpoint.is_file() or not optimizer_state.is_file():
+        raise RuntimeError("Checkpoint ou estado Adam ausente após treinamento.")
+    checkpoint_tmp = best_checkpoint.with_name(best_checkpoint.name + ".tmp")
+    optimizer_tmp = best_optimizer_state.with_name(best_optimizer_state.name + ".tmp")
+    shutil.copy2(checkpoint, checkpoint_tmp)
+    shutil.copy2(optimizer_state, optimizer_tmp)
+    os.replace(checkpoint_tmp, best_checkpoint)
+    os.replace(optimizer_tmp, best_optimizer_state)
+
+
+def restore_best_state(best_checkpoint: Path, best_optimizer_state: Path,
+                       checkpoint: Path, optimizer_state: Path) -> None:
+    """Restaura pesos e momentos Adam do mesmo ciclo vencedor."""
+    if not best_checkpoint.is_file() or not best_optimizer_state.is_file():
+        raise RuntimeError("Nenhum estado de melhor validação foi salvo.")
+    shutil.copy2(best_checkpoint, checkpoint)
+    shutil.copy2(best_optimizer_state, optimizer_state)
 
 
 def should_stop(continuous: bool, correct_count: int, total: int) -> bool:
@@ -165,8 +190,10 @@ def main() -> int:
     epochs, attempts = int(sys.argv[6]), int(sys.argv[7])
     continuous = sys.argv[8] == "1"
     question_count = int(sys.argv[9])
-    if epochs < 1 or attempts < 1 or attempts > MAX_CYCLES:
-        raise ValueError(f"Épocas e tentativas precisam ser positivas; tentativas <= {MAX_CYCLES}.")
+    if not 1 <= epochs <= 100 or not 1 <= attempts <= MAX_CYCLES:
+        raise ValueError(f"Épocas precisam estar entre 1 e 100; tentativas entre 1 e {MAX_CYCLES}.")
+    if sys.argv[8] not in ("0", "1"):
+        raise ValueError("O modo contínuo precisa ser 0 ou 1.")
     if not 1 <= question_count <= MAX_VALIDATION_QUESTIONS:
         raise ValueError("A quantidade de questões precisa estar entre 1 e 40.")
 
@@ -180,12 +207,17 @@ def main() -> int:
     validation = select_validation_questions(train_dialogues, validation_pool, question_count)
     test = read_dialogues(test_corpus)
     checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
+    optimizer_state = Path(str(checkpoint) + ".adam")
+    best_checkpoint = Path(str(checkpoint) + ".best")
+    best_optimizer_state = Path(str(optimizer_state) + ".best")
     output = Path("build/g2/respostas-tsukuyomi.md")
     output.parent.mkdir(parents=True, exist_ok=True)
 
     cycle = 0
     learning_rate = INITIAL_LEARNING_RATE
     best_validation_score = -1.0
+    best_validation_correct = 0
+    best_validation_cycle = 0
     plateau_cycles = 0
     maximum_cycles = min(attempts, MAX_CYCLES)
     with output.open("w", encoding="utf-8") as report:
@@ -231,6 +263,14 @@ def main() -> int:
             )
             mean_f1 = sum(result[2] for result in validation_results) / max(1, total)
             validation_score = 0.8 * (correct_count / max(1, total)) + 0.2 * mean_f1
+            if not math.isfinite(validation_score):
+                raise RuntimeError("A pontuação de validação não é finita.")
+            if validation_score > best_validation_score + 1.0e-6:
+                save_best_state(checkpoint, optimizer_state,
+                                best_checkpoint, best_optimizer_state)
+                best_validation_score = validation_score
+                best_validation_correct = correct_count
+                best_validation_cycle = cycle
             learning_rate, best_validation_score, plateau_cycles, reduced = update_learning_rate(
                 learning_rate, best_validation_score, plateau_cycles, validation_score
             )
@@ -264,6 +304,22 @@ def main() -> int:
             raise RuntimeError(
                 f"Objetivo contínuo não atingido: {correct_count}/{total} após {cycle} ciclos."
             )
+
+        # A avaliação final usa o melhor estado de validação, não necessariamente
+        # o último ciclo, e restaura também os momentos Adam correspondentes.
+        restore_best_state(best_checkpoint, best_optimizer_state,
+                           checkpoint, optimizer_state)
+        report.write(
+            f"**Melhor estado: ciclo {best_validation_cycle}; "
+            f"validação {best_validation_correct}/{len(validation)}; "
+            f"pontuação {best_validation_score:.3f}.**\\n\\n"
+        )
+        print(
+            f"Melhor checkpoint: ciclo {best_validation_cycle}; "
+            f"validação {best_validation_correct}/{len(validation)}; "
+            f"score={best_validation_score:.3f}.",
+            flush=True,
+        )
 
         # No modo de uma questão, não consultar o teste reservado.
         if question_count == 1:
