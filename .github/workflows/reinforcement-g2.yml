@@ -20,6 +20,21 @@ on:
     - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
     inputs:
+      question_sky:
+        description: "Pergunta: O céu é azul?"
+        required: true
+        type: boolean
+        default: true
+      question_mountains:
+        description: "Pergunta: As montanhas são altas ou baixas?"
+        required: true
+        type: boolean
+        default: true
+      question_grass:
+        description: "Pergunta: Que cor é a grama?"
+        required: true
+        type: boolean
+        default: true
       attempts:
         description: "Number of G2 answer attempts (1-100)"
         required: true
@@ -29,7 +44,7 @@ on:
         description: "Bootstrap epochs per expert"
         required: true
         type: number
-        default: 8
+        default: 100
 permissions:
   contents: write
   actions: read
@@ -51,7 +66,7 @@ jobs:
           mkdir -p artifacts/reinforcement-g2
           previous_run="$(gh run list --workflow reinforcement-g2.yml --branch main --status success --json databaseId --limit 1 --jq '.[0].databaseId // empty')"
           if [[ -n "$previous_run" ]]; then
-            gh run download "$previous_run" --name morok-g2-reinforcement-state --dir artifacts/reinforcement-g2 || true
+            gh run download "$previous_run" --name morok-g2-reinforcement-state-v2 --dir artifacts/reinforcement-g2 || true
           fi
       - name: Install build tools
         run: |
@@ -63,12 +78,25 @@ jobs:
           cmake --build build --parallel 2
           ctest --test-dir build --output-on-failure
       - name: Run G2 reinforcement
+        env:
+          QUESTION_SKY: ${{ github.event_name != 'workflow_dispatch' || inputs.question_sky }}
+          QUESTION_MOUNTAINS: ${{ github.event_name != 'workflow_dispatch' || inputs.question_mountains }}
+          QUESTION_GRASS: ${{ github.event_name != 'workflow_dispatch' || inputs.question_grass }}
         run: |
+          questions=()
+          [[ "$QUESTION_SKY" == "true" ]] && questions+=(sky_is_blue)
+          [[ "$QUESTION_MOUNTAINS" == "true" ]] && questions+=(mountains_high_or_low)
+          [[ "$QUESTION_GRASS" == "true" ]] && questions+=(grass_color)
+          if [[ "${#questions[@]}" -eq 0 ]]; then
+            echo "::error::Select at least one question."
+            exit 1
+          fi
           python3 scripts/run-g2-reinforcement.py \
             --checkpoint artifacts/reinforcement-g2/model \
             --database data/reinforcement-g2/answers.json \
+            --questions "${questions[@]}" \
             --attempts "${{ github.event_name == 'workflow_dispatch' && inputs.attempts || 3 }}" \
-            --bootstrap-epochs "${{ github.event_name == 'workflow_dispatch' && inputs.epochs || 8 }}" \
+            --bootstrap-epochs "${{ github.event_name == 'workflow_dispatch' && inputs.epochs || 100 }}" \
             --results-file artifacts/reinforcement-g2/attempt-results.txt
       - name: Commit G2 feedback history
         run: |
@@ -82,7 +110,7 @@ jobs:
       - name: Publish G2 reinforcement state
         uses: actions/upload-artifact@v4
         with:
-          name: morok-g2-reinforcement-state
+          name: morok-g2-reinforcement-state-v2
           path: artifacts/reinforcement-g2/
           if-no-files-found: error
           retention-days: 90
