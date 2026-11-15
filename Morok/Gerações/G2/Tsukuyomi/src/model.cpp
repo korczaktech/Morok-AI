@@ -152,8 +152,8 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
     if (question.available && context.size() >= 3) {
         std::size_t answer_begin = context.size();
         for (std::size_t i = 0; i + 2 < context.size(); ++i) {
-            const bool line_start = i == 0 || context[i - 1] == '\\n' ||
-                                    context[i - 1] == '\\r';
+            const bool line_start = i == 0 || context[i - 1] == '\n' ||
+                                    context[i - 1] == '\r';
             if (line_start && context[i] == 'I' && context[i + 1] == 'A' &&
                 context[i + 2] == ':')
                 answer_begin = i + 3;
