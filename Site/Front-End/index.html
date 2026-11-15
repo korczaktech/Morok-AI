@@ -44,8 +44,9 @@
       z-index: 20; overflow: hidden; white-space: nowrap;
     }
     .app.sidebar-collapsed .sidebar {
-      width: 0; flex-basis: 0; padding-left: 0; padding-right: 0;
-      border-right: 0; overflow: hidden;
+      width: 0 !important; min-width: 0 !important; max-width: 0 !important;
+      flex: 0 0 0 !important; padding-left: 0 !important; padding-right: 0 !important;
+      border-right: 0 !important; overflow: hidden;
     }
     .brand-row { display:flex; align-items:center; justify-content:space-between; padding: 0 7px 25px; }
     .brand { display:flex; align-items:center; gap:11px; color:var(--text); text-decoration:none; font-weight:800; letter-spacing:-.055em; font-size:19px; }
@@ -213,8 +214,9 @@
     @media (min-width:1200px) { .welcome { padding-top:82px; } }
     @media (max-width:760px) {
       .sidebar, .app.sidebar-collapsed .sidebar {
-        position:fixed; inset:0 auto 0 0; width:270px; flex-basis:270px;
-        padding:22px 14px 15px; border-right:1px solid var(--line);
+        position:fixed; inset:0 auto 0 0; width:270px !important;
+        min-width:270px !important; max-width:270px !important; flex:0 0 270px !important;
+        padding:22px 14px 15px !important; border-right:1px solid var(--line) !important;
         transform:translateX(-102%); box-shadow:20px 0 60px rgba(0,0,0,.35);
       }
       .sidebar.open { transform:translateX(0); }
@@ -403,27 +405,24 @@
 
     function closeSidebar() {
       sidebar.classList.remove('open');
+      app.classList.add('sidebar-collapsed');
       backdrop.classList.remove('show');
-      if (!mobileSidebar.matches) app.classList.add('sidebar-collapsed');
       $('#open-sidebar').setAttribute('aria-expanded', 'false');
     }
     function openSidebar() {
+      app.classList.remove('sidebar-collapsed');
       if (mobileSidebar.matches) {
         sidebar.classList.add('open');
         backdrop.classList.add('show');
-      } else {
-        app.classList.remove('sidebar-collapsed');
       }
       $('#open-sidebar').setAttribute('aria-expanded', 'true');
     }
     function toggleSidebar() {
-      if (mobileSidebar.matches) {
-        if (sidebar.classList.contains('open')) closeSidebar();
-        else openSidebar();
-      } else {
-        const collapsed = app.classList.toggle('sidebar-collapsed');
-        $('#open-sidebar').setAttribute('aria-expanded', String(!collapsed));
-      }
+      const isOpen = mobileSidebar.matches
+        ? sidebar.classList.contains('open')
+        : !app.classList.contains('sidebar-collapsed');
+      if (isOpen) closeSidebar();
+      else openSidebar();
     }
     function newConversation() {
       chatArea.innerHTML = '';
