@@ -47,8 +47,10 @@ def main() -> int:
         errors.append("CMake contains removed G2 or G1 Artemis configuration")
     if "TsukuyomiMax" not in cmake or "morok_g1_tsukuyomimax" not in cmake:
         errors.append("CMake does not declare the Tsukuyomi Max G1 target")
-    if any((g1 / name).exists() for name in ("Apollo", "Mokosh", "Tsukuyomi")):
-        errors.append("G1 contains a retired model directory")
+    model_directories = sorted(p.name for p in g1.iterdir()
+                                if p.is_dir() and (p / "include").exists())
+    if model_directories != ["TsukuyomiMax"]:
+        errors.append("G1 must contain only the Tsukuyomi Max model directory")
 
     if errors:
         print("G1 architecture validation failed:", file=sys.stderr)
