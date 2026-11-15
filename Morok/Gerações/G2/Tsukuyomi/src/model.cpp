@@ -22,6 +22,7 @@ constexpr std::size_t kShiftOffset = 9952;
 constexpr std::size_t kStartOffset = 9984;
 
 static_assert(kStartOffset + 16 == kParameterCount);
+static_assert(sizeof(float) == 4 && std::numeric_limits<float>::is_iec559);
 
 float at(const Model& model, std::size_t offset) {
     return model.parameters[offset];
@@ -43,7 +44,7 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context) {
     Cache cache;
     cache.has_current = !context.empty();
     cache.current_byte = cache.has_current ? context.back() : 0;
-    cache.at_start = context.size() < 16;
+    cache.at_start = context.empty();
 
     if (cache.has_current) {
         const auto base = kEmbeddingOffset + cache.current_byte * kHiddenSize;
