@@ -103,11 +103,13 @@ void train_doc(const Doc& d, const G1TrainingConfig& c, G1Parameters& p,
 
     G1State state{};
     std::size_t context_offset = 0;
+    std::optional<std::uint8_t> previous_context_byte;
     while (window.size() >= 2) {
         if (c.cancellation_requested && c.cancellation_requested())
             throw std::runtime_error("training cancelled");
         auto result = compute_g1_bptt_gradients(
-            p, window, c.truncation_length, state, context_offset);
+            p, window, c.truncation_length, state, context_offset,
+            previous_context_byte);
         const auto step = apply_g1_optimizer_step(p, result.gradients, c.optimizer, o);
         t.nats += result.mean_loss_nats * result.target_byte_count;
         t.targets += result.target_byte_count;
@@ -124,6 +126,7 @@ void train_doc(const Doc& d, const G1TrainingConfig& c, G1Parameters& p,
 
         if (window.size() < c.truncation_length + 1) break;
         const auto overlap = window.back();
+        previous_context_byte = window[window.size() - 2U];
         context_offset += window.size() - 1;
         window.clear();
         window.push_back(overlap);
@@ -135,7 +138,12 @@ void train_doc(const Doc& d, const G1TrainingConfig& c, G1Parameters& p,
 
     // Consume the final byte and train a positive stop target at the true
     // document boundary. Earlier contexts were trained as "continue" by BPTT.
-    advance_g1_state(p, state, window.back());
+    const auto final_byte = window.back();
+    const auto previous_byte = window.size() >= 2U ? window[window.size() - 2U] : 0U;
+    const bool final_separator = is_g1_token_separator(final_byte);
+    const bool final_token_start = !final_separator &&
+        (window.size() < 2U || is_g1_token_separator(previous_byte));
+    advance_g1_state(p, state, final_byte, final_token_start, final_separator);
     const auto eos = compute_g1_eos_gradients(p, state,
         static_cast<std::size_t>(d.size), true);
     const auto eos_step = apply_g1_optimizer_step(p, eos.gradients, c.optimizer, o);
