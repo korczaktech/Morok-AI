@@ -103,14 +103,14 @@ morok_enable_sanitizers(morok_test_memory_store)
 add_test(NAME memory.store COMMAND morok_test_memory_store)
 
 add_executable(morok_test_language_subsystem unit/lang/test_language_subsystem.cpp)
-target_link_libraries(morok_test_language_subsystem PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_language_subsystem PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_language_subsystem)
 add_test(NAME lang.language_subsystem COMMAND morok_test_language_subsystem)
 
 add_executable(morok_test_communication_subsystem
     unit/comm/test_communication_subsystem.cpp
 )
-target_link_libraries(morok_test_communication_subsystem PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_communication_subsystem PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_communication_subsystem)
 add_test(NAME comm.communication_subsystem COMMAND morok_test_communication_subsystem)
 
@@ -122,7 +122,7 @@ morok_enable_sanitizers(morok_test_reasoning_subsystem)
 add_test(NAME reason.reasoning_subsystem COMMAND morok_test_reasoning_subsystem)
 
 add_executable(morok_test_learning_subsystem unit/learn/test_learning_subsystem.cpp)
-target_link_libraries(morok_test_learning_subsystem PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_learning_subsystem PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_learning_subsystem)
 add_test(NAME learn.learning_subsystem COMMAND morok_test_learning_subsystem)
 
@@ -143,7 +143,7 @@ add_test(NAME security.security_subsystem COMMAND morok_test_security_subsystem)
 
 if(MOROK_BUILD_APPS)
     add_executable(morok_test_application_runtime unit/apps/test_application_runtime.cpp)
-    target_link_libraries(morok_test_application_runtime PRIVATE Morok::Core morok_build_options)
+    target_link_libraries(morok_test_application_runtime PRIVATE Morok::G1 morok_build_options)
     morok_enable_sanitizers(morok_test_application_runtime)
     add_test(NAME apps.application_runtime COMMAND morok_test_application_runtime)
 
@@ -174,7 +174,7 @@ endif()
 
 # Stage 15: property, integration and regression coverage.
 add_executable(morok_test_model_properties property/test_model_properties.cpp)
-target_link_libraries(morok_test_model_properties PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_test_model_properties PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_model_properties)
 add_test(NAME property.model_invariants COMMAND morok_test_model_properties)
 set_tests_properties(property.model_invariants PROPERTIES LABELS "property;fast" TIMEOUT 30)

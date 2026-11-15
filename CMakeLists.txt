@@ -104,7 +104,7 @@ if(MOROK_BUILD_APPS)
     morok_enable_sanitizers(morok_convert)
 
     add_executable(morok_evaluate apps/morok-evaluate/main.cpp)
-    target_link_libraries(morok_evaluate PRIVATE Morok::Core morok_build_options)
+    target_link_libraries(morok_evaluate PRIVATE Morok::G1 morok_build_options)
     set_target_properties(morok_evaluate PROPERTIES OUTPUT_NAME "morok-evaluate")
     morok_enable_sanitizers(morok_evaluate)
 
@@ -115,7 +115,7 @@ if(MOROK_BUILD_APPS)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_executable(morok_server apps/morok-server/main.cpp)
-        target_link_libraries(morok_server PRIVATE Morok::Core morok_build_options)
+        target_link_libraries(morok_server PRIVATE Morok::G1 morok_build_options)
         set_target_properties(morok_server PROPERTIES OUTPUT_NAME "morok-server")
         morok_enable_sanitizers(morok_server)
     endif()
