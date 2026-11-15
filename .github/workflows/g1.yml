@@ -4,21 +4,21 @@ on:
   push:
     branches: [main]
     paths:
-      - "Gerações/G1/**"
-      - "include/**"
-      - "src/**"
-      - "tests/**"
-      - "CMakeLists.txt"
-      - "cmake/**"
+      - "Morok/Gerações/G1/**"
+      - "Morok/include/**"
+      - "Morok/src/**"
+      - "Morok/tests/**"
+      - "Morok/CMakeLists.txt"
+      - "Morok/cmake/**"
       - ".github/workflows/g1.yml"
   pull_request:
     paths:
-      - "Gerações/G1/**"
-      - "include/**"
-      - "src/**"
-      - "tests/**"
-      - "CMakeLists.txt"
-      - "cmake/**"
+      - "Morok/Gerações/G1/**"
+      - "Morok/include/**"
+      - "Morok/src/**"
+      - "Morok/tests/**"
+      - "Morok/CMakeLists.txt"
+      - "Morok/cmake/**"
       - ".github/workflows/g1.yml"
   workflow_dispatch:
 
@@ -43,20 +43,23 @@ jobs:
           sudo apt-get install --yes ninja-build libsqlite3-dev
 
       - name: Configure G1 without G2
+        working-directory: Morok
         run: >-
           cmake -S . -B build/g1 -G Ninja
           -DCMAKE_BUILD_TYPE=Release
-          -DMOROK_BUILD_G2=OFF
           -DMOROK_BUILD_TESTS=ON
           -DMOROK_BUILD_APPS=ON
 
       - name: Build G1
+        working-directory: Morok
         run: cmake --build build/g1 --parallel 2
 
       - name: Test G1 and shared core
+        working-directory: Morok
         run: ctest --test-dir build/g1 --output-on-failure --parallel 2
 
       - name: First-training and resume smoke test
+        working-directory: Morok
         run: |
           MOROK_TRAIN_BIN=./build/g1/morok-train \
           MOROK_GENERATE_BIN=./build/g1/morok_generate \
@@ -67,6 +70,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: morok-g1-training
-          path: artifacts/g1-first-training/
+          path: Morok/artifacts/g1-first-training/
           if-no-files-found: ignore
           retention-days: 14

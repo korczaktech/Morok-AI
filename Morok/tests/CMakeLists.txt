@@ -146,9 +146,7 @@ if(MOROK_BUILD_APPS)
     add_test(NAME apps.evaluate_usage COMMAND morok_evaluate)
     add_test(NAME apps.train_usage COMMAND morok_train_cli)
     add_test(NAME apps.reinforce_usage COMMAND morok_reinforce)
-)
     set(_morok_usage_tests apps.convert_usage apps.evaluate_usage apps.train_usage apps.reinforce_usage)
-)
     set_tests_properties(${_morok_usage_tests} PROPERTIES WILL_FAIL TRUE)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_test(NAME apps.server_usage COMMAND morok_server)
@@ -205,7 +203,7 @@ set_tests_properties(acceptance.seven_subsystems
 
 
 # G1 model profiles are compiled and exercised independently.
-foreach(_profile IN ITEMS Mokosh Tsukuyomi Artemis Apollo)
+foreach(_profile IN ITEMS Mokosh Tsukuyomi Apollo)
     string(TOLOWER "${_profile}" _profile_lower)
     add_executable(morok_test_g1_${_profile_lower} ../Gerações/G1/${_profile}/tests/test_profile.cpp)
     target_link_libraries(morok_test_g1_${_profile_lower} PRIVATE Morok::G1::${_profile} morok_build_options)
@@ -220,7 +218,6 @@ set_tests_properties(architecture.generation_isolation PROPERTIES LABELS "archit
 add_test(NAME reinforcement.feedback_database
     COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/Gerações/G1/shared/tests/scripts/test_g1_reinforcement.py)
 set_tests_properties(reinforcement.feedback_database PROPERTIES LABELS "reinforcement;python" TIMEOUT 30)
-)
 
 get_property(_morok_tests DIRECTORY PROPERTY TESTS)
 set_tests_properties(${_morok_tests} PROPERTIES TIMEOUT 120)

@@ -4,23 +4,23 @@ on:
   push:
     branches: [main]
     paths:
-      - "include/**"
-      - "src/**"
-      - "Gerações/G1/**"
-      - "tests/**"
-      - "CMakeLists.txt"
-      - "CMakePresets.json"
-      - "cmake/**"
+      - "Morok/include/**"
+      - "Morok/src/**"
+      - "Morok/Gerações/G1/**"
+      - "Morok/tests/**"
+      - "Morok/CMakeLists.txt"
+      - "Morok/CMakePresets.json"
+      - "Morok/cmake/**"
       - ".github/workflows/sanitizers.yml"
   pull_request:
     paths:
-      - "include/**"
-      - "src/**"
-      - "Gerações/G1/**"
-      - "tests/**"
-      - "CMakeLists.txt"
-      - "CMakePresets.json"
-      - "cmake/**"
+      - "Morok/include/**"
+      - "Morok/src/**"
+      - "Morok/Gerações/G1/**"
+      - "Morok/tests/**"
+      - "Morok/CMakeLists.txt"
+      - "Morok/CMakePresets.json"
+      - "Morok/cmake/**"
       - ".github/workflows/sanitizers.yml"
   workflow_dispatch:
 
@@ -54,6 +54,7 @@ jobs:
           sudo apt-get install --yes ninja-build libsqlite3-dev clang
 
       - name: Configure instrumented build
+        working-directory: Morok
         run: >-
           cmake -S . -B build/sanitizers -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
@@ -64,10 +65,12 @@ jobs:
           -DMOROK_ENABLE_UBSAN=ON
 
       - name: Build
+        working-directory: Morok
         run: cmake --build build/sanitizers --parallel 2
 
       - name: Run tests
         env:
           ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        working-directory: Morok
         run: ctest --test-dir build/sanitizers --output-on-failure --parallel 2

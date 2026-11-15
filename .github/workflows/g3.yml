@@ -4,13 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - "Gerações/G3/**"
-      - "MODELOS.md"
+      - "Morok/Gerações/G3/**"
+      - "Morok/MODELOS.md"
       - ".github/workflows/g3.yml"
   pull_request:
     paths:
-      - "Gerações/G3/**"
-      - "MODELOS.md"
+      - "Morok/Gerações/G3/**"
+      - "Morok/MODELOS.md"
       - ".github/workflows/g3.yml"
   workflow_dispatch:
 
@@ -30,6 +30,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate G3 profile reservations
+        working-directory: Morok
         run: |
           python3 - <<'PY'
           from pathlib import Path

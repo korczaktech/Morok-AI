@@ -43,10 +43,13 @@ jobs:
           sudo apt-get install --yes clang ninja-build libsqlite3-dev
 
       - name: Configure
+        working-directory: Morok
         run: cmake --preset ${{ matrix.preset }} -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
 
       - name: Build
+        working-directory: Morok
         run: cmake --build --preset ${{ matrix.preset }} --parallel 2
 
       - name: Test
+        working-directory: Morok
         run: ctest --preset ${{ matrix.preset }} --parallel 2
