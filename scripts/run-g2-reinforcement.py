@@ -37,14 +37,17 @@ def main():
  ap.add_argument("--attempts",type=int,default=3); ap.add_argument("--questions",nargs="+",choices=sorted(TASK_CONCEPTS),default=list(TASK_CONCEPTS)); ap.add_argument("--learning-rate",type=float,default=.0001)
  ap.add_argument("--results-file",type=Path,default=ROOT/"artifacts/reinforcement-g2/attempt-results.txt")
  a=ap.parse_args()
- if not 1<=a.attempts<=100 or not 1<=a.bootstrap_epochs<=100:raise ValueError("attempts and bootstrap epochs must be in [1,100]")
+ if not 1<=a.attempts<=10 or not 1<=a.bootstrap_epochs<=100:raise ValueError("attempts must be in [1,10] and bootstrap epochs in [1,100]")
  if not a.questions or len(a.questions)!=len(set(a.questions)):raise ValueError("select at least one unique question")
  if not a.database.is_file():raise FileNotFoundError(a.database)
  db=json.loads(a.database.read_text(encoding="utf-8"))
  if db.get("schema_version")!=1 or {q["id"] for q in db["questions"]}!=set(TASK_CONCEPTS):raise ValueError("invalid G2 feedback database")
  a.checkpoint.parent.mkdir(parents=True,exist_ok=True)
+ for suffix in (".expert-a",".expert-b",".expert-a.training",".expert-b.training",".expert-a.inference",".expert-b.inference"):
+  Path(str(a.checkpoint)+suffix).unlink(missing_ok=True)
+ run([str(a.trainer),str(ROOT/"tests/fixtures/g2-single-document"),str(a.checkpoint),str(a.bootstrap_epochs),"42"])
  if not Path(str(a.checkpoint)+".expert-a").is_file() or not Path(str(a.checkpoint)+".expert-b").is_file():
-  run([str(a.trainer),str(ROOT/"tests/fixtures/g2-single-document"),str(a.checkpoint),str(a.bootstrap_epochs),"42"])
+  raise RuntimeError("fresh G2 bootstrap did not produce both expert checkpoints")
  selected_questions=select_questions(db["questions"],a.questions)
  run_id=os.environ.get("GITHUB_RUN_ID","local"); run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT","1"); results=[]
  with tempfile.TemporaryDirectory(prefix="morok-g2-reinforcement-") as td:
@@ -53,19 +56,25 @@ def main():
    q=selected_questions[i%len(selected_questions)]; prompt=tmp/"prompt.txt"; answer=tmp/"answer.txt"; prompt.write_text(q["prompt"],encoding="utf-8")
    before=digest(Path(str(a.checkpoint)+".expert-a"))+digest(Path(str(a.checkpoint)+".expert-b"))
    run([str(a.generator),str(a.checkpoint),str(prompt),str(answer),"48"])
-   response=answer.read_text(encoding="utf-8"); verdict,reward,reason=grade(q["id"],response); episode_no=len(db["episodes"])+1
+   response=answer.read_text(encoding="utf-8"); verdict,reward,reason=grade(q["id"],response)
+   compact=response.strip()
+   if len(compact)>=12 and (len(set(compact))<=2 or max(compact.count(ch) for ch in set(compact))/len(compact)>=0.85):
+    verdict,reward,reason="incorrect",-1,"degenerate_repetition"
+   episode_no=len(db["episodes"])+1
    episode={"episode":episode_no,"episode_id":f"{run_id}:{run_attempt}:{i+1}:{q['id']}","run_id":run_id,"run_attempt":int(run_attempt),"source":"model_generated","question_id":q["id"],"prompt":q["prompt"],"answer":response,"verdict":verdict,"reward":reward,"grading_reason":reason,"timestamp_utc":datetime.now(timezone.utc).isoformat(),"model_sha256_before":before,"model_sha256_after":None,"trainable_parameters":2000,"policy_update":{"status":"pending","algorithm":"reward_weighted_bptt_score_gradient_on_both_experts"}}
    db["episodes"].append(episode); db["totals"]["episodes"]+=1; db["totals"][verdict]+=1; atomic(a.database,db)
-   if len(response.encode("utf-8"))>=2:
+   if verdict=="correct" and len(response.encode("utf-8"))>=2:
     prompt_file=tmp/"prompt.txt"; answer_file=tmp/"answer.txt"
-    report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt_file),str(answer_file),str(reward),str(a.learning_rate)]))
-    episode["policy_update"]={"status":"applied","algorithm":"reward_weighted_bptt_score_gradient_on_both_experts","report":report}; db["totals"]["policy_updates"]+=1
-   else:episode["policy_update"]={"status":"skipped","reason":"response_too_short_for_bptt"}; db["totals"]["skipped_updates"]+=1
+    report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt_file),str(answer_file),"1",str(a.learning_rate)]))
+    episode["policy_update"]={"status":"applied","algorithm":"positive_reward_weighted_bptt_on_correct_model_response","report":report}; db["totals"]["policy_updates"]+=1
+   else:
+    episode["policy_update"]={"status":"skipped","reason":"incorrect_or_degenerate_response_not_used_as_training_target"}; db["totals"]["skipped_updates"]+=1
    episode["model_sha256_after"]=digest(Path(str(a.checkpoint)+".expert-a"))+digest(Path(str(a.checkpoint)+".expert-b")); atomic(a.database,db)
-   results.append({"attempt":i+1,"question_id":q["id"],"answer":response,"verdict":verdict,"reward":reward,"policy_update":episode["policy_update"]["status"]})
+   results.append({"attempt":i+1,"question_id":q["id"],"answer":response,"verdict":verdict,"reward":reward,"policy_update":episode["policy_update"]["status"],"grading_reason":reason})
  lines=[f"{x['attempt']}. {x['answer'].replace(chr(10),' ').strip() or '[resposta vazia]'} - {'correto' if x['verdict']=='correct' else 'errado'}" for x in results]
  a.results_file.parent.mkdir(parents=True,exist_ok=True); a.results_file.write_text("\n".join(lines)+"\n",encoding="utf-8")
- report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"selected_questions":[q["id"] for q in selected_questions],"results":results,"totals":db["totals"],"trainable_parameters":2000}
+ correct_count=sum(x["verdict"]=="correct" for x in results)
+ report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"selected_questions":[q["id"] for q in selected_questions],"results":results,"correct_in_this_run":correct_count,"behavioral_gate":"passed" if correct_count else "failed","totals":db["totals"],"trainable_parameters":2000}
  summary=os.environ.get("GITHUB_STEP_SUMMARY")
  if summary:
   with open(summary,"a",encoding="utf-8") as f:
@@ -75,6 +84,7 @@ def main():
     verdict="correto" if x["verdict"]=="correct" else "errado"
     f.write(f"| {x['attempt']} | {x['question_id']} | {escaped} | {verdict} |\n")
  print(json.dumps(report,ensure_ascii=False,indent=2))
+ if correct_count==0:raise RuntimeError("G2 behavioral gate failed: no correct, non-degenerate model response; reinforcement updates were skipped")
 if __name__=="__main__":
  try:main()
  except Exception as e:print(f"run-g2-reinforcement: {e}",file=sys.stderr);sys.exit(1)
