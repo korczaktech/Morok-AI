@@ -12,9 +12,10 @@ namespace morok::g2::tsukuyomi {
 inline constexpr std::size_t kVocabularySize = 256;
 inline constexpr std::size_t kHiddenSize = 32;
 inline constexpr std::size_t kContextSize = 13;
+inline constexpr std::size_t kBpttTruncation = 13;
 inline constexpr std::size_t kParameterCount = 10000;
-// Versão do formato binário do checkpoint; a versão pública do modelo permanece 0.1.
-inline constexpr std::uint32_t kCheckpointFormatVersion = 4;
+// Formato interno recorrente; a versão pública do modelo permanece 0.1.
+inline constexpr std::uint32_t kCheckpointFormatVersion = 5;
 
 struct Model {
     std::array<float, kParameterCount> parameters{};
@@ -28,6 +29,7 @@ struct ForwardResult {
 struct TrainingConfig {
     std::size_t epochs{1};
     std::size_t batch_size{16};
+    std::size_t bptt_steps{kBpttTruncation};
     double learning_rate{0.001};
     double weight_decay{0.00001};
     double gradient_clip{1.0};
