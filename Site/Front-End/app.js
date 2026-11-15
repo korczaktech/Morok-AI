@@ -4,13 +4,13 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const STORAGE_KEY = 'morok.web.state.v2';
   const MAX_LOCAL_BYTES = 3_500_000;
-  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: '', displayName: 'Visitante', attachments: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
+  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: '', supabaseUrl: '', supabaseKey: '', authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
   const el = {
     app: $('#app'), sidebar: $('#sidebar'), backdrop: $('#backdrop'), history: $('#history-list'),
     welcome: $('#welcome'), conversation: $('#conversation'), input: $('#message-input'), composer: $('#composer'),
     send: $('#send-button'), tray: $('#attachment-tray'), file: $('#file-input'), status: $('#status-label'),
     dot: $('#status-dot'), pill: $('#connection-pill'), settings: $('#settings-dialog'), rename: $('#rename-dialog'),
-    profile: $('#profile-dialog'), context: $('#context-menu'), toast: $('#toast')
+    profile: $('#profile-dialog'), auth: $('#auth-dialog'), context: $('#context-menu'), toast: $('#toast')
   };
 
   function id() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)); }
@@ -19,7 +19,7 @@
   function titleFrom(text) { const clean = text.replace(/\s+/g, ' ').trim(); return clean.length > 34 ? clean.slice(0, 34).trimEnd() + '…' : clean || 'Nova conversa'; }
   function persist() {
     try {
-      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, apiUrl: state.apiUrl, displayName: state.displayName });
+      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, apiUrl: state.apiUrl, displayName: state.displayName, supabaseUrl: state.supabaseUrl, supabaseKey: state.supabaseKey, generation: state.generation, model: state.model });
       if (payload.length > MAX_LOCAL_BYTES) { toast('O histórico local está cheio. Exclua conversas antigas.'); return; }
       localStorage.setItem(STORAGE_KEY, payload);
     } catch (error) { toast('Não foi possível salvar no navegador. Verifique o espaço disponível.'); }
@@ -32,6 +32,11 @@
       state.theme = ['dark','light','system'].includes(saved.theme) ? saved.theme : 'dark';
       state.apiUrl = typeof saved.apiUrl === 'string' ? saved.apiUrl : '';
       state.displayName = typeof saved.displayName === 'string' ? saved.displayName.slice(0,32) : 'Visitante';
+      state.supabaseUrl = typeof saved.supabaseUrl === 'string' ? saved.supabaseUrl : '';
+      state.supabaseKey = typeof saved.supabaseKey === 'string' ? saved.supabaseKey : '';
+      state.generation = saved.generation === 'G1' ? 'G1' : 'G1';
+      state.model = ['Tsukuyomi','Apollo','Mokosh'].includes(saved.model) ? saved.model : 'Tsukuyomi';
+      try { state.authSession = JSON.parse(sessionStorage.getItem('morok.auth.session') || 'null'); } catch { state.authSession = null; }
     } catch { localStorage.removeItem(STORAGE_KEY); }
     if (!state.conversations.some(c => c.id === state.activeId)) state.activeId = null;
   }
@@ -134,8 +139,12 @@
     state.activeId = conversationId; persist(); renderHistory(); renderConversation(); closeSidebar();
   }
   function updateProfile() {
-    $('#profile-name').textContent = state.displayName || 'Visitante';
-    $('#profile-avatar').textContent = initials(state.displayName);
+    const user = state.authSession?.user;
+    const signedIn = !!user?.email;
+    $('#profile-name').textContent = signedIn ? user.email : (state.displayName || 'Visitante');
+    $('#profile-avatar').textContent = signedIn ? initials(user.email) : initials(state.displayName);
+    $('#profile-subtitle').textContent = signedIn ? 'Conta autenticada' : 'Entre para usar sua conta';
+    $('#profile-button').classList.toggle('signed-in', signedIn);
   }
   function toast(message) {
     el.toast.textContent = message; el.toast.classList.add('show');
@@ -272,7 +281,7 @@
     el.pill.querySelector('span').textContent = status === 'online' ? 'Conectado' : status === 'wait' ? 'Conectando' : 'Desconectado';
   }
   function openSettings() {
-    $('#api-url').value = state.apiUrl; $('#theme-select').value = state.theme; $('#test-result').textContent = '';
+    $('#api-url').value = state.apiUrl; $('#theme-select').value = state.theme; $('#supabase-url').value = state.supabaseUrl; $('#supabase-key').value = state.supabaseKey; $('#test-result').textContent = ''; $('#auth-config-result').textContent = state.supabaseUrl && state.supabaseKey ? 'Supabase configurado.' : 'Configure o projeto Supabase para habilitar contas.';
     el.settings.showModal();
   }
   function saveSettings() {
@@ -294,7 +303,76 @@
     renderAttachments(); el.file.value = '';
   }
 
-  $('#new-chat').addEventListener('click',createConversation);
+
+  function authConfigReady() { return !!(state.supabaseUrl && state.supabaseKey); }
+  function openAuth(mode='login') {
+    state.authMode=mode; setAuthMode(mode);
+    $('#auth-email').value=state.authSession?.user?.email || '';
+    $('#auth-password').value='';
+    $('#auth-message').textContent='';
+    $('#auth-logout').hidden=!state.authSession;
+    $('#auth-submit').hidden=!!state.authSession;
+    $('#auth-email').disabled=!!state.authSession;
+    $('#auth-password').hidden=!!state.authSession;
+    $('#auth-forgot').hidden=!!state.authSession;
+    $('.auth-tab').forEach(tab=>tab.hidden=!!state.authSession);
+    $('#auth-title').textContent=state.authSession?'Conta conectada':'Entrar na sua conta';
+    el.auth.showModal();
+  }
+  function setAuthMode(mode) {
+    state.authMode=mode;
+    $('.auth-tab').forEach(tab=>tab.classList.toggle('active',tab.dataset.authMode===mode));
+    $('#auth-title').textContent=mode==='signup'?'Criar sua conta':'Entrar na sua conta';
+    $('#auth-submit').textContent=mode==='signup'?'Criar conta':'Entrar';
+    $('#auth-password').autocomplete=mode==='signup'?'new-password':'current-password';
+    $('#auth-forgot').hidden=mode!=='login';
+  }
+  async function supabaseAuth(path, options={}) {
+    if(!authConfigReady()) throw new Error('Configure a URL e a chave publicável do Supabase em Configurações.');
+    const response=await fetch(state.supabaseUrl+'/auth/v1/'+path,{method:options.method||'POST',headers:{'Content-Type':'application/json','apikey':state.supabaseKey,...(options.token?{Authorization:'Bearer '+options.token}:{})},body:options.body===undefined?undefined:JSON.stringify(options.body)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(data.msg||data.message||data.error_description||data.error||'Falha na autenticação ('+response.status+').');
+    return data;
+  }
+  function saveAuthSession(session) {
+    state.authSession=session;
+    try { if(session) sessionStorage.setItem('morok.auth.session',JSON.stringify(session)); else sessionStorage.removeItem('morok.auth.session'); } catch {}
+    if(session?.user?.email) state.displayName=session.user.email.split('@')[0].slice(0,32);
+    updateProfile(); persist();
+  }
+  async function submitAuth() {
+    const email=$('#auth-email').value.trim(); const password=$('#auth-password').value;
+    const message=$('#auth-message'); message.className='auth-message'; message.textContent='Conectando ao Supabase…';
+    if(!email || !email.includes('@')) { message.classList.add('error'); message.textContent='Informe um e-mail válido.'; return; }
+    if(password.length<8) { message.classList.add('error'); message.textContent='A senha deve ter pelo menos 8 caracteres.'; return; }
+    $('#auth-submit').disabled=true;
+    try {
+      if(state.authMode==='signup') {
+        const data=await supabaseAuth('signup',{body:{email,password}});
+        if(data.access_token) { saveAuthSession(data); message.classList.add('success'); message.textContent='Conta criada e sessão iniciada.'; setTimeout(()=>el.auth.close(),700); }
+        else { message.classList.add('success'); message.textContent='Cadastro recebido. Confirme o e-mail enviado pelo Supabase e depois entre.'; }
+      } else {
+        const data=await supabaseAuth('token?grant_type=password',{body:{email,password}});
+        saveAuthSession(data); message.classList.add('success'); message.textContent='Login realizado.'; setTimeout(()=>el.auth.close(),500);
+      }
+    } catch(error) { message.classList.add('error'); message.textContent=error.message; }
+    finally { $('#auth-submit').disabled=false; }
+  }
+  async function recoverPassword() {
+    const email=$('#auth-email').value.trim(); const message=$('#auth-message');
+    if(!email || !email.includes('@')) { message.className='auth-message error'; message.textContent='Informe seu e-mail para receber o link de recuperação.'; return; }
+    try { await supabaseAuth('recover',{body:{email}}); message.className='auth-message success'; message.textContent='Se a conta existir, o Supabase enviará instruções de recuperação.'; }
+    catch(error) { message.className='auth-message error'; message.textContent=error.message; }
+  }
+  async function logout() {
+    try { if(state.authSession?.access_token) await supabaseAuth('logout',{token:state.authSession.access_token}); } catch {}
+    saveAuthSession(null); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
+  }
+  $('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
+  $('#auth-submit').addEventListener('click',event=>{event.preventDefault();submitAuth();});
+  $('#auth-forgot').addEventListener('click',recoverPassword);
+  $('#auth-logout').addEventListener('click',logout);
+\n  $('#new-chat').addEventListener('click',createConversation);
   $('#brand-home').addEventListener('click',event=>{event.preventDefault();state.activeId=null;persist();renderHistory();renderConversation();closeSidebar();el.input.focus();});
   $('#all-chats').addEventListener('click',()=>{renderHistory();closeSidebar();});
   $('#search-open').addEventListener('click',()=>{const query=prompt('Buscar no título e no conteúdo das conversas:');if(query!==null){renderHistory(query);closeSidebar();}});
@@ -302,13 +380,21 @@
   $('#sidebar-close').addEventListener('click',closeSidebar);
   el.backdrop.addEventListener('click',closeSidebar);
   $('#settings-open').addEventListener('click',openSettings);
-  $('#profile-button').addEventListener('click',()=>{$('#display-name').value=state.displayName==='Visitante'?'':state.displayName;el.profile.showModal();});
+  $('#profile-button').addEventListener('click',()=>{if(state.authSession?.user){openAuth('login');}else{openAuth('login');}});
   $('#profile-save').addEventListener('click',()=>{const name=$('#display-name').value.trim();state.displayName=name||'Visitante';updateProfile();persist();});
   $('#model-select').addEventListener('click',()=>{const pop=$('#model-popover');pop.hidden=!pop.hidden;$('#model-select').setAttribute('aria-expanded',String(!pop.hidden));});
+  function updateModelMenu() {
+    $('#model-select-label').textContent = state.generation + ' · ' + state.model;
+    $('[data-generation]').forEach(button=>button.classList.toggle('selected',button.dataset.generation===state.generation));
+    $('[data-model]').forEach(button=>button.classList.toggle('selected',button.dataset.model===state.model));
+  }
+  $('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;updateModelMenu();persist();}));
+  $('[data-model]').forEach(button=>button.addEventListener('click',()=>{state.model=button.dataset.model;updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Perfil selecionado: '+state.generation+' · '+state.model+'. O servidor ainda usa o checkpoint carregado.');}));
   document.addEventListener('click',event=>{if(!event.target.closest('.model-select-wrap')){$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');}if(!event.target.closest('.context-menu')&&!event.target.closest('.history-menu'))closeContextMenu();});
   el.context.addEventListener('click',event=>{const action=event.target.dataset.action;if(action==='rename')renameConversation(state.contextId);if(action==='delete')deleteConversation(state.contextId);closeContextMenu();});
   $('#rename-save').addEventListener('click',()=>{const conversation=state.conversations.find(c=>c.id===state.renameId);if(conversation){conversation.title=$('#rename-input').value.trim()||'Nova conversa';conversation.updatedAt=now();persist();renderHistory();}state.renameId=null;});
   $('#save-settings').addEventListener('click',event=>{event.preventDefault();saveSettings();});
+  $('#auth-open').addEventListener('click',()=>{el.settings.close();openAuth('login');});
   $('#test-connection').addEventListener('click',async()=>{const url=$('#api-url').value.trim();if(url){state.apiUrl=url.replace(/\/+$/,'');}const ok=await checkHealth();$('#test-result').textContent=ok?'Servidor respondeu corretamente.':'Falha de conexão. Confira URL, HTTPS e CORS.';});
   $('#status-refresh').addEventListener('click',()=>checkHealth(true));
   $('#clear-data').addEventListener('click',()=>{if(!confirm('Apagar todas as conversas e preferências locais?'))return;state.conversations=[];state.activeId=null;state.displayName='Visitante';state.attachments=[];persist();renderHistory();renderConversation();updateProfile();renderAttachments();toast('Dados locais apagados.');});
@@ -324,5 +410,5 @@
     if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='o'){event.preventDefault();createConversation();}
   });
   matchMedia('(prefers-color-scheme: light)').addEventListener?.('change',()=>{if(state.theme==='system')applyTheme();});
-  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); checkHealth();
+  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); checkHealth();
 })();
