@@ -6,7 +6,7 @@ Executar o primeiro ciclo completo e reproduzível de treinamento da G1, partind
 
 ## Execução automatizada
 
-O script `G1/scripts/first-training.sh` executa o primeiro treinamento. O build Release e a suíte CTest podem ser executados manualmente; os workflows de GitHub Actions foram removidos temporariamente.
+O script `Gerações/G1/scripts/first-training.sh` executa o primeiro treinamento. O workflow `G1` executa build Release, CTest e o smoke test de treinamento com retomada. Os workflows ficam na raiz do repositório em `.github/workflows/` e executam o projeto a partir de `Morok/`.
 
 Padrões da campanha técnica:
 - 50 épocas solicitadas (configurável no workflow);
@@ -14,7 +14,7 @@ Padrões da campanha técnica:
 - AdamW, learning rate 0,001;
 - BPTT truncado em 64 bytes;
 - early stopping com paciência 5;
-- corpus `G1/shared/tests/fixtures/benchmark`, com divisão determinística por documento;
+- corpus `Gerações/G1/shared/tests/fixtures/benchmark`, com divisão determinística por documento;
 - retomada obrigatória a partir do checkpoint de fronteira de época;
 - geração autoregressiva limitada a 128 bytes.
 
@@ -44,7 +44,7 @@ A medição de memória do runner GitHub não comprova operação em hardware f�
 ## Critérios de aceitação
 
 - [x] Runner reproduzível versionado, com semente e hiperparâmetros explícitos.
-- [x] Workflow automatizado para build Release, CTest e primeiro treinamento.
+- [x] Workflow `G1` automatizado para build Release, CTest e primeiro treinamento.
 - [x] Treinamento parte de inicialização determinística sem pesos pré-treinados.
 - [x] Métricas e eventos de treinamento são preservados em JSONL.
 - [x] Checkpoint de retomada e melhor checkpoint de inferência são artefatos distintos.

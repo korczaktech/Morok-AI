@@ -2,13 +2,13 @@
 
 ## Objetivo
 
-Este documento registra o experimento histórico de ciclos retomáveis da G1. O workflow original foi removido; a execução atual é manual por `G1/scripts/continual-cycle.sh`. O experimento usa corpus factual introdutório em português, restaura o checkpoint anterior, executa ciclos adicionais, gera uma continuação e registra métricas e limitações.
+Este documento registra o experimento histórico de ciclos retomáveis da G1. O workflow específico de aprendizagem contínua foi desativado; a execução deste experimento permanece manual por `Gerações/G1/scripts/continual-cycle.sh`. O workflow `G1` atual valida build, testes e primeiro treinamento. O experimento usa corpus factual introdutório em português, restaura o checkpoint anterior, executa ciclos adicionais, gera uma continuação e registra métricas e limitações.
 
 O experimento demonstra a infraestrutura de treinamento contínuo, não compreensão de linguagem.
 
 ## Agendamento e continuidade
 
-O fluxo original usava um workflow que já não existe. A execução atual é manual pelo script `G1/scripts/continual-cycle.sh`.
+A execução contínua permanece manual pelo script `Gerações/G1/scripts/continual-cycle.sh`; o workflow `G1` não agenda ciclos contínuos.
 
 - executa a cada 15 minutos por `schedule`;
 - aceita execução manual pelo script da G1;
@@ -22,11 +22,11 @@ No fluxo histórico, checkpoint e contador eram transportados por artifact. Atua
 
 ## Dados e avaliação atual
 
-Os documentos `doc-*.txt` em `G1/shared/tests/fixtures/continual/` contêm um par pergunta/resposta por documento. Isso torna cada fim de documento um limite de resposta para o treinamento EOS. O corpus começou com 12 exemplos sobre o céu e recebeu exemplos factuais adicionais em outros tópicos; continua sendo um conjunto pequeno e controlado, não uma amostra representativa da língua portuguesa.
+Os documentos `doc-*.txt` em `Gerações/G1/shared/tests/fixtures/continual/` contêm um par pergunta/resposta por documento. Isso torna cada fim de documento um limite de resposta para o treinamento EOS. O corpus começou com 12 exemplos sobre o céu e recebeu exemplos factuais adicionais em outros tópicos; continua sendo um conjunto pequeno e controlado, não uma amostra representativa da língua portuguesa.
 
 A métrica principal do treinador é a perda de predição do próximo byte (BPB) em treino/validação/teste. Ela mede qualidade estatística de predição no corpus, não compreensão semântica.
 
-Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. O script `G1/scripts/evaluate-qa.py` também avalia perguntas reservadas em `G1/shared/tests/fixtures/continual-eval/cases.json`, com paráfrases e tópicos factuais distintos, registrando exact match e token F1. A avaliação não encerra o treinamento nem cria marcador automático de sucesso.
+Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. O script `Gerações/G1/scripts/evaluate-qa.py` também avalia perguntas reservadas em `Gerações/G1/shared/tests/fixtures/continual-eval/cases.json`, com paráfrases e tópicos factuais distintos, registrando exact match e token F1. A avaliação não encerra o treinamento nem cria marcador automático de sucesso.
 
 O estado final possível do orçamento é `budget_exhausted`. Isso significa somente que o limite de épocas foi atingido. O status da avaliação semântica permanece `not_established`: o conjunto reservado mede apenas sobreposição lexical (exact match/token F1), ainda sem revisão humana e sem critérios semânticos independentes.
 
@@ -64,7 +64,7 @@ O artifact de cada execução contém, quando produzidos:
 
 ## Critérios de aceitação da infraestrutura
 
-- [x] Workflow agendado e execução manual.
+- [x] Workflow histórico agendado (desativado) e execução manual.
 - [x] Checkpoint transportado entre execuções por artifact.
 - [x] Retomada com orçamento incremental de épocas.
 - [x] Métricas de predição de bytes, geração pós-treinamento e diagnóstico lexical em perguntas reservadas.

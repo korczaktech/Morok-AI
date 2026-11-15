@@ -48,9 +48,9 @@ CXX=clang++ cmake -S . -B build-fuzz -G Ninja \\
   -DMOROK_BUILD_TESTS=OFF -DMOROK_BUILD_APPS=OFF \\
   -DMOROK_BUILD_FUZZERS=ON
 cmake --build build-fuzz --parallel 2
-./build-fuzz/morok_fuzz_utf8 -runs=2000 G1/shared/tests/fixtures/benchmark
-./build-fuzz/morok_fuzz_rlah_decode -runs=2000 G1/shared/tests/fixtures/benchmark
-./build-fuzz/morok_fuzz_checkpoint -runs=2000 G1/shared/tests/fixtures/fuzz
+./build-fuzz/morok_fuzz_utf8 -runs=2000 Gerações/G1/shared/tests/fixtures/benchmark
+./build-fuzz/morok_fuzz_rlah_decode -runs=2000 Gerações/G1/shared/tests/fixtures/benchmark
+./build-fuzz/morok_fuzz_checkpoint -runs=2000 Gerações/G1/shared/tests/fixtures/fuzz
 \`\`\`
 
 ## Critérios de qualidade

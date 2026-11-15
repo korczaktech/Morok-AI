@@ -25,7 +25,7 @@ G30 representa 5 trilhões de parâmetros pela regra matemática atual. Isso é 
 
 ## 2. Árvore proposta
 
-A árvore abaixo representa uma estrutura-alvo futura, não o estado atual do repositório. Os workflows GitHub Actions foram removidos temporariamente e não existem em `.github/workflows/` neste momento. A organização efetivamente implementada está descrita em [MODELOS.md](../MODELOS.md). Diretórios de infraestrutura avançada só devem ser criados quando forem necessários.
+A árvore abaixo representa uma estrutura-alvo futura, não o estado atual do repositório. Os workflows ativos ficam em `.github/workflows/` na raiz do repositório; os comandos de build e teste executam com `Morok/` como diretório de trabalho. A organização efetivamente implementada está descrita em [MODELOS.md](../MODELOS.md). Diretórios de infraestrutura avançada só devem ser criados quando forem necessários.
 
 ```text
 Morok-AI/

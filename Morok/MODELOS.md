@@ -6,22 +6,22 @@ G1 e G3 são as gerações atualmente mantidas. Os perfis disponíveis são defi
 
 ```text
 Morok-AI/
-├── include/                 # contratos e infraestrutura pública compartilhada
-├── src/                     # implementações do Core compartilhado
-├── G1/
-│   ├── shared/              # motor e subsistemas exclusivos da geração G1
-│   ├── Mokosh/
-│   ├── Tsukuyomi/
-│   └── Apollo/
-├── G3/                      # estrutura documental; sem motor implementado
-│   ├── Mokosh/
-│   ├── Tsukuyomi/
-│   ├── Artemis/
-│   └── Apollo/
-├── apps/                    # utilitários realmente compartilhados
-├── data/                    # dados comuns e manifests
-├── docs/
-└── tests/                   # testes do Core e contratos compartilhados
+├── Aplicativo/
+├── Site/
+└── Morok/
+    ├── include/                 # contratos e infraestrutura pública compartilhada
+    ├── src/                     # implementações do Core compartilhado
+    ├── Gerações/
+    │   ├── G1/
+    │   │   ├── shared/          # motor e subsistemas exclusivos da G1
+    │   │   ├── Mokosh/
+    │   │   ├── Tsukuyomi/
+    │   │   └── Apollo/
+    │   └── G3/                  # estrutura documental
+    ├── apps/
+    ├── data/
+    ├── docs/
+    └── tests/
 ```
 
 As pastas públicas da raiz abrigam somente capacidades realmente compartilhadas. Código exclusivo, parâmetros, configurações, memória especializada, agentes, treinamento, inferência e testes pertencem ao respectivo modelo, conforme a necessidade real. Não duplicar código público dentro das gerações.
@@ -63,7 +63,7 @@ O diretório público `include/` e a biblioteca `Morok::Core` contêm contratos 
 
 A implementação compartilhada da geração G1 está em `Gerações/G1/shared/` e é compilada apenas em `Morok::G1`. Inclui o motor de parâmetros, forward pass, BPTT, otimizador, treinamento, inferência, checkpoints e adaptadores de linguagem/comunicação/aprendizado que ainda são específicos da G1.
 
-Aplicações, scripts, dados de reforço, fixtures e testes específicos da geração mantida ficam dentro de `Gerações/G1/`. O CMake continua na raiz como orquestrador de build.
+Aplicações, scripts, dados de reforço, fixtures e testes específicos da geração mantida ficam dentro de `Gerações/G1/`. O CMake fica em `Morok/CMakeLists.txt`, na raiz do diretório do projeto, como orquestrador de build.
 
 ## Estado dos perfis
 
