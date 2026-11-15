@@ -56,6 +56,7 @@ int main(int argc, char** argv) {
         std::cerr << "Uso: morok-g2-tsukuyomi-generate <checkpoint> <prompt> <max_bytes> "
                   << "[--sample] [--temperature N] [--top-k N] [--top-p N] "
                   << "[--repetition-penalty N] [--repetition-window N] [--seed N]\n"
+                  << "Ou: morok-g2-tsukuyomi-generate --batch <checkpoint> <max_bytes>\n";
         return 2;
     }
 
