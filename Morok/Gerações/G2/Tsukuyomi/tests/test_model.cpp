@@ -19,7 +19,7 @@ int main() {
     using namespace morok::g2::tsukuyomi;
 
     static_assert(kParameterCount == 10000);
-    static_assert(kCheckpointFormatVersion == 3);
+    static_assert(kCheckpointFormatVersion == 4);
     Model model;
     initialize(model, 1234);
     Model same_seed;
@@ -76,7 +76,7 @@ int main() {
         const double loss_plus = evaluate_loss(plus, question_gradient_sample, one_target_mask);
         const double loss_minus = evaluate_loss(minus, question_gradient_sample, one_target_mask);
         const double numerical = (loss_plus - loss_minus) / (2.0 * epsilon);
-        assert(std::abs(numerical - analytic[9216]) <=
+        assert(std::abs(numerical - analytic[9232]) <=
                3.0e-2 + 3.0e-2 * std::abs(numerical));
     }
 
@@ -126,8 +126,8 @@ int main() {
         constexpr float epsilon = 1.0e-3F;
         Model plus = model;
         Model minus = model;
-        plus.parameters[9216] += epsilon;
-        minus.parameters[9216] -= epsilon;
+        plus.parameters[9232] += epsilon;
+        minus.parameters[9232] -= epsilon;
         std::vector<std::uint8_t> history_mask(history_target_bytes.size(), 0);
         history_mask[history_target_index] = 1;
         const double loss_plus = evaluate_loss(plus, history_target_bytes, history_mask);
