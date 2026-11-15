@@ -33,6 +33,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Testar separação de dados e avaliador
+        working-directory: Morok
+        run: python3 -m unittest discover -s "Gerações/G2/Tsukuyomi/tests" -p "test_*.py" -v
+
       - name: Install dependencies
         run: |
           sudo apt-get update
