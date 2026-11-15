@@ -7,6 +7,7 @@
 #include <iterator>
 #include <limits>
 #include <random>
+#include <numeric>
 #include <string>
 
 namespace morok::g2::tsukuyomi {
@@ -478,15 +479,23 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
                            [](float value) { return std::isfinite(value); });
     };
 
+    std::vector<std::size_t> target_order;
+    target_order.reserve(bytes.size());
+    for (std::size_t target = 0; target < bytes.size(); ++target) {
+        if (target_mask.empty() || target_mask[target] != 0)
+            target_order.push_back(target);
+    }
+
     for (std::size_t epoch = 0; epoch < config.epochs; ++epoch) {
         std::uint64_t epoch_targets = 0;
-        for (std::size_t target = 0; target < bytes.size(); ++target) {
-            if (!target_mask.empty() && target_mask[target] == 0) continue;
-            // Acumula diretamente no gradiente do mini-lote: evita zerar,
-            // copiar e percorrer um segundo vetor de 10.000 parâmetros por byte.
+        // Embaralha a ordem das atualizações, nunca o texto ou o contexto causal.
+        // A semente derivada do Adam mantém a retomada determinística.
+        std::mt19937_64 shuffle_rng(
+            config.seed ^ (state.step + 0x9E3779B97F4A7C15ULL));
+        std::shuffle(target_order.begin(), target_order.end(), shuffle_rng);
+        for (const std::size_t target : target_order) {
             if (!accumulate_target_gradient(model, bytes, target, gradient))
                 return report;
-
             ++accumulated_targets;
             ++epoch_targets;
             if (accumulated_targets >= config.batch_size && !apply_batch())
