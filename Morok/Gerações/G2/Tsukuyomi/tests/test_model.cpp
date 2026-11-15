@@ -255,6 +255,38 @@ int main() {
     assert(stopped.size() == generation_prompt.size() + 1);
     assert(stopped.back() == static_cast<std::uint8_t>('\n'));
 
+    // Decodificação configurável: penalidade reduz repetição sem alterar pesos.
+    {
+        Model decoding_model;
+        decoding_model.parameters.fill(0.0F);
+        decoding_model.parameters[9664 + static_cast<std::size_t>('a')] = 1.0F;
+        decoding_model.parameters[9664 + static_cast<std::size_t>('b')] = 0.9F;
+        const std::array<std::uint8_t, 3> prompt{'I', 'A', ':'};
+        const auto greedy = generate(decoding_model, prompt, 2);
+        assert(greedy.size() == prompt.size() + 2);
+        assert(greedy[prompt.size()] == static_cast<std::uint8_t>('a'));
+        assert(greedy[prompt.size() + 1] == static_cast<std::uint8_t>('a'));
+
+        GenerationConfig penalty_config;
+        penalty_config.repetition_penalty = 1.2;
+        penalty_config.repetition_window = 8;
+        const auto penalized = generate(decoding_model, prompt, 2, penalty_config);
+        assert(penalized.size() == prompt.size() + 2);
+        assert(penalized[prompt.size()] == static_cast<std::uint8_t>('a'));
+        assert(penalized[prompt.size() + 1] == static_cast<std::uint8_t>('b'));
+
+        GenerationConfig sampling_config;
+        sampling_config.sample = true;
+        sampling_config.temperature = 0.7;
+        sampling_config.top_k = 2;
+        sampling_config.top_p = 0.9;
+        sampling_config.seed = 9876;
+        assert(generate(decoding_model, prompt, 16, sampling_config) ==
+               generate(decoding_model, prompt, 16, sampling_config));
+        sampling_config.top_p = 0.0;
+        assert(generate(decoding_model, prompt, 16, sampling_config).size() == prompt.size());
+    }
+
     // Caminho com U:/IA: usa a representação da pergunta pré-calculada.
     const std::string cached_prompt_text =
         "U: Uma pergunta longa para exercitar o cache contextual da inferência?\nIA:";
