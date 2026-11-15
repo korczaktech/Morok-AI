@@ -60,6 +60,10 @@ Esses testes verificam a derivada da função atual em pontos representativos; n
 - 10 ciclos no máximo (10 épocas totais).
 - 40 perguntas de validação por ciclo.
 - Treinamento contínuo desativado por padrão.
+- O workflow de push só executa treinamento quando a mensagem do commit contém `[train-g2]`; os demais pushes apenas validam e compilam.
+- O checkpoint final é restaurado do ciclo com melhor pontuação de validação, junto com os momentos Adam correspondentes.
+
+- Treinamento contínuo desativado por padrão.
 - Se ativado manualmente, o modo contínuo pode encerrar antes quando todas as questões selecionadas forem respondidas exatamente, mas nunca ultrapassa o limite de ciclos.
 - O teste reservado de 12 perguntas é executado somente após o treinamento.
 
