@@ -55,6 +55,8 @@ def grade(question_id: str, answer: str) -> tuple[str, int, str]:
     token_set = set(tokens)
     if not tokens:
         return "incorrect", -1, "empty_response"
+    if tokens == normalized_tokens(SEED_ANSWERS[question_id]):
+        return "incorrect", -2, "repeated_example_answer"
     if token_set & NEGATIONS:
         return "incorrect", -1, "negated_response"
     required = TASK_CONCEPTS[question_id]
