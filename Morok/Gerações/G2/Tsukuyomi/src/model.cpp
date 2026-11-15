@@ -667,7 +667,7 @@ std::vector<std::uint8_t> generate(const Model& model,
         static_cast<std::size_t>(utf8.remaining) > max_new_bytes)
         return output;
 
-    if (!std::isfinite(config.temperature) || config.temperature <= 0.0 ||
+    if (!std::isfinite(config.temperature) || config.temperature < 1.0e-6 || config.temperature > 100.0 ||
         !std::isfinite(config.top_p) || config.top_p <= 0.0 || config.top_p > 1.0 ||
         !std::isfinite(config.repetition_penalty) || config.repetition_penalty < 1.0)
         return output;
@@ -714,7 +714,7 @@ std::vector<std::uint8_t> generate(const Model& model,
                 score = score >= 0.0 ? score / config.repetition_penalty
                                      : score * config.repetition_penalty;
             }
-            candidates.emplace_back(byte, score);
+            if (std::isfinite(score)) candidates.emplace_back(byte, score);
         }
         if (candidates.empty()) break;
 
@@ -730,6 +730,9 @@ std::vector<std::uint8_t> generate(const Model& model,
             }
         } else {
             for (auto& candidate : candidates) candidate.second /= config.temperature;
+            if (!std::all_of(candidates.begin(), candidates.end(),
+                             [](const auto& candidate) { return std::isfinite(candidate.second); }))
+                break;
             std::sort(candidates.begin(), candidates.end(),
                 [](const auto& left, const auto& right) {
                     return left.second == right.second
