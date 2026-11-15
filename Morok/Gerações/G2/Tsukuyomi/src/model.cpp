@@ -660,20 +660,36 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
 
     for (std::size_t epoch = 0; epoch < config.epochs; ++epoch) {
         std::uint64_t epoch_targets = 0;
-        // Reinicia a ordem canônica antes do shuffle para equivalência entre
-        // treinamento contínuo e retomada em checkpoints.
+        // Agrupa alvos em blocos causais ordenados. Os blocos são embaralhados,
+        // mas cada bloco compartilha o forward recorrente enquanto os pesos ficam fixos.
         std::sort(target_order.begin(), target_order.end());
-        // Embaralha as atualizações, nunca o texto nem o contexto causal.
+        std::vector<std::vector<std::size_t>> target_batches;
+        target_batches.reserve((target_order.size() + config.batch_size - 1) / config.batch_size);
+        for (std::size_t begin = 0; begin < target_order.size(); begin += config.batch_size) {
+            const std::size_t end = std::min(target_order.size(), begin + config.batch_size);
+            target_batches.emplace_back(target_order.begin() + static_cast<std::ptrdiff_t>(begin),
+                                         target_order.begin() + static_cast<std::ptrdiff_t>(end));
+        }
         std::mt19937_64 shuffle_rng(
             config.seed ^ (state.step + 0x9E3779B97F4A7C15ULL));
-        std::shuffle(target_order.begin(), target_order.end(), shuffle_rng);
-        for (const std::size_t target : target_order) {
-            if (!accumulate_target_gradient(model, bytes, target, gradient, config.bptt_steps))
-                return report;
-            ++accumulated_targets;
-            ++epoch_targets;
-            if (accumulated_targets >= config.batch_size && !apply_batch())
-                return report;
+        std::shuffle(target_batches.begin(), target_batches.end(), shuffle_rng);
+
+        for (const auto& batch : target_batches) {
+            Cache cache;
+            bool cache_valid = false;
+            for (const std::size_t target : batch) {
+                const auto prefix = bytes.first(target);
+                if (!cache_valid || !extend_cache(model, prefix, config.bptt_steps, cache)) {
+                    cache = calculate(model, prefix, true, nullptr, config.bptt_steps);
+                    cache_valid = true;
+                }
+                if (!accumulate_target_gradient_from_cache(
+                        model, bytes, target, cache, gradient))
+                    return report;
+                ++accumulated_targets;
+                ++epoch_targets;
+            }
+            if (!apply_batch()) return report;
         }
         if (!apply_batch()) return report;
         ++report.epochs_completed;
