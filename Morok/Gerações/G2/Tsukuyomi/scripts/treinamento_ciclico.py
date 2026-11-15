@@ -312,7 +312,9 @@ def main() -> int:
         report.write("- Critério contínuo: encerrar quando todas as questões selecionadas estiverem corretas\n")
         report.write("- Critério de aprovação: igualdade lexical normalizada; não mede semântica\n")
         report.write("- F1 lexical, similaridade de caracteres, repetição e diversidade são diagnósticos; não aprovam respostas.\n")
-        report.write("- Scheduler: 70% exatidão + 15% F1 lexical + 15% similaridade de caracteres da validação.\n")
+        report.write("- Score diagnóstico: 70% exatidão + 15% F1 lexical + 15% similaridade de caracteres.\n")
+        report.write("- Scheduler: ranking lexicográfico (respostas exatas primeiro; F1/similaridade apenas no empate).\n")
+        report.write(f"- Delta mínimo do desempate: {LR_MIN_DELTA:.3f}; platô: {LR_PLATEAU_CYCLES} ciclos.\n")
         report.write(f"- Learning rate inicial: {learning_rate:.6f}; scheduler reduz após {LR_PLATEAU_CYCLES} ciclos sem melhora da validação.\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
