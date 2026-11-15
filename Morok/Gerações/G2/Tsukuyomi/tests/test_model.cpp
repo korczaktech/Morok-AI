@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <limits>
+#include <string>
 #include <vector>
 
 // Os testes precisam continuar ativos também em builds Release (-DNDEBUG).
