@@ -127,8 +127,8 @@ int main() {
         memory_model.parameters[8192] = 8.0F;
         memory_model.parameters[static_cast<std::size_t>('a') * kHiddenSize] = 0.8F;
         memory_model.parameters[static_cast<std::size_t>('z') * kHiddenSize] = -0.8F;
-        std::string memory_a = "U: Q\\nIA:a";
-        std::string memory_b = "U: Q\\nIA:z";
+        std::string memory_a = "U: Q\nIA:a";
+        std::string memory_b = "U: Q\nIA:z";
         memory_a.append(24, 'x');
         memory_b.append(24, 'x');
         const std::vector<std::uint8_t> memory_bytes_a(memory_a.begin(), memory_a.end());
