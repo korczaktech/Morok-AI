@@ -1,6 +1,6 @@
 # 24. Estrutura completa do repositório
 
-**Status:** proposta estrutural normativa para a evolução do Morok AI da G1 à G30.  
+**Status:** proposta de evolução para G1–G30; não substitui a árvore implementada descrita em [MODELOS.md](../MODELOS.md).  
 **Linguagem principal:** C++20 inicialmente, com evolução controlada do padrão conforme necessidade real.  
 **Princípio:** uma única base de código, com componentes substituíveis e contratos estáveis; gerações são configurações/arquiteturas versionadas, não cópias do projeto.
 
@@ -25,7 +25,7 @@ G30 representa 5 trilhões de parâmetros pela regra matemática atual. Isso é 
 
 ## 2. Árvore proposta
 
-A árvore abaixo representa a estrutura-alvo. Diretórios de infraestrutura avançada podem permanecer vazios ou conter apenas documentação até que sejam necessários. Não criar arquivos-fonte vazios só para preencher a árvore.
+A árvore abaixo representa uma estrutura-alvo futura, não o estado atual do repositório. Os workflows GitHub Actions foram removidos temporariamente e não existem em `.github/workflows/` neste momento. A organização efetivamente implementada está descrita em [MODELOS.md](../MODELOS.md). Diretórios de infraestrutura avançada só devem ser criados quando forem necessários.
 
 ```text
 Morok-AI/

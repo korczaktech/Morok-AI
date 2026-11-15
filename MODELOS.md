@@ -6,12 +6,30 @@ Cada geração contém quatro modelos especializados. G1, G2 e G3 são geraçõe
 
 ```text
 Morok-AI/
-├── G1/{Mokosh,Tsukuyomi,Artemis,Apollo}/
-├── G2/{Mokosh,Tsukuyomi,Artemis,Apollo}/
-├── G3/{Mokosh,Tsukuyomi,Artemis,Apollo}/
-├── core/
-├── tools/
-└── ...
+├── include/                 # contratos e infraestrutura pública compartilhada
+├── src/                     # implementações do Core compartilhado
+├── G1/
+│   ├── shared/              # motor e subsistemas exclusivos da geração G1
+│   ├── Mokosh/
+│   ├── Tsukuyomi/
+│   ├── Artemis/
+│   └── Apollo/
+├── G2/
+│   ├── engine/              # motor de especialistas exclusivo da G2
+│   ├── model/               # composição do modelo G2
+│   ├── Mokosh/
+│   ├── Tsukuyomi/
+│   ├── Artemis/
+│   └── Apollo/
+├── G3/                      # estrutura documental; sem motor implementado
+│   ├── Mokosh/
+│   ├── Tsukuyomi/
+│   ├── Artemis/
+│   └── Apollo/
+├── apps/                    # utilitários realmente compartilhados
+├── data/                    # dados comuns e manifests
+├── docs/
+└── tests/                   # testes do Core e contratos compartilhados
 ```
 
 As pastas públicas da raiz abrigam somente capacidades realmente compartilhadas. Código exclusivo, parâmetros, configurações, memória especializada, agentes, treinamento, inferência e testes pertencem ao respectivo modelo, conforme a necessidade real. Não duplicar código público dentro das gerações.

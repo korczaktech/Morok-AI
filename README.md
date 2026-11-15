@@ -105,7 +105,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 - Etapa 1: infraestrutura CMake/C++20, presets, sanitizers, teste de fumaça e CI adicionados.
 - Etapa 2: tipos comuns, validação UTF-8, IDs fortes, erros tipados e testes adicionados.
 - Etapa 3: primitivas matemáticas estáveis e testes numéricos adicionados; CI GCC/Clang Debug/Release aprovado no run 43514960300.
-- Etapa 4: inventário tipado de 1.000 parâmetros FP32, ordem canônica e inicialização determinística; CI GCC/Clang Debug/Release aprovado.
+- Etapa 4: inventário tipado de 1.000 parâmetros FP32, ordem canônica e inicialização determinística.
 - Etapa 5: forward pass fast/slow, cabeça binária causal, scoring em nats e testes adicionados; CI GCC/Clang Debug/Release aprovado no run 43517463554.
 - Etapa 6: BPTT truncado e gradientes manuais da G1 implementados.
 - Etapa 7: AdamW, SGD com momentum, clipping global e testes transacionais implementados.
