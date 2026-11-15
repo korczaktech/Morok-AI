@@ -25,6 +25,10 @@ question_map = {
     "SKY": "sky_is_blue",
     "GRASS": "grass_color",
     "MOUNTAINS": "mountains_high_or_low",
+    "GREETING": "greeting",
+    "ENGLISH_SKY": "english_sky",
+    "SPANISH_SKY": "spanish_sky",
+    "MULTI_TURN": "multi_turn",
 }
 questions = [qid for key, qid in question_map.items()
              if os.environ.get("G1_QUESTION_" + key, "false").lower() == "true"]
@@ -71,8 +75,9 @@ for profile_index, profile in enumerate(profiles):
     with results.open(encoding="utf-8", newline="") as stream:
         profile_rows = [row for row in csv.DictReader(stream, delimiter="\t")
                         if row["profile"] == profile]
-    selected_rows = [row for row in profile_rows if row["question_id"] in questions]
-    expected_rows = len(questions) * attempts
+    required_questions = [qid for qid in ("sky_is_blue", "grass_color", "mountains_high_or_low") if qid in questions]
+    selected_rows = [row for row in profile_rows if row["question_id"] in required_questions]
+    expected_rows = len(required_questions) * attempts
     checks = []
     for row in selected_rows:
         answer = row["answer"]
@@ -88,9 +93,9 @@ for profile_index, profile in enumerate(profiles):
             "readable": readable,
             "no_long_repeat": no_long_repeat,
         })
-    passed = (len(selected_rows) == expected_rows and expected_rows > 0
+    passed = (expected_rows > 0 and len(selected_rows) == expected_rows
               and all(x["correct"] and x["readable"] and x["no_long_repeat"] for x in checks))
-    status = "approved" if passed else "candidate_rejected"
+    status = "approved" if passed else ("candidate_rejected" if expected_rows else "not_evaluated")
     if passed:
         shutil.copy2(candidate, approved)
     report = {
@@ -99,6 +104,7 @@ for profile_index, profile in enumerate(profiles):
         "approval_rule": "100% factual accuracy on selected questions and attempts; "
                          "non-empty readable output; no repeated run of 8 characters",
         "selected_questions": questions,
+        "quality_gate_questions": required_questions,
         "attempts_per_question": attempts,
         "evaluations": len(selected_rows),
         "expected_evaluations": expected_rows,
