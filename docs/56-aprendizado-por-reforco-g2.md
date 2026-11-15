@@ -33,12 +33,9 @@ Quando a resposta gerada está errada ou degenerada, o runner usa a resposta de 
 
 O executável de geração G2 ativa saída imprimível, penalização de repetição e um limite de bytes. Essas medidas reduzem saídas degeneradas, mas não garantem uma resposta semanticamente correta. O workflow registra a resposta inicial e a resposta pós-atualização separadamente para permitir auditar o efeito do reforço.
 
-O avaliador exige os conceitos esperados em cada resposta:
-- Céu: `sim` e `azul`.
-- Montanhas: `montanhas` e `altas`.
-- Grama: `grama` e `verde`.
+O avaliador compara a sequência completa de tokens normalizados com a resposta de referência de cada pergunta. A normalização ignora diferenças de acentuação, caixa e pontuação, mas não ignora palavras extras, repetições ou sufixos aleatórios. Assim, uma saída como a resposta correta seguida de ruído é incorreta. Respostas incompletas, negativas, com tokens inesperados ou degeneradas não recebem recompensa positiva.
 
-Respostas incompletas, negativas ou degeneradas não recebem recompensa positiva.
+Na inicialização, o runner reconcilia os resultados históricos com o avaliador estrito e recalcula os totais. Experiências antigas cuja resposta inicial do modelo contém tokens extras não são reaproveitadas como alvo do próprio modelo: o replay usa a demonstração de referência para evitar consolidar ruído histórico.
 
 ## Persistência
 
@@ -50,7 +47,7 @@ Os checkpoints de treinamento do bootstrap também podem ser retomados com `--re
 
 Antes de gerar novas respostas, o runner consulta os 32 episódios mais recentes do banco e reapresenta seus exemplos ao atualizador dos dois especialistas. A memória é limitada por `--memory-replay-limit` (padrão 32; zero desativa) e cada exemplo usa 25 passos por padrão, configuráveis por `--memory-replay-steps`. Isso acontece mesmo quando a execução atual solicita apenas uma tentativa e uma época de bootstrap.
 
-Experiências cuja atualização original usou uma resposta correta do próprio modelo são reproduzidas com essa resposta inicial. Experiências corrigidas pelo oráculo são reproduzidas com a resposta de referência, em vez de reforçar a saída incorreta. O runner registra quantas experiências foram consideradas, quantas atualizações de replay reduziram a perda e quantas foram ignoradas. O banco continua sendo versionado no repositório pelo workflow, então a memória atravessa execuções distintas do GitHub Actions.
+Experiências cuja atualização original usou uma resposta correta do próprio modelo são reproduzidas com essa resposta inicial somente se ela passar novamente pelo avaliador estrito. Caso contrário, são recuperadas com a resposta de referência, em vez de reforçar uma saída incorreta ou contaminada por ruído. O runner registra quantas experiências foram consideradas, quantas atualizações de replay reduziram a perda e quantas foram ignoradas. O banco continua sendo versionado no repositório pelo workflow, então a memória atravessa execuções distintas do GitHub Actions.
 
 O replay é uma forma de rehearsal supervisionado sobre experiências armazenadas. Ele não transforma o sistema em REINFORCE/PPO nem fornece julgamento semântico geral; a avaliação continua limitada ao avaliador lexical controlado. Checkpoints produzidos por versões anteriores à correção do sinal do gradiente devem ser descartados uma única vez antes de executar a versão corrigida; caso contrário, o runner continuará a partir dos pesos antigos.
 
