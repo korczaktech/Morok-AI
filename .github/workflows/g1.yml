@@ -105,11 +105,11 @@ jobs:
               print(f"::error title=Avaliação G1::{message}")
               if summary_path:
                   with open(summary_path, "a", encoding="utf-8") as summary:
-                      summary.write("# Avaliação G1\\n\\n" + message + "\\n")
+                      summary.write("# Avaliação G1\n\n" + message + "\n")
               raise SystemExit(0)
 
           with results.open(encoding="utf-8", newline="") as stream:
-              rows = list(csv.DictReader(stream, delimiter="\\t"))
+              rows = list(csv.DictReader(stream, delimiter="\t"))
           if not rows:
               raise SystemExit("O arquivo de avaliação está vazio.")
           profiles = list(dict.fromkeys(row["profile"] for row in rows))
@@ -123,9 +123,9 @@ jobs:
               lines = ["| " + " | ".join(headers) + " |",
                        "| " + " | ".join("---" for _ in headers) + " |"]
               for row in body:
-                  cells = [str(cell).replace("|", "\\\\|").replace("\\r", " ").replace("\\n", " ") for cell in row]
+                  cells = [str(cell).replace("|", "\\|").replace("\r", " ").replace("\n", " ") for cell in row]
                   lines.append("| " + " | ".join(cells) + " |")
-              return "\\n".join(lines) + "\\n"
+              return "\n".join(lines) + "\n"
 
           def display_answer(answer):
               if not answer:
@@ -160,7 +160,7 @@ jobs:
                                row["attempt"], answer, verdict,
                                f'{row["latency_ms"]:.3f} ms'])
               level = "notice" if row["correct"] else "warning"
-              safe = answer.replace("%", "%25").replace("\\r", "%0D").replace("\\n", "%0A").replace(":", "%3A").replace(",", "%2C")
+              safe = answer.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A").replace(":", "%3A").replace(",", "%2C")
               print(f"::{level} title={row['profile']} - tentativa {row['attempt']}::{questions[row['question_id']]}; {verdict}; resposta: {safe}; latência: {row['latency_ms']:.3f} ms")
 
           report = [
@@ -173,7 +173,7 @@ jobs:
               "## Avaliação individual de cada tentativa",
               table(["Modelo", "Pergunta", "Tentativa", "Resposta gerada", "Estado", "Tempo"], detailed)
           ]
-          rendered = "\\n".join(report) + "\\n"
+          rendered = "\n".join(report) + "\n"
           if summary_path:
               with open(summary_path, "a", encoding="utf-8") as summary:
                   summary.write(rendered)
