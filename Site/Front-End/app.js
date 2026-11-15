@@ -372,7 +372,8 @@
   $('#auth-submit').addEventListener('click',event=>{event.preventDefault();submitAuth();});
   $('#auth-forgot').addEventListener('click',recoverPassword);
   $('#auth-logout').addEventListener('click',logout);
-\n  $('#new-chat').addEventListener('click',createConversation);
+
+  $('#new-chat').addEventListener('click',createConversation);
   $('#brand-home').addEventListener('click',event=>{event.preventDefault();state.activeId=null;persist();renderHistory();renderConversation();closeSidebar();el.input.focus();});
   $('#all-chats').addEventListener('click',()=>{renderHistory();closeSidebar();});
   $('#search-open').addEventListener('click',()=>{const query=prompt('Buscar no título e no conteúdo das conversas:');if(query!==null){renderHistory(query);closeSidebar();}});
