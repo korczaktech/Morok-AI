@@ -48,9 +48,23 @@ for model in selected:
         raise RuntimeError(f"Estado de conclusão inválido para {model}.")
 if results_path.exists() and results_path.stat().st_size:
     with results_path.open(encoding="utf-8", newline="") as stream:
-        header = next(csv.reader(stream, delimiter="\t"), None)
-    if header != ["model", "epoch", "question_id", "attempt", "verdict", "latency_ms", "answer"]:
-        raise RuntimeError("Cabeçalho de history.tsv incompatível; não será anexado histórico corrompido.")
+        reader = csv.DictReader(stream, delimiter="\\t")
+        header = reader.fieldnames
+        if header == ["model", "epoch", "question_id", "verdict", "answer"]:
+            # Migra o histórico legado para o formato com número de tentativa e latência.
+            legacy_rows = list(reader)
+            migrated_path = results_path.with_suffix(".tsv.migrating")
+            with migrated_path.open("w", encoding="utf-8", newline="") as migrated:
+                writer = csv.writer(migrated, delimiter="\\t", lineterminator="\\n")
+                writer.writerow(["model", "epoch", "question_id", "attempt",
+                                 "verdict", "latency_ms", "answer"])
+                for row in legacy_rows:
+                    writer.writerow([row["model"], row["epoch"], row["question_id"],
+                                     "1", row["verdict"], "", row["answer"]])
+            migrated_path.replace(results_path)
+        elif header != ["model", "epoch", "question_id", "attempt",
+                        "verdict", "latency_ms", "answer"]:
+            raise RuntimeError("Cabeçalho de history.tsv incompatível; não será anexado histórico corrompido.")
 
 def save_json_atomic(path, value):
     temporary = path.with_suffix(path.suffix + ".tmp")
