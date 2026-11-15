@@ -12,6 +12,10 @@ import unicodedata
 MAX_RESPONSE_BYTES = 160
 MAX_VALIDATION_QUESTIONS = 40
 MAX_CYCLES = 100000
+INITIAL_LEARNING_RATE = 0.001
+MIN_LEARNING_RATE = 0.00005
+LR_REDUCE_FACTOR = 0.5
+LR_PLATEAU_CYCLES = 5
 
 
 def should_stop(continuous: bool, correct_count: int, total: int) -> bool:
@@ -46,7 +50,7 @@ def evaluate(answer: str, expected: str) -> tuple[bool, float]:
     precision = overlap / len(actual)
     recall = overlap / len(reference)
     score = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-    return actual == reference or score >= 0.90, score
+    return actual == reference, score
 
 
 def read_dialogues(corpus: Path) -> list[tuple[str, str]]:
@@ -154,6 +158,9 @@ def main() -> int:
 
     streak = 0
     cycle = 0
+    learning_rate = INITIAL_LEARNING_RATE
+    best_train_bpb = float("inf")
+    plateau_cycles = 0
     maximum_cycles = MAX_CYCLES if continuous else attempts
     with output.open("w", encoding="utf-8") as report:
         report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
@@ -165,22 +172,49 @@ def main() -> int:
         report.write(f"- Modo contínuo: {'ativado' if continuous else 'desativado'}\n")
         report.write(f"- Limite de geração: {MAX_RESPONSE_BYTES} bytes\n")
         report.write("- Critério contínuo: encerrar no primeiro ciclo em que a questão selecionada estiver correta\n")
-        report.write("- Métrica: F1 lexical por frequência; não mede semântica\n")
+        report.write("- Critério de aprovação: igualdade lexical normalizada; não mede semântica\n")
+        report.write("- F1 lexical é apenas diagnóstico; similaridade não aprova uma resposta.\n")
+        report.write(f"- Learning rate inicial: {learning_rate:.6f}; scheduler reduz após {LR_PLATEAU_CYCLES} ciclos sem melhora de train_bpb.\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
         while cycle < maximum_cycles:
             cycle += 1
-            command = [str(trainer), str(train_corpus), str(checkpoint), str(epochs), "42"]
+            command = [
+                str(trainer), str(train_corpus), str(checkpoint),
+                str(epochs), "42", f"{learning_rate:.8f}",
+            ]
             if cycle > 1:
                 command.append("--resume")
 
             print(
                 f"\n=== Ciclo {cycle}: {epochs} época(s), validação "
-                f"{len(validation)} perguntas; sequência {streak}/10 ===",
+                f"{len(validation)} pergunta(s), LR={learning_rate:.6f} ===",
                 flush=True,
             )
             started = time.perf_counter()
-            subprocess.run(command, check=True)
+            training_process = subprocess.run(
+                command, check=True, capture_output=True, text=True, encoding="utf-8"
+            )
+            print(training_process.stdout, end="", flush=True)
+            bpb_match = re.search(
+                r"train_bpb final:\\s*([0-9.eE+-]+)", training_process.stdout
+            )
+            if bpb_match:
+                train_bpb = float(bpb_match.group(1))
+                if train_bpb + 1.0e-6 < best_train_bpb:
+                    best_train_bpb = train_bpb
+                    plateau_cycles = 0
+                else:
+                    plateau_cycles += 1
+                if plateau_cycles >= LR_PLATEAU_CYCLES and learning_rate > MIN_LEARNING_RATE:
+                    learning_rate = max(MIN_LEARNING_RATE, learning_rate * LR_REDUCE_FACTOR)
+                    plateau_cycles = 0
+                    print(
+                        f"Scheduler: train_bpb sem melhora; learning rate reduzido para {learning_rate:.6f}.",
+                        flush=True,
+                    )
+            else:
+                raise RuntimeError("O treinador não informou train_bpb final; scheduler não pode continuar.")
             validation_results = evaluate_set(generator, checkpoint, validation)
             correct_count, total = write_results(
                 report, f"Validação — tentativa {cycle}", validation, validation_results
@@ -189,13 +223,13 @@ def main() -> int:
             streak = streak + 1 if all_correct else 0
             elapsed = time.perf_counter() - started
             report.write(
-                f"**Validação: {correct_count}/{total}. Sequência perfeita: "
-                f"{streak}/10. Duração: {elapsed:.2f}s.**\n\n"
+                f"**Validação: {correct_count}/{total}. F1 é diagnóstico, não critério de aprovação. "
+                f"LR: {learning_rate:.6f}. Duração: {elapsed:.2f}s.**\n\n"
             )
             report.flush()
             print(
                 f"Validação do ciclo {cycle}: {correct_count}/{total}; "
-                f"sequência {streak}/10; {elapsed:.2f}s.",
+                f"LR={learning_rate:.6f}; {elapsed:.2f}s.",
                 flush=True,
             )
 
