@@ -163,6 +163,7 @@ class TrainingDataTests(unittest.TestCase):
     def test_benchmark_categories_cover_composition_concepts_and_facts(self):
         self.assertEqual(training.benchmark_category("Compare Apollo e Mokosh"), "composicao")
         self.assertEqual(training.benchmark_category("Explique o que é contexto"), "conceito")
+        self.assertEqual(training.benchmark_category("O que é contexto?"), "conceito")
         self.assertEqual(training.benchmark_category("Quantos parâmetros existem?"), "fato")
         self.assertEqual(training.benchmark_category("Olá, tudo bem?"), "conversa")
 
