@@ -23,6 +23,19 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(lr, training.INITIAL_LEARNING_RATE * 0.5)
         self.assertEqual(plateau, 0)
 
+    def test_training_budget_is_finite_and_matches_default_plan(self):
+        self.assertEqual(training.MAX_CYCLES, 10)
+        self.assertEqual(training.MAX_TOTAL_EPOCHS, 200)
+        self.assertEqual(20 * 10, training.MAX_TOTAL_EPOCHS)
+
+    def test_learning_rate_scheduler_never_crosses_minimum(self):
+        lr = training.MIN_LEARNING_RATE * 2
+        best = 0.9
+        plateau = 0
+        for _ in range(training.LR_PLATEAU_CYCLES):
+            lr, best, plateau, _ = training.update_learning_rate(lr, best, plateau, 0.1)
+        self.assertEqual(lr, training.MIN_LEARNING_RATE)
+
     def test_learning_rate_scheduler_resets_on_improvement(self):
         lr, best, plateau, reduced = training.update_learning_rate(
             0.001, 0.5, 4, 0.8
