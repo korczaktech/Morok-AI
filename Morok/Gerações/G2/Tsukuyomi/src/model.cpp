@@ -22,7 +22,6 @@ constexpr std::size_t kScaleOffset = 9920;
 constexpr std::size_t kShiftOffset = 9952;
 constexpr std::size_t kStartOffset = 9984;
 constexpr std::size_t kEmbeddingWeightEnd = 8192;
-constexpr float kAnswerContextScale = 0.025F;
 constexpr std::size_t kHiddenWeightEnd = 9216;
 constexpr std::size_t kContextWeightEnd = 9632;
 
