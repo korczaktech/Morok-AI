@@ -208,21 +208,13 @@ if(MOROK_BUILD_APPS)
         morok_train morok_benchmark morok_generate morok_reinforce morok_complete
         RUNTIME DESTINATION bin)
     if(MOROK_BUILD_G2)
-        install(TARGETS morok_g2 morok_g2_mokosh morok_g2_tsukuyomi morok_g2_artemis morok_g2_apollo morok_train_g2 morok_generate_g2 morok_reinforce_g2
+        install(TARGETS morok_g2 morok_train_g2 morok_generate_g2 morok_reinforce_g2
             ARCHIVE DESTINATION lib RUNTIME DESTINATION bin)
-        install(DIRECTORY G2/engine/include/ G2/model/include/ DESTINATION include)
-        foreach(_profile IN ITEMS Mokosh Tsukuyomi Artemis Apollo)
-            install(DIRECTORY G2/${_profile}/include/ DESTINATION include)
-        endforeach()
     endif()
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
     endif()
-    install(TARGETS morok_core morok_g1 morok_g1_mokosh morok_g1_tsukuyomi morok_g1_artemis morok_g1_apollo ARCHIVE DESTINATION lib)
-    install(DIRECTORY G1/shared/include/ DESTINATION include)
-    foreach(_profile IN ITEMS Mokosh Tsukuyomi Artemis Apollo)
-        install(DIRECTORY G1/${_profile}/include/ DESTINATION include)
-    endforeach()
+    install(TARGETS morok_core morok_g1 ARCHIVE DESTINATION lib)
     install(DIRECTORY include/ DESTINATION include)
 endif()
 
