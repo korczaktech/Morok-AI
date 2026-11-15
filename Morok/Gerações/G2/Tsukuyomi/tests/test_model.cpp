@@ -20,7 +20,7 @@ int main() {
     using namespace morok::g2::tsukuyomi;
 
     static_assert(kParameterCount == 10000);
-    static_assert(kCheckpointFormatVersion == 5);
+    static_assert(kCheckpointFormatVersion == 6);
     Model model;
     initialize(model, 1234);
     Model same_seed;
@@ -115,6 +115,27 @@ int main() {
     const std::vector<std::uint8_t> history_bytes_b(history_b.begin(), history_b.end());
     assert(forward(model, history_bytes_a).hidden !=
            forward(model, history_bytes_b).hidden);
+
+    // Memória temporal: uma diferença antiga deve continuar influenciando
+    // o estado após mais de uma janela TBPTT de bytes comuns.
+    {
+        Model memory_model;
+        memory_model.parameters.fill(0.0F);
+        for (std::size_t h = 0; h < kHiddenSize; ++h)
+            memory_model.parameters[9920 + h] = 1.0F;
+        memory_model.parameters[9632] = 0.2F;
+        memory_model.parameters[8192] = 1.0F;
+        memory_model.parameters[static_cast<std::size_t>('a') * kHiddenSize] = 0.8F;
+        memory_model.parameters[static_cast<std::size_t>('z') * kHiddenSize] = -0.8F;
+        std::string memory_a = "U: Q\\nIA:a";
+        std::string memory_b = "U: Q\\nIA:z";
+        memory_a.append(24, 'x');
+        memory_b.append(24, 'x');
+        const std::vector<std::uint8_t> memory_bytes_a(memory_a.begin(), memory_a.end());
+        const std::vector<std::uint8_t> memory_bytes_b(memory_b.begin(), memory_b.end());
+        assert(forward(memory_model, memory_bytes_a).hidden !=
+               forward(memory_model, memory_bytes_b).hidden);
+    }
 
     // A matriz recorrente compartilhada altera o estado após processar a sequência.
     Model recurrent_changed = model;
