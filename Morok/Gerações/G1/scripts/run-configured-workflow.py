@@ -46,6 +46,7 @@ for profile_index, profile in enumerate(profiles):
     candidate = model_dir / "candidate.morokckp"
     approved = model_dir / "approved.morokckp"
     gate_report = model_dir / "quality-gate.json"
+    candidate.unlink(missing_ok=True)
     approved.unlink(missing_ok=True)
     gate_report.unlink(missing_ok=True)
     metrics = model_dir / "metrics.jsonl"
