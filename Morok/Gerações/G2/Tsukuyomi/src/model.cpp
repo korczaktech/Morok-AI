@@ -236,7 +236,7 @@ double evaluate_loss(const Model& model, std::span<const std::uint8_t> bytes) {
 TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
                     const TrainingConfig& config, TrainingState* supplied_state) {
     TrainingReport report;
-    if (bytes.size() < 2 || config.epochs == 0 ||
+    if (bytes.size() < 2 || config.epochs == 0 || config.batch_size == 0 ||
         !(config.learning_rate > 0.0) || !(config.gradient_clip > 0.0))
         return report;
 
@@ -245,12 +245,21 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
     TrainingState local_state;
     TrainingState& state = supplied_state ? *supplied_state : local_state;
     std::array<float, kParameterCount> gradient{};
+    std::size_t accumulated_targets = 0;
+    const auto apply_batch = [&]() {
+        if (accumulated_targets == 0) return;
+        const float inverse_batch = 1.0F / static_cast<float>(accumulated_targets);
+        for (auto& value : gradient) value *= inverse_batch;
+        ++state.step;
+        apply_adam(model, gradient, state, config);
+        gradient.fill(0.0F);
+        accumulated_targets = 0;
+    };
 
     for (std::size_t epoch = 0; epoch < config.epochs; ++epoch) {
         for (std::size_t target = 0; target < bytes.size(); ++target) {
             const auto context = bytes.first(target);
             const auto cache = calculate(model, context);
-            gradient.fill(0.0F);
 
             std::array<float, kHiddenSize> hidden_gradient{};
             for (std::size_t token = 0; token < kVocabularySize; ++token) {
@@ -301,9 +310,10 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
                 }
             }
 
-            ++state.step;
-            apply_adam(model, gradient, state, config);
+            ++accumulated_targets;
+            if (accumulated_targets >= config.batch_size) apply_batch();
         }
+        apply_batch();
         ++report.epochs_completed;
         report.target_bytes += bytes.size();
     }
