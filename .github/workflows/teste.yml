@@ -125,9 +125,6 @@ jobs:
               ref: "main",
               inputs: {
                 question: "${{ inputs.question }}",
-                model_tsukuyomi: "${{ inputs.model_tsukuyomi }}",
-                model_apollo: "${{ inputs.model_apollo }}",
-                model_mokosh: "${{ inputs.model_mokosh }}",
                 model_tsukuyomi_max: "${{ inputs.model_tsukuyomi_max }}",
                 previous_run_id: String(context.runId)
               }
