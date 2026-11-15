@@ -1,0 +1,451 @@
+MOROK-AI — ÁRVORE COMPLETA DO REPOSITÓRIO
+Branch: main
+Commit-base: 854abef2d829e2cadc638f5b27a76078d54c03b4
+Diretórios: 145
+Arquivos: 298
+Total de entradas: 443
+
+Morok-AI/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       ├── fuzzing.yml
+│       ├── g1.yml
+│       ├── g3.yml
+│       ├── Pagina.yml
+│       └── sanitizers.yml
+├── Aplicativo/
+│   ├── Android/
+│   │   └── .gitkeep
+│   ├── IOS/
+│   │   └── .gitkeep
+│   ├── Linux/
+│   │   └── .gitkeep
+│   ├── MacOS/
+│   │   └── .gitkeep
+│   └── Windows/
+│       └── .gitkeep
+├── Morok/
+│   ├── .clang-format
+│   ├── .gitignore
+│   ├── apps/
+│   │   └── morok-convert/
+│   │       └── main.cpp
+│   ├── artifacts/
+│   │   └── README.md
+│   ├── cmake/
+│   │   ├── MorokCompilerOptions.cmake
+│   │   └── MorokSanitizers.cmake
+│   ├── CMakeLists.txt
+│   ├── CMakePresets.json
+│   ├── configs/
+│   │   └── generations/
+│   │       └── README.md
+│   ├── data/
+│   │   ├── interim/
+│   │   │   └── .gitkeep
+│   │   ├── manifests/
+│   │   │   └── .gitkeep
+│   │   ├── processed/
+│   │   │   └── .gitkeep
+│   │   ├── raw/
+│   │   │   └── .gitkeep
+│   │   └── README.md
+│   ├── docs/
+│   │   ├── 01-visao-geral.md
+│   │   ├── 02-arquitetura-geral.md
+│   │   ├── 03-subsistemas.md
+│   │   ├── 04-modelo-e-parametros.md
+│   │   ├── 05-rlah-visao-geral.md
+│   │   ├── 06-rlah-objetivos-e-agrupamentos.md
+│   │   ├── 07-rlah-segmentacao-e-hierarquia.md
+│   │   ├── 08-contexto-e-predicao.md
+│   │   ├── 09-treinamento-e-avaliacao.md
+│   │   ├── 10-recursos-e-otimizacao.md
+│   │   ├── 11-geracao-1.md
+│   │   ├── 12-pendencias-e-validacao.md
+│   │   ├── 13-arquitetura-matematica-rlah.md
+│   │   ├── 14-predicao-binaria-e-objetivo.md
+│   │   ├── 15-segmentacao-adaptativa-e-criterio.md
+│   │   ├── 16-protocolo-de-treinamento.md
+│   │   ├── 17-revisao-bibliografica-e-posicionamento.md
+│   │   ├── 18-especificacao-operacional-g1.md
+│   │   ├── 19-contratos-de-interfaces.md
+│   │   ├── 20-subsistemas-cognitivos.md
+│   │   ├── 21-persistencia-e-memoria.md
+│   │   ├── 22-seguranca-e-permissoes.md
+│   │   ├── 23-build-testes-e-distribuicao.md
+│   │   ├── 24-estrutura-completa-repositorio.md
+│   │   ├── 25-etapa-1-infraestrutura.md
+│   │   ├── 26-etapa-2-tipos-compartilhados.md
+│   │   ├── 27-etapa-3-primitivas-matematicas.md
+│   │   ├── 28-etapa-4-inventario-parametros-g1.md
+│   │   ├── 29-etapa-5-forward-pass-g1.md
+│   │   ├── 30-etapa-6-bptt-gradientes-g1.md
+│   │   ├── 31-etapa-7-otimizadores-g1.md
+│   │   ├── 32-etapa-8-treinamento-g1.md
+│   │   ├── 33-github-actions-entrada-saida.md
+│   │   ├── 34-etapa-9-checkpoints-persistencia.md
+│   │   ├── 35-etapa-10-benchmark-validacao.md
+│   │   ├── 36-etapa-11-geracao-g1.md
+│   │   ├── 37-etapa-12-avaliacao-benchmarks.md
+│   │   ├── 38-etapa-13-ia-core-e-contratos.md
+│   │   ├── 39-etapa-14-ia-mem.md
+│   │   ├── 40-etapa-15-ia-lang.md
+│   │   ├── 41-etapa-16-ia-comm.md
+│   │   ├── 42-etapa-17-ia-reas.md
+│   │   ├── 43-etapa-18-ia-learn.md
+│   │   ├── 44-etapa-3-rlah-implementacao.md
+│   │   ├── 45-etapa-12-ia-tools.md
+│   │   ├── 46-etapa-13-seguranca.md
+│   │   ├── 47-etapa-14-aplicacoes-executaveis.md
+│   │   ├── 48-etapa-15-testes-automatizados.md
+│   │   ├── 49-etapa-16-documentacao-experimentos.md
+│   │   ├── 50-etapa-18-seguranca-integracao.md
+│   │   ├── 51-etapa-19-testes-aceitacao.md
+│   │   ├── 52-etapa-20-primeiro-treinamento-g1.md
+│   │   ├── 53-aprendizagem-continua-g1-actions.md
+│   │   └── 54-aprendizado-por-reforco-g1.md
+│   ├── entrada.txt
+│   ├── experiments/
+│   │   ├── ablations/
+│   │   │   └── README.md
+│   │   ├── generation-scaling/
+│   │   │   └── README.md
+│   │   ├── README.md
+│   │   ├── results/
+│   │   │   └── README.md
+│   │   └── templates/
+│   │       └── manifest.example.json
+│   ├── Gerações/
+│   │   ├── G1/
+│   │   │   ├── Apollo/
+│   │   │   │   ├── include/
+│   │   │   │   │   └── morok/
+│   │   │   │   │       └── g1/
+│   │   │   │   │           └── apollo/
+│   │   │   │   │               └── profile.hpp
+│   │   │   │   ├── README.md
+│   │   │   │   ├── src/
+│   │   │   │   │   └── profile.cpp
+│   │   │   │   └── tests/
+│   │   │   │       └── test_profile.cpp
+│   │   │   ├── apps/
+│   │   │   │   ├── benchmark.cpp
+│   │   │   │   ├── cli/
+│   │   │   │   │   └── main.cpp
+│   │   │   │   ├── complete.cpp
+│   │   │   │   ├── evaluate/
+│   │   │   │   │   └── main.cpp
+│   │   │   │   ├── evaluate_profiles.cpp
+│   │   │   │   ├── generate.cpp
+│   │   │   │   ├── reinforce.cpp
+│   │   │   │   ├── server/
+│   │   │   │   │   └── main.cpp
+│   │   │   │   └── train.cpp
+│   │   │   ├── data/
+│   │   │   │   └── reinforcement/
+│   │   │   │       └── answers.json
+│   │   │   ├── Mokosh/
+│   │   │   │   ├── include/
+│   │   │   │   │   └── morok/
+│   │   │   │   │       └── g1/
+│   │   │   │   │           └── mokosh/
+│   │   │   │   │               └── profile.hpp
+│   │   │   │   ├── README.md
+│   │   │   │   ├── src/
+│   │   │   │   │   └── profile.cpp
+│   │   │   │   └── tests/
+│   │   │   │       └── test_profile.cpp
+│   │   │   ├── README.md
+│   │   │   ├── scripts/
+│   │   │   │   ├── continual-cycle.sh
+│   │   │   │   ├── evaluate-qa.py
+│   │   │   │   ├── first-training.sh
+│   │   │   │   ├── reinforcement.py
+│   │   │   │   ├── run-configured-workflow.py
+│   │   │   │   └── validate-corpus.py
+│   │   │   ├── shared/
+│   │   │   │   ├── include/
+│   │   │   │   │   └── morok/
+│   │   │   │   │       ├── comm/
+│   │   │   │   │       │   └── session_manager.hpp
+│   │   │   │   │       ├── lang/
+│   │   │   │   │       │   └── language_subsystem.hpp
+│   │   │   │   │       ├── learn/
+│   │   │   │   │       │   └── learning_subsystem.hpp
+│   │   │   │   │       └── model/
+│   │   │   │   │           ├── g1_forward.hpp
+│   │   │   │   │           ├── learn/
+│   │   │   │   │           │   ├── g1_benchmark.hpp
+│   │   │   │   │           │   ├── g1_bptt.hpp
+│   │   │   │   │           │   ├── g1_checkpoint.hpp
+│   │   │   │   │           │   ├── g1_evaluation.hpp
+│   │   │   │   │           │   ├── g1_generation.hpp
+│   │   │   │   │           │   ├── g1_training.hpp
+│   │   │   │   │           │   └── optimizer.hpp
+│   │   │   │   │           └── parameters/
+│   │   │   │   │               └── g1_parameters.hpp
+│   │   │   │   ├── src/
+│   │   │   │   │   ├── comm/
+│   │   │   │   │   │   └── communication_subsystem.cpp
+│   │   │   │   │   ├── lang/
+│   │   │   │   │   │   └── language_subsystem.cpp
+│   │   │   │   │   ├── learn/
+│   │   │   │   │   │   └── learning_subsystem.cpp
+│   │   │   │   │   └── model/
+│   │   │   │   │       ├── g1_forward.cpp
+│   │   │   │   │       ├── learn/
+│   │   │   │   │       │   ├── g1_benchmark.cpp
+│   │   │   │   │       │   ├── g1_bptt.cpp
+│   │   │   │   │       │   ├── g1_checkpoint.cpp
+│   │   │   │   │       │   ├── g1_evaluation.cpp
+│   │   │   │   │       │   ├── g1_generation.cpp
+│   │   │   │   │       │   ├── g1_training.cpp
+│   │   │   │   │       │   └── optimizer.cpp
+│   │   │   │   │       └── parameters/
+│   │   │   │   │           └── g1_parameters.cpp
+│   │   │   │   └── tests/
+│   │   │   │       ├── acceptance/
+│   │   │   │       │   ├── test_g1_acceptance.cpp
+│   │   │   │       │   └── test_seven_subsystems.cpp
+│   │   │   │       ├── fixtures/
+│   │   │   │       │   ├── benchmark/
+│   │   │   │       │   │   ├── doc-01.txt
+│   │   │   │       │   │   ├── doc-02.txt
+│   │   │   │       │   │   ├── doc-03.txt
+│   │   │   │       │   │   ├── doc-04.txt
+│   │   │   │       │   │   ├── doc-05.txt
+│   │   │   │       │   │   └── doc-06.txt
+│   │   │   │       │   ├── continual/
+│   │   │   │       │   │   ├── doc-01.txt
+│   │   │   │       │   │   ├── doc-02.txt
+│   │   │   │       │   │   ├── doc-03.txt
+│   │   │   │       │   │   ├── doc-04.txt
+│   │   │   │       │   │   ├── doc-05.txt
+│   │   │   │       │   │   ├── doc-06.txt
+│   │   │   │       │   │   ├── doc-07.txt
+│   │   │   │       │   │   ├── doc-08.txt
+│   │   │   │       │   │   ├── doc-09.txt
+│   │   │   │       │   │   ├── doc-10.txt
+│   │   │   │       │   │   ├── doc-11.txt
+│   │   │   │       │   │   ├── doc-12.txt
+│   │   │   │       │   │   ├── doc-13.txt
+│   │   │   │       │   │   ├── doc-14.txt
+│   │   │   │       │   │   ├── doc-15.txt
+│   │   │   │       │   │   ├── doc-16.txt
+│   │   │   │       │   │   ├── doc-17.txt
+│   │   │   │       │   │   ├── doc-18.txt
+│   │   │   │       │   │   ├── doc-19.txt
+│   │   │   │       │   │   ├── doc-20.txt
+│   │   │   │       │   │   ├── doc-21.txt
+│   │   │   │       │   │   ├── doc-22.txt
+│   │   │   │       │   │   ├── doc-23.txt
+│   │   │   │       │   │   ├── doc-24.txt
+│   │   │   │       │   │   ├── doc-25.txt
+│   │   │   │       │   │   ├── doc-26.txt
+│   │   │   │       │   │   ├── doc-27.txt
+│   │   │   │       │   │   ├── doc-28.txt
+│   │   │   │       │   │   ├── doc-29.txt
+│   │   │   │       │   │   ├── doc-30.txt
+│   │   │   │       │   │   ├── doc-31.txt
+│   │   │   │       │   │   ├── doc-32.txt
+│   │   │   │       │   │   ├── doc-33.txt
+│   │   │   │       │   │   ├── doc-34.txt
+│   │   │   │       │   │   ├── doc-35.txt
+│   │   │   │       │   │   ├── doc-36.txt
+│   │   │   │       │   │   ├── doc-37.txt
+│   │   │   │       │   │   ├── doc-38.txt
+│   │   │   │       │   │   ├── doc-39.txt
+│   │   │   │       │   │   ├── doc-40.txt
+│   │   │   │       │   │   ├── doc-41.txt
+│   │   │   │       │   │   ├── doc-42.txt
+│   │   │   │       │   │   ├── doc-43.txt
+│   │   │   │       │   │   ├── doc-44.txt
+│   │   │   │       │   │   ├── doc-45.txt
+│   │   │   │       │   │   ├── doc-46.txt
+│   │   │   │       │   │   ├── doc-47.txt
+│   │   │   │       │   │   ├── doc-48.txt
+│   │   │   │       │   │   ├── doc-49.txt
+│   │   │   │       │   │   ├── doc-50.txt
+│   │   │   │       │   │   ├── doc-51.txt
+│   │   │   │       │   │   ├── doc-52.txt
+│   │   │   │       │   │   └── manifest.json
+│   │   │   │       │   ├── continual-eval/
+│   │   │   │       │   │   └── cases.json
+│   │   │   │       │   ├── continual-prompt.txt
+│   │   │   │       │   └── fuzz/
+│   │   │   │       │       └── checkpoint-valid.hex
+│   │   │   │       ├── fuzz/
+│   │   │   │       │   └── fuzz_checkpoint.cpp
+│   │   │   │       ├── integration/
+│   │   │   │       │   └── model_training_generation_pipeline.cpp
+│   │   │   │       ├── property/
+│   │   │   │       │   └── test_model_properties.cpp
+│   │   │   │       ├── scripts/
+│   │   │   │       │   └── test_g1_reinforcement.py
+│   │   │   │       └── unit/
+│   │   │   │           ├── apps/
+│   │   │   │           │   └── test_application_runtime.cpp
+│   │   │   │           ├── comm/
+│   │   │   │           │   └── test_communication_subsystem.cpp
+│   │   │   │           ├── lang/
+│   │   │   │           │   └── test_language_subsystem.cpp
+│   │   │   │           ├── learn/
+│   │   │   │           │   └── test_learning_subsystem.cpp
+│   │   │   │           └── model/
+│   │   │   │               ├── test_g1_benchmark.cpp
+│   │   │   │               ├── test_g1_bptt.cpp
+│   │   │   │               ├── test_g1_checkpoint.cpp
+│   │   │   │               ├── test_g1_evaluation.cpp
+│   │   │   │               ├── test_g1_forward.cpp
+│   │   │   │               ├── test_g1_generation.cpp
+│   │   │   │               ├── test_g1_optimizer.cpp
+│   │   │   │               ├── test_g1_parameters.cpp
+│   │   │   │               ├── test_g1_reinforcement.cpp
+│   │   │   │               └── test_g1_training.cpp
+│   │   │   └── Tsukuyomi/
+│   │   │       ├── include/
+│   │   │       │   └── morok/
+│   │   │       │       └── g1/
+│   │   │       │           └── tsukuyomi/
+│   │   │       │               └── profile.hpp
+│   │   │       ├── README.md
+│   │   │       ├── src/
+│   │   │       │   └── profile.cpp
+│   │   │       └── tests/
+│   │   │           └── test_profile.cpp
+│   │   └── G3/
+│   │       ├── Apollo/
+│   │       │   └── README.md
+│   │       ├── Artemis/
+│   │       │   └── README.md
+│   │       ├── Mokosh/
+│   │       │   └── README.md
+│   │       ├── README.md
+│   │       └── Tsukuyomi/
+│   │           └── README.md
+│   ├── include/
+│   │   └── morok/
+│   │       ├── comm/
+│   │       │   ├── conversation.hpp
+│   │       │   ├── event_stream.hpp
+│   │       │   ├── formatter.hpp
+│   │       │   └── message.hpp
+│   │       ├── common/
+│   │       │   ├── build_info.hpp
+│   │       │   ├── byte_buffer.hpp
+│   │       │   ├── error.hpp
+│   │       │   ├── ids.hpp
+│   │       │   ├── model_version.hpp
+│   │       │   ├── result.hpp
+│   │       │   ├── timestamp.hpp
+│   │       │   ├── types.hpp
+│   │       │   └── utf8_text.hpp
+│   │       ├── core/
+│   │       │   ├── cancellation.hpp
+│   │       │   ├── configuration.hpp
+│   │       │   ├── health.hpp
+│   │       │   ├── lifecycle.hpp
+│   │       │   ├── request_context.hpp
+│   │       │   ├── resource_limits.hpp
+│   │       │   ├── runtime.hpp
+│   │       │   └── session_registry.hpp
+│   │       ├── lang/
+│   │       │   └── rlah/
+│   │       │       └── segmenter.hpp
+│   │       ├── memory/
+│   │       │   ├── memory_store.hpp
+│   │       │   └── memory_subsystem.hpp
+│   │       ├── model/
+│   │       │   └── math/
+│   │       │       ├── initialization.hpp
+│   │       │       ├── primitives.hpp
+│   │       │       └── README.md
+│   │       ├── reason/
+│   │       │   └── reasoning_subsystem.hpp
+│   │       ├── security/
+│   │       │   └── security_subsystem.hpp
+│   │       └── tools/
+│   │           └── tool_subsystem.hpp
+│   ├── MODELOS.md
+│   ├── README.md
+│   ├── saida.txt
+│   ├── src/
+│   │   ├── common/
+│   │   │   ├── build_info.cpp
+│   │   │   ├── error.cpp
+│   │   │   ├── ids.cpp
+│   │   │   ├── model_version.cpp
+│   │   │   ├── timestamp.cpp
+│   │   │   └── utf8_text.cpp
+│   │   ├── lang/
+│   │   │   └── rlah/
+│   │   │       └── segmenter.cpp
+│   │   ├── memory/
+│   │   │   └── memory_store.cpp
+│   │   ├── reason/
+│   │   │   └── reasoning_subsystem.cpp
+│   │   ├── security/
+│   │   │   └── security_subsystem.cpp
+│   │   └── tools/
+│   │       └── tool_subsystem.cpp
+│   ├── tests/
+│   │   ├── acceptance/
+│   │   │   ├── end_to_end/
+│   │   │   │   └── .gitkeep
+│   │   │   └── generation_profiles/
+│   │   │       └── .gitkeep
+│   │   ├── CMakeLists.txt
+│   │   ├── fixtures/
+│   │   │   └── fuzz/
+│   │   │       └── rlah-valid.hex
+│   │   ├── fuzz/
+│   │   │   ├── fuzz_rlah_decode.cpp
+│   │   │   └── fuzz_utf8.cpp
+│   │   ├── integration/
+│   │   │   ├── inference_pipeline/
+│   │   │   │   └── .gitkeep
+│   │   │   ├── memory_pipeline/
+│   │   │   │   └── .gitkeep
+│   │   │   ├── model_training/
+│   │   │   │   └── .gitkeep
+│   │   │   ├── rlah_pipeline/
+│   │   │   │   └── .gitkeep
+│   │   │   └── subsystem_contracts/
+│   │   │       └── .gitkeep
+│   │   ├── property/
+│   │   │   └── .gitkeep
+│   │   ├── regression/
+│   │   │   ├── .gitkeep
+│   │   │   └── test_runtime_rollback.cpp
+│   │   ├── scripts/
+│   │   │   └── test_generation_isolation.py
+│   │   ├── support/
+│   │   │   └── .gitkeep
+│   │   └── unit/
+│   │       ├── common/
+│   │       │   ├── test_build_info.cpp
+│   │       │   └── test_shared_types.cpp
+│   │       ├── core/
+│   │       │   └── test_runtime_contracts.cpp
+│   │       ├── lang/
+│   │       │   └── test_rlah_segmenter.cpp
+│   │       ├── memory/
+│   │       │   └── test_memory_store.cpp
+│   │       ├── model/
+│   │       │   └── test_math_primitives.cpp
+│   │       ├── reason/
+│   │       │   └── test_reasoning_subsystem.cpp
+│   │       ├── security/
+│   │       │   └── test_security_subsystem.cpp
+│   │       └── tools/
+│   │           └── test_tool_subsystem.cpp
+│   └── third_party/
+│       └── README.md
+└── Site/
+    ├── Back-End/
+    │   └── .gitkeep
+    └── Front-End/
+        ├── .gitkeep
+        └── index.html
