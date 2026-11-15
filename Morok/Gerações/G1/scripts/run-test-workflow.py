@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Treina uma época e testa uma resposta por modelo em cada ciclo."""
+"""Treina 100 épocas e testa 100 respostas por modelo em cada ciclo."""
 import csv
 import json
 import os
@@ -81,7 +81,7 @@ while not all(completed.get(model, False) for model in selected):
         checkpoint = model_dir / "resume.morokckp"
         candidate = model_dir / "candidate.morokckp"
         metrics = model_dir / "metrics.jsonl"
-        epoch = int(epochs.get(model, 0)) + 1
+        epoch = int(epochs.get(model, 0)) + 100
         args = [
             str(train), str(corpus), str(epoch), str(seed_base + model_index),
             "--checkpoint", str(checkpoint),
@@ -97,7 +97,7 @@ while not all(completed.get(model, False) for model in selected):
 
         # Nunca aceite um artefato antigo como se fosse a saída deste treinamento.
         candidate.unlink(missing_ok=True)
-        print(f"[{model}] Treinando época {epoch}.", flush=True)
+        print(f"[{model}] Treinando até a época {epoch} (100 novas épocas).", flush=True)
         try:
             subprocess.run(args, check=True, timeout=remaining)
         except subprocess.TimeoutExpired:
@@ -116,7 +116,7 @@ while not all(completed.get(model, False) for model in selected):
         try:
             subprocess.run([
                 str(evaluate), str(candidate), str(temporary_results),
-                model, question, "1",
+                model, question, "100",
             ], check=True, timeout=remaining)
         except subprocess.TimeoutExpired:
             print(f"[{model}] Limite de tempo atingido durante a avaliação.", flush=True)
@@ -125,17 +125,24 @@ while not all(completed.get(model, False) for model in selected):
 
         with temporary_results.open(encoding="utf-8", newline="") as stream:
             rows = list(csv.DictReader(stream, delimiter="\t"))
-        if len(rows) != 1:
-            raise RuntimeError(f"{model}: esperado exatamente um resultado; recebidos {len(rows)}.")
-        row = rows[0]
-        required = {"profile", "question_id", "attempt", "verdict", "answer"}
-        if not required.issubset(row):
-            raise RuntimeError(f"{model}: resultado TSV sem as colunas obrigatórias.")
-        if row["profile"] != model or row["question_id"] != question or row["attempt"] != "1":
-            raise RuntimeError(f"{model}: o avaliador retornou um resultado que não corresponde à tentativa solicitada.")
-        if row["verdict"] not in {"correct", "incorrect"}:
-            raise RuntimeError(f"{model}: veredito inválido: {row['verdict']!r}.")
-        is_correct = row["verdict"] == "correct"
+        if len(rows) != 100:
+            raise RuntimeError(f"{model}: esperado exatamente 100 resultados; recebidos {len(rows)}.")
+        required = {"profile", "question_id", "attempt", "verdict", "latency_ms", "answer"}
+        correct_attempts = 0
+        for expected_attempt, row in enumerate(rows, start=1):
+            if not required.issubset(row):
+                raise RuntimeError(f"{model}: resultado TSV sem as colunas obrigatórias.")
+            if (row["profile"] != model or row["question_id"] != question or
+                    row["attempt"] != str(expected_attempt)):
+                raise RuntimeError(f"{model}: resultado não corresponde à tentativa {expected_attempt}/100.")
+            if row["verdict"] not in {"correct", "incorrect"}:
+                raise RuntimeError(f"{model}: veredito inválido: {row['verdict']!r}.")
+            if not row["latency_ms"]:
+                raise RuntimeError(f"{model}: latência ausente na tentativa {expected_attempt}.")
+            if row["verdict"] == "correct":
+                correct_attempts += 1
+
+        is_correct = correct_attempts > 0
 
         # Persiste os contadores e o estado de conclusão antes do histórico legível.
         epochs[model] = epoch
@@ -145,13 +152,17 @@ while not all(completed.get(model, False) for model in selected):
 
         header_needed = not results_path.exists() or results_path.stat().st_size == 0
         with results_path.open("a", encoding="utf-8", newline="") as stream:
-            writer = csv.writer(stream, delimiter="\t", lineterminator="\n")
+            writer = csv.writer(stream, delimiter="\\t", lineterminator="\\n")
             if header_needed:
-                writer.writerow(["model", "epoch", "question_id", "verdict", "answer"])
-            writer.writerow([model, epoch, question, row["verdict"], row["answer"]])
+                writer.writerow(["model", "epoch", "question_id", "attempt", "verdict", "latency_ms", "answer"])
+            for row in rows:
+                writer.writerow([model, epoch, question, row["attempt"],
+                                 row["verdict"], row["latency_ms"], row["answer"]])
             stream.flush()
             os.fsync(stream.fileno())
-        print(f"[{model}] época={epoch}; resposta={'CORRETA' if is_correct else 'incorreta'}; saída={row['answer']!r}", flush=True)
+        print(f"[{model}] épocas={epoch}; acertos={correct_attempts}/100; "
+              f"estado={'APROVADO' if is_correct else 'não aprovado'}; "
+              f"última saída={rows[-1]['answer']!r}", flush=True)
 
         if all(completed.get(name, False) for name in selected):
             break
