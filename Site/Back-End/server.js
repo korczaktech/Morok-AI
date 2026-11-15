@@ -22,8 +22,11 @@ const client = new MongoClient(MONGODB_URI);
 await client.connect();
 const db = client.db(DATABASE);
 const accounts = db.collection(COLLECTION);
+const sessions = db.collection("morok_sessions");
 await accounts.createIndex({ email: 1 }, { unique: true, name: "morok_accounts_email_unique" });
 await accounts.createIndex({ accountId: 1 }, { unique: true, name: "morok_accounts_account_id_unique" });
+await sessions.createIndex({ jti: 1 }, { unique: true, name: "morok_sessions_jti_unique" });
+await sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "morok_sessions_expiry_ttl" });
 
 const attempts = new Map();
 const WINDOW_MS = 15 * 60 * 1000;
@@ -116,20 +119,25 @@ function base64url(value) {
   return Buffer.from(value).toString("base64url");
 }
 
-function createToken(account) {
+async function createToken(account) {
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const expiresAt = new Date((issuedAt + TOKEN_TTL_SECONDS) * 1000);
+  const jti = crypto.randomUUID();
   const header = base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const payload = base64url(JSON.stringify({
     sub: account.accountId,
     email: account.email,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS
+    jti,
+    iat: issuedAt,
+    exp: issuedAt + TOKEN_TTL_SECONDS
   }));
   const unsigned = header + "." + payload;
   const signature = crypto.createHmac("sha256", JWT_SECRET).update(unsigned).digest("base64url");
+  await sessions.insertOne({ jti, accountId: account.accountId, createdAt: new Date(), expiresAt });
   return unsigned + "." + signature;
 }
 
-function verifyToken(token) {
+async function verifyToken(token) {
   const parts = String(token || "").split(".");
   if (parts.length !== 3) return null;
   const unsigned = parts[0] + "." + parts[1];
@@ -138,9 +146,12 @@ function verifyToken(token) {
   try { actual = Buffer.from(parts[2], "base64url"); } catch { return null; }
   if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return null;
   try {
+    const header = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+    if (header.alg !== "HS256" || header.typ !== "JWT") return null;
     const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
-    if (!payload.sub || !payload.exp || payload.exp <= Math.floor(Date.now() / 1000)) return null;
-    return payload;
+    if (!payload.sub || !payload.jti || !payload.exp || payload.exp <= Math.floor(Date.now() / 1000)) return null;
+    const active = await sessions.findOne({ jti: payload.jti, accountId: payload.sub, expiresAt: { $gt: new Date() } }, { projection: { _id: 1 } });
+    return active ? payload : null;
   } catch { return null; }
 }
 
@@ -192,7 +203,7 @@ async function handle(req, res) {
       };
       await accounts.insertOne(account);
       return send(res, 201, {
-        access_token: createToken(account),
+        access_token: await createToken(account),
         token_type: "Bearer",
         expires_in: TOKEN_TTL_SECONDS,
         user: publicAccount(account)
@@ -215,7 +226,7 @@ async function handle(req, res) {
       }
       await accounts.updateOne({ _id: account._id }, { $set: { lastLoginAt: new Date(), updatedAt: new Date() } });
       return send(res, 200, {
-        access_token: createToken(account),
+        access_token: await createToken(account),
         token_type: "Bearer",
         expires_in: TOKEN_TTL_SECONDS,
         user: publicAccount(account)
@@ -226,7 +237,7 @@ async function handle(req, res) {
   }
 
   if (req.method === "GET" && path === "/auth/me") {
-    const token = verifyToken(bearer(req));
+    const token = await verifyToken(bearer(req));
     if (!token) return send(res, 401, { error: "Sessão inválida ou expirada." }, req.allowedOrigin);
     const account = await accounts.findOne({ accountId: token.sub }, { projection: { accountId: 1, email: 1, name: 1 } });
     if (!account) return send(res, 401, { error: "Conta não encontrada." }, req.allowedOrigin);
@@ -234,6 +245,9 @@ async function handle(req, res) {
   }
 
   if (req.method === "POST" && path === "/auth/logout") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Sessão inválida ou expirada." }, req.allowedOrigin);
+    await sessions.deleteOne({ jti: token.jti });
     return send(res, 200, { success: true }, req.allowedOrigin);
   }
 
