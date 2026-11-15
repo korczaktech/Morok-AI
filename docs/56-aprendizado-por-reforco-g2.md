@@ -1,33 +1,44 @@
 # Reinforcement-G2
 
-Este workflow aplica reforço exclusivamente à G2. A G2 possui dois especialistas independentes de 1.000 parâmetros; cada tentativa calcula gradientes BPTT e aplica a recompensa aos dois especialistas, totalizando 2.000 parâmetros treináveis.
+O workflow aplica treinamento e avaliação exclusivamente à G2. A G2 contém dois especialistas independentes de 1.000 parâmetros cada, totalizando exatamente 2.000 parâmetros treináveis.
 
 ## Isolamento
 
-- Checkpoint G2 usa o formato pareado `.expert-a` e `.expert-b`.
-- O histórico fica em `data/reinforcement-g2/answers.json`, sem compartilhar episódios com G1.
-- O artefato do Actions tem nome `morok-g2-reinforcement-state`.
-- O workflow é independente: `.github/workflows/reinforcement-g2.yml`.
-- A geração usa `morok-generate-g2`; o reforço usa `morok-reinforce-g2`.
+- Checkpoints G2 usam o formato pareado dos especialistas A e B.
+- O histórico fica em `data/reinforcement-g2/answers.json`, separado dos episódios da G1.
+- O workflow é `.github/workflows/reinforcement-g2.yml`.
+- A geração usa `morok-generate-g2`; as atualizações usam `morok-reinforce-g2`.
+- O artefato do Actions preserva os checkpoints e resultados da execução.
 
-## Limitações
+## Corpus e perguntas
 
-A recompensa agora respeita o sentido do otimizador: recompensa positiva aplica descida do gradiente da perda da sequência observada; recompensa negativa inverte o gradiente para desencorajar essa sequência. Isso é uma aproximação reward-weighted BPTT, não um estimador REINFORCE completo com baseline. O avaliador lexical é restrito às três perguntas controladas e não mede compreensão geral. Checkpoints preservam os pesos, mas o estado do otimizador é reinicializado em cada processo de reforço. Resultados de treinamento não devem ser interpretados como prova de competência linguística.
+O bootstrap usa exatamente um arquivo de texto em `tests/fixtures/g2-single-document/doc-01.txt`. Esse arquivo contém três pares controlados de pergunta e resposta:
 
-## Seleção de perguntas
+- `Usuario: O ceu e azul?` → `Sim, o ceu e azul`.
+- `Usuario: As montanhas sao altas ou baixas?` → `As montanhas sao altas.`.
+- `Usuario: Que cor e a grama?` → `A grama e verde.`.
 
-Na execução manual de `Reinforcement-G2`, os três campos booleanos aparecem como caixas de seleção: pergunta sobre o céu, sobre as montanhas e sobre a cor da grama. É necessário selecionar pelo menos uma. Não há execução agendada; as perguntas são selecionadas manualmente no workflow. O número de tentativas é distribuído apenas entre as perguntas selecionadas.
+Os três prompts no banco de feedback correspondem aos prefixos literais do corpus. O bootstrap é executado separadamente para os dois especialistas, com até 100 épocas. Como há apenas um documento, a métrica de seleção é calculada sobre o próprio documento de treinamento; isso não constitui validação independente nem demonstra generalização.
 
-O corpus de bootstrap continua contendo exatamente um exemplo: `Usuario: O ceu e azul?\nIA: Sim, o ceu e azul`. O prompt da pergunta sobre o céu foi alinhado ao prefixo literal desse exemplo. As perguntas sobre montanhas e grama são opções de avaliação, mas não possuem exemplos correspondentes no corpus atual; selecioná-las não significa que a G2 já tenha aprendido essas respostas.
+## Ciclo de tentativa e correção
 
-## Diagnóstico da repetição de caracteres
+Cada tentativa gera uma resposta e a avalia com um verificador lexical limitado às três perguntas controladas.
 
-O histórico anterior acumulou episódios incorretos sem respostas corretas. Ao alterar o corpus e alinhar os prompts, o histórico antigo foi reinicializado para não misturar resultados produzidos por versões incompatíveis do conjunto de treinamento. A saída recorrente de caracteres `e` confirma que o modelo não aprendeu a responder às perguntas. O reforço anterior apenas aplicava recompensas negativas às sequências geradas; isso não fornece ao modelo a resposta correta. Cada execução faz bootstrap de checkpoints novos a partir do corpus versionado, sem restaurar pesos antigos. O bootstrap manual padrão foi elevado para 100 épocas por especialista.
+- Se a resposta for correta e não degenerada, ela própria é usada como sequência-alvo para uma atualização positiva.
+- Se a resposta estiver errada ou for degenerada, ela nunca é usada como alvo positivo. O sistema usa a resposta de referência correspondente ao corpus como demonstração-oráculo.
+- Cada demonstração-oráculo aplica 25 passos de atualização positiva aos dois especialistas. A tentativa seguinte é gerada com os pesos já atualizados.
+- O banco registra se a atualização usou a resposta do modelo ou uma demonstração-oráculo.
 
-Isso corrige a reutilização do checkpoint antigo e o desalinhamento do prompt do céu, mas não prova que o modelo conseguirá gerar uma resposta correta. O corpus de um único exemplo é insuficiente para ensinar as outras perguntas ou linguagem natural geral. A qualidade deverá ser confirmada pelos resultados reais da próxima execução.
+Esse mecanismo permite que o modelo receba um sinal de correção após errar. Como a resposta de referência é fornecida pelo sistema, essa etapa é treinamento supervisionado guiado por oráculo; não deve ser descrita como aprendizado autônomo nem como REINFORCE completo. A implementação usa uma aproximação reward-weighted BPTT.
 
-## Proteção contra colapso de geração
+## Gate comportamental e limites
 
-O workflow não executa mais por cron. Ele só é iniciado manualmente ou por mudanças relevantes no código. A restauração automática de checkpoints antigos foi removida: cada execução de avaliação começa com um bootstrap limpo a partir do corpus versionado. O limite de tentativas foi reduzido para 10.
+O workflow só passa no gate comportamental se pelo menos uma resposta gerada durante a execução for correta e não degenerada. Se nenhuma passar, o job termina como falha mesmo que compilação e testes de software estejam verdes.
 
-Respostas com repetição degenerada de caracteres são classificadas como incorretas. O treinador de reforço não pode usar respostas incorretas ou degeneradas como alvos de atualização; somente uma resposta correta recebe recompensa positiva e pode atualizar os pesos. Se nenhuma resposta correta for produzida, a execução falha no gate comportamental, embora a compilação e os testes de software possam ter passado. Isso evita confundir sucesso técnico com capacidade de responder.
+Cada execução começa com bootstrap limpo a partir do corpus versionado; os pesos treinados em uma execução não são restaurados automaticamente na execução seguinte. Os artefatos preservam os resultados e checkpoints para inspeção, mas não implicam persistência automática entre runs.
+
+O avaliador lexical só mede as três perguntas definidas. Acertar esses exemplos não comprova compreensão geral, capacidade de responder perguntas inéditas ou competência linguística ampla. A quantidade de parâmetros também não é evidência de qualidade por si só.
+
+## Execução
+
+O workflow não usa cron. Pode ser iniciado manualmente, com caixas de seleção para as três perguntas, quantidade de tentativas e épocas de bootstrap, ou por mudanças relevantes no código. É necessário selecionar pelo menos uma pergunta. O limite de tentativas por execução é 10.
