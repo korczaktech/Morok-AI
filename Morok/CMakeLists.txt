@@ -137,6 +137,11 @@ add_executable(morok_generate Gerações/G1/apps/generate.cpp)
 target_link_libraries(morok_generate PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_generate)
 
+add_executable(morok_g1_profile_evaluate Gerações/G1/apps/evaluate_profiles.cpp)
+target_link_libraries(morok_g1_profile_evaluate PRIVATE Morok::G1 morok_g1_tsukuyomi morok_g1_mokosh morok_g1_apollo morok_build_options)
+set_target_properties(morok_g1_profile_evaluate PROPERTIES OUTPUT_NAME "morok-g1-profile-evaluate")
+morok_enable_sanitizers(morok_g1_profile_evaluate)
+
 
 
 add_executable(morok_reinforce Gerações/G1/apps/reinforce.cpp)
@@ -149,7 +154,7 @@ endif()
 
 if(MOROK_BUILD_APPS)
     install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
-        morok_train morok_benchmark morok_generate morok_reinforce morok_complete
+        morok_train morok_benchmark morok_generate morok_reinforce morok_complete morok_g1_profile_evaluate
         RUNTIME DESTINATION bin)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
