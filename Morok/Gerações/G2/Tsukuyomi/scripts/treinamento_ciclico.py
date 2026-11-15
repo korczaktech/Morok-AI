@@ -295,8 +295,8 @@ def main() -> int:
         report.write(f"- Limite de geração: {MAX_RESPONSE_BYTES} bytes\n")
         report.write("- Critério contínuo: encerrar quando todas as questões selecionadas estiverem corretas\n")
         report.write("- Critério de aprovação: igualdade lexical normalizada; não mede semântica\n")
-        report.write("- F1 lexical é diagnóstico; similaridade não aprova uma resposta.\n")
-        report.write("- Scheduler: 80% exatidão + 20% F1 lexical médio da validação.\n")
+        report.write("- F1 lexical, similaridade de caracteres, repetição e diversidade são diagnósticos; não aprovam respostas.\n")
+        report.write("- Scheduler: 70% exatidão + 15% F1 lexical + 15% similaridade de caracteres da validação.\n")
         report.write(f"- Learning rate inicial: {learning_rate:.6f}; scheduler reduz após {LR_PLATEAU_CYCLES} ciclos sem melhora da validação.\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
