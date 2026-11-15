@@ -2,13 +2,14 @@ import http from "node:http";
 import crypto from "node:crypto";
 import { promisify } from "node:util";
 import { MongoClient } from "mongodb";
+import bcrypt from "bcryptjs";
 
 const scrypt = promisify(crypto.scrypt);
 const PORT = Number(process.env.PORT || 10000);
 const MONGODB_URI = process.env.MONGODB_URI;
 const DATABASE = process.env.MONGODB_DATABASE || "Contas";
 const APP_DATABASE = process.env.MONGODB_APP_DATABASE || "Morok-AI";
-const COLLECTION = process.env.MONGODB_COLLECTION || "morok_accounts";
+const COLLECTION = process.env.MONGODB_COLLECTION || "contas";
 const JWT_SECRET = process.env.JWT_SECRET;
 const ALLOWED_ORIGINS = new Set([
   ...((process.env.CORS_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean)),
@@ -33,8 +34,6 @@ await conversations.createIndex({ accountId: 1, updatedAt: -1 }, { name: "morok_
 await conversations.createIndex({ accountId: 1, conversationId: 1 }, { name: "morok_conversations_account_id_unique" });
 await messages.createIndex({ accountId: 1, conversationId: 1, createdAt: 1 }, { name: "morok_messages_conversation_time" });
 await messages.createIndex({ accountId: 1, conversationId: 1, messageId: 1 }, { name: "morok_messages_id_unique" });
-await accounts.createIndex({ email: 1 }, { unique: true, name: "morok_accounts_email_unique" });
-await accounts.createIndex({ accountId: 1 }, { unique: true, name: "morok_accounts_account_id_unique" });
 await sessions.createIndex({ jti: 1 }, { unique: true, name: "morok_sessions_jti_unique" });
 await sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "morok_sessions_expiry_ttl" });
 
@@ -135,8 +134,8 @@ async function createToken(account) {
   const jti = crypto.randomUUID();
   const header = base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const payload = base64url(JSON.stringify({
-    sub: account.accountId,
-    email: account.email,
+    sub: account.id,
+    email: account.Email,
     jti,
     iat: issuedAt,
     exp: issuedAt + TOKEN_TTL_SECONDS
@@ -166,7 +165,8 @@ async function verifyToken(token) {
 }
 
 function publicAccount(account) {
-  return { id: account.accountId, email: account.email, name: account.name || account.email.split("@")[0] };
+  const email = account.Email;
+  return { id: account.id, email, name: account.Nome || email.split("@")[0] };
 }
 
 function bearer(req) {
@@ -195,16 +195,25 @@ async function handle(req, res) {
       const name = typeof body.name === "string" ? body.name.trim().slice(0, 64) : "";
       if (!validEmail(email)) return send(res, 400, { error: "Informe um e-mail válido." }, req.allowedOrigin);
       if (password.length < 8 || password.length > 128) return send(res, 400, { error: "A senha deve ter entre 8 e 128 caracteres." }, req.allowedOrigin);
-      const existing = await accounts.findOne({ email }, { projection: { _id: 1 } });
+      const existing = await accounts.findOne({ Email: email }, { projection: { _id: 1 } });
       if (existing) return send(res, 409, { error: "Já existe uma conta com este e-mail." }, req.allowedOrigin);
+      const now = new Date();
       const account = {
-        accountId: crypto.randomUUID(),
-        name: name || email.split("@")[0].slice(0, 64),
-        email,
-        passwordHash: await hashPassword(password),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastLoginAt: new Date()
+        id: crypto.randomUUID(),
+        Nome: name || email.split("@")[0].slice(0, 64),
+        Email: email,
+        Telefone: null,
+        Planos: {},
+        Verified: false,
+        EmailVerified: false,
+        PhoneVerified: false,
+        Conta: { Status: "active", Role: "user", CriadaEm: now, AtualizadaEm: now, UltimoLogin: now },
+        Produtos: {},
+        Seguranca: { TwoFactorEnabled: false, RecoveryEnabled: false },
+        Preferencias: { Idioma: "pt-BR", Tema: "system" },
+        Metadados: { OrigemCadastro: "morok-web", VersaoCadastro: "1.0.0", UltimoDispositivo: "", UltimoIP: null },
+        PasswordChangedAt: now,
+        Autenticacao: { Email: email, SenhaHash: await bcrypt.hash(password, 12), EmailVerificado: false }
       };
       await accounts.insertOne(account);
       return send(res, 201, {
@@ -225,11 +234,12 @@ async function handle(req, res) {
       const email = normalizeEmail(body.email);
       const password = typeof body.password === "string" ? body.password : "";
       if (!validEmail(email) || !password) return send(res, 400, { error: "E-mail ou senha inválidos." }, req.allowedOrigin);
-      const account = await accounts.findOne({ email });
-      if (!account || !(await verifyPassword(password, account.passwordHash))) {
+      const account = await accounts.findOne({ Email: email });
+      if (!account || account.Conta?.Status !== "active" || !(await bcrypt.compare(password, account.Autenticacao?.SenhaHash || ""))) {
         return send(res, 401, { error: "E-mail ou senha incorretos." }, req.allowedOrigin);
       }
-      await accounts.updateOne({ _id: account._id }, { $set: { lastLoginAt: new Date(), updatedAt: new Date() } });
+      const loginAt = new Date();
+      await accounts.updateOne({ _id: account._id }, { $set: { "Conta.UltimoLogin": loginAt, "Conta.AtualizadaEm": loginAt } });
       return send(res, 200, {
         access_token: await createToken(account),
         token_type: "Bearer",
@@ -244,7 +254,7 @@ async function handle(req, res) {
   if (req.method === "GET" && path === "/auth/me") {
     const token = await verifyToken(bearer(req));
     if (!token) return send(res, 401, { error: "Sessão inválida ou expirada." }, req.allowedOrigin);
-    const account = await accounts.findOne({ accountId: token.sub }, { projection: { accountId: 1, email: 1, name: 1 } });
+    const account = await accounts.findOne({ id: token.sub }, { projection: { id: 1, Email: 1, Nome: 1 } });
     if (!account) return send(res, 401, { error: "Conta não encontrada." }, req.allowedOrigin);
     return send(res, 200, { user: publicAccount(account) }, req.allowedOrigin);
   }
