@@ -20,7 +20,7 @@ int main() {
     using namespace morok::g2::tsukuyomi;
 
     static_assert(kParameterCount == 10000);
-    static_assert(kCheckpointFormatVersion == 6);
+    static_assert(kCheckpointFormatVersion == 7);
     Model model;
     initialize(model, 1234);
     Model same_seed;
@@ -54,6 +54,8 @@ int main() {
     check_gradient(0, 9984); // vetor inicial
     check_gradient(3, 0);    // embedding usado na saída
     check_gradient(3, 101 * kHiddenSize); // embedding de entrada compartilhado
+    check_gradient(3, 1 * kHiddenSize);   // protótipo aprendido de letra maiúscula
+    check_gradient(3, 17 * kHiddenSize); // protótipo aprendido de início de palavra
     check_gradient(3, 8192); // projeção oculta
     check_gradient(3, 9216); // projeção de contexto
     check_gradient(3, 9632); // bias oculto
@@ -98,6 +100,24 @@ int main() {
         const double numerical = (loss_plus - loss_minus) / (2.0 * epsilon);
         assert(std::abs(numerical - analytic[question_embedding]) <=
                3.0e-2 + 3.0e-2 * std::abs(numerical));
+    }
+
+    // Canais linguísticos: letras da mesma classe compartilham o protótipo
+    // de categoria, enquanto maiúsculas e minúsculas usam protótipos distintos.
+    {
+        Model linguistic_model;
+        linguistic_model.parameters.fill(0.0F);
+        for (std::size_t h = 0; h < kHiddenSize; ++h) {
+            linguistic_model.parameters[8192 + h * kHiddenSize + h] = 0.1F;
+            linguistic_model.parameters[9920 + h] = 1.0F;
+        }
+        linguistic_model.parameters[1 * kHiddenSize] = 0.7F; // maiúsculas
+        linguistic_model.parameters[2 * kHiddenSize] = -0.7F; // minúsculas
+        const std::array<std::uint8_t, 1> upper_a{'A'}, upper_b{'B'}, lower_a{'a'};
+        assert(forward(linguistic_model, upper_a).hidden ==
+               forward(linguistic_model, upper_b).hidden);
+        assert(forward(linguistic_model, upper_a).hidden !=
+               forward(linguistic_model, lower_a).hidden);
     }
 
     // Perguntas longas que diferem no início não podem colapsar ao mesmo contexto.
