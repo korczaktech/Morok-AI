@@ -38,7 +38,7 @@ def build_memory_replay(episodes,limit=32):
  if not isinstance(limit,int) or limit<0 or limit>256:raise ValueError("memory replay limit must be in [0,256]")
  if limit==0:return []
  replay=[]
- for episode in episodes[-limit:]:
+ for episode in episodes:
   question_id=episode.get("question_id")
   update=episode.get("policy_update") or {}
   if question_id not in SEED_ANSWERS or update.get("status")!="applied":continue
@@ -53,7 +53,7 @@ def build_memory_replay(episodes,limit=32):
   if not prompt or len(target.encode("utf-8"))<2:continue
   replay.append({"episode_id":episode.get("episode_id","legacy"),"question_id":question_id,
                  "prompt":prompt,"target":target,"source":source,"reward":1})
- return replay
+ return replay[-limit:]
 def run(cmd):
  r=subprocess.run(cmd,capture_output=True,text=True,encoding="utf-8")
  if r.returncode:raise RuntimeError(f"command failed: {' '.join(cmd)}\n{r.stdout}\n{r.stderr}")
