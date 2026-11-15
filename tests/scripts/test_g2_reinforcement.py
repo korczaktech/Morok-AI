@@ -47,9 +47,10 @@ class G2ReinforcementTests(unittest.TestCase):
     def test_runner_uses_adaptive_training_and_reports_sequence_loss(self):
         runner = (ROOT / "scripts" / "run-g2-reinforcement.py").read_text(encoding="utf-8")
         app = (ROOT / "apps" / "reinforce_g2.cpp").read_text(encoding="utf-8")
-        self.assertIn('default=100)', runner)
+        self.assertIn('default=1000)', runner)
         self.assertIn('default=.001)', runner)
         self.assertIn('str(a.learning_rate),"100"', runner)
+        self.assertIn('"--patience",str(a.bootstrap_epochs)', runner)
         self.assertIn('target_loss_before', app)
         self.assertIn('target_loss_after', app)
         self.assertIn('G1OptimizerConfig::adamw()', app)
