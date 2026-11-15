@@ -16,21 +16,6 @@ on:
           - english_sky
           - spanish_sky
           - multi_turn
-      model_tsukuyomi:
-        description: "Tsukuyomi"
-        type: boolean
-        required: true
-        default: false
-      model_apollo:
-        description: "Apollo"
-        type: boolean
-        required: true
-        default: false
-      model_mokosh:
-        description: "Mokosh"
-        type: boolean
-        required: true
-        default: false
       model_tsukuyomi_max:
         description: "Tsukuyomi Max"
         type: boolean
@@ -96,9 +81,6 @@ jobs:
         working-directory: Morok
         env:
           G1_TEST_QUESTION: ${{ inputs.question }}
-          G1_MODEL_TSUKUYOMI: ${{ inputs.model_tsukuyomi }}
-          G1_MODEL_APOLLO: ${{ inputs.model_apollo }}
-          G1_MODEL_MOKOSH: ${{ inputs.model_mokosh }}
           G1_MODEL_TSUKUYOMI_MAX: ${{ inputs.model_tsukuyomi_max }}
         run: python3 "Gerações/G1/scripts/run-test-workflow.py"
 
