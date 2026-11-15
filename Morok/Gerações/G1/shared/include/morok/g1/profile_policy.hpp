@@ -8,7 +8,7 @@
 
 namespace morok::g1 {
 
-enum class ProfileKind { tsukuyomi, apollo, mokosh };
+enum class ProfileKind { tsukuyomi, apollo, mokosh, tsukuyomi_max };
 
 // Shared source of truth for profile decoding policies. These controls are
 // inference-time settings and do not add trainable neural parameters.
@@ -39,6 +39,13 @@ enum class ProfileKind { tsukuyomi, apollo, mokosh };
         config.top_k = mokosh_top_k;
         config.repetition_penalty = 0.35;
         config.repetition_window = 32;
+        break;
+    case ProfileKind::tsukuyomi_max:
+        config.max_new_bytes = std::clamp<std::size_t>(requested_bytes, 1, 512);
+        config.temperature = 0.75;
+        config.top_k = 16;
+        config.repetition_penalty = 0.4;
+        config.repetition_window = 64;
         break;
     }
     return config;
