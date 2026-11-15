@@ -172,9 +172,9 @@ int main(int argc, char** argv) {
               << "Objetivo: " << (target_mask.empty() ? "todos os bytes" : "somente respostas IA:") << '\n'
               << "Mini-lote: " << config.batch_size << '\n'
               << "BPTT truncado: " << config.bptt_steps << " etapas (máximo "
-              << morok::g2::tsukuyomi::kBpttTruncation << ')' << '\\n'
+              << morok::g2::tsukuyomi::kBpttTruncation << ')' << '\n'
               << "Estado recorrente: " << morok::g2::tsukuyomi::kHiddenSize
-              << " dimensões" << '\\n'
+              << " dimensões" << '\n'
               << "Learning rate: " << config.learning_rate << " ("
               << config.learning_rate * 100.0 << "%)" << '\n'
               << "Weight decay: " << config.weight_decay << " (seletivo)" << '\n'
