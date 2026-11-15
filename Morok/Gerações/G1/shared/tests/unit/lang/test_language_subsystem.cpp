@@ -34,7 +34,7 @@ int main() {
     auto other_request = core::RequestContext::create(*second.value_if());
     assert(request && other_request);
 
-    auto prompt = common::Utf8Text::from_utf8("Olá, Morok!");
+    auto prompt = common::Utf8Text::from_utf8("  Olá,\n   Morok!  ");
     assert(prompt);
     assert(language.observe(*request.value_if(), *prompt.value_if()));
 
@@ -47,9 +47,13 @@ int main() {
     assert(common::Utf8Text::from_utf8(
         generated.value_if()->text.view()));
 
+    auto english_prompt = common::Utf8Text::from_utf8("Is the sky blue?");
+    assert(english_prompt);
+    assert(language.observe(*other_request.value_if(), *english_prompt.value_if()));
     auto second_generated = language.generate(*other_request.value_if(), 4);
     assert(second_generated);
     assert(second_generated.value_if()->text.size_bytes() <= 4);
+    assert(second_generated.value_if()->input_language == lang::DetectedLanguage::english);
 
     auto oversized = language.generate(*request.value_if(), 9);
     assert(!oversized);
