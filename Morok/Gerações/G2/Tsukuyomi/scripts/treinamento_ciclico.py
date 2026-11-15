@@ -181,7 +181,7 @@ def main() -> int:
         report.write(f"- Banco de validação disponível: {len(validation_pool)}\n")
         report.write(f"- Questões selecionadas: {question_count}\n")
         report.write(f"- Perguntas de teste reservado: {len(test)}\n")
-        report.write(f"- Épocas por ciclo: {epochs}\n")
+        report.write(f"- Épocas por tentativa: {epochs}\n")
         report.write(f"- Modo contínuo: {'ativado' if continuous else 'desativado'}\n")
         report.write(f"- Limite de geração: {MAX_RESPONSE_BYTES} bytes\n")
         report.write("- Critério contínuo: encerrar no primeiro ciclo em que a questão selecionada estiver correta\n")
