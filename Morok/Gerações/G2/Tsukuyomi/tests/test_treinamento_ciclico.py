@@ -51,7 +51,7 @@ class TrainingDataTests(unittest.TestCase):
         self.assertFalse(training.should_stop(True, 1, 2))
         self.assertFalse(training.should_stop(False, 1, 1))
 
-    def test_validation_does_not_prioritize_memorized_answers(self):
+    def test_validation_selection_preserves_fixed_order(self):
         train = [("pergunta original", "O orçamento planejado para Apollo é de 5.000 parâmetros.")]
         validation = [
             ("pergunta sem resposta aprendida", "Uma resposta ainda não treinada."),
@@ -60,6 +60,14 @@ class TrainingDataTests(unittest.TestCase):
         ]
         selected = training.select_validation_questions(train, validation, 1)
         self.assertEqual(selected, [validation[0]])
+
+    def test_reserved_test_answers_are_unseen_in_training(self):
+        train = training.read_dialogues(DATA_DIR / "treinamento.txt")
+        test = training.read_dialogues(DATA_DIR / "teste.txt")
+        train_answers = {answer for _, answer in train}
+        train_questions = {question for question, _ in train}
+        self.assertFalse(train_questions & {question for question, _ in test})
+        self.assertFalse(train_answers & {answer for _, answer in test})
     def test_split_sizes_and_original_examples_are_preserved(self):
         train = training.read_dialogues(DATA_DIR / "treinamento.txt")
         original = training.read_dialogues(DATA_DIR / "treinamento-inicial.txt")
