@@ -57,7 +57,7 @@ def main():
  with tempfile.TemporaryDirectory(prefix="morok-g2-reinforcement-") as td:
   tmp=Path(td)
   for i in range(a.attempts):
-   q=selected_questions[i%len(selected_questions)]; prompt=tmp/"prompt.txt"; answer=tmp/"answer.txt"; prompt.write_text(q["prompt"],encoding="utf-8")
+   q=selected_questions[i%len(selected_questions)]; prompt=tmp/"prompt.txt"; answer=tmp/"answer.txt"; answer_file=answer; prompt.write_text(q["prompt"],encoding="utf-8")
    before=digest(Path(str(a.checkpoint)+".expert-a"))+digest(Path(str(a.checkpoint)+".expert-b"))
    run([str(a.generator),str(a.checkpoint),str(prompt),str(answer),"48"])
    response=answer.read_text(encoding="utf-8"); verdict,reward,reason=grade(q["id"],response)
