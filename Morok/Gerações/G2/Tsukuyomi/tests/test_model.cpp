@@ -138,6 +138,22 @@ int main() {
                3.0e-2 + 3.0e-2 * std::abs(numerical));
     }
 
+    // As 13 faixas são regiões posicionais contíguas, não buckets cíclicos.
+    {
+        Model positional_model;
+        positional_model.parameters.fill(0.0F);
+        positional_model.parameters[static_cast<std::size_t>('A') * kHiddenSize] = 1.0F;
+        positional_model.parameters[9216] = 1.0F; // primeira região, dimensão 0
+        positional_model.parameters[9216 + 12 * kHiddenSize] = 2.0F; // última região
+        positional_model.parameters[9920] = 1.0F;
+        const std::string first_text = "U: A............\\nIA:";
+        const std::string last_text  = "U: ............A\\nIA:";
+        const std::vector<std::uint8_t> first_prompt(first_text.begin(), first_text.end());
+        const std::vector<std::uint8_t> last_prompt(last_text.begin(), last_text.end());
+        assert(forward(positional_model, first_prompt).hidden !=
+               forward(positional_model, last_prompt).hidden);
+    }
+
     // Perguntas longas que diferem no início não podem colapsar ao mesmo contexto.
     const std::string prompt_a = "U: A pergunta inteira tem contexto longo?\nIA:";
     const std::string prompt_b = "U: B pergunta inteira tem contexto longo?\nIA:";
