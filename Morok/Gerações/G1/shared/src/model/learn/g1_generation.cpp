@@ -1,4 +1,5 @@
 #include "morok/model/learn/g1_generation.hpp"
+#include "morok/lang/rlah/segmenter.hpp"
 
 #include <algorithm>
 #include <array>
@@ -66,6 +67,8 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
     if (!std::isfinite(config.temperature) || config.temperature < 0.0 ||
         !std::isfinite(config.repetition_penalty) || config.repetition_penalty < 0.0 ||
         !std::isfinite(config.eos_threshold) || config.eos_threshold <= 0.0 ||
+        !std::isfinite(config.rlah_bias_strength) || config.rlah_bias_strength < 0.0 ||
+        config.rlah_bias_strength > 2.0 ||
         config.eos_threshold >= 1.0 || config.min_new_bytes > config.max_new_bytes) {
         throw std::invalid_argument("configuração de amostragem inválida");
     }
@@ -81,6 +84,14 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
     std::size_t evaluations = 0;
     Utf8State utf8{};
     std::mt19937_64 random(config.seed);
+    morok::lang::rlah::Config rlah_config{};
+    rlah_config.min_frequency = 2;
+    rlah_config.max_candidates = 256;
+    rlah_config.max_active = 64;
+    rlah_config.max_dictionary = 64;
+    rlah_config.create = 0.55F;
+    rlah_config.keep = 0.45F;
+    morok::lang::rlah::Segmenter rlah_segmenter(rlah_config);
 
     bool stopped_by_eos = false;
     for (std::size_t position = 0; position < config.max_new_bytes; ++position) {
@@ -111,6 +122,40 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
         std::vector<Candidate> candidates;
         candidates.reserve(256);
 
+        std::array<double, 256> rlah_bias{};
+        if (config.rlah_bias_strength > 0.0 && position % 8U == 0U) {
+            std::vector<std::uint8_t> context;
+            const auto prompt_bytes = prompt.string();
+            constexpr std::size_t context_limit = 4096;
+            const std::size_t prompt_begin = prompt_bytes.size() > context_limit
+                ? prompt_bytes.size() - context_limit : 0U;
+            context.reserve(std::min(context_limit, prompt_bytes.size() + generated.size()));
+            for (std::size_t i = prompt_begin; i < prompt_bytes.size(); ++i)
+                context.push_back(static_cast<std::uint8_t>(
+                    static_cast<unsigned char>(prompt_bytes[i])));
+            for (const unsigned char byte : generated) {
+                context.push_back(byte);
+                if (context.size() > context_limit) context.erase(context.begin());
+            }
+            if (context.size() >= 2U) {
+                const auto segments = rlah_segmenter.evaluate(context);
+                for (const auto& segment : segments) {
+                    if (!segment.active || segment.bytes.size() < 2U ||
+                        segment.bytes.size() > context.size() + 1U) continue;
+                    const std::size_t prefix_size = segment.bytes.size() - 1U;
+                    if (prefix_size == 0U || prefix_size > context.size()) continue;
+                    if (std::equal(segment.bytes.begin(),
+                                   segment.bytes.begin() + static_cast<std::ptrdiff_t>(prefix_size),
+                                   context.end() - static_cast<std::ptrdiff_t>(prefix_size))) {
+                        const auto next_byte = segment.bytes.back();
+                        rlah_bias[next_byte] = std::max(
+                            rlah_bias[next_byte],
+                            static_cast<double>(std::clamp(segment.utility, 0.0F, 1.0F)));
+                    }
+                }
+            }
+        }
+
         for (unsigned int candidate = 0; candidate <= 255; ++candidate) {
             if (config.printable_only && utf8.remaining == 0 &&
                 (candidate < 0x20U || candidate == 0x7FU))
@@ -136,6 +181,7 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
                         adjusted_loss += config.repetition_penalty;
                 }
             }
+            adjusted_loss -= config.rlah_bias_strength * rlah_bias[byte];
             candidates.push_back(Candidate{byte, adjusted_loss, candidate_state});
         }
 
