@@ -2,7 +2,7 @@
 
 ## Organização por geração
 
-G1 e G3 são as gerações atualmente mantidas. Os perfis disponíveis são definidos individualmente por geração; não é obrigatório que todas tenham os mesmos perfis.
+G1, G2 e G3 são gerações distintas. Os perfis e suas implementações são definidos por geração; modelos com o mesmo nome em gerações diferentes não precisam compartilhar arquitetura, parâmetros ou checkpoints.
 
 ```text
 Morok-AI/
@@ -13,9 +13,13 @@ Morok-AI/
     ├── src/                     # implementações do Core compartilhado
     ├── Gerações/
     │   ├── G1/
-    │   │   ├── shared/          # motor e subsistemas exclusivos da G1
+    │   │   ├── shared/
     │   │   └── TsukuyomiMax/
-    │   └── G3/                  # estrutura documental
+    │   ├── G2/
+    │   │   ├── Apollo/
+    │   │   ├── Tsukuyomi/
+    │   │   └── Mokosh/
+    │   └── G3/
     ├── apps/
     ├── data/
     ├── docs/
@@ -24,13 +28,33 @@ Morok-AI/
 
 As pastas públicas da raiz abrigam somente capacidades realmente compartilhadas. Código exclusivo, parâmetros, configurações, memória especializada, agentes, treinamento, inferência e testes pertencem ao respectivo modelo, conforme a necessidade real. Não duplicar código público dentro das gerações.
 
-## Modelos
+## Especificações gerais dos modelos
 
-### Artemis — arquitetura multiagente
-Modelo destinado a tarefas que se beneficiam de colaboração. Deve utilizar mais de dois agentes, portanto no mínimo três agentes ativos na arquitetura de execução. Coordenação, divisão de tarefas e consolidação de resultados pertencem à implementação exclusiva de Artemis.
+Os três modelos da G2 representam perfis distintos de capacidade e desempenho:
 
-### Tsukuyomi Max — rede neural unificada da G1
-Modelo neural central da geração G1. Utiliza um único conjunto de parâmetros e um checkpoint próprio para aprender os diferentes tipos de pergunta e diálogos da geração, sem separar a rede por perfil de tarefa. Tsukuyomi Max é o único modelo mantido na G1.
+### Tsukuyomi — modelo mais avançado
+
+É o modelo de maior capacidade da linha Morok. Assume o papel anteriormente atribuído ao Mokosh: prioriza qualidade, profundidade de raciocínio, capacidade de lidar com tarefas complexas e maior processamento quando necessário. É a opção destinada às tarefas que exigem o máximo de capacidade do sistema, mesmo que isso implique maior custo computacional e latência.
+
+### Mokosh — modelo rápido
+
+É o perfil otimizado para velocidade e baixa latência. Prioriza respostas rápidas e menor custo computacional, sendo adequado para interações frequentes e tarefas diretas. Não deve ser tratado como o modelo mais avançado: sua prioridade é desempenho de execução.
+
+### Apollo — modelo comum
+
+É o perfil geral e equilibrado, destinado ao uso cotidiano. Busca equilíbrio entre capacidade, velocidade e consumo de recursos, sem priorizar extremos de raciocínio ou de velocidade.
+
+### Relação entre os perfis
+
+- **Tsukuyomi:** máxima capacidade e tarefas complexas.
+- **Mokosh:** velocidade e baixa latência.
+- **Apollo:** uso geral e equilíbrio.
+
+Essas definições estabelecem os objetivos dos modelos, não resultados já comprovados. Quantidade de parâmetros, arquitetura, orçamento de memória, tempos-alvo e métricas de qualidade devem ser especificados e validados experimentalmente em documentos próprios. Não presumir que um perfil é superior em todos os indicadores.
+
+### Tsukuyomi Max — implementação histórica da G1
+
+Tsukuyomi Max é o único modelo mantido na G1 e representa a implementação dessa geração. Seu estado e sua arquitetura permanecem definidos pelos documentos específicos da G1. Ele não altera a hierarquia funcional dos três perfis da G2.
 
 ## Regras de isolamento
 
@@ -47,7 +71,7 @@ Modelo neural central da geração G1. Utiliza um único conjunto de parâmetros
 
 ## Relação entre gerações
 
-Os modelos são definidos por geração. A G1 possui somente Tsukuyomi Max. A quantidade de parâmetros, mecanismos cognitivos e capacidades será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
+Os modelos são definidos por geração. A G1 possui somente Tsukuyomi Max. A G2 define três perfis: Apollo (comum), Mokosh (rápido) e Tsukuyomi (mais avançado). A G3 permanece documental. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
 
 ## Organização real do código
 
@@ -55,15 +79,18 @@ O diretório público `include/` e a biblioteca `Morok::Core` contêm contratos 
 
 A implementação compartilhada da geração G1 está em `Gerações/G1/shared/` e é compilada apenas em `Morok::G1`. Inclui o motor de parâmetros, forward pass, BPTT, otimizador, treinamento, inferência, checkpoints e adaptadores de linguagem/comunicação/aprendizado que ainda são específicos da G1.
 
-Aplicações, scripts, dados de reforço, fixtures e testes específicos da geração mantida ficam dentro de `Gerações/G1/`. O CMake fica em `Morok/CMakeLists.txt`, na raiz do diretório do projeto, como orquestrador de build.
+Aplicações, scripts, dados de reforço, fixtures e testes específicos da geração ficam dentro de sua respectiva pasta. O CMake fica em `Morok/CMakeLists.txt`, na raiz do diretório do projeto, como orquestrador de build.
 
 ## Estado dos perfis
 
 G1 possui somente o alvo CMake de Tsukuyomi Max. O modelo mantém suas políticas e implementação exclusiva em `Gerações/G1/TsukuyomiMax/`; o motor e os adaptadores compartilhados permanecem em `Gerações/G1/shared/`.
+
+G2 possui os diretórios de Apollo, Tsukuyomi e Mokosh, com suas funções gerais definidas nesta especificação. A implementação, arquitetura interna, treinamento e inferência ainda devem ser desenvolvidos e documentados individualmente.
 
 G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de outras gerações dentro da G3.
 
 A organização mantém as implementações específicas dentro de cada geração, os perfis dentro de seus diretórios, e a infraestrutura realmente comum na raiz. A validação local de compilação e testes deve ser executada antes de considerar a migração encerrada.
 
 ## Modelo removido
+
 Hephaestus não faz parte da arquitetura aprovada.
