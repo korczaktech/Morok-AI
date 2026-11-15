@@ -165,14 +165,12 @@ std::uint64_t checksum(const float* values, std::size_t count) {
 }
 
 void apply_adam(Model& model, const std::array<float, kParameterCount>& gradient,
-                std::array<double, kParameterCount>& first,
-                std::array<double, kParameterCount>& second,
-                std::uint64_t step, const TrainingConfig& config) {
+                TrainingState& state, const TrainingConfig& config) {
     constexpr double beta1 = 0.9;
     constexpr double beta2 = 0.999;
     constexpr double epsilon = 1.0e-8;
-    const double correction1 = 1.0 - std::pow(beta1, static_cast<double>(step));
-    const double correction2 = 1.0 - std::pow(beta2, static_cast<double>(step));
+    const double correction1 = 1.0 - std::pow(beta1, static_cast<double>(state.step));
+    const double correction2 = 1.0 - std::pow(beta2, static_cast<double>(state.step));
 
     double norm_squared = 0.0;
     for (float value : gradient)
@@ -183,10 +181,10 @@ void apply_adam(Model& model, const std::array<float, kParameterCount>& gradient
 
     for (std::size_t i = 0; i < kParameterCount; ++i) {
         const double g = static_cast<double>(gradient[i]) * clip;
-        first[i] = beta1 * first[i] + (1.0 - beta1) * g;
-        second[i] = beta2 * second[i] + (1.0 - beta2) * g * g;
-        const double m = first[i] / correction1;
-        const double v = second[i] / correction2;
+        state.first_moment[i] = beta1 * state.first_moment[i] + (1.0 - beta1) * g;
+        state.second_moment[i] = beta2 * state.second_moment[i] + (1.0 - beta2) * g * g;
+        const double m = state.first_moment[i] / correction1;
+        const double v = state.second_moment[i] / correction2;
         const double decay = config.weight_decay * model.parameters[i];
         model.parameters[i] -= static_cast<float>(
             config.learning_rate * (m / (std::sqrt(v) + epsilon) + decay));
@@ -236,7 +234,7 @@ double evaluate_loss(const Model& model, std::span<const std::uint8_t> bytes) {
 }
 
 TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
-                    const TrainingConfig& config) {
+                    const TrainingConfig& config, TrainingState* supplied_state) {
     TrainingReport report;
     if (bytes.size() < 2 || config.epochs == 0 ||
         !(config.learning_rate > 0.0) || !(config.gradient_clip > 0.0))
@@ -244,10 +242,9 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
 
     report.initial_loss = evaluate_loss(model, bytes);
     report.initial_bpb = report.initial_loss / std::log(2.0);
-    std::array<double, kParameterCount> first{};
-    std::array<double, kParameterCount> second{};
+    TrainingState local_state;
+    TrainingState& state = supplied_state ? *supplied_state : local_state;
     std::array<float, kParameterCount> gradient{};
-    std::uint64_t step = 0;
 
     for (std::size_t epoch = 0; epoch < config.epochs; ++epoch) {
         for (std::size_t target = 0; target < bytes.size(); ++target) {
@@ -304,8 +301,8 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
                 }
             }
 
-            ++step;
-            apply_adam(model, gradient, first, second, step, config);
+            ++state.step;
+            apply_adam(model, gradient, state, config);
         }
         ++report.epochs_completed;
         report.target_bytes += bytes.size();
@@ -365,6 +362,84 @@ bool save_checkpoint(const Model& model, const std::filesystem::path& path) {
     stream.write(reinterpret_cast<const char*>(model.parameters.data()),
                  static_cast<std::streamsize>(sizeof(float) * kParameterCount));
     return stream.good();
+}
+
+bool save_training_state(const TrainingState& state,
+                         const std::filesystem::path& path) {
+    if (path.empty()) return false;
+    constexpr char magic[8] = {'M','O','R','O','K','A','D','M'};
+    constexpr std::uint32_t version = 1;
+    constexpr std::uint32_t count = static_cast<std::uint32_t>(kParameterCount);
+    std::uint64_t hash = 14695981039346656037ULL;
+    const auto update_hash = [&hash](const unsigned char* data, std::size_t size) {
+        for (std::size_t i = 0; i < size; ++i) {
+            hash ^= data[i];
+            hash *= 1099511628211ULL;
+        }
+    };
+    update_hash(reinterpret_cast<const unsigned char*>(&state.step), sizeof(state.step));
+    update_hash(reinterpret_cast<const unsigned char*>(state.first_moment.data()),
+                sizeof(double) * kParameterCount);
+    update_hash(reinterpret_cast<const unsigned char*>(state.second_moment.data()),
+                sizeof(double) * kParameterCount);
+    std::ofstream stream(path, std::ios::binary | std::ios::trunc);
+    if (!stream) return false;
+    stream.write(magic, sizeof(magic));
+    stream.write(reinterpret_cast<const char*>(&version), sizeof(version));
+    stream.write(reinterpret_cast<const char*>(&count), sizeof(count));
+    stream.write(reinterpret_cast<const char*>(&state.step), sizeof(state.step));
+    stream.write(reinterpret_cast<const char*>(&hash), sizeof(hash));
+    stream.write(reinterpret_cast<const char*>(state.first_moment.data()),
+                 static_cast<std::streamsize>(sizeof(double) * kParameterCount));
+    stream.write(reinterpret_cast<const char*>(state.second_moment.data()),
+                 static_cast<std::streamsize>(sizeof(double) * kParameterCount));
+    return stream.good();
+}
+
+bool load_training_state(TrainingState& state,
+                         const std::filesystem::path& path) {
+    std::ifstream stream(path, std::ios::binary);
+    if (!stream) return false;
+    char magic[8]{};
+    std::uint32_t version = 0;
+    std::uint32_t count = 0;
+    std::uint64_t step = 0;
+    std::uint64_t expected_hash = 0;
+    TrainingState candidate;
+    stream.read(magic, sizeof(magic));
+    stream.read(reinterpret_cast<char*>(&version), sizeof(version));
+    stream.read(reinterpret_cast<char*>(&count), sizeof(count));
+    stream.read(reinterpret_cast<char*>(&step), sizeof(step));
+    stream.read(reinterpret_cast<char*>(&expected_hash), sizeof(expected_hash));
+    if (!stream || std::memcmp(magic, "MOROKADM", 8) != 0 ||
+        version != 1 || count != kParameterCount)
+        return false;
+    candidate.step = step;
+    stream.read(reinterpret_cast<char*>(candidate.first_moment.data()),
+                static_cast<std::streamsize>(sizeof(double) * kParameterCount));
+    stream.read(reinterpret_cast<char*>(candidate.second_moment.data()),
+                static_cast<std::streamsize>(sizeof(double) * kParameterCount));
+    if (!stream || stream.peek() != std::char_traits<char>::eof()) return false;
+    for (std::size_t i = 0; i < kParameterCount; ++i) {
+        if (!std::isfinite(candidate.first_moment[i]) ||
+            !std::isfinite(candidate.second_moment[i]) ||
+            candidate.second_moment[i] < 0.0) return false;
+    }
+    std::uint64_t hash = 14695981039346656037ULL;
+    const auto update_hash = [&hash](const unsigned char* data, std::size_t size) {
+        for (std::size_t i = 0; i < size; ++i) {
+            hash ^= data[i];
+            hash *= 1099511628211ULL;
+        }
+    };
+    update_hash(reinterpret_cast<const unsigned char*>(&candidate.step), sizeof(candidate.step));
+    update_hash(reinterpret_cast<const unsigned char*>(candidate.first_moment.data()),
+                sizeof(double) * kParameterCount);
+    update_hash(reinterpret_cast<const unsigned char*>(candidate.second_moment.data()),
+                sizeof(double) * kParameterCount);
+    if (hash != expected_hash) return false;
+    state = candidate;
+    return true;
 }
 
 bool load_checkpoint(Model& model, const std::filesystem::path& path) {
