@@ -53,11 +53,13 @@ O primeiro ciclo inicializa o modelo. Os ciclos seguintes carregam os parâmetro
 
 O avaliador atual é determinístico e compara palavras normalizadas preservando a frequência de cada palavra (F1 de pelo menos 90%, ou igualdade após normalização). Isso permite uma verificação automática reproduzível, mas não equivale a compreensão semântica e pode rejeitar paráfrases corretas ou aceitar coincidências lexicais. A aprovação deve ser interpretada como correspondência ao gabarito, não como prova de inteligência ou entendimento.
 
-O estado do Adam é salvo em arquivo separado com versão e checksum, junto do checkpoint. A retomada exige os dois arquivos válidos. O workflow tem limite operacional de seis horas, portanto uma execução contínua pode ser interrompida pelo limite do GitHub Actions antes de atingir dez ciclos perfeitos.
+O treinamento acumula gradientes em mini-lotes de 16 bytes-alvo por padrão, reduzindo as atualizações do Adam. O estado do Adam é salvo em arquivo separado com versão e checksum, junto do checkpoint. A retomada exige os dois arquivos válidos. O workflow tem limite operacional de seis horas, portanto uma execução contínua pode ser interrompida pelo limite do GitHub Actions antes de atingir dez ciclos perfeitos.
 
 ## Escopo e limitações
 
 A versão 0.1 é um pipeline funcional de modelo de linguagem byte-level, não uma demonstração de raciocínio geral. O contexto é finito; não há BPTT, memória externa, tokenizer, subsistemas cognitivos G2, retomada do estado do otimizador ou qualidade linguística comprovada. A geração preserva UTF-8 válido para prompts válidos. Qualidade linguística depende de treinamento e avaliação com corpus apropriado. Consulte ARCHITECTURE.md.
+
+O pipeline ainda é supervisionado por previsão do próximo byte; não é RL. A comparação automática das respostas não fornece recompensa ao modelo nem atualiza os pesos durante a avaliação. O contexto efetivo permanece em 14 bytes, uma limitação importante para relacionar perguntas completas às respostas.
 
 O orçamento é conferido estaticamente e representa parâmetros implementados, não qualidade ou desempenho comprovados.
 
