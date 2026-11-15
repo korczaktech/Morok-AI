@@ -63,7 +63,7 @@ manifest={
  "data":{"path":"tests/fixtures/g2-single-document","license":"CC0-1.0","documents":len(corpus),
          "bytes":sum(p.stat().st_size for p in corpus),"ordered_name_and_content_sha256":digest.hexdigest()},
  "training":{"epochs_requested":epochs,"resume_epoch":epochs+1,"seed":seed,"optimizer":"AdamW",
-             "same_document_split":True,"experts_trained_sequentially":True,
+             "single_document_evaluation":True,"experts_trained_sequentially":True,
              "expert_a_validation_bpb":metric("expert_a_validation_bpb"),
              "expert_b_validation_bpb":metric("expert_b_validation_bpb"),
              "expert_a_test_bpb":metric("expert_a_test_bpb"),
