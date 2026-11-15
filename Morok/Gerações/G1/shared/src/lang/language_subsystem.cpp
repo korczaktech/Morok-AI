@@ -53,7 +53,7 @@ DetectedLanguage identify_language(std::string_view text) {
 
     const auto pt = count({"que", "não", "uma", "com", "para", "como", "você", "olá", "sim", "qual", "céu"});
     const auto en = count({"the", "is", "are", "what", "with", "you", "hello", "yes", "how"});
-    const auto es = count({"que", "no", "una", "con", "para", "como", "hola", "sí", "qué"});
+    const auto es = count({"que", "no", "una", "con", "para", "como", "hola", "sí", "qué", "el", "es", "cielo", "azul"});
     if (pt == 0 && en == 0 && es == 0) return DetectedLanguage::unknown;
     if (pt >= en && pt >= es) return DetectedLanguage::portuguese;
     if (en >= es) return DetectedLanguage::english;
