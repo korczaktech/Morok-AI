@@ -1,3 +1,4 @@
+  $('#generation-back').addEventListener('click',()=>{$('#model-submenu').hidden=true;$('#generation-list').hidden=false;});
 (() => {
   'use strict';
   const $ = (selector, root = document) => root.querySelector(selector);
