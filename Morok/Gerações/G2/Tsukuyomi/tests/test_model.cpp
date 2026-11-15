@@ -117,7 +117,7 @@ int main() {
         'U', ':', 'Q', '\n', 'I', 'A', ':', 'A', '\n'
     };
     const std::array<std::uint8_t, 9> answer_mask{
-        0, 0, 0, 0, 0, 0, 0, 1, 0
+        0, 0, 0, 0, 0, 0, 0, 1, 1
     };
     Model supervised;
     initialize(supervised, 321);
@@ -128,7 +128,7 @@ int main() {
     const auto supervised_report = train(
         supervised, dialogue, supervised_config, &supervised_state, answer_mask);
     assert(supervised_report.epochs_completed == 2);
-    assert(supervised_report.target_bytes == 2);
+    assert(supervised_report.target_bytes == 4);
     assert(std::isfinite(supervised_report.initial_loss));
     assert(std::isfinite(supervised_report.final_loss));
     assert(std::isfinite(evaluate_loss(supervised, dialogue, answer_mask)));
