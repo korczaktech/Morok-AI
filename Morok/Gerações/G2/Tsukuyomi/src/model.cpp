@@ -100,6 +100,60 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context) {
     return cache;
 }
 
+struct Utf8State {
+    int remaining{0};
+    std::uint8_t next_min{0x80};
+    std::uint8_t next_max{0xBF};
+};
+
+bool consume_utf8(Utf8State& state, std::uint8_t byte) {
+    if (state.remaining > 0) {
+        if (byte < state.next_min || byte > state.next_max) return false;
+        --state.remaining;
+        state.next_min = 0x80;
+        state.next_max = 0xBF;
+        return true;
+    }
+    if (byte <= 0x7F) return true;
+    if (byte >= 0xC2 && byte <= 0xDF) {
+        state.remaining = 1;
+    } else if (byte == 0xE0) {
+        state.remaining = 2;
+        state.next_min = 0xA0;
+    } else if ((byte >= 0xE1 && byte <= 0xEC) ||
+               (byte >= 0xEE && byte <= 0xEF)) {
+        state.remaining = 2;
+    } else if (byte == 0xED) {
+        state.remaining = 2;
+        state.next_max = 0x9F;
+    } else if (byte == 0xF0) {
+        state.remaining = 3;
+        state.next_min = 0x90;
+    } else if (byte >= 0xF1 && byte <= 0xF3) {
+        state.remaining = 3;
+    } else if (byte == 0xF4) {
+        state.remaining = 3;
+        state.next_max = 0x8F;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+bool valid_utf8_prefix(std::span<const std::uint8_t> bytes, Utf8State& state) {
+    for (const auto byte : bytes)
+        if (!consume_utf8(state, byte)) return false;
+    return true;
+}
+
+bool valid_utf8_start(std::uint8_t byte, std::size_t slots_after) {
+    if (byte <= 0x7F) return true;
+    if (byte >= 0xC2 && byte <= 0xDF) return slots_after >= 1;
+    if (byte >= 0xE0 && byte <= 0xEF) return slots_after >= 2;
+    if (byte >= 0xF0 && byte <= 0xF4) return slots_after >= 3;
+    return false;
+}
+
 std::uint64_t checksum(const float* values, std::size_t count) {
     const auto* bytes = reinterpret_cast<const unsigned char*>(values);
     std::uint64_t hash = 14695981039346656037ULL;
@@ -189,6 +243,7 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
         return report;
 
     report.initial_loss = evaluate_loss(model, bytes);
+    report.initial_bpb = report.initial_loss / std::log(2.0);
     std::array<double, kParameterCount> first{};
     std::array<double, kParameterCount> second{};
     std::array<float, kParameterCount> gradient{};
@@ -257,6 +312,7 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
     }
 
     report.final_loss = evaluate_loss(model, bytes);
+    report.final_bpb = report.final_loss / std::log(2.0);
     return report;
 }
 
@@ -265,13 +321,30 @@ std::vector<std::uint8_t> generate(const Model& model,
                                    std::size_t max_new_bytes) {
     std::vector<std::uint8_t> output(prompt.begin(), prompt.end());
     output.reserve(output.size() + max_new_bytes);
+    Utf8State utf8;
+    if (!valid_utf8_prefix(output, utf8) ||
+        static_cast<std::size_t>(utf8.remaining) > max_new_bytes)
+        return output;
+
     for (std::size_t i = 0; i < max_new_bytes; ++i) {
         const auto cache = calculate(model, output);
-        const auto best = static_cast<std::size_t>(
-            std::distance(cache.probabilities.begin(),
-                std::max_element(cache.probabilities.begin(),
-                                 cache.probabilities.end())));
-        output.push_back(static_cast<std::uint8_t>(best));
+        std::size_t best = kVocabularySize;
+        float best_logit = -std::numeric_limits<float>::infinity();
+        const std::size_t slots_after = max_new_bytes - i - 1;
+        for (std::size_t token = 0; token < kVocabularySize; ++token) {
+            const auto byte = static_cast<std::uint8_t>(token);
+            const bool allowed = utf8.remaining > 0
+                ? byte >= utf8.next_min && byte <= utf8.next_max
+                : valid_utf8_start(byte, slots_after);
+            if (allowed && cache.logits[token] > best_logit) {
+                best = token;
+                best_logit = cache.logits[token];
+            }
+        }
+        if (best == kVocabularySize) break;
+        const auto byte = static_cast<std::uint8_t>(best);
+        if (!consume_utf8(utf8, byte)) break;
+        output.push_back(byte);
     }
     return output;
 }
