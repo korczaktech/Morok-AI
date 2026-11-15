@@ -90,7 +90,8 @@ int main() {
         assert(with_decay.parameters[i] == without_decay.parameters[i]);
     for (std::size_t i = 9216; i < 9632; ++i)
         assert(with_decay.parameters[i] != without_decay.parameters[i]);
-\n    const auto before = evaluate_loss(model, sample);
+
+    const auto before = evaluate_loss(model, sample);
     assert(std::isfinite(before) && before > 0.0);
 
     const auto prediction = forward(model, sample);
