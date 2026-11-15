@@ -48,10 +48,10 @@
     }
   ],
   "totals": {
-    "episodes": 160,
+    "episodes": 163,
     "correct": 21,
-    "incorrect": 139,
-    "policy_updates": 160,
+    "incorrect": 142,
+    "policy_updates": 163,
     "skipped_updates": 0,
     "oracle_demonstrations": 21
   },
@@ -4971,6 +4971,99 @@
           "gradient_norm_first": 1.27414,
           "gradient_norm_last": 1.27414,
           "parameter_delta_l2": 2.50039e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 161,
+      "episode_id": "43670988040:1:generated:1:sky_is_blue",
+      "run_id": "43670988040",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "sky_is_blue",
+      "prompt": "O céu é azul?\nResposta: ",
+      "answer": "C eareapere`eo apes`ara apesdare are`eo apes`eca",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-15T03:09:40.343149+00:00",
+      "model_sha256_before": "88279f97bbcb07a666f4b2597132a784b9649ffe82c017180a83d5f540a8362a",
+      "model_sha256_after": "f0851ceb341d3240bde0e8b0c8de9a791fa43ddf9d2a2a6badf0259e1b742073",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.27799,
+          "gradient_norm_last": 1.27799,
+          "parameter_delta_l2": 2.49983e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 162,
+      "episode_id": "43670988040:1:generated:2:mountains_high_or_low",
+      "run_id": "43670988040",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "mountains_high_or_low",
+      "prompt": "As montanhas são altas ou baixas?\nResposta: ",
+      "answer": "C eareapere`eo apes`ara apesdare are`eo apes`eca",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-15T03:09:40.359850+00:00",
+      "model_sha256_before": "f0851ceb341d3240bde0e8b0c8de9a791fa43ddf9d2a2a6badf0259e1b742073",
+      "model_sha256_after": "cbebdf03922f9f5225861514b1999fee01a9db1d3ff58006961ed29a0d1633ed",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.27885,
+          "gradient_norm_last": 1.27885,
+          "parameter_delta_l2": 2.49968e-05,
+          "optimizer_steps": 1,
+          "optimizer_step": 1,
+          "trainable_parameters": 1000
+        }
+      }
+    },
+    {
+      "episode": 163,
+      "episode_id": "43670988040:1:generated:3:grass_color",
+      "run_id": "43670988040",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "grass_color",
+      "prompt": "Que cor é a grama?\nResposta: ",
+      "answer": "C eareapere`eo apes`ara apesdare are`eo apes`eca",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "expected_concept_not_found",
+      "timestamp_utc": "2026-11-15T03:09:40.375139+00:00",
+      "model_sha256_before": "cbebdf03922f9f5225861514b1999fee01a9db1d3ff58006961ed29a0d1633ed",
+      "model_sha256_after": "88d3a79656932cdfe25b2398c64d8f2d913dca3b6fbe438d25a85dd6af3a1a2a",
+      "trainable_parameters": 1000,
+      "policy_update": {
+        "status": "applied",
+        "algorithm": "reward_weighted_bptt_score_function_surrogate",
+        "report": {
+          "reward": -1,
+          "target_bytes": 48,
+          "gradient_norm_first": 1.27437,
+          "gradient_norm_last": 1.27437,
+          "parameter_delta_l2": 2.50011e-05,
           "optimizer_steps": 1,
           "optimizer_step": 1,
           "trainable_parameters": 1000
