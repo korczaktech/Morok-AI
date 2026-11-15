@@ -14,7 +14,9 @@ import unicodedata
 
 MAX_RESPONSE_BYTES = 160
 MAX_VALIDATION_QUESTIONS = 40
-MAX_CYCLES = 100
+MAX_CYCLES = 10
+MAX_EPOCHS_PER_CYCLE = 100
+MAX_TOTAL_EPOCHS = 200
 INITIAL_LEARNING_RATE = 0.001
 MIN_LEARNING_RATE = 0.00005
 LR_REDUCE_FACTOR = 0.5
@@ -201,8 +203,10 @@ def main() -> int:
     epochs, attempts = int(sys.argv[6]), int(sys.argv[7])
     continuous = sys.argv[8] == "1"
     question_count = int(sys.argv[9])
-    if not 1 <= epochs <= 100 or not 1 <= attempts <= MAX_CYCLES:
-        raise ValueError(f"Épocas precisam estar entre 1 e 100; tentativas entre 1 e {MAX_CYCLES}.")
+    if not 1 <= epochs <= MAX_EPOCHS_PER_CYCLE or not 1 <= attempts <= MAX_CYCLES:
+        raise ValueError(f"Épocas precisam estar entre 1 e {MAX_EPOCHS_PER_CYCLE}; tentativas entre 1 e {MAX_CYCLES}.")
+    if epochs * attempts > MAX_TOTAL_EPOCHS:
+        raise ValueError(f"O treinamento está limitado a {MAX_TOTAL_EPOCHS} épocas totais por execução.")
     if sys.argv[8] not in ("0", "1"):
         raise ValueError("O modo contínuo precisa ser 0 ou 1.")
     if not 1 <= question_count <= MAX_VALIDATION_QUESTIONS:
@@ -238,6 +242,7 @@ def main() -> int:
         report.write(f"- Questões selecionadas: {question_count}\n")
         report.write(f"- Perguntas de teste reservado: {len(test)}\n")
         report.write(f"- Épocas por tentativa: {epochs}\n")
+        report.write(f"- Épocas totais máximas: {epochs * maximum_cycles}\n")
         report.write(f"- Modo contínuo: {'ativado' if continuous else 'desativado'}\n")
         report.write(f"- Limite de geração: {MAX_RESPONSE_BYTES} bytes\n")
         report.write("- Critério contínuo: encerrar quando todas as questões selecionadas estiverem corretas\n")
