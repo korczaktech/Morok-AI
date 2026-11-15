@@ -8,7 +8,7 @@ MODULE = runpy.run_path(str(ROOT / "scripts" / "run-g2-reinforcement.py"))
 grade = MODULE["grade"]
 select_questions = MODULE["select_questions"]
 is_degenerate_response = MODULE["is_degenerate_response"]
-select_training_target = MODULE["select_training_target"]
+select_training_target = MODULE["select_training_target"]\nbuild_memory_replay = MODULE["build_memory_replay"]
 SEED_ANSWERS = MODULE["SEED_ANSWERS"]
 
 
