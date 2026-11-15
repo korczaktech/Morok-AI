@@ -5,6 +5,7 @@ import argparse, hashlib, json, os, re, subprocess, sys, tempfile, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
+MAX_BOOTSTRAP_EPOCHS=1000
 REQUIRED_CONCEPTS={
  "sky_is_blue":{"sim","azul"},
  "mountains_high_or_low":{"montanhas","altas"},
@@ -48,7 +49,8 @@ def main():
  ap.add_argument("--attempts",type=int,default=3); ap.add_argument("--questions",nargs="+",choices=sorted(TASK_CONCEPTS),default=list(TASK_CONCEPTS)); ap.add_argument("--learning-rate",type=float,default=.001)
  ap.add_argument("--results-file",type=Path,default=ROOT/"artifacts/reinforcement-g2/attempt-results.txt")
  a=ap.parse_args()
- if not 1<=a.attempts<=10 or not 1<=a.bootstrap_epochs<=100:raise ValueError("attempts must be in [1,10] and bootstrap epochs in [1,100]")
+ a.results_file.parent.mkdir(parents=True,exist_ok=True)
+ if not 1<=a.attempts<=10 or not 1<=a.bootstrap_epochs<=MAX_BOOTSTRAP_EPOCHS:raise ValueError(f"attempts must be in [1,10] and bootstrap epochs in [1,{MAX_BOOTSTRAP_EPOCHS}]")
  if not a.questions or len(a.questions)!=len(set(a.questions)):raise ValueError("select at least one unique question")
  if not a.database.is_file():raise FileNotFoundError(a.database)
  db=json.loads(a.database.read_text(encoding="utf-8"))
