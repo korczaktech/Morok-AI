@@ -91,11 +91,11 @@ def main() -> int:
         violations.append("CMakeLists.txt: generation-specific source compiled into Morok::Core")
 
     g1 = cmake.split("add_library(morok_g1 STATIC", 1)[1].split("add_library(Morok::G1", 1)[0]
-    if "G1/shared/src/" not in g1 or "G2/" in g1:
+    if "Gerações/G1/shared/src/" not in g1 or "G2/" in g1:
         violations.append("CMakeLists.txt: G1 target source ownership is invalid")
 
     g2 = cmake.split("add_library(morok_g2 STATIC", 1)[1].split("add_library(Morok::G2", 1)[0]
-    if "G2/engine/src/" not in g2 or "G2/model/src/" not in g2 or "G1/" in g2:
+    if "Gerações/G2/engine/src/" not in g2 or "Gerações/G2/model/src/" not in g2 or "G1/" in g2:
         violations.append("CMakeLists.txt: G2 target source ownership is invalid")
     if "Morok::G1" in g2:
         violations.append("CMakeLists.txt: Morok::G2 links Morok::G1")
