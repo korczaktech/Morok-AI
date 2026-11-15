@@ -15,9 +15,9 @@
 namespace {
 struct Question { const char* id; const char* prompt; const char* expected; };
 const std::vector<Question> questions{
- {"sky_is_blue","O céu é azul?\nResposta: ","azul"},
- {"grass_color","Qual a cor da grama?\nResposta: ","verde"},
- {"mountains_high_or_low","As montanhas são altas?\nResposta: ","altas"}
+ {"sky_is_blue","U: O céu é azul?\nIA: ","Sim, o céu é azul."},
+ {"grass_color","U: Qual é a cor da grama?\nIA: ","A grama geralmente é verde."},
+ {"mountains_high_or_low","U: As montanhas são altas?\nIA: ","Sim, muitas montanhas são altas."}
 };
 std::string clean(std::string s) { for(char& c:s) if(c=='\t'||c=='\n'||c=='\r') c=' '; return s; }
 template<class Generate>
@@ -35,7 +35,9 @@ void run_profile(const char* name,const morok::model::G1Parameters& p,std::ofstr
    const auto answer=result.continuation.string();
    std::string normalized=answer;
    for(char& ch:normalized) ch=static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
-   const bool correct=normalized.find(q.expected)!=std::string::npos;
+   std::string expected=q.expected;
+   for(char& ch:expected) ch=static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+   const bool correct=normalized.find(expected)!=std::string::npos;
    out<<name<<'\t'<<q.id<<'\t'<<attempt<<'\t'<<(correct?"correct":"incorrect")<<'\t'<<ms<<'\t'<<clean(answer)<<'\n';
    if(!out) throw std::runtime_error("failed writing evaluation row");
   }
