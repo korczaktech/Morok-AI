@@ -92,7 +92,7 @@ def main() -> int:
     if len(sys.argv) not in (6, 8):
         print("Uso: avaliacao_final.py <gerador> <checkpoint> <validacao.txt> <teste.txt> <saida.json> [<gerador_baseline> <checkpoint_baseline>]", file=sys.stderr)
         return 2
-    generator, checkpoint, validation_path, test_path, output = map(Path, sys.argv[1:])
+    generator, checkpoint, validation_path, test_path, output = map(Path, sys.argv[1:6])
     if not generator.is_file() or not checkpoint.is_file():
         raise FileNotFoundError("Gerador ou checkpoint final não encontrado.")
     validation = read_dialogues(validation_path)
