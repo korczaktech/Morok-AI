@@ -75,4 +75,14 @@ jobs:
           build/g2/morok-g2-tsukuyomi-generate build/g2/tsukuyomi-smoke.ckpt "Morok" 32 > build/g2/tsukuyomi-smoke-output.txt
           test -s build/g2/tsukuyomi-smoke.ckpt
           test -s build/g2/tsukuyomi-smoke-output.txt
+          build/g2/morok-g2-tsukuyomi-train \
+            "Gerações/G2/Tsukuyomi/data/treinamento.txt" \
+            build/g2/tsukuyomi-dialogue-smoke.ckpt 1 42 > build/g2/tsukuyomi-dialogue-smoke.log
+          grep -F "Objetivo: somente respostas IA:" build/g2/tsukuyomi-dialogue-smoke.log
+          grep -E "Bytes-alvo: [1-9][0-9]*" build/g2/tsukuyomi-dialogue-smoke.log
+          build/g2/morok-g2-tsukuyomi-generate \
+            build/g2/tsukuyomi-dialogue-smoke.ckpt "U: Você tem sentimentos? IA:" 32 \
+            > build/g2/tsukuyomi-dialogue-smoke-output.txt
+          test -s build/g2/tsukuyomi-dialogue-smoke.ckpt
+          test -s build/g2/tsukuyomi-dialogue-smoke-output.txt
 
