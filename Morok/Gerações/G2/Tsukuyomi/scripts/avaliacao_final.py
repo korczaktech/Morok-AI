@@ -101,6 +101,69 @@ def summarize_rows(dialogues: list[tuple[str, str]], answers: list[str]) -> dict
     return summary
 
 
+
+def retrieval_baseline_answers(training: list[tuple[str, str]],
+                               questions: list[tuple[str, str]]) -> list[str]:
+    if not training:
+        raise ValueError("O baseline de recuperação precisa de exemplos de treinamento.")
+    document_frequency = Counter()
+    training_tokens = []
+    for question, _ in training:
+        tokens = normalize(question)
+        training_tokens.append(Counter(tokens))
+        document_frequency.update(set(tokens))
+    document_count = len(training)
+    inverse_frequency = {
+        token: math.log((1.0 + document_count) / (1.0 + count)) + 1.0
+        for token, count in document_frequency.items()
+    }
+
+    def vector(tokens: Counter) -> dict[str, float]:
+        return {token: frequency * inverse_frequency.get(token, 1.0)
+                for token, frequency in tokens.items()}
+
+    training_vectors = [vector(tokens) for tokens in training_tokens]
+    training_norms = [
+        math.sqrt(sum(value * value for value in values.values()))
+        for values in training_vectors
+    ]
+    answers = []
+    for question, _ in questions:
+        query = vector(Counter(normalize(question)))
+        query_norm = math.sqrt(sum(value * value for value in query.values()))
+        best_index = 0
+        best_score = -1.0
+        for index, candidate in enumerate(training_vectors):
+            denominator = query_norm * training_norms[index]
+            score = (sum(value * candidate.get(token, 0.0)
+                         for token, value in query.items()) / denominator
+                     if denominator > 0.0 else 0.0)
+            if score > best_score:
+                best_score = score
+                best_index = index
+        answers.append(training[best_index][1])
+    return answers
+
+
+def evaluate_retrieval_baseline(training: list[tuple[str, str]],
+                                dialogues: list[tuple[str, str]]) -> dict:
+    answers = retrieval_baseline_answers(training, dialogues)
+    rows = [metrics(answer, expected)
+            for answer, (_, expected) in zip(answers, dialogues)]
+    count = len(rows)
+    if count == 0:
+        raise ValueError("O conjunto de avaliação não pode estar vazio.")
+    return {
+        "questions": count,
+        "exact_matches": sum(row["exact"] for row in rows),
+        "exact_match_rate": sum(row["exact"] for row in rows) / count,
+        "mean_lexical_f1": sum(row["lexical_f1"] for row in rows) / count,
+        "mean_character_similarity": sum(row["character_similarity"] for row in rows) / count,
+        "answers": [{"question": question, "expected": expected, "generated": answer, **row}
+                    for (question, expected), answer, row in zip(dialogues, answers, rows)],
+    }
+
+
 def evaluate_split(generator: Path, checkpoint: Path, dialogues: list[tuple[str, str]]) -> dict:
     answers, elapsed = generate(generator, checkpoint, dialogues)
     rows = [metrics(answer, expected) for answer, (_, expected) in zip(answers, dialogues)]
@@ -133,6 +196,10 @@ def main() -> int:
         raise RuntimeError("Os conjuntos independentes devem conter 40 questões de validação e 12 de teste.")
     validation_result = evaluate_split(generator, checkpoint, validation)
     test_result = evaluate_split(generator, checkpoint, test)
+    training_path = validation_path.with_name("treinamento.txt")
+    training = read_dialogues(training_path)
+    retrieval_validation = evaluate_retrieval_baseline(training, validation)
+    retrieval_test = evaluate_retrieval_baseline(training, test)
     repeat_answers, repeat_seconds = generate(generator, checkpoint, test)
     deterministic = repeat_answers == [item["generated"] for item in test_result["answers"]]
     comparison = {
@@ -172,6 +239,14 @@ def main() -> int:
         "pretrained_weights": False,
         "validation": validation_result,
         "reserved_test": test_result,
+        "retrieval_baseline": {
+            "method": "tfidf_cosine_nearest_training_question",
+            "validation": retrieval_validation,
+            "reserved_test": retrieval_test,
+            "candidate_minus_baseline_test_exact_matches": test_result["exact_matches"] - retrieval_test["exact_matches"],
+            "candidate_minus_baseline_test_lexical_f1": test_result["mean_lexical_f1"] - retrieval_test["mean_lexical_f1"],
+            "candidate_minus_baseline_test_character_similarity": test_result["mean_character_similarity"] - retrieval_test["mean_character_similarity"],
+        },
         "deterministic_greedy_generation": deterministic,
         "repeat_test_generation_seconds": repeat_seconds,
         "comparison": comparison,
