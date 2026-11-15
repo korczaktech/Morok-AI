@@ -75,6 +75,11 @@ jobs:
           build/g2/morok-g2-tsukuyomi-generate build/g2/tsukuyomi-smoke.ckpt "Morok" 32 > build/g2/tsukuyomi-smoke-output.txt
           test -s build/g2/tsukuyomi-smoke.ckpt
           test -s build/g2/tsukuyomi-smoke-output.txt
+
+          # Regressão do parser: BOM, espaços antes dos marcadores e CRLF.
+          printf '\357\273\277  U: pergunta\r\n  IA: resposta\r\n' > build/g2/dialogue-parser-smoke.txt
+          build/g2/morok-g2-tsukuyomi-train build/g2/dialogue-parser-smoke.txt build/g2/dialogue-parser-smoke.ckpt 1 42 > build/g2/dialogue-parser-smoke.log
+          grep -q 'Bytes-alvo: 11' build/g2/dialogue-parser-smoke.log
           build/g2/morok-g2-tsukuyomi-train \
             "Gerações/G2/Tsukuyomi/data/treinamento.txt" \
             build/g2/tsukuyomi-dialogue-smoke.ckpt 1 42 > build/g2/tsukuyomi-dialogue-smoke.log
