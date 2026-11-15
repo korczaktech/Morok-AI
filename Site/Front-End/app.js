@@ -259,23 +259,30 @@
   }
   async function checkHealth(showToast = false) {
     if (!state.apiUrl) { setConnection('off','API não configurada'); if (showToast) toast('Configure o endereço da API primeiro.'); return false; }
-    setConnection('wait','Verificando API…');
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
-    try {
-      const response = await fetch(state.apiUrl.replace(/\/+$/,'') + '/health',{method:'GET',mode:'cors',cache:'no-store',signal:controller.signal});
-      const data = await response.json().catch(() => null);
-      if (!response.ok || data?.status !== 'ok') throw new Error('Health check inválido (HTTP ' + response.status + ').');
-      setConnection('online','API configurada');
-      if (showToast) toast('Conexão com o Morok estabelecida.');
-      return true;
-    } catch (error) {
-      setConnection('error',error.name === 'AbortError' ? 'Tempo esgotado ao conectar' : 'API indisponível');
-      if (showToast) toast(error.name === 'AbortError' ? 'A API demorou mais de 12 segundos para responder.' : 'Não foi possível conectar. Verifique URL, HTTPS e CORS.');
-      return false;
-    } finally {
-      clearTimeout(timeoutId);
+    const endpoint = state.apiUrl.replace(/\\/+$/,'') + '/health';
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      setConnection('wait',attempt === 1 ? 'Verificando API…' : 'Aguardando API…');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      try {
+        const response = await fetch(endpoint,{method:'GET',mode:'cors',cache:'no-store',signal:controller.signal});
+        const data = await response.json().catch(() => null);
+        if (!response.ok || data?.status !== 'ok') throw new Error('Health check inválido (HTTP ' + response.status + ').');
+        setConnection('online','API configurada');
+        if (showToast) toast('Conexão com o Morok estabelecida.');
+        return true;
+      } catch (error) {
+        lastError = error;
+        if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 1200 * attempt));
+      } finally {
+        clearTimeout(timeoutId);
+      }
     }
+    const timedOut = lastError?.name === 'AbortError';
+    setConnection('error',timedOut ? 'Tempo esgotado ao conectar' : 'API indisponível');
+    if (showToast) toast(timedOut ? 'A API não respondeu após três tentativas.' : 'Não foi possível conectar à API. Verifique a origem do site e o CORS.');
+    return false;
   }
   function setConnection(status,label) {
     el.status.textContent = label;
@@ -309,7 +316,7 @@
 
 
   async function authRequest(path, options={}) {
-    const response = await fetch(AUTH_API_URL + path, {
+    const request = {
       method: options.method || 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -318,7 +325,30 @@
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       mode: 'cors',
       cache: 'no-store'
-    });
+    };
+    let response;
+    let lastError;
+    const attempts = path === '/auth/login' ? 2 : 1;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 35000);
+      try {
+        response = await fetch(AUTH_API_URL + path, { ...request, signal: controller.signal });
+        break;
+      } catch (error) {
+        lastError = error;
+        if (attempt === attempts) {
+          const detail = error.name === 'AbortError' ? 'A API demorou mais de 35 segundos para responder.' : 'Não foi possível alcançar a API. Verifique conexão e CORS.';
+          const wrapped = new Error(detail);
+          wrapped.cause = error;
+          throw wrapped;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+    if (!response) throw lastError || new Error('Falha de comunicação com a API.');
     const data = await response.json().catch(() => ({}));
     if (!response.ok) { const error = new Error(data.error || 'Falha na autenticação (' + response.status + ').'); error.status = response.status; throw error; }
     return data;
