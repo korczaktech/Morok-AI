@@ -65,33 +65,24 @@ void run_profile(const char* name, const morok::model::G1Parameters& parameters,
     for (const auto& question : questions) {
         if (std::find(selected.begin(), selected.end(), question.id) == selected.end())
             continue;
-
         auto prompt = morok::common::Utf8Text::from_utf8(question.prompt);
         if (!prompt) throw std::runtime_error("evaluation prompt is not valid UTF-8");
-
-        Aggregate aggregate;
         const auto expected = normalize(question.expected);
         for (std::size_t attempt = 1; attempt <= attempts; ++attempt) {
             const auto start = std::chrono::steady_clock::now();
             const auto result = generate(parameters, *prompt.value_if(), attempt);
             const auto stop = std::chrono::steady_clock::now();
-            aggregate.total_latency_ms += std::chrono::duration<double, std::milli>(
+            const double latency_ms = std::chrono::duration<double, std::milli>(
                 stop - start).count();
-            const auto answer = normalize(result.continuation.view());
-            if (!expected.empty() && answer.find(expected) != std::string::npos)
-                ++aggregate.correct;
-            ++aggregate.attempts;
+            const std::string answer(result.continuation.view());
+            const auto normalized_answer = normalize(answer);
+            const bool correct = !expected.empty() &&
+                normalized_answer.find(expected) != std::string::npos;
+            output << name << '\\t' << question.id << '\\t' << attempt << '\\t'
+                   << (correct ? "correct" : "incorrect") << '\\t'
+                   << latency_ms << '\\t' << answer << '\\n';
+            if (!output) throw std::runtime_error("failed writing evaluation attempt");
         }
-
-        const double accuracy = aggregate.attempts == 0 ? 0.0
-            : static_cast<double>(aggregate.correct) /
-              static_cast<double>(aggregate.attempts);
-        const double mean_latency = aggregate.attempts == 0 ? 0.0
-            : aggregate.total_latency_ms / static_cast<double>(aggregate.attempts);
-        output << name << '\t' << question.id << '\t' << aggregate.attempts
-               << '\t' << accuracy << '\t' << mean_latency << '\t'
-               << (aggregate.correct == aggregate.attempts ? "pass" : "fail") << '\n';
-        if (!output) throw std::runtime_error("failed writing evaluation aggregate");
     }
 }
 
