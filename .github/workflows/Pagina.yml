@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - Website
-    paths:
-      - "Site/Front-End/**"
-      - ".github/workflows/Pagina.yml"
   workflow_dispatch:
 
 permissions:
