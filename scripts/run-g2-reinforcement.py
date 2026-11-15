@@ -17,11 +17,15 @@ NEGATIONS={"nao","nunca","jamais"}
 def tokens(s):
  v=unicodedata.normalize("NFKD",s.casefold()); v="".join(c for c in v if not unicodedata.combining(c)); return re.findall(r"[a-z0-9]+",v)
 def grade(q,a):
- t=set(tokens(a))
- if not t:return "incorrect",-1,"empty_response"
- if t&NEGATIONS:return "incorrect",-1,"negated_response"
- missing=sorted(REQUIRED_CONCEPTS[q]-t)
- return ("correct",1,"matched_required_concepts") if not missing else ("incorrect",-1,"missing_expected_concepts:"+",".join(missing))
+ actual=tokens(a)
+ expected=tokens(SEED_ANSWERS[q])
+ if not actual:return "incorrect",-1,"empty_response"
+ if set(actual)&NEGATIONS:return "incorrect",-1,"negated_response"
+ if actual==expected:return "correct",1,"exact_normalized_answer"
+ missing=sorted(set(expected)-set(actual))
+ extra=sorted(set(actual)-set(expected))
+ if missing:return "incorrect",-1,"missing_expected_tokens:"+",".join(missing)
+ return "incorrect",-1,"unexpected_tokens:"+",".join(extra or actual[len(expected):])
 def select_questions(questions, selected_ids):
  selected=set(selected_ids); available={q["id"] for q in questions}
  if not selected or len(selected)!=len(selected_ids) or selected-available:
@@ -46,7 +50,14 @@ def build_memory_replay(episodes,limit=32):
   if source=="oracle_demonstration":
    target=SEED_ANSWERS[question_id]
   elif source=="model_response":
-   target=episode.get("initial_answer") or episode.get("answer","")
+   candidate=episode.get("initial_answer") or episode.get("answer","")
+   if grade(question_id,candidate)[0]=="correct":
+    target=candidate
+   else:
+    # Never teach the model to reproduce historical generations that were
+    # incorrectly accepted by the old concept-presence grader.
+    target=SEED_ANSWERS[question_id]
+    source="oracle_demonstration"
   else:
    continue
   prompt=episode.get("prompt","")
@@ -54,6 +65,24 @@ def build_memory_replay(episodes,limit=32):
   replay.append({"episode_id":episode.get("episode_id","legacy"),"question_id":question_id,
                  "prompt":prompt,"target":target,"source":source,"reward":1})
  return replay[-limit:]
+def reconcile_episode_outcomes(db):
+ episodes=db["episodes"]
+ for episode in episodes:
+  question_id=episode.get("question_id")
+  if question_id not in SEED_ANSWERS:continue
+  verdict,reward,reason=grade(question_id,episode.get("answer",""))
+  if is_degenerate_response(episode.get("answer","")):
+   verdict,reward,reason="incorrect",-1,"degenerate_repetition"
+  episode["verdict"],episode["reward"],episode["grading_reason"]=verdict,reward,reason
+ totals=db["totals"]
+ totals["episodes"]=len(episodes)
+ totals["correct"]=sum(e.get("verdict")=="correct" for e in episodes)
+ totals["incorrect"]=sum(e.get("verdict")=="incorrect" for e in episodes)
+ totals["policy_updates"]=sum((e.get("policy_update") or {}).get("status")=="applied" for e in episodes)
+ totals["skipped_updates"]=sum((e.get("policy_update") or {}).get("status")!="applied" for e in episodes)
+ totals["oracle_demonstrations"]=sum((e.get("policy_update") or {}).get("source")=="oracle_demonstration" for e in episodes)
+ for key in ("memory_replay_experiences","memory_replay_updates","memory_replay_skipped"):
+  totals.setdefault(key,0)
 def run(cmd):
  r=subprocess.run(cmd,capture_output=True,text=True,encoding="utf-8")
  if r.returncode:raise RuntimeError(f"command failed: {' '.join(cmd)}\n{r.stdout}\n{r.stderr}")
@@ -95,7 +124,8 @@ def main():
   if not inference_a.is_file() or not inference_b.is_file():
    raise RuntimeError("G2 bootstrap did not produce both expert checkpoints")
  selected_questions=select_questions(db["questions"],a.questions)
- for key in ("memory_replay_experiences","memory_replay_updates","memory_replay_skipped"):db["totals"].setdefault(key,0)
+ reconcile_episode_outcomes(db)
+ atomic(a.database,db)
  run_id=os.environ.get("GITHUB_RUN_ID","local"); run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT","1"); results=[]
  with tempfile.TemporaryDirectory(prefix="morok-g2-reinforcement-",dir=a.checkpoint.parent) as td:
   tmp=Path(td)
