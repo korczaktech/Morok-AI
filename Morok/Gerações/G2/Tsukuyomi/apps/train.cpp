@@ -21,11 +21,11 @@ std::vector<std::uint8_t> make_dialogue_target_mask(
         line_start = 3;
     while (line_start < bytes.size()) {
         std::size_t line_end = line_start;
-        while (line_end < bytes.size() && bytes[line_end] != '\\n' &&
-               bytes[line_end] != '\\r')
+        while (line_end < bytes.size() && bytes[line_end] != '\n' &&
+               bytes[line_end] != '\r')
             ++line_end;
         std::size_t marker = line_start;
-        while (marker < line_end && (bytes[marker] == ' ' || bytes[marker] == '\\t'))
+        while (marker < line_end && (bytes[marker] == ' ' || bytes[marker] == '\t'))
             ++marker;
         const std::size_t length = line_end - marker;
         if (length >= 2 && bytes[marker] == 'U' && bytes[marker + 1] == ':') {
@@ -37,17 +37,17 @@ std::vector<std::uint8_t> make_dialogue_target_mask(
                 mask[i] = 1;
             // O modelo também precisa aprender o terminador que a inferência consome.
             std::size_t terminator = line_end;
-            if (terminator < bytes.size() && bytes[terminator] == '\\r') {
+            if (terminator < bytes.size() && bytes[terminator] == '\r') {
                 mask[terminator] = 1;
                 ++terminator;
             }
-            if (terminator < bytes.size() && bytes[terminator] == '\\n')
+            if (terminator < bytes.size() && bytes[terminator] == '\n')
                 mask[terminator] = 1;
             awaiting_answer = false;
         }
         line_start = line_end;
         while (line_start < bytes.size() &&
-               (bytes[line_start] == '\\r' || bytes[line_start] == '\\n'))
+               (bytes[line_start] == '\r' || bytes[line_start] == '\n'))
             ++line_start;
     }
     if (std::none_of(mask.begin(), mask.end(),
