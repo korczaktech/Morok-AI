@@ -38,7 +38,11 @@ void incremental_state_continuity(){
  morok::model::G1State zero{};
  auto first=morok::model::compute_g1_bptt_gradients(p,std::span<const std::uint8_t>(bytes.data(),9),8,zero);
  morok::model::G1State expected{};
- for(std::size_t i=0;i<8;++i)morok::model::advance_g1_state(p,expected,bytes[i]);
+ for(std::size_t i=0;i<8;++i){
+  const bool separator=morok::model::is_g1_token_separator(bytes[i]);
+  const bool token_start=!separator&&(i==0||morok::model::is_g1_token_separator(bytes[i-1]));
+  morok::model::advance_g1_state(p,expected,bytes[i],token_start,separator);
+ }
  for(std::size_t i=0;i<11;++i){
   req(std::abs(first.final_state.fast[i]-expected.fast[i])<1e-6F,"fast state mismatch at BPTT boundary");
   req(std::abs(first.final_state.slow[i]-expected.slow[i])<1e-6F,"slow state mismatch at BPTT boundary");
