@@ -11,6 +11,12 @@ import unicodedata
 
 MAX_RESPONSE_BYTES = 160
 MAX_VALIDATION_QUESTIONS = 40
+MAX_CYCLES = 100000
+
+
+def should_stop(continuous: bool, correct_count: int, total: int) -> bool:
+    """No modo contínuo, encerra assim que a questão selecionada estiver correta."""
+    return continuous and total > 0 and correct_count == total
 
 
 def normalize(text: str) -> list[str]:
@@ -137,7 +143,7 @@ def main() -> int:
 
     streak = 0
     cycle = 0
-    maximum_cycles = 100000 if continuous else attempts
+    maximum_cycles = MAX_CYCLES if continuous else attempts
     with output.open("w", encoding="utf-8") as report:
         report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
         report.write(f"- Diálogos de treinamento: {len(train_dialogues)}\n")
@@ -147,7 +153,7 @@ def main() -> int:
         report.write(f"- Épocas por ciclo: {epochs}\n")
         report.write(f"- Modo contínuo: {'ativado' if continuous else 'desativado'}\n")
         report.write(f"- Limite de geração: {MAX_RESPONSE_BYTES} bytes\n")
-        report.write("- Critério contínuo: 10 ciclos consecutivos com 100% na validação\n")
+        report.write("- Critério contínuo: encerrar no primeiro ciclo em que a questão selecionada estiver correta\n")
         report.write("- Métrica: F1 lexical por frequência; não mede semântica\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
@@ -182,26 +188,32 @@ def main() -> int:
                 flush=True,
             )
 
-            if continuous and streak >= 10:
-                report.write("Dez ciclos consecutivos aprovados na validação.\n\n")
+            if should_stop(continuous, correct_count, total):
+                report.write("Questão selecionada respondida corretamente; treinamento encerrado.\n\n")
                 break
             if not continuous and cycle >= attempts:
                 break
         else:
             raise RuntimeError("Limite de segurança atingido sem completar o objetivo.")
 
-        if continuous and streak < 10:
-            raise RuntimeError("Treinamento contínuo terminou sem 10 ciclos perfeitos.")
+        if continuous and not should_stop(continuous, correct_count, total):
+            raise RuntimeError(
+                f"A questão selecionada não foi respondida corretamente após {cycle} ciclos."
+            )
 
-        # O teste reservado não participa da escolha de ciclos nem do critério de parada.
-        test_results = evaluate_set(generator, checkpoint, test)
-        test_correct, test_total = write_results(
-            report, "Teste final reservado", test, test_results
-        )
-        report.write(
-            f"**Resultado final no teste reservado: {test_correct}/{test_total}.**\n"
-        )
-        print(f"Teste final reservado: {test_correct}/{test_total}.", flush=True)
+        # No modo de uma questão, não consultar o teste reservado.
+        if question_count == 1:
+            report.write("Teste reservado não executado: modo de uma questão.\n")
+            print("Teste reservado preservado e não executado (modo de uma questão).", flush=True)
+        else:
+            test_results = evaluate_set(generator, checkpoint, test)
+            test_correct, test_total = write_results(
+                report, "Teste final reservado", test, test_results
+            )
+            report.write(
+                f"**Resultado final no teste reservado: {test_correct}/{test_total}.**\n"
+            )
+            print(f"Teste final reservado: {test_correct}/{test_total}.", flush=True)
 
     print(f"\nRelatório salvo em: {output}")
     print(f"Checkpoint final: {checkpoint}")
