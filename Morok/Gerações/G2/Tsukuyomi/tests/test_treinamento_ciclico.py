@@ -48,7 +48,7 @@ class TrainingDataTests(unittest.TestCase):
         selected = training.select_validation_questions(train, validation, 1)
         self.assertEqual(selected, [validation[0]])
     def test_split_sizes(self):
-        self.assertGreaterEqual(len(training.read_dialogues(DATA_DIR / "treinamento.txt")), 32)
+        self.assertEqual(len(training.read_dialogues(DATA_DIR / "treinamento.txt")), 56)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "validacao.txt")), 40)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "teste.txt")), 12)
 
