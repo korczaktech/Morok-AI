@@ -30,27 +30,34 @@ As pastas públicas da raiz abrigam somente capacidades realmente compartilhadas
 
 ## Especificações gerais dos modelos
 
-Os três modelos da G2 representam perfis distintos de capacidade e desempenho:
+Os três modelos da G2 representam perfis distintos de capacidade e desempenho. Cada um possui uma quantidade definida de parâmetros:
 
-### Tsukuyomi — modelo mais avançado
+| Modelo | Perfil | Parâmetros |
+|---|---|---:|
+| Tsukuyomi | Mais avançado | 10.000 |
+| Apollo | Comum / uso geral | 5.000 |
+| Mokosh | Rápido | 2.000 |
+| **Total da G2** | | **17.000** |
+
+### Tsukuyomi — 10.000 parâmetros
 
 É o modelo de maior capacidade da linha Morok. Assume o papel anteriormente atribuído ao Mokosh: prioriza qualidade, profundidade de raciocínio, capacidade de lidar com tarefas complexas e maior processamento quando necessário. É a opção destinada às tarefas que exigem o máximo de capacidade do sistema, mesmo que isso implique maior custo computacional e latência.
 
-### Mokosh — modelo rápido
+### Mokosh — 2.000 parâmetros
 
 É o perfil otimizado para velocidade e baixa latência. Prioriza respostas rápidas e menor custo computacional, sendo adequado para interações frequentes e tarefas diretas. Não deve ser tratado como o modelo mais avançado: sua prioridade é desempenho de execução.
 
-### Apollo — modelo comum
+### Apollo — 5.000 parâmetros
 
 É o perfil geral e equilibrado, destinado ao uso cotidiano. Busca equilíbrio entre capacidade, velocidade e consumo de recursos, sem priorizar extremos de raciocínio ou de velocidade.
 
 ### Relação entre os perfis
 
-- **Tsukuyomi:** máxima capacidade e tarefas complexas.
-- **Mokosh:** velocidade e baixa latência.
-- **Apollo:** uso geral e equilíbrio.
+- **Tsukuyomi:** 10.000 parâmetros; máxima capacidade e tarefas complexas.
+- **Apollo:** 5.000 parâmetros; uso geral e equilíbrio.
+- **Mokosh:** 2.000 parâmetros; velocidade e baixa latência.
 
-Essas definições estabelecem os objetivos dos modelos, não resultados já comprovados. Quantidade de parâmetros, arquitetura, orçamento de memória, tempos-alvo e métricas de qualidade devem ser especificados e validados experimentalmente em documentos próprios. Não presumir que um perfil é superior em todos os indicadores.
+As quantidades acima são especificações de projeto para a G2. Elas definem o orçamento de parâmetros de cada modelo, não comprovam qualidade, velocidade ou capacidade já alcançadas. Arquitetura, distribuição dos parâmetros, orçamento de memória, tempos-alvo e métricas de qualidade devem ser validados experimentalmente. Não presumir que um perfil é superior em todos os indicadores.
 
 ### Tsukuyomi Max — implementação histórica da G1
 
@@ -71,7 +78,7 @@ Tsukuyomi Max é o único modelo mantido na G1 e representa a implementação de
 
 ## Relação entre gerações
 
-Os modelos são definidos por geração. A G1 possui somente Tsukuyomi Max. A G2 define três perfis: Apollo (comum), Mokosh (rápido) e Tsukuyomi (mais avançado). A G3 permanece documental. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
+Os modelos são definidos por geração. A G1 possui somente Tsukuyomi Max. A G2 define três perfis: Apollo (comum, 5.000 parâmetros), Mokosh (rápido, 2.000 parâmetros) e Tsukuyomi (mais avançado, 10.000 parâmetros), totalizando 17.000 parâmetros previstos. A G3 permanece documental. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
 
 ## Organização real do código
 
@@ -85,7 +92,7 @@ Aplicações, scripts, dados de reforço, fixtures e testes específicos da gera
 
 G1 possui somente o alvo CMake de Tsukuyomi Max. O modelo mantém suas políticas e implementação exclusiva em `Gerações/G1/TsukuyomiMax/`; o motor e os adaptadores compartilhados permanecem em `Gerações/G1/shared/`.
 
-G2 possui os diretórios de Apollo, Tsukuyomi e Mokosh, com suas funções gerais definidas nesta especificação. A implementação, arquitetura interna, treinamento e inferência ainda devem ser desenvolvidos e documentados individualmente.
+G2 possui os diretórios de Apollo, Tsukuyomi e Mokosh, com seus orçamentos de parâmetros e funções gerais definidos nesta especificação. A implementação, arquitetura interna, treinamento e inferência ainda devem ser desenvolvidos e documentados individualmente.
 
 G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de outras gerações dentro da G3.
 
