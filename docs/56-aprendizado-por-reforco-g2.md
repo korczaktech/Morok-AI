@@ -13,13 +13,13 @@ A G2 possui dois especialistas independentes de 1.000 parâmetros cada, totaliza
 
 ## Corpus
 
-O bootstrap usa um único documento em `tests/fixtures/g2-single-document/doc-01.txt`, com três exemplos controlados:
+O bootstrap usa três documentos independentes em `tests/fixtures/g2-single-document/`, um por pergunta e resposta. Cada arquivo termina exatamente no fim da resposta, permitindo que o treinador aplique um alvo EOS positivo em cada limite:
 
 - `Usuario: O ceu e azul?` → `Sim, o ceu e azul`.
 - `Usuario: As montanhas sao altas ou baixas?` → `As montanhas sao altas.`.
 - `Usuario: Que cor e a grama?` → `A grama e verde.`.
 
-Como há um único documento, a avaliação do bootstrap ocorre no próprio documento de treinamento. Ela não é validação independente e não mede generalização.
+O modo G2 treina nos três documentos e calcula as métricas sobre os mesmos documentos. Isso permite treinar o encerramento em cada resposta, mas as métricas são de resubstituição, não validação independente, e não medem generalização.
 
 ## Correções de aprendizado
 
@@ -49,7 +49,7 @@ Antes de gerar novas respostas, o runner consulta os 32 episódios mais recentes
 
 Experiências cuja atualização original usou uma resposta correta do próprio modelo são reproduzidas com essa resposta inicial somente se ela passar novamente pelo avaliador estrito. Caso contrário, são recuperadas com a resposta de referência, em vez de reforçar uma saída incorreta ou contaminada por ruído. O runner registra quantas experiências foram consideradas, quantas atualizações de replay reduziram a perda e quantas foram ignoradas. O banco continua sendo versionado no repositório pelo workflow, então a memória atravessa execuções distintas do GitHub Actions.
 
-O replay é uma forma de rehearsal supervisionado sobre experiências armazenadas. Ele não transforma o sistema em REINFORCE/PPO nem fornece julgamento semântico geral; a avaliação continua limitada ao avaliador lexical controlado. Checkpoints produzidos por versões anteriores à correção do sinal do gradiente devem ser descartados uma única vez antes de executar a versão corrigida; caso contrário, o runner continuará a partir dos pesos antigos.
+O replay é uma forma de rehearsal supervisionado sobre experiências armazenadas. Ele não transforma o sistema em REINFORCE/PPO nem fornece julgamento semântico geral; a avaliação continua limitada ao avaliador lexical controlado. O runner usa o prefixo de checkpoint v3. Checkpoints anteriores foram treinados com os três pares concatenados e não aprenderam EOS em cada resposta; por isso, não são compatíveis com o novo protocolo e não são restaurados. O workflow restaura apenas artefatos v3 de execuções bem-sucedidas anteriores.
 
 ## Limitações
 
