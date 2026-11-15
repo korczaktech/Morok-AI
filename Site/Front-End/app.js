@@ -310,7 +310,7 @@
   const workspaceDialog = $('#workspace-dialog');
   function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
   function openWorkspacePage(page) {
-    const titles = {images:'Imagens',tasks:'Tarefas',library:'Biblioteca',plugins:'Plugins',locations:'Localizações',personalization:'Personalização',instructions:'Instruções personalizadas'};
+    const titles = {images:'Imagens',tasks:'Tarefas',library:'Biblioteca',plugins:'Plugins',locations:'Localizações',personalization:'Personalização',instructions:'Instruções personalizadas',account:'Minha conta',privacy:'Dados e privacidade',security:'Segurança',notifications:'Notificações'};
     if (!titles[page]) return;
     $('#workspace-title').textContent = titles[page];
     const root = $('#workspace-page');
