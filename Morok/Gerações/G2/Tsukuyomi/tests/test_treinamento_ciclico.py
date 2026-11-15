@@ -50,7 +50,7 @@ class TrainingDataTests(unittest.TestCase):
     def test_split_sizes(self):
         self.assertGreaterEqual(len(training.read_dialogues(DATA_DIR / "treinamento.txt")), 32)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "validacao.txt")), 40)
-        self.assertEqual(len(training.read_dialogues(DATA_DIR / "teste.txt")), 4)
+        self.assertEqual(len(training.read_dialogues(DATA_DIR / "teste.txt")), 12)
 
     def test_report_separates_correct_and_incorrect_answers(self):
         from io import StringIO
