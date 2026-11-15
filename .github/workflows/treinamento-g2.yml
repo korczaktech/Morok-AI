@@ -11,10 +11,10 @@ on:
         required: true
         default: true
       epocas:
-        description: "Épocas por ciclo (passagens completas pelo corpus)"
+        description: "Épocas por tentativa (passagens completas pelo corpus)"
         type: number
         required: true
-        default: 200
+        default: 1
       tentativas:
         description: "Quantidade de ciclos quando o treinamento contínuo estiver desligado"
         type: number
@@ -49,7 +49,7 @@ jobs:
 
       - name: Validar parâmetros
         env:
-          EPOCAS: ${{ github.event_name == 'push' && 200 || inputs.epocas || 200 }}
+          EPOCAS: ${{ github.event_name == 'push' && 1 || inputs.epocas || 1 }}
           TENTATIVAS: ${{ github.event_name == 'push' && 10 || inputs.tentativas || 10 }}
           QUESTOES: ${{ github.event_name == 'push' && 1 || inputs.questoes || 1 }}
         run: |
@@ -97,7 +97,7 @@ jobs:
       - name: Treinar e avaliar somente as questões selecionadas
         working-directory: Morok
         env:
-          EPOCAS: ${{ inputs.epocas || 200 }}
+          EPOCAS: ${{ inputs.epocas || 1 }}
           TENTATIVAS: ${{ inputs.tentativas || 10 }}
           QUESTOES: ${{ inputs.questoes || 1 }}
           TREINAMENTO_CONTINUO: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || inputs.treinamento_continuo || false }}
