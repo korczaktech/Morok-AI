@@ -8,7 +8,8 @@ MODULE = runpy.run_path(str(ROOT / "scripts" / "run-g2-reinforcement.py"))
 grade = MODULE["grade"]
 select_questions = MODULE["select_questions"]
 is_degenerate_response = MODULE["is_degenerate_response"]
-select_training_target = MODULE["select_training_target"]\nbuild_memory_replay = MODULE["build_memory_replay"]
+select_training_target = MODULE["select_training_target"]
+build_memory_replay = MODULE["build_memory_replay"]
 SEED_ANSWERS = MODULE["SEED_ANSWERS"]
 
 
@@ -42,6 +43,38 @@ class G2ReinforcementTests(unittest.TestCase):
     def test_correct_generation_uses_its_own_response_as_target(self):
         self.assertEqual(select_training_target("sky_is_blue", "Sim, o ceu e azul", "correct"),
                          ("Sim, o ceu e azul", "model_response"))
+
+    def test_memory_replays_persisted_model_answers_and_oracle_corrections(self):
+        episodes = [
+            {"episode_id": "1", "question_id": "sky_is_blue",
+             "prompt": "Usuario: O ceu e azul?\\nIA: ",
+             "initial_answer": "Sim, o ceu e azul", "answer": "Sim, o ceu e azul!",
+             "policy_update": {"status": "applied", "source": "model_response"}},
+            {"episode_id": "2", "question_id": "grass_color",
+             "prompt": "Usuario: Que cor e a grama?\\nIA: ",
+             "initial_answer": "grama roxa", "answer": "A grama e verde.",
+             "policy_update": {"status": "applied", "source": "oracle_demonstration"}},
+            {"episode_id": "3", "question_id": "mountains_high_or_low",
+             "prompt": "prompt", "answer": "incompleta",
+             "policy_update": {"status": "skipped"}},
+        ]
+        replay = build_memory_replay(episodes, 32)
+        self.assertEqual(len(replay), 2)
+        self.assertEqual(replay[0]["target"], "Sim, o ceu e azul")
+        self.assertEqual(replay[0]["source"], "model_response")
+        self.assertEqual(replay[1]["target"], SEED_ANSWERS["grass_color"])
+        self.assertEqual(replay[1]["source"], "oracle_demonstration")
+        self.assertEqual(build_memory_replay(episodes, 1)[0]["episode_id"], "2")
+        self.assertEqual(build_memory_replay(episodes, 0), [])
+        with self.assertRaises(ValueError):
+            build_memory_replay(episodes, 257)
+
+    def test_runner_replays_memory_before_new_attempts(self):
+        runner = (ROOT / "scripts" / "run-g2-reinforcement.py").read_text(encoding="utf-8")
+        self.assertIn('default=32,help="number of latest persisted experiences', runner)
+        self.assertIn('memory=build_memory_replay(db["episodes"],a.memory_replay_limit)', runner)
+        self.assertIn('a.memory_replay_steps', runner)
+        self.assertIn('"experiences_considered":len(memory)', runner)
 
 
     def test_runner_uses_adaptive_training_and_reports_sequence_loss(self):
@@ -99,8 +132,7 @@ class G2ReinforcementTests(unittest.TestCase):
             prompt, target = expected[question["id"]]
             self.assertEqual(question["prompt"], prompt)
             self.assertIn(prompt + target, corpus)
-        self.assertEqual(len(db["episodes"]), 0)
-        self.assertEqual(db["totals"]["episodes"], 0)
+        self.assertEqual(db["totals"]["episodes"], len(db["episodes"]))
 
     def test_database_is_isolated_and_has_2000_parameter_policy(self):
         db = json.loads((ROOT / "data" / "reinforcement-g2" / "answers.json").read_text(encoding="utf-8"))
