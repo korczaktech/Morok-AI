@@ -37,6 +37,11 @@ def validation_rank(correct_count: int, total: int, mean_f1: float,
     return correct_count, 0.5 * mean_f1 + 0.5 * mean_char_similarity
 
 
+def initial_validation_rank() -> tuple[int, float]:
+    """Sentinela que garante que o primeiro ciclo seja salvo como melhor estado."""
+    return -1, -1.0
+
+
 def update_learning_rate(current: float, best_rank: tuple[int, float], plateau: int,
                          observed_rank: tuple[int, float]) -> tuple[float, tuple[int, float], int, bool]:
     """Reduz LR após três ciclos sem melhora real; exatidão sempre domina o desempate."""
@@ -297,6 +302,7 @@ def main() -> int:
     best_validation_score = -1.0
     best_validation_correct = 0
     best_validation_cycle = 0
+    best_validation_rank = initial_validation_rank()
     plateau_cycles = 0
     maximum_cycles = min(attempts, MAX_CYCLES)
     with output.open("w", encoding="utf-8") as report:
