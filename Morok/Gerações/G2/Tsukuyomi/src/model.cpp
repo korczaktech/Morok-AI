@@ -658,13 +658,19 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
 
 std::vector<std::uint8_t> generate(const Model& model,
                                    std::span<const std::uint8_t> prompt,
-                                   std::size_t max_new_bytes) {
+                                   std::size_t max_new_bytes, const GenerationConfig& config) {
     std::vector<std::uint8_t> output(prompt.begin(), prompt.end());
     output.reserve(output.size() + max_new_bytes);
     Utf8State utf8;
     if (!valid_utf8_prefix(output, utf8) ||
         static_cast<std::size_t>(utf8.remaining) > max_new_bytes)
         return output;
+
+    if (!std::isfinite(config.temperature) || config.temperature <= 0.0 ||
+        !std::isfinite(config.top_p) || config.top_p <= 0.0 || config.top_p > 1.0 ||
+        !std::isfinite(config.repetition_penalty) || config.repetition_penalty < 1.0)
+        return output;
+    std::mt19937_64 sampling_rng(config.seed);
 
     const QuestionFeatures question = prepare_question_features(model, prompt);
     std::size_t sequence_begin = 0;
@@ -688,21 +694,71 @@ std::vector<std::uint8_t> generate(const Model& model,
 
     for (std::size_t i = 0; i < max_new_bytes; ++i) {
         const auto logits = logits_for_state(model, state);
-        std::size_t best = kVocabularySize;
-        float best_logit = -std::numeric_limits<float>::infinity();
         const std::size_t slots_after = max_new_bytes - i - 1;
+        std::vector<std::pair<std::uint8_t, double>> candidates;
+        candidates.reserve(kVocabularySize);
+        const std::size_t repetition_begin = output.size() > config.repetition_window
+            ? std::max(prompt.size(), output.size() - config.repetition_window)
+            : prompt.size();
         for (std::size_t token = 0; token < kVocabularySize; ++token) {
             const auto byte = static_cast<std::uint8_t>(token);
             const bool allowed = utf8.remaining > 0
                 ? byte >= utf8.next_min && byte <= utf8.next_max
                 : valid_utf8_start(byte, slots_after);
-            if (allowed && logits[token] > best_logit) {
-                best = token;
-                best_logit = logits[token];
+            if (!allowed) continue;
+            double score = static_cast<double>(logits[token]);
+            if (config.repetition_penalty > 1.0 &&
+                std::find(output.begin() + static_cast<std::ptrdiff_t>(repetition_begin),
+                          output.end(), byte) != output.end()) {
+                score = score >= 0.0 ? score / config.repetition_penalty
+                                     : score * config.repetition_penalty;
             }
+            candidates.emplace_back(byte, score);
         }
-        if (best == kVocabularySize) break;
-        const auto byte = static_cast<std::uint8_t>(best);
+        if (candidates.empty()) break;
+
+        std::uint8_t selected = candidates.front().first;
+        if (!config.sample) {
+            double best_score = candidates.front().second;
+            for (const auto& candidate : candidates) {
+                if (candidate.second > best_score ||
+                    (candidate.second == best_score && candidate.first < selected)) {
+                    selected = candidate.first;
+                    best_score = candidate.second;
+                }
+            }
+        } else {
+            for (auto& candidate : candidates) candidate.second /= config.temperature;
+            std::sort(candidates.begin(), candidates.end(),
+                [](const auto& left, const auto& right) {
+                    return left.second == right.second
+                        ? left.first < right.first : left.second > right.second;
+                });
+            if (config.top_k > 0 && candidates.size() > config.top_k)
+                candidates.resize(config.top_k);
+            const double maximum = candidates.front().second;
+            std::vector<double> weights;
+            weights.reserve(candidates.size());
+            double denominator = 0.0;
+            for (const auto& candidate : candidates) {
+                const double weight = std::exp(candidate.second - maximum);
+                weights.push_back(weight);
+                denominator += weight;
+            }
+            if (config.top_p < 1.0) {
+                double cumulative = 0.0;
+                std::size_t keep = 0;
+                for (; keep < weights.size(); ++keep) {
+                    cumulative += weights[keep] / denominator;
+                    if (cumulative >= config.top_p) { ++keep; break; }
+                }
+                candidates.resize(std::max<std::size_t>(1, keep));
+                weights.resize(candidates.size());
+            }
+            std::discrete_distribution<std::size_t> distribution(weights.begin(), weights.end());
+            selected = candidates[distribution(sampling_rng)].first;
+        }
+        const auto byte = selected;
         if (!consume_utf8(utf8, byte)) break;
         output.push_back(byte);
         if (byte == '\n' || byte == '\r' || byte == '\0') break;
