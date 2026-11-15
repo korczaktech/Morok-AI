@@ -26,6 +26,9 @@ def is_degenerate_response(response):
  compact=response.strip()
  if len(compact)<12:return False
  return len(set(compact))<=2 or max(compact.count(ch) for ch in set(compact))/len(compact)>=0.85
+def select_training_target(question_id,response,verdict):
+ if verdict=="correct" and len(response.encode("utf-8"))>=2:return response,"model_response"
+ return SEED_ANSWERS[question_id],"oracle_demonstration"
 def run(cmd):
  r=subprocess.run(cmd,capture_output=True,text=True,encoding="utf-8")
  if r.returncode:raise RuntimeError(f"command failed: {' '.join(cmd)}\n{r.stdout}\n{r.stderr}")
@@ -66,15 +69,10 @@ def main():
    episode_no=len(db["episodes"])+1
    episode={"episode":episode_no,"episode_id":f"{run_id}:{run_attempt}:{i+1}:{q['id']}","run_id":run_id,"run_attempt":int(run_attempt),"source":"model_generated","question_id":q["id"],"prompt":q["prompt"],"answer":response,"verdict":verdict,"reward":reward,"grading_reason":reason,"timestamp_utc":datetime.now(timezone.utc).isoformat(),"model_sha256_before":before,"model_sha256_after":None,"trainable_parameters":2000,"policy_update":{"status":"pending","algorithm":"reward_weighted_bptt_score_gradient_on_both_experts"}}
    db["episodes"].append(episode); db["totals"]["episodes"]+=1; db["totals"][verdict]+=1; atomic(a.database,db)
-   if verdict=="correct" and len(response.encode("utf-8"))>=2:
-    training_source="model_response"
-    training_target=response
-   else:
-    # A wrong model response is never treated as a positive target. Use the
-    # known answer from the controlled corpus as an oracle demonstration so
-    # the next attempt actually receives a learning signal.
-    training_source="oracle_demonstration"
-    training_target=SEED_ANSWERS[q["id"]]
+   training_target,training_source=select_training_target(q["id"],response,verdict)
+   if training_source=="oracle_demonstration":
+    # Never reward a wrong model response. Teach the known corpus answer so
+    # the next attempt receives an actual learning signal.
     answer_file.write_text(training_target,encoding="utf-8")
    if len(training_target.encode("utf-8"))>=2:
     report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate)]))
