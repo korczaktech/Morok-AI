@@ -30,7 +30,7 @@ std::size_t parse_steps(const char* value) {
     return static_cast<std::size_t>(parsed);
 }
 void usage() {
-    std::cerr << "usage: morok-reinforce <checkpoint> <prompt.txt> <response.txt> <reward:-1|1> [learning-rate] [steps]\n";
+    std::cerr << "usage: morok-reinforce <checkpoint> <prompt.txt> <response.txt> <reward:-2|-1|1> [learning-rate] [steps]\n";
 }
 }
 
@@ -45,9 +45,9 @@ int main(int argc, char** argv) {
         if (prompt_text.empty() || response_text.size() < 2)
             throw std::invalid_argument("prompt must be non-empty and response must contain at least two bytes");
         const std::string reward_text = argv[4];
-        if (reward_text != "1" && reward_text != "-1")
-            throw std::invalid_argument("reward must be exactly 1 or -1");
-        const double reward = reward_text == "1" ? 1.0 : -1.0;
+        if (reward_text != "1" && reward_text != "-1" && reward_text != "-2")
+            throw std::invalid_argument("reward must be exactly 1, -1, or -2");
+        const double reward = std::stod(reward_text);
         const double learning_rate = argc >= 6 ? std::stod(argv[5]) : 0.0001;
         const std::size_t update_steps = argc >= 7 ? parse_steps(argv[6]) : 1;
         if (!std::isfinite(learning_rate) || learning_rate <= 0.0 || learning_rate > 0.01)
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
         checkpoint.has_optimizer = true;
         save_g1_checkpoint(argv[1], checkpoint);
 
-        std::cout << "{\"reward\":" << (reward > 0.0 ? 1 : -1)
+        std::cout << "{\"reward\":" << static_cast<int>(reward)
                   << ",\"target_bytes\":" << response.size()
                   << ",\"gradient_norm_first\":" << first_gradient_norm
                   << ",\"gradient_norm_last\":" << last_gradient_norm
