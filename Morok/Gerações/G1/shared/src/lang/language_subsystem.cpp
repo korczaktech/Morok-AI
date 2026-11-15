@@ -133,12 +133,8 @@ DetectedLanguage identify_language(std::string_view text) {
 
 model::G1GenerationReport generate_for_profile(
     const model::G1Parameters& parameters, const common::Utf8Text& prompt,
-    LanguageProfile profile, std::size_t max_new_bytes) {
-    g1::ProfileKind kind = g1::ProfileKind::tsukuyomi;
-    if (profile == LanguageProfile::apollo) kind = g1::ProfileKind::apollo;
-    else if (profile == LanguageProfile::mokosh) kind = g1::ProfileKind::mokosh;
-    else if (profile == LanguageProfile::tsukuyomi_max) kind = g1::ProfileKind::tsukuyomi_max;
-    const auto config = g1::make_generation_config(kind, max_new_bytes, 42);
+    std::size_t max_new_bytes) {
+    const auto config = g1::make_generation_config(max_new_bytes, 42);
     return model::generate_g1(parameters, prompt, config);
 }
 
