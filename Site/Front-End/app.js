@@ -474,7 +474,12 @@
   restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); checkHealth(); refreshAuthSession();
 
   $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
-  $('#auth-form').addEventListener('submit',event=>{event.preventDefault();if(event.submitter && event.submitter.id!=='auth-submit')return;submitAuth();});
+  $('#auth-form').addEventListener('submit',event=>{if(event.submitter && event.submitter.id!=='auth-submit')return;event.preventDefault();submitAuth();});
+  // Keep dialog dismissal independent from form submission handlers.
+  $('.dialog').forEach(dialog=>{
+    dialog.querySelectorAll('.dialog-close').forEach(button=>button.addEventListener('click',event=>{event.preventDefault();dialog.close();}));
+    dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
+  });
   $('#auth-logout').addEventListener('click',logout);
 
   $('#new-chat').addEventListener('click',createConversation);
