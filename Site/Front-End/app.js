@@ -5,7 +5,7 @@
   const STORAGE_KEY = 'morok.web.state.v2';
   const AUTH_API_URL = 'https://morok-ai.onrender.com';
   const MAX_LOCAL_BYTES = 3_500_000;
-  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: '', authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
+  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
   const el = {
     app: $('#app'), sidebar: $('#sidebar'), backdrop: $('#backdrop'), history: $('#history-list'),
     welcome: $('#welcome'), conversation: $('#conversation'), input: $('#message-input'), composer: $('#composer'),
@@ -31,7 +31,7 @@
       if (Array.isArray(saved.conversations)) state.conversations = saved.conversations.filter(c => c && typeof c.id === 'string' && Array.isArray(c.messages)).slice(0, 200);
       state.activeId = saved.activeId || null;
       state.theme = ['dark','light','system'].includes(saved.theme) ? saved.theme : 'dark';
-      state.apiUrl = typeof saved.apiUrl === 'string' ? saved.apiUrl : '';
+      state.apiUrl = typeof saved.apiUrl === 'string' && saved.apiUrl.trim() ? saved.apiUrl.trim() : AUTH_API_URL;
       state.displayName = typeof saved.displayName === 'string' ? saved.displayName.slice(0,32) : 'Visitante';
       state.generation = saved.generation === 'G1' ? 'G1' : 'G1';
       state.model = ['Tsukuyomi','Apollo','Mokosh'].includes(saved.model) ? saved.model : 'Tsukuyomi';
