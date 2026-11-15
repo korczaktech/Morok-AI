@@ -30,14 +30,21 @@ struct G1Evaluation {
     std::array<double, kG1PredictionBits> conditional_logits{};
 };
 
-// Eight MSB-first bit features, even/odd parity, normalized popcount and byte value.
+// Eight MSB-first byte bits plus lexical token-start, separator and content features.
+[[nodiscard]] bool is_g1_token_separator(std::uint8_t byte) noexcept;
 [[nodiscard]] std::array<float, kG1InputDimension>
 encode_g1_byte(std::uint8_t byte) noexcept;
+[[nodiscard]] std::array<float, kG1InputDimension>
+encode_g1_byte(std::uint8_t byte, bool token_start,
+               bool token_separator) noexcept;
 
 // Consume one observed byte and update both recurrent states.
 // The caller must reset state at the start of each independent document/session.
 void advance_g1_state(const G1Parameters& parameters, G1State& state,
                       std::uint8_t observed_byte);
+void advance_g1_state(const G1Parameters& parameters, G1State& state,
+                      std::uint8_t observed_byte, bool token_start,
+                      bool token_separator);
 
 // Predict the next byte from the current state using greedy conditional bit decoding.
 [[nodiscard]] G1Prediction predict_g1_next_byte(const G1Parameters& parameters,
