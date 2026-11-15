@@ -214,6 +214,7 @@
     if (conversation.title === 'Nova conversa') conversation.title = titleFrom(raw || attachments[0]?.name || 'Arquivo');
     conversation.updatedAt = now(); state.attachments = []; renderAttachments(); el.input.value = ''; resizeInput();
     persist(); renderHistory(); renderConversation();
+    void syncConversation(conversation);
     await requestAnswer(conversation, prompt);
   }
   async function requestAnswer(conversation, prompt) {
@@ -239,7 +240,7 @@
         conversation.messages.push({ id:id(), role:'assistant', error:true, content:reason, createdAt:now() });
       }
     } finally {
-      state.busy = false; state.controller = null; setBusy(false); conversation.updatedAt = now(); persist(); renderHistory(); renderConversation();
+      state.busy = false; state.controller = null; setBusy(false); conversation.updatedAt = now(); persist(); void syncConversation(conversation); renderHistory(); renderConversation();
     }
   }
   function setBusy(busy) {
@@ -319,6 +320,51 @@
     if (!response.ok) { const error = new Error(data.error || 'Falha na autenticação (' + response.status + ').'); error.status = response.status; throw error; }
     return data;
   }
+  async function syncConversation(conversation) {
+    const token = state.authSession?.access_token;
+    if (!token || !conversation?.id) return;
+    try {
+      await authRequest('/v1/conversations/sync', {
+        token,
+        body: { conversation: {
+          id: conversation.id, title: conversation.title,
+          createdAt: conversation.createdAt, updatedAt: conversation.updatedAt,
+          messages: conversation.messages || []
+        } }
+      });
+    } catch (error) {
+      console.warn('Não foi possível sincronizar a conversa:', error.message);
+    }
+  }
+  async function loadRemoteConversations() {
+    const token = state.authSession?.access_token;
+    if (!token) return;
+    try {
+      const data = await authRequest('/v1/conversations', { method: 'GET', token });
+      if (!Array.isArray(data.conversations)) return;
+      const localById = new Map(state.conversations.map(item => [item.id, item]));
+      const merged = [];
+      for (const remote of data.conversations) {
+        const local = localById.get(remote.id);
+        if (!local || Date.parse(remote.updatedAt) > Date.parse(local.updatedAt)) {
+          merged.push(remote);
+        } else {
+          merged.push(local);
+          void syncConversation(local);
+        }
+        localById.delete(remote.id);
+      }
+      for (const local of localById.values()) {
+        merged.push(local);
+        void syncConversation(local);
+      }
+      state.conversations = merged.sort((a,b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)).slice(0,200);
+      if (!state.conversations.some(item => item.id === state.activeId)) state.activeId = state.conversations[0]?.id || null;
+      persist(); renderHistory(); renderConversation();
+    } catch (error) {
+      console.warn('Não foi possível carregar as conversas da nuvem:', error.message);
+    }
+  }
   function openAuth(mode='login') {
     state.authMode=mode; setAuthMode(mode);
     $('#auth-email').value=state.authSession?.user?.email || '';
@@ -366,7 +412,7 @@
     }
     try {
       const data=await authRequest('/auth/me',{method:'GET',token:session.access_token});
-      if(data.user) { state.authSession.user=data.user; saveAuthSession(state.authSession); }
+      if(data.user) { state.authSession.user=data.user; saveAuthSession(state.authSession); await loadRemoteConversations(); }
     } catch(error) { if(error.status===401) saveAuthSession(null); else updateProfile(); }
   }
   async function submitAuth() {
@@ -380,6 +426,7 @@
       const path=state.authMode==='signup'?'/auth/signup':'/auth/login';
       const data=await authRequest(path,{body:state.authMode==='signup'?{email,password,name}:{email,password}});
       saveAuthSession(data);
+      await loadRemoteConversations();
       message.classList.add('success');
       message.textContent=state.authMode==='signup'?'Conta criada e salva no MongoDB.':'Login realizado.';
       setTimeout(()=>el.auth.close(),500);
