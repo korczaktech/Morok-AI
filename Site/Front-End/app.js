@@ -31,7 +31,7 @@
       if (Array.isArray(saved.conversations)) state.conversations = saved.conversations.filter(c => c && typeof c.id === 'string' && Array.isArray(c.messages)).slice(0, 200);
       state.activeId = saved.activeId || null;
       state.theme = ['dark','light','system'].includes(saved.theme) ? saved.theme : 'dark';
-      state.apiUrl = typeof saved.apiUrl === 'string' && saved.apiUrl.trim() ? saved.apiUrl.trim() : AUTH_API_URL;
+      state.apiUrl = AUTH_API_URL;
       state.displayName = typeof saved.displayName === 'string' ? saved.displayName.slice(0,32) : 'Visitante';
       state.generation = saved.generation === 'G1' ? 'G1' : 'G1';
       state.model = ['Tsukuyomi','Apollo','Mokosh'].includes(saved.model) ? saved.model : 'Tsukuyomi';
