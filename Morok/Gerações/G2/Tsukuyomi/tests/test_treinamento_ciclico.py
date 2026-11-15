@@ -56,6 +56,19 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "validacao.txt")), 40)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "teste.txt")), 12)
 
+    def test_training_metrics_are_parsed_and_must_be_finite(self):
+        output = (
+            "Épocas: 1\\nBytes-alvo: 512\\n"
+            "train_bpb inicial: 7.5\\ntrain_bpb final: 6.9\\n"
+        )
+        self.assertEqual(training.extract_training_metric(output, "Épocas"), 1.0)
+        self.assertEqual(training.extract_training_metric(output, "Bytes-alvo"), 512.0)
+        self.assertAlmostEqual(training.extract_training_metric(output, "train_bpb final"), 6.9)
+        with self.assertRaises(RuntimeError):
+            training.extract_training_metric("train_bpb final: nan\\n", "train_bpb final")
+        with self.assertRaises(RuntimeError):
+            training.extract_training_metric("", "train_bpb final")
+
     def test_best_checkpoint_and_adam_state_are_saved_and_restored_together(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
