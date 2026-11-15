@@ -11,25 +11,25 @@ import unicodedata
 
 MAX_RESPONSE_BYTES = 160
 MAX_VALIDATION_QUESTIONS = 40
-MAX_CYCLES = 100000
+MAX_CYCLES = 100
 INITIAL_LEARNING_RATE = 0.001
 MIN_LEARNING_RATE = 0.00005
 LR_REDUCE_FACTOR = 0.5
 LR_PLATEAU_CYCLES = 5
 
 
-def update_learning_rate(current: float, best_bpb: float, plateau: int,
-                         observed_bpb: float) -> tuple[float, float, int, bool]:
-    """Reduz o LR após cinco ciclos sem melhora mensurável de train_bpb."""
-    if not (observed_bpb >= 0.0):
-        raise ValueError("train_bpb observado precisa ser não negativo.")
-    if observed_bpb + 1.0e-6 < best_bpb:
-        return current, observed_bpb, 0, False
+def update_learning_rate(current: float, best_score: float, plateau: int,
+                         observed_score: float) -> tuple[float, float, int, bool]:
+    """Reduz o LR após cinco ciclos sem melhora na qualidade das respostas."""
+    if not 0.0 <= observed_score <= 1.0:
+        raise ValueError("A pontuação de validação precisa estar entre 0 e 1.")
+    if observed_score > best_score + 1.0e-6:
+        return current, observed_score, 0, False
     plateau += 1
     if plateau >= LR_PLATEAU_CYCLES and current > MIN_LEARNING_RATE:
         reduced = max(MIN_LEARNING_RATE, current * LR_REDUCE_FACTOR)
-        return reduced, best_bpb, 0, reduced < current
-    return current, best_bpb, plateau, False
+        return reduced, best_score, 0, reduced < current
+    return current, best_score, plateau, False
 
 
 def should_stop(continuous: bool, correct_count: int, total: int) -> bool:
@@ -38,14 +38,9 @@ def should_stop(continuous: bool, correct_count: int, total: int) -> bool:
 
 
 def select_validation_questions(train_dialogues, validation_pool, count):
-    """Prioriza perguntas cuja resposta de referência existe nos 32 exemplos de treino."""
-    known_answers = {tuple(normalize(answer)) for _, answer in train_dialogues}
-    candidates = [
-        dialogue for dialogue in validation_pool
-        if tuple(normalize(dialogue[1])) in known_answers
-    ]
-    selected_pool = candidates if count == 1 and candidates else validation_pool
-    return selected_pool[:count]
+    """Seleciona perguntas em ordem fixa, sem favorecer respostas memorizadas."""
+    del train_dialogues
+    return validation_pool[:count]
 
 
 def normalize(text: str) -> list[str]:
@@ -152,8 +147,8 @@ def main() -> int:
     epochs, attempts = int(sys.argv[6]), int(sys.argv[7])
     continuous = sys.argv[8] == "1"
     question_count = int(sys.argv[9])
-    if epochs < 1 or attempts < 1:
-        raise ValueError("Épocas e tentativas precisam ser maiores que zero.")
+    if epochs < 1 or attempts < 1 or attempts > MAX_CYCLES:
+        raise ValueError(f"Épocas e tentativas precisam ser positivas; tentativas <= {MAX_CYCLES}.")
     if not 1 <= question_count <= MAX_VALIDATION_QUESTIONS:
         raise ValueError("A quantidade de questões precisa estar entre 1 e 40.")
 
@@ -172,9 +167,9 @@ def main() -> int:
 
     cycle = 0
     learning_rate = INITIAL_LEARNING_RATE
-    best_train_bpb = float("inf")
+    best_validation_score = -1.0
     plateau_cycles = 0
-    maximum_cycles = MAX_CYCLES if continuous else attempts
+    maximum_cycles = min(attempts, MAX_CYCLES)
     with output.open("w", encoding="utf-8") as report:
         report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
         report.write(f"- Diálogos de treinamento: {len(train_dialogues)}\n")
@@ -184,9 +179,10 @@ def main() -> int:
         report.write(f"- Épocas por tentativa: {epochs}\n")
         report.write(f"- Modo contínuo: {'ativado' if continuous else 'desativado'}\n")
         report.write(f"- Limite de geração: {MAX_RESPONSE_BYTES} bytes\n")
-        report.write("- Critério contínuo: encerrar no primeiro ciclo em que a questão selecionada estiver correta\n")
+        report.write("- Critério contínuo: encerrar quando todas as questões selecionadas estiverem corretas\n")
         report.write("- Critério de aprovação: igualdade lexical normalizada; não mede semântica\n")
-        report.write("- F1 lexical é apenas diagnóstico; similaridade não aprova uma resposta.\n")
+        report.write("- F1 lexical é diagnóstico; similaridade não aprova uma resposta.\n")
+        report.write("- Scheduler: 80% exatidão + 20% F1 lexical médio da validação.\n")
         report.write(f"- Learning rate inicial: {learning_rate:.6f}; scheduler reduz após {LR_PLATEAU_CYCLES} ciclos sem melhora de train_bpb.\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
@@ -209,34 +205,32 @@ def main() -> int:
                 command, check=True, capture_output=True, text=True, encoding="utf-8"
             )
             print(training_process.stdout, end="", flush=True)
-            bpb_match = re.search(
-                r"train_bpb final:\s*([0-9.eE+-]+)", training_process.stdout
-            )
-            if bpb_match:
-                train_bpb = float(bpb_match.group(1))
-                learning_rate, best_train_bpb, plateau_cycles, reduced = update_learning_rate(
-                    learning_rate, best_train_bpb, plateau_cycles, train_bpb
-                )
-                if reduced:
-                    print(
-                        f"Scheduler: train_bpb sem melhora; learning rate reduzido para {learning_rate:.6f}.",
-                        flush=True,
-                    )
-            else:
-                raise RuntimeError("O treinador não informou train_bpb final; scheduler não pode continuar.")
+            if not re.search(r"train_bpb final:\\s*[0-9.eE+-]+", training_process.stdout):
+                raise RuntimeError("O treinador não informou train_bpb final.")
             validation_results = evaluate_set(generator, checkpoint, validation)
             correct_count, total = write_results(
-                report, f"Validação — tentativa {cycle}", validation, validation_results
+                report, f"Validação — ciclo {cycle}", validation, validation_results
             )
+            mean_f1 = sum(result[2] for result in validation_results) / max(1, total)
+            validation_score = 0.8 * (correct_count / max(1, total)) + 0.2 * mean_f1
+            learning_rate, best_validation_score, plateau_cycles, reduced = update_learning_rate(
+                learning_rate, best_validation_score, plateau_cycles, validation_score
+            )
+            if reduced:
+                print(
+                    f"Scheduler: validação estagnada; learning rate reduzido para {learning_rate:.6f}.",
+                    flush=True,
+                )
             elapsed = time.perf_counter() - started
             report.write(
-                f"**Validação: {correct_count}/{total}. F1 é diagnóstico, não critério de aprovação. "
-                f"LR: {learning_rate:.6f}. Duração: {elapsed:.2f}s.**\n\n"
+                f"**Validação: {correct_count}/{total}; F1 médio: {mean_f1:.3f}; "
+                f"pontuação: {validation_score:.3f}; LR: {learning_rate:.6f}; "
+                f"duração: {elapsed:.2f}s.**\n\n"
             )
             report.flush()
             print(
-                f"Validação do ciclo {cycle}: {correct_count}/{total}; "
-                f"LR={learning_rate:.6f}; {elapsed:.2f}s.",
+                f"Validação do ciclo {cycle}: {correct_count}/{total}; F1={mean_f1:.3f}; "
+                f"score={validation_score:.3f}; LR={learning_rate:.6f}; {elapsed:.2f}s.",
                 flush=True,
             )
 
@@ -250,7 +244,7 @@ def main() -> int:
 
         if continuous and not should_stop(continuous, correct_count, total):
             raise RuntimeError(
-                f"A questão selecionada não foi respondida corretamente após {cycle} ciclos."
+                f"Objetivo contínuo não atingido: {correct_count}/{total} após {cycle} ciclos."
             )
 
         # No modo de uma questão, não consultar o teste reservado.
