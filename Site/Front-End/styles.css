@@ -732,3 +732,8 @@ h1 span,.welcome h1 span{
 :root[data-theme="light"] .task-row,:root[data-theme="light"] .feature-card{background:#fff;border-color:#e4d9ef;color:#352443}
 :root[data-theme="light"] .upload-card{background:#faf7ff}
 @media(max-width:760px){.profile-menu{bottom:58px}.workspace-dialog{width:calc(100% - 18px)}.inline-create{flex-direction:column}}
+
+.profile-menu{max-height:min(72vh,520px);overflow-y:auto;overscroll-behavior:contain}
+.sidebar-tools{flex:0 0 auto}
+.history-heading{margin-top:15px}
+.workspace-dialog[open]{display:block}
