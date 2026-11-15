@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Treinamento cíclico e avaliação em lote do Tsukuyomi G2."""
+"""Treinamento cíclico com validação e teste independentes do Tsukuyomi G2 0.1."""
 
 from collections import Counter
 from pathlib import Path
@@ -8,7 +8,6 @@ import subprocess
 import sys
 import time
 import unicodedata
-
 
 MAX_RESPONSE_BYTES = 160
 
@@ -20,15 +19,12 @@ def normalize(text: str) -> list[str]:
 
 
 def evaluate(answer: str, expected: str) -> tuple[bool, float]:
-    """F1 por frequência de palavras; não representa avaliação semântica."""
+    """F1 lexical por frequência; não deve ser interpretado como avaliação semântica."""
     actual = normalize(answer)
     reference = normalize(expected)
     if not actual or not reference:
         return False, 0.0
-
-    actual_counts = Counter(actual)
-    reference_counts = Counter(reference)
-    overlap = sum((actual_counts & reference_counts).values())
+    overlap = sum((Counter(actual) & Counter(reference)).values())
     precision = overlap / len(actual)
     recall = overlap / len(reference)
     score = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
@@ -48,26 +44,85 @@ def read_dialogues(corpus: Path) -> list[tuple[str, str]]:
                 dialogues.append((question, answer))
             question = None
     if not dialogues:
-        raise RuntimeError("Nenhum par U:/IA: completo foi encontrado no corpus.")
+        raise RuntimeError(f"Nenhum par U:/IA: completo encontrado em {corpus}.")
     return dialogues
 
 
+def evaluate_set(generator: Path, checkpoint: Path,
+                 dialogues: list[tuple[str, str]]) -> list[tuple[str, str, bool, float]]:
+    prompts = "".join(
+        question.replace("\n", " ").replace("\r", " ") + "\n"
+        for question, _ in dialogues
+    )
+    process = subprocess.run(
+        [str(generator), "--batch", str(checkpoint), str(MAX_RESPONSE_BYTES)],
+        input=prompts, check=True, capture_output=True, text=True, encoding="utf-8",
+    )
+    generated = process.stdout.splitlines()
+    if len(generated) != len(dialogues):
+        raise RuntimeError(
+            f"Gerador retornou {len(generated)} respostas para {len(dialogues)} perguntas."
+        )
+    results = []
+    for (question, expected), answer in zip(dialogues, generated):
+        answer = answer.strip()
+        correct, score = evaluate(answer, expected)
+        results.append((question, answer, correct, score))
+    return results
+
+
+def write_results(report, title: str, results) -> tuple[int, int]:
+    report.write(f"## {title}\n\n")
+    for index, (question, answer, correct, score) in enumerate(results, start=1):
+        verdict = "CORRETA" if correct else "INCORRETA"
+        report.write(f"### {index}. {question}\n\n")
+        report.write(f"- Resposta gerada: {answer or '(vazia)'}\n")
+        report.write(f"- Gabarito: {results_expected_placeholder(question)}\n")
+        report.write(f"- Correspondência lexical: {score:.1%}\n")
+        report.write(f"- Resultado: **{verdict}**\n\n")
+    correct_count = sum(item[2] for item in results)
+    return correct_count, len(results)
+
+
+def results_expected_placeholder(question: str) -> str:
+    # O gabarito é acrescentado por write_dialogue_results para evitar estado global.
+    return "(ver gabarito no arquivo de origem)"
+
+
+def write_dialogue_results(report, title: str, dialogues, results) -> tuple[int, int]:
+    report.write(f"## {title}\n\n")
+    for index, ((question, expected), (_, answer, correct, score)) in enumerate(
+        zip(dialogues, results), start=1
+    ):
+        verdict = "CORRETA" if correct else "INCORRETA"
+        report.write(f"### {index}. {question}\n\n")
+        report.write(f"- Resposta gerada: {answer or '(vazia)'}\n")
+        report.write(f"- Gabarito: {expected}\n")
+        report.write(f"- Correspondência lexical: {score:.1%}\n")
+        report.write(f"- Resultado: **{verdict}**\n\n")
+    return sum(item[2] for item in results), len(results)
+
+
 def main() -> int:
-    if len(sys.argv) != 7:
+    if len(sys.argv) != 9:
         print(
-            "Uso: treinamento_ciclico.py <treinador> <gerador> <corpus> "
-            "<epocas_por_ciclo> <tentativas> <continuo:0|1>",
+            "Uso: treinamento_ciclico.py <treinador> <gerador> <treino> "
+            "<validacao> <teste> <epocas> <tentativas> <continuo:0|1>",
             file=sys.stderr,
         )
         return 2
 
-    trainer, generator, corpus = map(Path, sys.argv[1:4])
-    epochs, attempts = int(sys.argv[4]), int(sys.argv[5])
-    continuous = sys.argv[6] == "1"
+    trainer, generator, train_corpus, validation_corpus, test_corpus = map(
+        Path, sys.argv[1:6]
+    )
+    epochs, attempts = int(sys.argv[6]), int(sys.argv[7])
+    continuous = sys.argv[8] == "1"
     if epochs < 1 or attempts < 1:
         raise ValueError("Épocas e tentativas precisam ser maiores que zero.")
 
-    dialogues = read_dialogues(corpus)
+    validation = read_dialogues(validation_corpus)
+    test = read_dialogues(test_corpus)
+    train_dialogues = read_dialogues(train_corpus)
     checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
     output = Path("build/g2/respostas-tsukuyomi.md")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -76,96 +131,69 @@ def main() -> int:
     cycle = 0
     maximum_cycles = 100000 if continuous else attempts
     with output.open("w", encoding="utf-8") as report:
-        report.write("# Avaliação do treinamento — Tsukuyomi G2\n\n")
-        report.write(f"- Perguntas: {len(dialogues)}\n")
+        report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
+        report.write(f"- Diálogos de treinamento: {len(train_dialogues)}\n")
+        report.write(f"- Perguntas de validação: {len(validation)}\n")
+        report.write(f"- Perguntas de teste reservado: {len(test)}\n")
         report.write(f"- Épocas por ciclo: {epochs}\n")
         report.write(f"- Modo contínuo: {'ativado' if continuous else 'desativado'}\n")
-        report.write("- Geração: um único processo por ciclo, checkpoint carregado uma vez\n")
-        report.write(f"- Limite por resposta: {MAX_RESPONSE_BYTES} bytes\n")
-        report.write("- Critério contínuo: 10 ciclos consecutivos com 100% das questões corretas\n")
-        report.write("- Avaliador: F1 lexical por frequência de palavras (não semântico)\n\n")
+        report.write(f"- Limite de geração: {MAX_RESPONSE_BYTES} bytes\n")
+        report.write("- Critério contínuo: 10 ciclos consecutivos com 100% na validação\n")
+        report.write("- Métrica: F1 lexical por frequência; não mede semântica\n")
+        report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
         while cycle < maximum_cycles:
             cycle += 1
-            command = [str(trainer), str(corpus), str(checkpoint), str(epochs), "42"]
+            command = [str(trainer), str(train_corpus), str(checkpoint), str(epochs), "42"]
             if cycle > 1:
                 command.append("--resume")
 
             print(
-                f"\n=== Ciclo {cycle}: {epochs} época(s), "
-                f"{len(dialogues)} pergunta(s); sequência correta: {streak}/10 ===",
+                f"\n=== Ciclo {cycle}: {epochs} época(s), validação "
+                f"{len(validation)} perguntas; sequência {streak}/10 ===",
                 flush=True,
             )
             started = time.perf_counter()
             subprocess.run(command, check=True)
-
-            # O gerador mantém o modelo carregado durante todas as perguntas.
-            prompts = "".join(question.replace("\n", " ").replace("\r", " ") + "\n"
-                              for question, _ in dialogues)
-            generated = subprocess.run(
-                [str(generator), "--batch", str(checkpoint), str(MAX_RESPONSE_BYTES)],
-                input=prompts,
-                check=True,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-            ).stdout.splitlines()
-
-            if len(generated) != len(dialogues):
-                raise RuntimeError(
-                    f"Gerador retornou {len(generated)} respostas para "
-                    f"{len(dialogues)} perguntas."
-                )
-
-            cycle_results = []
-            report.write(f"## Tentativa {cycle}\n\n")
-            for index, ((question, expected), answer) in enumerate(
-                zip(dialogues, generated), start=1
-            ):
-                answer = answer.strip()
-                correct, score = evaluate(answer, expected)
-                cycle_results.append(correct)
-                verdict = "CORRETA" if correct else "INCORRETA"
-                report.write(f"### {index}. {question}\n\n")
-                report.write(f"- Resposta gerada: {answer or '(vazia)'}\n")
-                report.write(f"- Gabarito: {expected}\n")
-                report.write(f"- Correspondência lexical: {score:.1%}\n")
-                report.write(f"- Resultado: **{verdict}**\n\n")
-                print(
-                    f"::{'notice' if correct else 'error'} title=Tsukuyomi G2::{verdict} "
-                    f"— tentativa {cycle}, questão {index}/{len(dialogues)}: {question}; "
-                    f"correspondência lexical {score:.1%}",
-                    flush=True,
-                )
-
-            elapsed = time.perf_counter() - started
-            correct_count = sum(cycle_results)
-            all_correct = len(cycle_results) == len(dialogues) and all(cycle_results)
+            validation_results = evaluate_set(generator, checkpoint, validation)
+            correct_count, total = write_dialogue_results(
+                report, f"Validação — tentativa {cycle}", validation, validation_results
+            )
+            all_correct = total > 0 and correct_count == total
             streak = streak + 1 if all_correct else 0
+            elapsed = time.perf_counter() - started
             report.write(
-                f"**Resultado da tentativa {cycle}: {correct_count}/{len(dialogues)} "
-                f"corretas. Sequência de ciclos perfeitos: {streak}/10. "
-                f"Tempo do ciclo: {elapsed:.2f} s.**\n\n"
+                f"**Validação: {correct_count}/{total}. Sequência perfeita: "
+                f"{streak}/10. Duração: {elapsed:.2f}s.**\n\n"
             )
             report.flush()
             print(
-                f"Ciclo {cycle}: {correct_count}/{len(dialogues)} corretas; "
-                f"sequência {streak}/10; duração {elapsed:.2f}s.",
+                f"Validação do ciclo {cycle}: {correct_count}/{total}; "
+                f"sequência {streak}/10; {elapsed:.2f}s.",
                 flush=True,
             )
 
             if continuous and streak >= 10:
-                report.write("## Objetivo atingido\n\n")
-                report.write("Dez ciclos consecutivos concluídos com todas as questões corretas.\n")
-                print("Objetivo atingido: 10 ciclos consecutivos com 100% de acerto.", flush=True)
+                report.write("Dez ciclos consecutivos aprovados na validação.\n\n")
                 break
             if not continuous and cycle >= attempts:
                 break
         else:
-            raise RuntimeError("Limite de segurança de ciclos atingido sem completar o objetivo.")
+            raise RuntimeError("Limite de segurança atingido sem completar o objetivo.")
 
-    if continuous and streak < 10:
-        raise RuntimeError("Treinamento contínuo terminou sem atingir 10 ciclos perfeitos.")
+        if continuous and streak < 10:
+            raise RuntimeError("Treinamento contínuo terminou sem 10 ciclos perfeitos.")
+
+        # O teste reservado não participa da escolha de ciclos nem do critério de parada.
+        test_results = evaluate_set(generator, checkpoint, test)
+        test_correct, test_total = write_dialogue_results(
+            report, "Teste final reservado", test, test_results
+        )
+        report.write(
+            f"**Resultado final no teste reservado: {test_correct}/{test_total}.**\n"
+        )
+        print(f"Teste final reservado: {test_correct}/{test_total}.", flush=True)
+
     print(f"\nRelatório salvo em: {output}")
     print(f"Checkpoint final: {checkpoint}")
     return 0
