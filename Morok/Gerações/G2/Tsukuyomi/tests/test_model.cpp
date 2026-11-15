@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <cstdio>
 #include <filesystem>
 #include <limits>
 #include <string>
@@ -13,7 +14,7 @@
 
 // Os testes precisam continuar ativos também em builds Release (-DNDEBUG).
 #undef assert
-#define assert(condition) do { if (!(condition)) std::abort(); } while (false)
+#define assert(condition) do { if (!(condition)) { std::fprintf(stderr, "Assertion failed at line %d: %s\n", __LINE__, #condition); std::abort(); } } while (false)
 
 int main() {
     using namespace morok::g2::tsukuyomi;
