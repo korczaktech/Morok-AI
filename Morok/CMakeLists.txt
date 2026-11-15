@@ -142,6 +142,11 @@ target_link_libraries(morok_g1_profile_evaluate PRIVATE Morok::G1 morok_g1_tsuku
 set_target_properties(morok_g1_profile_evaluate PROPERTIES OUTPUT_NAME "morok-g1-profile-evaluate")
 morok_enable_sanitizers(morok_g1_profile_evaluate)
 
+if(MOROK_BUILD_TESTS)
+    add_test(NAME g1_semantic_evaluator
+        COMMAND morok_g1_profile_evaluate --self-test)
+endif()
+
 
 
 add_executable(morok_reinforce Gerações/G1/apps/reinforce.cpp)
