@@ -19,7 +19,7 @@ cd "$root"
 
 train_bin="${MOROK_TRAIN_BIN:-./build/morok-train}"
 generate_bin="${MOROK_GENERATE_BIN:-./build/morok_generate}"
-corpus="Gerações/Gerações/G1/shared/tests/fixtures/benchmark"
+corpus="Gerações/G1/shared/tests/fixtures/benchmark"
 checkpoint="$output_dir/g1-resume.morokckp"
 best_model="$output_dir/g1-best.morokckp"
 metrics="$output_dir/metrics.jsonl"

@@ -64,7 +64,7 @@ jobs:
           mkdir -p build/fuzz-corpus/utf8 build/fuzz-corpus/rlah build/fuzz-corpus/checkpoint
           cp tests/fixtures/fuzz/rlah-valid.hex build/fuzz-corpus/utf8/
           cp tests/fixtures/fuzz/rlah-valid.hex build/fuzz-corpus/rlah/
-          cp Gerações/G1/shared/tests/fuzz/checkpoint-valid.hex build/fuzz-corpus/checkpoint/
+          cp Gerações/G1/shared/tests/fixtures/fuzz/checkpoint-valid.hex build/fuzz-corpus/checkpoint/
 
       - name: Fuzz UTF-8 parser
         working-directory: Morok

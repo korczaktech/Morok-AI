@@ -17,6 +17,6 @@ A G1 possui exatamente três perfis: `Morok::G1::Tsukuyomi`, `Morok::G1::Apollo`
 
 Os perfis usam o motor comum da própria G1, mas não importam código privado uns dos outros.
 
-A G1 depende apenas das bibliotecas públicas neutras da raiz e de seu motor interno. Não importa código da G2 ou G3.
+A G1 depende apenas das bibliotecas públicas neutras da raiz e de seu motor interno. Não importa código de outras gerações.
 
 Consulte [MODELOS.md](../MODELOS.md).
