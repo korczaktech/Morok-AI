@@ -37,6 +37,9 @@ Modelo de identidade visual escura/preta. Opera com exatamente um agente. Não d
 ### Artemis — arquitetura multiagente
 Modelo destinado a tarefas que se beneficiam de colaboração. Deve utilizar mais de dois agentes, portanto no mínimo três agentes ativos na arquitetura de execução. Coordenação, divisão de tarefas e consolidação de resultados pertencem à implementação exclusiva de Artemis.
 
+### Tsukuyomi Max — rede neural unificada da G1
+Modelo neural central da geração G1. Utiliza um único conjunto de parâmetros e um checkpoint próprio para aprender os diferentes tipos de pergunta e diálogos da geração, sem separar a rede por perfil de tarefa. Os demais perfis continuam disponíveis como configurações/modelos independentes para experimentação e comparação.
+
 ### Apollo — baixa latência
 Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a primeira resposta e o tempo total de inferência. Pode usar mais recursos quando isso produzir redução de latência medida e reproduzível.
 
@@ -55,7 +58,7 @@ Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a prim
 
 ## Relação entre gerações
 
-Os perfis são definidos por geração. Na G1 existem somente Tsukuyomi, Apollo e Mokosh; Artemis não faz parte dessa geração. A quantidade de parâmetros, mecanismos cognitivos e capacidades será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
+Os perfis são definidos por geração. Na G1 existem Tsukuyomi, Apollo, Mokosh e Tsukuyomi Max; Artemis não faz parte dessa geração. A quantidade de parâmetros, mecanismos cognitivos e capacidades será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
 
 ## Organização real do código
 
@@ -67,7 +70,7 @@ Aplicações, scripts, dados de reforço, fixtures e testes específicos da gera
 
 ## Estado dos perfis
 
-G1 possui alvos CMake independentes para Mokosh, Tsukuyomi e Apollo. Cada perfil mantém suas políticas e código exclusivo dentro de seu próprio diretório, com testes próprios. Os motores e adaptadores comuns aos perfis de uma geração permanecem no diretório interno dessa geração, fora dos diretórios dos perfis. Na G1, Tsukuyomi preserva a execução atual de agente único; Apollo é o perfil de velocidade; Mokosh deriva da base de Tsukuyomi, com processamento de raciocínio mais demorado e treinamento com mais épocas. Artemis não existe na G1.
+G1 possui alvos CMake independentes para Mokosh, Tsukuyomi, Apollo e Tsukuyomi Max. Cada perfil mantém suas políticas e código exclusivo dentro de seu próprio diretório, com testes próprios. Os motores e adaptadores comuns aos perfis de uma geração permanecem no diretório interno dessa geração, fora dos diretórios dos perfis. Na G1, Tsukuyomi preserva a execução atual de agente único; Apollo é o perfil de velocidade; Mokosh deriva da base de Tsukuyomi, com processamento de raciocínio mais demorado e treinamento com mais épocas. Tsukuyomi Max é a rede neural unificada da G1, com checkpoint próprio. Artemis não existe na G1.
 
 G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de outras gerações dentro da G3.
 
