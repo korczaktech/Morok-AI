@@ -36,6 +36,16 @@ struct TrainingConfig {
     std::uint64_t seed{42};
 };
 
+struct GenerationConfig {
+    bool sample{false};
+    double temperature{1.0};
+    std::size_t top_k{0};
+    double top_p{1.0};
+    double repetition_penalty{1.0};
+    std::size_t repetition_window{64};
+    std::uint64_t seed{42};
+};
+
 struct TrainingState {
     std::array<double, kParameterCount> first_moment{};
     std::array<double, kParameterCount> second_moment{};
@@ -68,7 +78,7 @@ void initialize(Model& model, std::uint64_t seed);
                                     std::span<const std::uint8_t> target_mask = {});
 [[nodiscard]] std::vector<std::uint8_t> generate(
     const Model& model, std::span<const std::uint8_t> prompt,
-    std::size_t max_new_bytes);
+    std::size_t max_new_bytes, const GenerationConfig& config = {});
 [[nodiscard]] bool save_checkpoint(const Model& model,
                                    const std::filesystem::path& path);
 [[nodiscard]] bool save_training_state(const TrainingState& state,
