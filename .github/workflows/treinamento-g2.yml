@@ -111,6 +111,7 @@ jobs:
           name: tsukuyomi-g2-treinamento-${{ github.run_id }}
           path: |
             Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
+            Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
             Morok/build/g2/respostas-tsukuyomi.md
           if-no-files-found: warn
           retention-days: 30
