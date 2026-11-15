@@ -5,6 +5,8 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+import json
+import shutil
 
 root = Path(__file__).resolve().parents[3]
 build = root / "build" / "g1"
@@ -41,7 +43,11 @@ for profile_index, profile in enumerate(profiles):
     model_dir = out / profile.lower()
     model_dir.mkdir(parents=True, exist_ok=True)
     checkpoint = model_dir / "model.morokckp"
-    best = model_dir / "best.morokckp"
+    candidate = model_dir / "candidate.morokckp"
+    approved = model_dir / "approved.morokckp"
+    gate_report = model_dir / "quality-gate.json"
+    approved.unlink(missing_ok=True)
+    gate_report.unlink(missing_ok=True)
     metrics = model_dir / "metrics.jsonl"
     profile_seed = (seed + profile_index) % (1 << 64)
     print(f"Training {profile}: {epochs} epochs requested (seed={profile_seed})", flush=True)
@@ -49,16 +55,64 @@ for profile_index, profile in enumerate(profiles):
         str(train), str(corpus), str(epochs), str(profile_seed),
         "--checkpoint", str(checkpoint),
         "--log", str(metrics),
-        "--export-best", str(best),
+        "--export-best", str(candidate),
         "--patience", "50",
         "--truncation", "64",
         "--optimizer", "adamw",
         "--learning-rate", "0.001",
     ], check=True)
     subprocess.run([
-        str(evaluate), str(best), str(results), profile,
+        str(evaluate), str(candidate), str(results), profile,
         ",".join(questions), str(attempts),
     ], check=True)
+
+    # Validation BPB selects a candidate; it does not establish answer quality.
+    with results.open(encoding="utf-8", newline="") as stream:
+        profile_rows = [row for row in csv.DictReader(stream, delimiter="\\t")
+                        if row["profile"] == profile]
+    selected_rows = [row for row in profile_rows if row["question_id"] in questions]
+    expected_rows = len(questions) * attempts
+    checks = []
+    for row in selected_rows:
+        answer = row["answer"]
+        letters = sum(ch.isalpha() for ch in answer)
+        printable = all(ch.isprintable() or ch in "\\t\\n\\r" for ch in answer)
+        no_long_repeat = not any(len(answer[i:i + 8]) == 8 and len(set(answer[i:i + 8])) == 1
+                                 for i in range(max(0, len(answer) - 7)))
+        readable = bool(answer.strip()) and printable and letters / max(1, len(answer)) >= 0.30
+        checks.append({
+            "question_id": row["question_id"],
+            "attempt": int(row["attempt"]),
+            "correct": row["verdict"] == "correct",
+            "readable": readable,
+            "no_long_repeat": no_long_repeat,
+        })
+    passed = (len(selected_rows) == expected_rows and expected_rows > 0
+              and all(x["correct"] and x["readable"] and x["no_long_repeat"] for x in checks))
+    status = "approved" if passed else "candidate_rejected"
+    if passed:
+        shutil.copy2(candidate, approved)
+    report = {
+        "profile": profile,
+        "status": status,
+        "approval_rule": "100% factual accuracy on selected questions and attempts; "
+                         "non-empty readable output; no repeated run of 8 characters",
+        "selected_questions": questions,
+        "attempts_per_question": attempts,
+        "evaluations": len(selected_rows),
+        "expected_evaluations": expected_rows,
+        "correct": sum(x["correct"] for x in checks),
+        "readable": sum(x["readable"] for x in checks),
+        "no_long_repeat": sum(x["no_long_repeat"] for x in checks),
+        "approved_checkpoint": approved.name if passed else None,
+        "candidate_checkpoint": candidate.name if candidate.is_file() else None,
+        "checks": checks,
+    }
+    gate_report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\\n",
+                           encoding="utf-8")
+    print(f"Quality gate {profile}: {status} "
+          f"({report['correct']}/{expected_rows} correct; "
+          f"{report['readable']}/{expected_rows} readable)", flush=True)
 
 with results.open(encoding="utf-8", newline="") as stream:
     rows = list(csv.DictReader(stream, delimiter="\t"))
