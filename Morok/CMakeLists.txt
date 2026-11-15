@@ -68,7 +68,7 @@ morok_enable_sanitizers(morok_g1)
 
 # Each G1 profile is a private target that may use the G1 shared engine,
 # but never another profile's implementation.
-foreach(_profile IN ITEMS Mokosh Tsukuyomi Apollo)
+foreach(_profile IN ITEMS Mokosh Tsukuyomi Apollo TsukuyomiMax)
     string(TOLOWER "${_profile}" _profile_lower)
     add_library(morok_g1_${_profile_lower} STATIC
         Gerações/G1/${_profile}/src/profile.cpp)
@@ -138,7 +138,7 @@ target_link_libraries(morok_generate PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_generate)
 
 add_executable(morok_g1_profile_evaluate Gerações/G1/apps/evaluate_profiles.cpp)
-target_link_libraries(morok_g1_profile_evaluate PRIVATE Morok::G1 morok_g1_tsukuyomi morok_g1_mokosh morok_g1_apollo morok_build_options)
+target_link_libraries(morok_g1_profile_evaluate PRIVATE Morok::G1 morok_g1_tsukuyomi morok_g1_mokosh morok_g1_apollo morok_g1_tsukuyomimax morok_build_options)
 set_target_properties(morok_g1_profile_evaluate PROPERTIES OUTPUT_NAME "morok-g1-profile-evaluate")
 morok_enable_sanitizers(morok_g1_profile_evaluate)
 
@@ -165,6 +165,7 @@ if(MOROK_BUILD_APPS)
         morok_g1_mokosh
         morok_g1_tsukuyomi
         morok_g1_apollo
+        morok_g1_tsukuyomimax
         ARCHIVE DESTINATION lib)
     install(DIRECTORY
         include/
@@ -172,6 +173,7 @@ if(MOROK_BUILD_APPS)
         Gerações/G1/Mokosh/include/
         Gerações/G1/Tsukuyomi/include/
         Gerações/G1/Apollo/include/
+        Gerações/G1/TsukuyomiMax/include/
         DESTINATION include)
 endif()
 
