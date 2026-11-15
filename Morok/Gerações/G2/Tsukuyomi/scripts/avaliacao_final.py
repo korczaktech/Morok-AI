@@ -163,7 +163,7 @@ def main() -> int:
         f"- Tempo teste (inclui carga do checkpoint): {test_result['generation_seconds_including_checkpoint_load']:.3f}s; "
         f"{test_result['questions_per_second_including_checkpoint_load']:.2f} perguntas/s.\n"
         f"- Geração gulosa determinística: {'sim' if deterministic else 'não'}.\n"
-        "- Comparação histórica: indisponível sem checkpoint compatível da arquitetura anterior; nenhum resultado foi inventado.\n"
+        f"- Comparação histórica: {comparison['status']}.\n"
         "- As métricas lexicais são diagnósticas e não comprovam compreensão semântica.\n",
         encoding="utf-8")
     if not deterministic:
