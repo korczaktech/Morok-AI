@@ -81,6 +81,8 @@ int main(int argc, char** argv) {
               << "Épocas: " << report.epochs_completed << '\n'
               << "Bytes-alvo: " << report.target_bytes << '\n'
               << "Loss inicial: " << report.initial_loss << '\n'
-              << "Loss final: " << report.final_loss << '\n';
+              << "Loss final: " << report.final_loss << '\n'
+              << "train_bpb inicial: " << report.initial_bpb << '\n'
+              << "train_bpb final: " << report.final_bpb << '\n';
     return 0;
 }
