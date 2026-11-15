@@ -211,5 +211,14 @@ add_test(NAME reinforcement.feedback_database
     COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/Gerações/G1/shared/tests/scripts/test_g1_reinforcement.py)
 set_tests_properties(reinforcement.feedback_database PROPERTIES LABELS "reinforcement;python" TIMEOUT 30)
 
+
+# G2 Tsukuyomi v0.1: exact parameter budget, learning, inference and checkpoint.
+add_executable(morok_test_g2_tsukuyomi
+    ../Gerações/G2/Tsukuyomi/tests/test_model.cpp)
+target_link_libraries(morok_test_g2_tsukuyomi PRIVATE Morok::G2::Tsukuyomi morok_build_options)
+morok_enable_sanitizers(morok_test_g2_tsukuyomi)
+add_test(NAME g2.tsukuyomi.model COMMAND morok_test_g2_tsukuyomi)
+set_tests_properties(g2.tsukuyomi.model PROPERTIES LABELS "g2;model" TIMEOUT 60)
+
 get_property(_morok_tests DIRECTORY PROPERTY TESTS)
 set_tests_properties(${_morok_tests} PROPERTIES TIMEOUT 120)
