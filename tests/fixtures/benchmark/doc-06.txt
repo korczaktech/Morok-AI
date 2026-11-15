@@ -1,0 +1,1 @@
+A qualidade de uma previsao e medida pela entropia em bits por byte.\n
