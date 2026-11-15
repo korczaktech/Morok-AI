@@ -262,7 +262,7 @@ void initialize(Model& model, std::uint64_t seed) {
     std::mt19937_64 random(seed);
     std::normal_distribution<float> embedding(0.0F, 0.025F);
     std::normal_distribution<float> matrix(0.0F, 0.10F);
-    std::normal_distribution<float> context(0.0F, 0.015F);
+    std::normal_distribution<float> context(0.0F, 0.10F);
     model.parameters.fill(0.0F);
 
     for (std::size_t i = 0; i < 8192; ++i)
