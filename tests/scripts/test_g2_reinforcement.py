@@ -112,7 +112,7 @@ class G2ReinforcementTests(unittest.TestCase):
             "episodes": [{
                 "question_id": "sky_is_blue",
                 "answer": "Sim, o ceu e azul",
-                "policy_update": {"status": "pending"},
+                "policy_update": {"status": "pending", "source": "oracle_demonstration"},
             }],
             "totals": {"episodes": 1, "correct": 1, "incorrect": 0,
                        "policy_updates": 0, "skipped_updates": 0,
@@ -123,6 +123,7 @@ class G2ReinforcementTests(unittest.TestCase):
         self.assertEqual(db["episodes"][0]["policy_update"]["reason"], "interrupted_before_completion")
         self.assertEqual(db["totals"]["policy_updates"], 0)
         self.assertEqual(db["totals"]["skipped_updates"], 1)
+        self.assertEqual(db["totals"]["oracle_demonstrations"], 0)
 
     def test_reconciles_legacy_totals_against_strict_grader(self):
         db = {
