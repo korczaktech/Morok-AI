@@ -33,6 +33,7 @@ int main() {
     TrainingConfig config;
     config.epochs = 2;
     config.learning_rate = 0.002;
+    config.batch_size = 1;
     const auto report = train(model, sample, config);
     assert(report.epochs_completed == 2);
     assert(report.target_bytes == sample.size() * 2);
