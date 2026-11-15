@@ -71,19 +71,26 @@ int main(int argc, char** argv) {
     }
 
     morok::g2::tsukuyomi::Model model;
+    morok::g2::tsukuyomi::TrainingState optimizer_state;
+    const std::filesystem::path optimizer_path = std::string(argv[2]) + ".adam";
     if (resume) {
         if (!morok::g2::tsukuyomi::load_checkpoint(model, argv[2])) {
             std::cerr << "Não foi possível retomar: checkpoint ausente ou inválido.\n";
+            return 1;
+        }
+        if (!morok::g2::tsukuyomi::load_training_state(optimizer_state, optimizer_path)) {
+            std::cerr << "Estado Adam ausente ou inválido; não é possível retomar com segurança.\n";
             return 1;
         }
     } else {
         morok::g2::tsukuyomi::initialize(model, config.seed);
     }
 
-    const auto report = morok::g2::tsukuyomi::train(model, bytes, config);
+    const auto report = morok::g2::tsukuyomi::train(model, bytes, config, &optimizer_state);
     if (report.epochs_completed != config.epochs ||
-        !morok::g2::tsukuyomi::save_checkpoint(model, argv[2])) {
-        std::cerr << "Treinamento ou gravação do checkpoint falhou.\n";
+        !morok::g2::tsukuyomi::save_checkpoint(model, argv[2]) ||
+        !morok::g2::tsukuyomi::save_training_state(optimizer_state, optimizer_path)) {
+        std::cerr << "Treinamento ou gravação do checkpoint/estado Adam falhou.\n";
         return 1;
     }
 
