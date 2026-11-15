@@ -20,3 +20,8 @@ API de autenticação do site Morok. Os registros são armazenados no MongoDB At
 - `POST /auth/recover`: indisponível até configurar um provedor de e-mail.
 
 Senhas são armazenadas com scrypt e salt individual. Tokens JWT HS256 expiram em sete dias.
+
+
+## Sessões de autenticação
+
+As sessões são registradas na coleção `morok_sessions` dentro da database `Contas`. Cada JWT contém um identificador individual (`jti`), validado contra o registro ativo no MongoDB. O logout remove esse registro e invalida imediatamente o token. Um índice TTL remove sessões expiradas automaticamente após sete dias.
