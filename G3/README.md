@@ -1,12 +1,9 @@
 # G3
 
-Esta pasta reúne as implementações exclusivas da geração G3.
+A G3 está reservada para uma geração futura e ainda não possui motor executável, parâmetros, treinamento, inferência ou checkpoints.
 
-- [Mokosh](./Mokosh/README.md)
-- [Tsukuyomi](./Tsukuyomi/README.md)
-- [Artemis](./Artemis/README.md)
-- [Apollo](./Apollo/README.md)
+Os diretórios `Mokosh/`, `Tsukuyomi/`, `Artemis/` e `Apollo/` reservam os quatro perfis, mas não contêm implementações funcionais. A G3 não importa código da G1 nem da G2.
 
-As dependências compartilhadas vêm das bibliotecas públicas da raiz. Não importar código privado de outra geração ou modelo.
+A implementação da G3 deverá ter seu próprio motor em `G3/shared/` e alvos de build independentes, antes de integrar os perfis.
 
-Consulte [MODELOS.md](../MODELOS.md). O código legado ainda está em migração; esta pasta não é, por enquanto, um alvo executável independente.
+Consulte [MODELOS.md](../MODELOS.md).

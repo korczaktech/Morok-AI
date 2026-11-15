@@ -47,19 +47,23 @@ Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a prim
 
 Cada geração implementará os quatro perfis. Mokosh mantém a prioridade de eficiência; Tsukuyomi usa exatamente um agente; Artemis usa mais de dois agentes; Apollo prioriza baixa latência. A quantidade de parâmetros, mecanismos cognitivos e capacidades de cada geração será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
 
-## Separação de código e dependências
+## Organização real do código
 
-O `core/` público contém infraestrutura compartilhada. As bibliotecas de geração são alvos separados: `Morok::G1` e `Morok::G2`. G1 e G2 podem depender do core, mas não podem importar headers, tipos, parâmetros, treinamento, inferência ou checkpoints privados um do outro.
+O diretório público `include/` e a biblioteca `Morok::Core` contêm contratos e infraestrutura neutra, usados por mais de uma geração. Não devem conter parâmetros, forward pass, treinamento, geração, checkpoints ou adaptadores específicos de uma geração/modelo.
 
-A implementação da G2 foi desmembrada em `G2/engine/`. Ela possui inventário de parâmetros, estado recorrente, forward pass, BPTT, otimizador, checkpoint, treinamento e geração próprios. Os dois especialistas internos da G2 usam esse motor privado da própria geração. Não são instâncias da implementação da G1.
+A implementação compartilhada da geração G1 está em `G1/shared/` e é compilada apenas em `Morok::G1`. Inclui o motor de parâmetros, forward pass, BPTT, otimizador, treinamento, inferência, checkpoints e adaptadores de linguagem/comunicação/aprendizado que ainda são específicos da G1.
 
-A implementação da G1 está isolada no alvo `Morok::G1`, separado do alvo público `Morok::Core`. Os executáveis e testes de G1 vinculam a biblioteca G1. G2 vincula apenas `Morok::G2` e `Morok::Core`. A separação é reforçada por um teste estático que impede referências da G2 a símbolos ou headers privados da G1.
+A implementação da G2 está dentro de `G2/`. `G2/engine/` contém o motor independente por especialista; `G2/legacy/` mantém os adaptadores da G2 que compõem os dois especialistas. A G2 não importa headers nem símbolos da G1. Os alvos `Morok::G1` e `Morok::G2` dependem do Core, mas não dependem um do outro.
 
-## Estado da migração
+Aplicações, scripts, dados de reforço, fixtures e testes específicos foram movidos para `G1/` ou `G2/`. O CMake continua na raiz como orquestrador de build e só inclui fontes da geração correspondente no alvo correspondente.
 
-A separação entre os motores de G1 e G2 e o desacoplamento da G2 são etapas implementadas nesta revisão. Ainda há arquivos históricos de G1 em `src/` e `include/`; a próxima migração física deve movê-los para `G1/engine/` e atualizar seus consumidores sem deixar headers privados na camada pública.
+## Estado dos perfis
 
-Os diretórios `G1/`, `G2/` e `G3/` contêm os perfis nomeados, mas isso não significa que os quatro modelos de cada geração já tenham quatro motores executáveis independentes. Mokosh, Tsukuyomi, Artemis e Apollo ainda precisam de suas políticas e implementações exclusivas integradas aos respectivos motores. G3 permanece sem motor implementado. A documentação não deve ser interpretada como prova de implementação.
+As pastas `G1/{Mokosh,Tsukuyomi,Artemis,Apollo}` e `G2/{Mokosh,Tsukuyomi,Artemis,Apollo}` ainda contêm especificações iniciais, não implementações completas e independentes. Os motores atuais são motores compartilhados no nível da geração; ainda faltam os adaptadores, políticas e alvos independentes de cada perfil. A existência de uma pasta ou README não significa que o perfil esteja funcional.
+
+G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de G1 ou G2 dentro da G3.
+
+A migração física da base G1/G2 foi feita, mas a migração total só pode ser considerada concluída depois de implementar os perfis, eliminar todos os caminhos históricos restantes, e obter CI, testes, sanitizers, fuzzing e workflows de treinamento/reforço verdes no commit final.
 
 ## Modelo removido
 Hephaestus não faz parte da arquitetura aprovada.
