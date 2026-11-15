@@ -27,7 +27,7 @@ python3 Gerações/G1/scripts/validate-corpus.py
 
 # EOS changed the meaning of the final 29 model parameters. Never resume an
 # older checkpoint whose architecture identifier predates the EOS head.
-expected_arch="RLAH-G1-fastslow-d11-bit8-eos"
+expected_arch="RLAH-G1-fastslow-d11-lex-eos"
 expected_corpus_manifest_version="2"
 current_corpus_sha="$(python3 - <<'PY'
 import hashlib
@@ -165,7 +165,7 @@ status = {
     "completed_epochs": int(os.environ["MOROK_EPOCHS"]),
     "maximum_epochs": int(os.environ["MOROK_MAX_EPOCHS"]),
     "trainable_parameters": 1000,
-    "architecture_id": "RLAH-G1-fastslow-d11-bit8-eos",
+    "architecture_id": "RLAH-G1-fastslow-d11-lex-eos",
     "corpus_manifest_version": 2,
     "corpus_license": "CC0-1.0",
     "corpus_kind": "curated_factual_qa",
