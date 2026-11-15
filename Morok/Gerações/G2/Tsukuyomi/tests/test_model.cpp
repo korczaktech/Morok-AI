@@ -106,6 +106,37 @@ int main() {
     const std::vector<std::uint8_t> bytes_b(prompt_b.begin(), prompt_b.end());
     assert(forward(model, bytes_a).hidden != forward(model, bytes_b).hidden);
 
+    // A resposta anterior precisa influenciar a previsão: pergunta e último
+    // byte iguais, mas histórico de resposta diferente, devem gerar estados distintos.
+    const std::string history_a = "U: Q\\nIA:ab";
+    const std::string history_b = "U: Q\\nIA:zb";
+    const std::vector<std::uint8_t> history_bytes_a(history_a.begin(), history_a.end());
+    const std::vector<std::uint8_t> history_bytes_b(history_b.begin(), history_b.end());
+    assert(forward(model, history_bytes_a).hidden !=
+           forward(model, history_bytes_b).hidden);
+
+    // O gradiente da projeção contextual inclui o byte anterior da resposta.
+    const std::string history_target = "U: Q\\nIA:abc";
+    const std::vector<std::uint8_t> history_target_bytes(
+        history_target.begin(), history_target.end());
+    const std::size_t history_target_index = history_target_bytes.size() - 1;
+    assert(compute_target_gradient(model, history_target_bytes,
+                                   history_target_index, analytic));
+    {
+        constexpr float epsilon = 1.0e-3F;
+        Model plus = model;
+        Model minus = model;
+        plus.parameters[9216] += epsilon;
+        minus.parameters[9216] -= epsilon;
+        std::vector<std::uint8_t> history_mask(history_target_bytes.size(), 0);
+        history_mask[history_target_index] = 1;
+        const double loss_plus = evaluate_loss(plus, history_target_bytes, history_mask);
+        const double loss_minus = evaluate_loss(minus, history_target_bytes, history_mask);
+        const double numerical = (loss_plus - loss_minus) / (2.0 * epsilon);
+        assert(std::abs(numerical - analytic[9216]) <=
+               3.0e-2 + 3.0e-2 * std::abs(numerical));
+    }
+
     // A geração gulosa deve parar no primeiro terminador, sem produzir bytes extras.
     Model newline_model;
     newline_model.parameters[9664 + static_cast<std::size_t>('\n')] = 10.0F;
