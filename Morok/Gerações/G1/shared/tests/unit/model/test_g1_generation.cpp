@@ -1,4 +1,5 @@
 #include "morok/model/learn/g1_generation.hpp"
+#include "morok/g1/profile_policy.hpp"
 #include "morok/model/learn/g1_checkpoint.hpp"
 #include "morok/model/parameters/g1_parameters.hpp"
 
@@ -178,6 +179,22 @@ void test_repetition_penalty_breaks_single_byte_collapse() {
             "repetition penalty must prevent a constant-byte continuation");
 }
 
+void test_shared_profile_generation_policies() {
+    using namespace morok;
+    const auto tsukuyomi = g1::make_generation_config(g1::ProfileKind::tsukuyomi, 900, 7);
+    require(tsukuyomi.max_new_bytes == 256, "Tsukuyomi must retain its 256-byte cap");
+    require(tsukuyomi.top_k == 0 && tsukuyomi.temperature == 0.8,
+            "Tsukuyomi policy must be centralized");
+    const auto apollo = g1::make_generation_config(g1::ProfileKind::apollo, 900, 8);
+    require(apollo.max_new_bytes == 512, "Apollo must retain its 512-byte cap");
+    const auto mokosh = g1::make_generation_config(g1::ProfileKind::mokosh, 900, 9, 3);
+    require(mokosh.max_new_bytes == 128, "Mokosh must retain its 128-byte cap");
+    require(mokosh.top_k == 3 && mokosh.temperature == 0.7,
+            "Mokosh must honor the configured top-k policy");
+    require(mokosh.rlah_bias_strength > 0.0,
+            "RLAH prior must be enabled in the inference policy");
+}
+
 void test_invalid_limits_rejected() {
     using namespace morok;
     model::G1Parameters parameters{};
@@ -203,6 +220,7 @@ int main() {
         test_sampling_is_seeded_and_top_k_one_is_greedy();
         test_learned_eos_stops_generation();
         test_repetition_penalty_breaks_single_byte_collapse();
+        test_shared_profile_generation_policies();
         test_printable_mode_excludes_ascii_control_bytes();
         test_invalid_limits_rejected();
     } catch (const std::exception& error) {
