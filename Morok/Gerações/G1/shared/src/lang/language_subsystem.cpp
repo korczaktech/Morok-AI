@@ -1,6 +1,7 @@
 #include "morok/lang/language_subsystem.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <exception>
 #include <initializer_list>
