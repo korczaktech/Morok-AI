@@ -77,6 +77,18 @@ int main() {
     assert(!stale);
     assert(stale.error_if()->code == common::ErrorCode::invalid_argument);
 
+    auto third = language.create_session(sessions);
+    assert(third);
+    auto spanish_request = core::RequestContext::create(*third.value_if());
+    assert(spanish_request);
+    auto spanish_prompt = common::Utf8Text::from_utf8("¿El cielo es azul?");
+    assert(spanish_prompt);
+    assert(language.observe(*spanish_request.value_if(), *spanish_prompt.value_if()));
+    auto spanish_generated = language.generate(*spanish_request.value_if(), 4);
+    assert(spanish_generated);
+    assert(spanish_generated.value_if()->input_language == lang::DetectedLanguage::spanish);
+    assert(language.close_session(sessions, *third.value_if()));
+
     assert(language.close_session(sessions, *second.value_if()));
     assert(language.active_sessions() == 0);
     assert(sessions.size() == 0);
