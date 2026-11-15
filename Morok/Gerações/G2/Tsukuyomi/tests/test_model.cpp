@@ -109,8 +109,8 @@ int main() {
     // A matriz recorrente compartilhada altera o estado após processar a sequência.
     Model recurrent_changed = model;
     recurrent_changed.parameters[8192] += 0.5F;
-    assert(forward(model, bytes_a).hidden !=
-           forward(recurrent_changed, bytes_a).hidden);
+    assert(forward(model, history_bytes_a).hidden !=
+           forward(recurrent_changed, history_bytes_a).hidden);
 
     // A resposta anterior precisa influenciar a previsão: pergunta e último
     // byte iguais, mas histórico de resposta diferente, devem gerar estados distintos.
