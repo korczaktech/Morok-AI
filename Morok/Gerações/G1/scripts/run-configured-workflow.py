@@ -69,7 +69,7 @@ for profile_index, profile in enumerate(profiles):
 
     # Validation BPB selects a candidate; it does not establish answer quality.
     with results.open(encoding="utf-8", newline="") as stream:
-        profile_rows = [row for row in csv.DictReader(stream, delimiter="\\t")
+        profile_rows = [row for row in csv.DictReader(stream, delimiter="\t")
                         if row["profile"] == profile]
     selected_rows = [row for row in profile_rows if row["question_id"] in questions]
     expected_rows = len(questions) * attempts
@@ -77,7 +77,7 @@ for profile_index, profile in enumerate(profiles):
     for row in selected_rows:
         answer = row["answer"]
         letters = sum(ch.isalpha() for ch in answer)
-        printable = all(ch.isprintable() or ch in "\\t\\n\\r" for ch in answer)
+        printable = all(ch.isprintable() or ch in "\t\n\r" for ch in answer)
         no_long_repeat = not any(len(answer[i:i + 8]) == 8 and len(set(answer[i:i + 8])) == 1
                                  for i in range(max(0, len(answer) - 7)))
         readable = bool(answer.strip()) and printable and letters / max(1, len(answer)) >= 0.30
@@ -109,7 +109,7 @@ for profile_index, profile in enumerate(profiles):
         "candidate_checkpoint": candidate.name if candidate.is_file() else None,
         "checks": checks,
     }
-    gate_report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\\n",
+    gate_report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n",
                            encoding="utf-8")
     print(f"Quality gate {profile}: {status} "
           f"({report['correct']}/{expected_rows} correct; "
