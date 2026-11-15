@@ -10,7 +10,7 @@ import time
 import unicodedata
 
 
-MAX_RESPONSE_BYTES = 96
+MAX_RESPONSE_BYTES = 160
 
 
 def normalize(text: str) -> list[str]:
