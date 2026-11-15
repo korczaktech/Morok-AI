@@ -45,23 +45,23 @@ morok_enable_sanitizers(morok_core)
 
 # G1 is a private generation library; the public core contains only shared infrastructure.
 add_library(morok_g1 STATIC
-    G1/shared/src/lang/language_subsystem.cpp
-    G1/shared/src/comm/communication_subsystem.cpp
-    G1/shared/src/learn/learning_subsystem.cpp
-    G1/shared/src/model/parameters/g1_parameters.cpp
-    G1/shared/src/model/g1_forward.cpp
-    G1/shared/src/model/learn/g1_bptt.cpp
-    G1/shared/src/model/learn/optimizer.cpp
-    G1/shared/src/model/learn/g1_training.cpp
-    G1/shared/src/model/learn/g1_checkpoint.cpp
-    G1/shared/src/model/learn/g1_benchmark.cpp
-    G1/shared/src/model/learn/g1_evaluation.cpp
-    G1/shared/src/model/learn/g1_generation.cpp
+    Gerações/G1/shared/src/lang/language_subsystem.cpp
+    Gerações/G1/shared/src/comm/communication_subsystem.cpp
+    Gerações/G1/shared/src/learn/learning_subsystem.cpp
+    Gerações/G1/shared/src/model/parameters/g1_parameters.cpp
+    Gerações/G1/shared/src/model/g1_forward.cpp
+    Gerações/G1/shared/src/model/learn/g1_bptt.cpp
+    Gerações/G1/shared/src/model/learn/optimizer.cpp
+    Gerações/G1/shared/src/model/learn/g1_training.cpp
+    Gerações/G1/shared/src/model/learn/g1_checkpoint.cpp
+    Gerações/G1/shared/src/model/learn/g1_benchmark.cpp
+    Gerações/G1/shared/src/model/learn/g1_evaluation.cpp
+    Gerações/G1/shared/src/model/learn/g1_generation.cpp
 )
 add_library(Morok::G1 ALIAS morok_g1)
 target_compile_features(morok_g1 PUBLIC cxx_std_20)
 target_include_directories(morok_g1 PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G1/shared/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G1/shared/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 target_link_libraries(morok_g1 PUBLIC Morok::Core PRIVATE morok_build_options)
@@ -72,11 +72,11 @@ morok_enable_sanitizers(morok_g1)
 foreach(_profile IN ITEMS Mokosh Tsukuyomi Artemis Apollo)
     string(TOLOWER "${_profile}" _profile_lower)
     add_library(morok_g1_${_profile_lower} STATIC
-        G1/${_profile}/src/profile.cpp)
+        Gerações/G1/${_profile}/src/profile.cpp)
     add_library(Morok::G1::${_profile} ALIAS morok_g1_${_profile_lower})
     target_compile_features(morok_g1_${_profile_lower} PUBLIC cxx_std_20)
     target_include_directories(morok_g1_${_profile_lower} PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G1/${_profile}/include>)
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G1/${_profile}/include>)
     target_link_libraries(morok_g1_${_profile_lower} PUBLIC Morok::G1 PRIVATE morok_build_options)
     morok_enable_sanitizers(morok_g1_${_profile_lower})
 endforeach()
@@ -84,25 +84,25 @@ endforeach()
 # G2 is an optional, separate library. G1-only builds do not compile G2 sources.
 if(MOROK_BUILD_G2)
     add_library(morok_g2 STATIC
-        G2/model/src/parameters/g2_parameters.cpp
-        G2/model/src/g2_forward.cpp
-        G2/model/src/learn/g2_checkpoint.cpp
-        G2/model/src/learn/g2_training.cpp
-        G2/model/src/learn/g2_generation.cpp
-        G2/engine/src/parameters.cpp
-        G2/engine/src/forward.cpp
-        G2/engine/src/bptt.cpp
-        G2/engine/src/optimizer.cpp
-        G2/engine/src/checkpoint.cpp
-        G2/engine/src/training.cpp
-        G2/engine/src/generation.cpp
+        Gerações/G2/model/src/parameters/g2_parameters.cpp
+        Gerações/G2/model/src/g2_forward.cpp
+        Gerações/G2/model/src/learn/g2_checkpoint.cpp
+        Gerações/G2/model/src/learn/g2_training.cpp
+        Gerações/G2/model/src/learn/g2_generation.cpp
+        Gerações/G2/engine/src/parameters.cpp
+        Gerações/G2/engine/src/forward.cpp
+        Gerações/G2/engine/src/bptt.cpp
+        Gerações/G2/engine/src/optimizer.cpp
+        Gerações/G2/engine/src/checkpoint.cpp
+        Gerações/G2/engine/src/training.cpp
+        Gerações/G2/engine/src/generation.cpp
     )
     add_library(Morok::G2 ALIAS morok_g2)
     target_compile_features(morok_g2 PUBLIC cxx_std_20)
     target_include_directories(morok_g2 PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G2/engine/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G2/model/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G2/engine/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G2/model/include>
         $<INSTALL_INTERFACE:include>)
     target_link_libraries(morok_g2 PUBLIC Morok::Core PRIVATE morok_build_options)
     morok_enable_sanitizers(morok_g2)
@@ -111,18 +111,18 @@ if(MOROK_BUILD_G2)
     foreach(_profile IN ITEMS Mokosh Tsukuyomi Artemis Apollo)
         string(TOLOWER "${_profile}" _profile_lower)
         add_library(morok_g2_${_profile_lower} STATIC
-            G2/${_profile}/src/profile.cpp)
+            Gerações/G2/${_profile}/src/profile.cpp)
         add_library(Morok::G2::${_profile} ALIAS morok_g2_${_profile_lower})
         target_compile_features(morok_g2_${_profile_lower} PUBLIC cxx_std_20)
         target_include_directories(morok_g2_${_profile_lower} PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G2/${_profile}/include>)
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G2/${_profile}/include>)
         target_link_libraries(morok_g2_${_profile_lower} PUBLIC Morok::G2 PRIVATE morok_build_options)
         morok_enable_sanitizers(morok_g2_${_profile_lower})
     endforeach()
 endif()
 
 if(MOROK_BUILD_APPS)
-    add_executable(morok_cli G1/apps/cli/main.cpp)
+    add_executable(morok_cli Gerações/G1/apps/cli/main.cpp)
     target_link_libraries(morok_cli PRIVATE Morok::G1 morok_build_options)
     set_target_properties(morok_cli PROPERTIES OUTPUT_NAME "morok-cli")
     morok_enable_sanitizers(morok_cli)
@@ -132,18 +132,18 @@ if(MOROK_BUILD_APPS)
     set_target_properties(morok_convert PROPERTIES OUTPUT_NAME "morok-convert")
     morok_enable_sanitizers(morok_convert)
 
-    add_executable(morok_evaluate G1/apps/evaluate/main.cpp)
+    add_executable(morok_evaluate Gerações/G1/apps/evaluate/main.cpp)
     target_link_libraries(morok_evaluate PRIVATE Morok::G1 morok_build_options)
     set_target_properties(morok_evaluate PROPERTIES OUTPUT_NAME "morok-evaluate")
     morok_enable_sanitizers(morok_evaluate)
 
-    add_executable(morok_train_cli G1/apps/train.cpp)
+    add_executable(morok_train_cli Gerações/G1/apps/train.cpp)
     target_link_libraries(morok_train_cli PRIVATE Morok::G1 morok_build_options)
     set_target_properties(morok_train_cli PROPERTIES OUTPUT_NAME "morok-train")
     morok_enable_sanitizers(morok_train_cli)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        add_executable(morok_server G1/apps/server/main.cpp)
+        add_executable(morok_server Gerações/G1/apps/server/main.cpp)
         target_link_libraries(morok_server PRIVATE Morok::G1 morok_build_options)
         set_target_properties(morok_server PROPERTIES OUTPUT_NAME "morok-server")
         morok_enable_sanitizers(morok_server)
@@ -162,41 +162,41 @@ message(STATUS "C++ standard: C++20")
 message(STATUS "Tests: ${MOROK_BUILD_TESTS}")
 
 if(MOROK_BUILD_APPS)
-add_executable(morok_train G1/apps/train.cpp)
+add_executable(morok_train Gerações/G1/apps/train.cpp)
 target_link_libraries(morok_train PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_train)
 
-add_executable(morok_benchmark G1/apps/benchmark.cpp)
+add_executable(morok_benchmark Gerações/G1/apps/benchmark.cpp)
 target_link_libraries(morok_benchmark PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_benchmark)
 
-add_executable(morok_complete G1/apps/complete.cpp)
+add_executable(morok_complete Gerações/G1/apps/complete.cpp)
 target_link_libraries(morok_complete PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_complete)
 
-add_executable(morok_generate G1/apps/generate.cpp)
+add_executable(morok_generate Gerações/G1/apps/generate.cpp)
 target_link_libraries(morok_generate PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_generate)
 
 if(MOROK_BUILD_G2)
-add_executable(morok_train_g2 G2/apps/train.cpp)
+add_executable(morok_train_g2 Gerações/G2/apps/train.cpp)
 target_link_libraries(morok_train_g2 PRIVATE Morok::G2 morok_build_options)
 set_target_properties(morok_train_g2 PROPERTIES OUTPUT_NAME "morok-train-g2")
 morok_enable_sanitizers(morok_train_g2)
 
-add_executable(morok_generate_g2 G2/apps/generate.cpp)
+add_executable(morok_generate_g2 Gerações/G2/apps/generate.cpp)
 target_link_libraries(morok_generate_g2 PRIVATE Morok::G2 morok_build_options)
 set_target_properties(morok_generate_g2 PROPERTIES OUTPUT_NAME "morok-generate-g2")
 morok_enable_sanitizers(morok_generate_g2)
 endif()
 
-add_executable(morok_reinforce G1/apps/reinforce.cpp)
+add_executable(morok_reinforce Gerações/G1/apps/reinforce.cpp)
 target_link_libraries(morok_reinforce PRIVATE Morok::G1 morok_build_options)
 set_target_properties(morok_reinforce PROPERTIES OUTPUT_NAME "morok-reinforce")
 morok_enable_sanitizers(morok_reinforce)
 
 if(MOROK_BUILD_G2)
-add_executable(morok_reinforce_g2 G2/apps/reinforce.cpp)
+add_executable(morok_reinforce_g2 Gerações/G2/apps/reinforce.cpp)
 target_link_libraries(morok_reinforce_g2 PRIVATE Morok::G2 morok_build_options)
 set_target_properties(morok_reinforce_g2 PROPERTIES OUTPUT_NAME "morok-reinforce-g2")
 morok_enable_sanitizers(morok_reinforce_g2)
@@ -234,7 +234,7 @@ if(MOROK_BUILD_FUZZERS)
         target_link_options(morok_fuzz_${_fuzz_target} PRIVATE
             -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
     endforeach()
-    add_executable(morok_fuzz_checkpoint G1/shared/tests/fuzz/fuzz_checkpoint.cpp)
+    add_executable(morok_fuzz_checkpoint Gerações/G1/shared/tests/fuzz/fuzz_checkpoint.cpp)
     target_link_libraries(morok_fuzz_checkpoint PRIVATE Morok::Core Morok::G1 morok_build_options)
     target_compile_options(morok_fuzz_checkpoint PRIVATE
         -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
