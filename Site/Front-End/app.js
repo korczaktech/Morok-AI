@@ -5,13 +5,14 @@
   const STORAGE_KEY = 'morok.web.state.v2';
   const AUTH_API_URL = 'https://morok-ai.onrender.com';
   const MAX_LOCAL_BYTES = 3_500_000;
-  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], tasks: [], instructions: '', location: '', aboutMe: '', responseStyle: 'equilibrado', notifications: true, libraryItems: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
+  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], images: [], tasks: [], instructions: '', location: '', aboutMe: '', responseStyle: 'equilibrado', notifications: true, libraryItems: [], busy: false, controller: null, contextId: null, renameId: null, confirmResolve: null, toastTimer: null };
   const el = {
     app: $('#app'), sidebar: $('#sidebar'), backdrop: $('#backdrop'), history: $('#history-list'),
     welcome: $('#welcome'), conversation: $('#conversation'), input: $('#message-input'), composer: $('#composer'),
     send: $('#send-button'), tray: $('#attachment-tray'), file: $('#file-input'), status: $('#status-label'),
     dot: $('#status-dot'), pill: $('#connection-pill'), settings: $('#settings-dialog'), rename: $('#rename-dialog'),
-    profile: $('#profile-dialog'), auth: $('#auth-dialog'), context: $('#context-menu'), toast: $('#toast')
+    profile: $('#profile-dialog'), auth: $('#auth-dialog'), context: $('#context-menu'), toast: $('#toast'),
+    search: $('#search-dialog'), confirm: $('#confirm-dialog')
   };
 
   function id() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)); }
@@ -173,16 +174,64 @@
     el.context.style.top = Math.min(window.innerHeight - height - 8, rect.bottom + 3) + 'px';
   }
   function closeContextMenu() { el.context.hidden = true; state.contextId = null; }
+  function askConfirmation(message, title = 'Confirmar ação') {
+    $('#confirm-title').textContent = title;
+    $('#confirm-message').textContent = message;
+    el.confirm.showModal();
+    return new Promise(resolve => { state.confirmResolve = resolve; });
+  }
+  function finishConfirmation(accepted) {
+    const resolve = state.confirmResolve;
+    state.confirmResolve = null;
+    if (el.confirm.open) el.confirm.close();
+    if (resolve) resolve(accepted);
+  }
+  function renderSearchResults(query = '') {
+    const root = $('#conversation-search-results');
+    const term = query.trim().toLocaleLowerCase('pt-BR');
+    const matches = state.conversations.filter(conversation =>
+      !term || conversation.title.toLocaleLowerCase('pt-BR').includes(term) ||
+      conversation.messages.some(message => String(message.content || '').toLocaleLowerCase('pt-BR').includes(term))
+    );
+    root.replaceChildren();
+    if (!matches.length) {
+      const empty = document.createElement('div');
+      empty.className = 'workspace-empty';
+      empty.textContent = term ? 'Nenhuma conversa encontrada.' : 'Digite para pesquisar suas conversas.';
+      root.append(empty);
+      return;
+    }
+    for (const conversation of matches) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'search-result';
+      const title = document.createElement('strong');
+      title.textContent = conversation.title || 'Nova conversa';
+      const preview = document.createElement('small');
+      preview.textContent = conversation.messages.at(-1)?.content?.slice(0,100) || 'Conversa vazia';
+      button.append(title, preview);
+      button.addEventListener('click', () => { el.search.close(); openConversation(conversation.id); });
+      root.append(button);
+    }
+  }
+  function openSearch() {
+    $('#conversation-search-input').value = '';
+    renderSearchResults('');
+    el.search.showModal();
+    $('#conversation-search-input').focus();
+  }
   function renameConversation(conversationId) {
     const conversation = state.conversations.find(c => c.id === conversationId); if (!conversation) return;
     state.renameId = conversationId; $('#rename-input').value = conversation.title; closeContextMenu(); el.rename.showModal(); $('#rename-input').focus();
   }
   function deleteConversation(conversationId) {
     const conversation = state.conversations.find(c => c.id === conversationId); if (!conversation) return;
-    if (!confirm('Excluir a conversa "' + conversation.title + '" deste dispositivo?')) return;
-    state.conversations = state.conversations.filter(c => c.id !== conversationId);
-    if (state.activeId === conversationId) state.activeId = state.conversations[0]?.id || null;
-    persist(); renderHistory(); renderConversation(); toast('Conversa excluída.');
+    void askConfirmation('Excluir a conversa "' + conversation.title + '" deste dispositivo?', 'Excluir conversa').then(accepted => {
+      if (!accepted) return;
+      state.conversations = state.conversations.filter(c => c.id !== conversationId);
+      if (state.activeId === conversationId) state.activeId = state.conversations[0]?.id || null;
+      persist(); renderHistory(); renderConversation(); toast('Conversa excluída.');
+    });
   }
   function resizeInput() {
     el.input.style.height = 'auto'; el.input.style.height = Math.min(el.input.scrollHeight, 170) + 'px';
@@ -318,10 +367,10 @@
     if (page === 'privacy') root.innerHTML = '<p class="field-help">Controles dos dados mantidos neste navegador. Conversas e preferências locais não são apagadas da conta do servidor por estes controles.</p><div class="feature-card"><strong>Armazenamento local</strong><p>Histórico, tarefas, instruções e preferências deste dispositivo.</p></div><div class="dialog-footer"><button class="secondary-button" id="export-local-data" type="button">Exportar dados locais</button><button class="danger-button" id="delete-local-data" type="button">Apagar dados locais</button></div>';
     if (page === 'security') root.innerHTML = '<p class="field-help">Estado da sessão e acesso à conta.</p><div class="feature-card"><strong>Sessão atual</strong><p>'+(state.authSession?.user?.email ? escapeHTML(state.authSession.user.email) : 'Nenhuma conta conectada')+'</p><span class="feature-status">'+(state.authSession ? 'Sessão ativa neste navegador' : 'Sessão não iniciada')+'</span></div><p class="field-help">Alteração de senha, autenticação em dois fatores e dispositivos conectados ainda não são gerenciados por esta interface.</p><div class="dialog-footer"><button class="primary-button" id="security-auth" type="button">'+(state.authSession?'Ver sessão':'Entrar na conta')+'</button></div>';
     if (page === 'notifications') root.innerHTML = '<p class="field-help">Preferências de notificações locais.</p><label class="setting-row"><span><strong>Notificações</strong><small>Permitir avisos dentro desta interface.</small></span><input id="notifications-toggle" type="checkbox" '+(state.notifications?'checked':'')+'></label><div class="dialog-footer"><button class="primary-button" id="save-notifications" type="button">Salvar preferência</button></div>';
-    if (page === 'images') root.innerHTML = '<p class="field-help">Área para organizar imagens. A geração e edição de imagens ainda não estão conectadas a este espaço.</p><label class="upload-card">＋ Adicionar imagens deste dispositivo<input id="workspace-image-input" type="file" accept="image/*" multiple hidden></label><div class="workspace-empty">As imagens adicionadas aparecerão aqui durante esta sessão.</div><div class="workspace-image-grid" id="workspace-image-grid"></div>';
+    if (page === 'images') root.innerHTML = '<p class="field-help">Organize imagens escolhidas neste dispositivo. Os arquivos ficam disponíveis nesta sessão; geração por IA ainda não está conectada.</p><label class="upload-card">＋ Adicionar imagens deste dispositivo<input id="workspace-image-input" type="file" accept="image/*" multiple hidden></label><div class="workspace-empty" '+(state.images.length?'hidden':'')+'>Nenhuma imagem adicionada nesta sessão.</div><div class="workspace-image-grid" id="workspace-image-grid">'+state.images.map((image,index)=>'<div class="workspace-image-item"><img src="'+image.url+'" alt="'+escapeHTML(image.name)+'"><button class="image-remove" type="button" data-image-delete="'+index+'">Remover</button><small>'+escapeHTML(image.name)+'</small></div>').join('')+'</div>';
     if (page === 'tasks') root.innerHTML = '<p class="field-help">Crie uma lista de tarefas local. Ela fica salva neste navegador.</p><form class="inline-create" id="task-form"><input class="text-field" id="task-input" maxlength="140" placeholder="Descreva uma tarefa..." required><button class="primary-button" type="submit">Adicionar</button></form><div class="task-list" id="task-list">'+(state.tasks.length?state.tasks.map((task,index)=>'<div class="task-row"><label><input type="checkbox" data-task-done="'+index+'" '+(task.done?'checked':'')+'><span class="'+(task.done?'task-done':'')+'">'+escapeHTML(task.text)+'</span></label><button class="icon-button" type="button" data-task-delete="'+index+'" aria-label="Excluir tarefa">×</button></div>').join(''):'<div class="workspace-empty">Nenhuma tarefa criada.</div>')+'</div>';
     if (page === 'library') root.innerHTML = '<p class="field-help">Lista de arquivos adicionados. Por enquanto, apenas nomes e tamanhos são registrados; o conteúdo não é enviado nem armazenado na nuvem.</p><label class="upload-card">＋ Adicionar arquivos<input id="library-file-input" type="file" multiple hidden></label><div class="task-list">'+(state.libraryItems.length?state.libraryItems.map((item,index)=>'<div class="task-row"><span>▤ '+escapeHTML(item.name)+' <small>'+escapeHTML(item.size)+'</small></span><button class="icon-button" type="button" data-library-delete="'+index+'" aria-label="Remover arquivo">×</button></div>').join(''):'<div class="workspace-empty">Sua biblioteca está vazia.</div>')+'</div>';
-    if (page === 'plugins') root.innerHTML = '<p class="field-help">Conectores disponíveis dependem das integrações habilitadas na sua conta. Nenhum plugin externo está conectado a esta interface no momento.</p><div class="feature-card"><strong>Integrações</strong><p>Os conectores de aplicativos poderão ser gerenciados aqui quando a camada de plugins do Morok estiver implementada.</p><span class="feature-status">Ainda não conectado</span></div>';
+    if (page === 'plugins') root.innerHTML = '<p class="field-help">Gerencie os recursos disponíveis nesta interface. Conectores externos ainda não estão integrados ao backend do Morok.</p><div class="feature-card"><strong>Biblioteca local</strong><p>Organiza os arquivos que você adiciona neste navegador.</p><span class="feature-status">Disponível nesta sessão</span><button class="secondary-button plugin-detail-toggle" type="button" data-plugin-detail="library">Ver detalhes</button><p class="plugin-detail" data-plugin-description="library" hidden>Use a seção Biblioteca na barra lateral para adicionar e remover referências de arquivos. O conteúdo não é enviado ao servidor.</p></div><div class="feature-card"><strong>Conectores externos</strong><p>Integrações com serviços de terceiros.</p><span class="feature-status">Não conectado</span><button class="secondary-button plugin-detail-toggle" type="button" data-plugin-detail="external">Ver detalhes</button><p class="plugin-detail" data-plugin-description="external" hidden>A conexão OAuth, permissões e chamadas de serviços externos ainda precisam ser implementadas no backend. Nenhuma conta externa foi conectada.</p></div>';
     if (page === 'locations') root.innerHTML = '<p class="field-help">Defina uma localização de referência para experiências que dependam de região. Não usamos sua localização automaticamente.</p><label class="field-label" for="location-input">Localização</label><input class="text-field" id="location-input" maxlength="120" placeholder="Cidade, estado ou país" value="'+escapeHTML(state.location)+'"><div class="dialog-footer"><button class="primary-button" id="save-location" type="button">Salvar localização</button></div>';
     if (page === 'personalization') root.innerHTML = '<p class="field-help">Preferências de personalização salvas neste navegador.</p><label class="field-label" for="about-input">O que o Morok deve saber sobre você?</label><textarea class="text-field settings-textarea" id="about-input" maxlength="1000" placeholder="Interesses, contexto e objetivos...">'+escapeHTML(state.aboutMe)+'</textarea><label class="field-label" for="style-select">Estilo de resposta</label><select id="style-select" class="text-field"><option value="conciso" '+(state.responseStyle==='conciso'?'selected':'')+'>Conciso</option><option value="equilibrado" '+(state.responseStyle==='equilibrado'?'selected':'')+'>Equilibrado</option><option value="detalhado" '+(state.responseStyle==='detalhado'?'selected':'')+'>Detalhado</option></select><label class="field-label" for="workspace-theme">Tema</label><select id="workspace-theme" class="text-field"><option value="dark" '+(state.theme==='dark'?'selected':'')+'>Escuro</option><option value="light" '+(state.theme==='light'?'selected':'')+'>Claro</option><option value="system" '+(state.theme==='system'?'selected':'')+'>Sistema</option></select><div class="dialog-footer"><button class="primary-button" id="save-personalization" type="button">Salvar personalização</button></div>';
     if (page === 'instructions') root.innerHTML = '<p class="field-help">Defina orientações que deseja aplicar ao conversar. Por enquanto, elas ficam salvas localmente e ainda não são enviadas ao motor de inferência.</p><label class="field-label" for="instructions-input">Suas instruções</label><textarea class="text-field settings-textarea tall" id="instructions-input" maxlength="4000" placeholder="Como você gostaria que o Morok respondesse?">'+escapeHTML(state.instructions)+'</textarea><div class="dialog-footer"><button class="primary-button" id="save-instructions" type="button">Salvar instruções</button></div>';
@@ -340,7 +389,6 @@
     if (action === 'account') openWorkspacePage('account');
     else if (action === 'settings') openSettings();
     else if (action === 'personalization' || action === 'instructions' || action === 'privacy' || action === 'security' || action === 'notifications') openWorkspacePage(action);
-    else if (action === 'notifications') { state.notifications = !state.notifications; persist(); toast(state.notifications?'Notificações ativadas.':'Notificações desativadas.'); }
     else if (action === 'help') { $('#workspace-title').textContent='Ajuda e suporte'; $('#workspace-page').innerHTML='<p class="field-help">Consulte a documentação e os canais oficiais do projeto Morok para obter suporte.</p><a class="secondary-button" href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noopener noreferrer">Abrir repositório do projeto</a>'; workspaceDialog.showModal(); }
     else if (action === 'logout') { if (state.authSession) $('#auth-logout').click(); else toast('Nenhuma conta está conectada.'); }
   }
@@ -524,8 +572,13 @@
 
   $('#new-chat').addEventListener('click',createConversation);
   $('#brand-home').addEventListener('click',event=>{event.preventDefault();state.activeId=null;persist();renderHistory();renderConversation();closeSidebar();el.input.focus();});
-  $('#all-chats').addEventListener('click',()=>{renderHistory();closeSidebar();});
-  $('#search-open').addEventListener('click',()=>{const query=prompt('Buscar no título e no conteúdo das conversas:');if(query!==null){renderHistory(query);closeSidebar();}});
+  $('#all-chats').addEventListener('click',()=>{renderHistory('');$('.side-action').forEach(item=>item.classList.remove('active'));$('#all-chats').classList.add('active');closeSidebar();});
+  $('#search-open').addEventListener('click',()=>{closeSidebar();openSearch();});
+  $('#conversation-search-input').addEventListener('input',event=>renderSearchResults(event.target.value));
+  $('#confirm-accept').addEventListener('click',()=>finishConfirmation(true));
+  $('#confirm-cancel').addEventListener('click',()=>finishConfirmation(false));
+  el.confirm.addEventListener('cancel',event=>{event.preventDefault();finishConfirmation(false);});
+  el.confirm.addEventListener('click',event=>{if(event.target===el.confirm)finishConfirmation(false);});
   $('#menu-toggle').addEventListener('click',openSidebar);
   $('#sidebar-close').addEventListener('click',closeSidebar);
   el.backdrop.addEventListener('click',closeSidebar);
@@ -540,17 +593,19 @@
   $('#workspace-page').addEventListener('submit',event=>{if(event.target.id==='task-form'){event.preventDefault();const value=$('#task-input').value.trim();if(value){state.tasks.unshift({text:value,done:false});persist();openWorkspacePage('tasks');}}});
   $('#workspace-page').addEventListener('change',event=>{
     if(event.target.matches('[data-task-done]')){const task=state.tasks[Number(event.target.dataset.taskDone)];if(task){task.done=event.target.checked;persist();openWorkspacePage('tasks');}}
-    if(event.target.id==='workspace-image-input'){const grid=$('#workspace-image-grid');for(const file of event.target.files){const image=document.createElement('img');image.alt=file.name;image.src=URL.createObjectURL(file);image.title=file.name;grid.append(image);}$('.workspace-empty')?.remove();}
+    if(event.target.id==='workspace-image-input'){for(const file of event.target.files){if(!file.type.startsWith('image/'))continue;state.images.push({name:file.name,url:URL.createObjectURL(file)});}openWorkspacePage('images');}
     if(event.target.id==='library-file-input'){for(const file of event.target.files){state.libraryItems.unshift({name:file.name,size:Math.max(1,Math.round(file.size/1024))+' KB'});}persist();openWorkspacePage('library');}
   });
   $('#workspace-page').addEventListener('click',event=>{
     const taskDelete=event.target.closest('[data-task-delete]');if(taskDelete){state.tasks.splice(Number(taskDelete.dataset.taskDelete),1);persist();openWorkspacePage('tasks');}
     const libraryDelete=event.target.closest('[data-library-delete]');if(libraryDelete){state.libraryItems.splice(Number(libraryDelete.dataset.libraryDelete),1);persist();openWorkspacePage('library');}
+    const imageDelete=event.target.closest('[data-image-delete]');if(imageDelete){const image=state.images.splice(Number(imageDelete.dataset.imageDelete),1)[0];if(image?.url)URL.revokeObjectURL(image.url);openWorkspacePage('images');}
+    const pluginDetail=event.target.closest('[data-plugin-detail]');if(pluginDetail){const detail=$('[data-plugin-description="'+pluginDetail.dataset.pluginDetail+'"]');if(detail){detail.hidden=!detail.hidden;pluginDetail.textContent=detail.hidden?'Ver detalhes':'Ocultar detalhes';}}
     if(event.target.id==='account-auth'){workspaceDialog.close();openAuth('login');}
     if(event.target.id==='edit-local-profile'){workspaceDialog.close();$('#display-name').value=state.displayName;el.profile.showModal();}
     if(event.target.id==='security-auth'){workspaceDialog.close();openAuth('login');}
     if(event.target.id==='export-local-data'){const payload={conversations:state.conversations,tasks:state.tasks,theme:state.theme,displayName:state.displayName,instructions:state.instructions,location:state.location,aboutMe:state.aboutMe,responseStyle:state.responseStyle,libraryItems:state.libraryItems};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='morok-dados-locais.json';link.click();URL.revokeObjectURL(url);toast('Exportação preparada.');}
-    if(event.target.id==='delete-local-data'){if(confirm('Apagar conversas, tarefas e preferências deste navegador?')){state.conversations=[];state.activeId=null;state.tasks=[];state.instructions='';state.location='';state.aboutMe='';state.libraryItems=[];state.displayName='Visitante';persist();renderHistory();renderConversation();updateProfile();workspaceDialog.close();toast('Dados locais apagados.');}}
+    if(event.target.id==='delete-local-data'){void askConfirmation('Apagar conversas, tarefas, instruções, localização, biblioteca e preferências deste navegador? Esta ação não pode ser desfeita.','Apagar dados locais').then(accepted=>{if(!accepted)return;state.conversations=[];state.activeId=null;state.tasks=[];state.instructions='';state.location='';state.aboutMe='';state.libraryItems=[];state.displayName='Visitante';persist();renderHistory();renderConversation();updateProfile();workspaceDialog.close();toast('Dados locais apagados.');});}
     if(event.target.id==='save-notifications'){state.notifications=$('#notifications-toggle').checked;persist();toast('Preferência de notificações salva.');}
     if(event.target.id==='save-location'){state.location=$('#location-input').value.trim();persist();toast('Localização salva.');}
     if(event.target.id==='save-personalization'){state.aboutMe=$('#about-input').value.trim();state.responseStyle=$('#style-select').value;state.theme=$('#workspace-theme').value;applyTheme();persist();toast('Personalização salva.');}
@@ -572,7 +627,7 @@
   $('#save-settings').addEventListener('click',event=>{event.preventDefault();saveSettings();});
   $('#auth-open').addEventListener('click',()=>{el.settings.close();openAuth('login');});
   $('#status-refresh').addEventListener('click',()=>checkHealth(true));
-  $('#clear-data').addEventListener('click',()=>{if(!confirm('Apagar todas as conversas e preferências locais?'))return;state.conversations=[];state.activeId=null;state.displayName='Visitante';state.attachments=[];persist();renderHistory();renderConversation();updateProfile();renderAttachments();toast('Dados locais apagados.');});
+  $('#clear-data').addEventListener('click',()=>{void askConfirmation('Apagar todas as conversas deste dispositivo? As tarefas, biblioteca e preferências serão mantidas.','Apagar conversas').then(accepted=>{if(!accepted)return;state.conversations=[];state.activeId=null;state.attachments=[];persist();renderHistory();renderConversation();renderAttachments();toast('Conversas apagadas.');});});
   $('#attach-button').addEventListener('click',()=>el.file.click());
   el.file.addEventListener('change',event=>addFiles([...event.target.files]));
   $$('.suggestion').forEach(button=>button.addEventListener('click',()=>{el.input.value=button.dataset.prompt;resizeInput();el.input.focus();}));
@@ -580,8 +635,8 @@
   el.input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();if(!state.busy)sendMessage();else state.controller?.abort();}});
   el.composer.addEventListener('submit',event=>{event.preventDefault();sendMessage();});
   document.addEventListener('keydown',event=>{
-    if(event.key==='Escape'){closeSidebar();closeContextMenu();$('#model-popover').hidden=true;}
-    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();el.input.focus();}
+    if(event.key==='Escape'){closeSidebar();closeContextMenu();$('#model-popover').hidden=true;if(el.search.open)el.search.close();}
+    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();closeSidebar();openSearch();}
     if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='o'){event.preventDefault();createConversation();}
   });
   matchMedia('(prefers-color-scheme: light)').addEventListener?.('change',()=>{if(state.theme==='system')applyTheme();});
