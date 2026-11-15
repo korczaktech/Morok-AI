@@ -99,7 +99,7 @@ def main():
   with open(summary,"a",encoding="utf-8") as f:
    f.write("## Reinforcement-G2 results\\n\\n| # | Pergunta | Resposta | Resultado |\\n|---:|---|---|---|\\n")
    for x in results:
-    escaped=x["answer"].replace("|","\\\\|").replace("\\n"," ").replace("\\r"," ")
+    escaped=x["answer"].replace("|","\\|").replace("\\n"," ").replace("\\r"," ")
     verdict="correto" if x["verdict"]=="correct" else "errado"
     f.write(f"| {x['attempt']} | {x['question_id']} | {escaped} | {verdict} |\\n")
  print(json.dumps(report,ensure_ascii=False,indent=2))
