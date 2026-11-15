@@ -46,11 +46,14 @@ O workflow manual **Treinamento — G2** fica disponível na aba Actions. Ele of
 
 - Checkbox para habilitar o Tsukuyomi.
 - **Épocas:** passagens completas pelo corpus em cada ciclo.
-- **Tentativas:** quantidade de ciclos. Em cada ciclo, o modelo treina pelas épocas configuradas e depois gera uma resposta para cada pergunta identificada pelo prefixo U: no corpus.
+- **Tentativas:** quantidade de ciclos quando o treinamento contínuo estiver desligado. Em cada ciclo, o modelo treina pelas épocas configuradas e gera uma resposta para cada pergunta com seu gabarito IA: no corpus.
+- **Treinamento contínuo:** checkbox opcional. Quando ativada, ignora o limite fixo de tentativas e continua até obter 10 ciclos consecutivos em que todas as perguntas atinjam o critério de aprovação. Um ciclo com qualquer resposta reprovada zera a sequência.
 
-O primeiro ciclo inicializa o modelo. Os ciclos seguintes carregam o checkpoint anterior, preservando os parâmetros aprendidos. Ao final, o workflow publica o checkpoint e um relatório Markdown com as respostas geradas como artefatos da execução.
+O primeiro ciclo inicializa o modelo. Os ciclos seguintes carregam o checkpoint anterior, preservando os parâmetros aprendidos. O relatório mostra resposta gerada, gabarito, correspondência lexical e resultado por pergunta; o resumo é publicado diretamente na página da execução e o relatório/checkpoint ficam disponíveis como artefatos.
 
-Limitação atual: o estado dos momentos do Adam não é salvo no checkpoint; portanto, os parâmetros do modelo continuam entre ciclos, mas os acumuladores internos do otimizador são reiniciados no início de cada ciclo. As respostas são registradas, mas ainda não são avaliadas automaticamente como corretas ou incorretas.
+O avaliador atual é determinístico e compara palavras normalizadas com o gabarito do corpus (correspondência F1 de pelo menos 90%, ou igualdade após normalização). Isso permite uma verificação automática reproduzível, mas não equivale a compreensão semântica e pode rejeitar paráfrases corretas ou aceitar coincidências lexicais. A aprovação deve ser interpretada como correspondência ao gabarito, não como prova de inteligência ou entendimento.
+
+O estado dos momentos do Adam não é salvo no checkpoint; os parâmetros continuam entre ciclos, mas os acumuladores internos do otimizador são reiniciados. O workflow tem limite operacional de seis horas, portanto uma execução contínua pode ser interrompida pelo limite do GitHub Actions antes de atingir dez ciclos perfeitos.
 
 ## Escopo e limitações
 
