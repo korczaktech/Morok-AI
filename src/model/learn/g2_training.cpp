@@ -4,11 +4,12 @@
 namespace morok::model {
 G2TrainingReport train_g2_corpus(const G2TrainingConfig& config,G2Parameters& p) {
     if(config.checkpoint_prefix.empty()) throw std::invalid_argument("G2 checkpoint_prefix is required");
-    auto a=config.base; a.checkpoint_path=config.checkpoint_prefix.string()+".expert-a.training";
+    auto a=config.base; a.allow_single_document=true; a.checkpoint_path=config.checkpoint_prefix.string()+".expert-a.training";
     a.best_model_path=config.checkpoint_prefix.string()+".expert-a.inference";
     if(config.resume) a.resume_from_checkpoint=a.checkpoint_path;
     if(!config.base.metrics_log_path.empty()) a.metrics_log_path=config.base.metrics_log_path.string()+".expert-a";
     auto b=config.base;
+    b.allow_single_document=true;
     // Keep the same deterministic corpus split; initialization already gives B an independent seed.
     b.checkpoint_path=config.checkpoint_prefix.string()+".expert-b.training";
     b.best_model_path=config.checkpoint_prefix.string()+".expert-b.inference";
