@@ -23,15 +23,15 @@ Como há um único documento, a avaliação do bootstrap ocorre no próprio docu
 
 ## Correções de aprendizado
 
-O otimizador minimiza a perda subtraindo o gradiente. Portanto, recompensa positiva deve aplicar o gradiente BPTT sem inverter seu sinal; recompensa negativa deve inverter o sinal. O atualizador G2 segue essa convenção. Ele usa AdamW, clipping de norma 5 e taxa padrão de 0,001. O número padrão de passos por episódio é 100, e o bootstrap padrão usa 100 épocas (configuráveis). O atualizador mede a perda média da sequência-alvo antes e depois da atualização para os dois especialistas. Reduzir essa perda demonstra ajuste ao exemplo, não generalização.
+O otimizador minimiza a perda subtraindo o gradiente. Portanto, recompensa positiva deve aplicar o gradiente BPTT sem inverter seu sinal; recompensa negativa deve inverter o sinal. O atualizador G2 segue essa convenção. Ele usa AdamW, clipping de norma 5 e taxa padrão de 0,001. O número padrão de passos por atualização de episódio é 1.000, e o bootstrap padrão usa 1.000 épocas (configuráveis). O atualizador mede a perda média da sequência-alvo antes e depois da atualização para os dois especialistas. Reduzir essa perda demonstra ajuste ao exemplo, não generalização.
 
-O teste unitário compara a perda da sequência antes e depois da atualização para os dois especialistas. Ele exige que recompensa positiva reduza a perda e que o gradiente invertido aumente a perda. Isso valida a direção da atualização, não apenas a alteração dos parâmetros. O runner usa demonstrações de referência com recompensa positiva quando a resposta está errada; portanto, esse fluxo é aprendizado supervisionado guiado por oráculo, não REINFORCE clássico.
+O teste unitário compara a perda da sequência antes e depois da atualização para os dois especialistas. Ele exige que recompensa positiva reduza a perda e que o gradiente invertido aumente a perda. Isso valida a direção da atualização, não apenas a alteração dos parâmetros. O runner usa demonstrações de referência com recompensa positiva quando a resposta está errada e gera novamente após a atualização. O gate comportamental avalia essa nova saída, nunca a amostra anterior ao treinamento. Portanto, esse fluxo é aprendizado supervisionado guiado por oráculo, não REINFORCE clássico.
 
 Quando a resposta gerada está errada ou degenerada, o runner usa a resposta de referência como demonstração-oráculo. Essa correção é treinamento supervisionado guiado por referência, não aprendizado autônomo nem uma implementação completa de REINFORCE.
 
 ## Geração e avaliação
 
-O executável de geração G2 ativa saída imprimível, penalização de repetição e um limite de bytes. Essas medidas reduzem saídas degeneradas, mas não garantem uma resposta semanticamente correta.
+O executável de geração G2 ativa saída imprimível, penalização de repetição e um limite de bytes. Essas medidas reduzem saídas degeneradas, mas não garantem uma resposta semanticamente correta. O workflow registra a resposta inicial e a resposta pós-atualização separadamente para permitir auditar o efeito do reforço.
 
 O avaliador exige os conceitos esperados em cada resposta:
 - Céu: `sim` e `azul`.
