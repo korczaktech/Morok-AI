@@ -152,7 +152,7 @@ while not all(completed.get(model, False) for model in selected):
 
         header_needed = not results_path.exists() or results_path.stat().st_size == 0
         with results_path.open("a", encoding="utf-8", newline="") as stream:
-            writer = csv.writer(stream, delimiter="\\t", lineterminator="\\n")
+            writer = csv.writer(stream, delimiter="\t", lineterminator="\n")
             if header_needed:
                 writer.writerow(["model", "epoch", "question_id", "attempt", "verdict", "latency_ms", "answer"])
             for row in rows:
