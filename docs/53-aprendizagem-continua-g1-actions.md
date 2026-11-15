@@ -1,32 +1,32 @@
-# G1 — Aprendizagem contínua com GitHub Actions
+# G1 — Aprendizagem contínua (experimento histórico)
 
 ## Objetivo
 
-Executar ciclos periódicos e retomáveis de treinamento da G1. O experimento usa um corpus factual introdutório em português, com perguntas e respostas sobre natureza, geografia, astronomia, química, biologia, corpo humano, matemática e física. O prompt de geração destacado no workflow continua sendo o da cor do céu. Cada ciclo restaura o checkpoint anterior, executa até 10 épocas adicionais, gera uma continuação e registra métricas e limitações.
+Este documento registra o experimento histórico de ciclos retomáveis da G1. O workflow original foi removido; a execução atual é manual por `G1/scripts/continual-cycle.sh`. O experimento usa corpus factual introdutório em português, restaura o checkpoint anterior, executa ciclos adicionais, gera uma continuação e registra métricas e limitações.
 
-Este workflow demonstra a infraestrutura de treinamento contínuo. Ele **não demonstra, por si só, compreensão de linguagem**.
+O experimento demonstra a infraestrutura de treinamento contínuo, não compreensão de linguagem.
 
 ## Agendamento e continuidade
 
-O workflow `.github/workflows/training.yml`:
+O fluxo original usava um workflow que já não existe. A execução atual é manual pelo script `G1/scripts/continual-cycle.sh`.
 
 - executa a cada 15 minutos por `schedule`;
-- aceita execução manual por `workflow_dispatch`;
+- aceita execução manual pelo script da G1;
 - impede execuções simultâneas;
 - restaura o artifact da última execução bem-sucedida;
 - compila Release e executa CTest;
 - treina até 10 épocas adicionais por ciclo, com teto total de 500;
 - salva checkpoint, melhor modelo, métricas, geração e estado em artifact com retenção de 90 dias.
 
-O checkpoint e o contador de épocas são transportados pelo artifact `morok-g1-continual-state`. O workflow não grava pesos no repositório e não cria commits automáticos. A agenda do GitHub Actions é periódica, não um processo sempre ativo, e pode atrasar.
+No fluxo histórico, checkpoint e contador eram transportados por artifact. Atualmente, os artefatos são geridos localmente pelo diretório de estado fornecido ao script; não há agenda nem commits automáticos.
 
 ## Dados e avaliação atual
 
-Os documentos `doc-*.txt` em `tests/fixtures/continual/` contêm um par pergunta/resposta por documento. Isso torna cada fim de documento um limite de resposta para o treinamento EOS. O corpus começou com 12 exemplos sobre o céu e recebeu exemplos factuais adicionais em outros tópicos; continua sendo um conjunto pequeno e controlado, não uma amostra representativa da língua portuguesa.
+Os documentos `doc-*.txt` em `G1/shared/tests/fixtures/continual/` contêm um par pergunta/resposta por documento. Isso torna cada fim de documento um limite de resposta para o treinamento EOS. O corpus começou com 12 exemplos sobre o céu e recebeu exemplos factuais adicionais em outros tópicos; continua sendo um conjunto pequeno e controlado, não uma amostra representativa da língua portuguesa.
 
 A métrica principal do treinador é a perda de predição do próximo byte (BPB) em treino/validação/teste. Ela mede qualidade estatística de predição no corpus, não compreensão semântica.
 
-Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. O script `scripts/evaluate-g1-qa.py` também avalia perguntas reservadas em `tests/fixtures/continual-eval/cases.json`, com paráfrases e tópicos factuais distintos, registrando exact match e token F1. Ela **não** encerra o treinamento, não cria marcador de sucesso e não altera o estado do workflow para `goal_reached`.
+Depois de cada ciclo, `morok_generate` recebe o prompt versionado e produz até 128 bytes. O script `G1/scripts/evaluate-qa.py` também avalia perguntas reservadas em `G1/shared/tests/fixtures/continual-eval/cases.json`, com paráfrases e tópicos factuais distintos, registrando exact match e token F1. A avaliação não encerra o treinamento nem cria marcador automático de sucesso.
 
 O estado final possível do orçamento é `budget_exhausted`. Isso significa somente que o limite de épocas foi atingido. O status da avaliação semântica permanece `not_established`: o conjunto reservado mede apenas sobreposição lexical (exact match/token F1), ainda sem revisão humana e sem critérios semânticos independentes.
 

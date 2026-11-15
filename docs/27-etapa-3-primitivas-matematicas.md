@@ -49,4 +49,4 @@ Cada inicializador recebe uma semente explícita e instancia seu próprio gerado
 - [ ] CI GCC/Clang em Debug e Release aprovado para o commit final desta revisão.
 - [ ] ASan/UBSan executado em ambiente compatível para o commit final desta revisão.
 
-A CI padrão está definida em `.github/workflows/ci.yml`; a execução ASan/UBSan está em `.github/workflows/sanitizers.yml`. Os dois últimos itens dependem da conclusão bem-sucedida dos workflows no commit final; não são marcados como aprovados apenas porque os arquivos foram adicionados.
+Os workflows de CI e sanitizers foram removidos temporariamente. Os itens de validação continuam pendentes e devem ser executados localmente quando a migração estiver validada.

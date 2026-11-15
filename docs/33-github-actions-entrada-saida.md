@@ -1,4 +1,7 @@
-# Execucao pelo GitHub Actions: entrada.txt -> saida.txt
+# Fluxo histórico: entrada.txt -> saida.txt
+
+> O workflow que implementava esta automação foi removido. Este documento registra apenas o comportamento antigo; não há execução automática ativa.
+
 
 ## Fluxo
 

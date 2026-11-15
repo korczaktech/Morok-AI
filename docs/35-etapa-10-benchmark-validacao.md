@@ -65,13 +65,13 @@ O operador deve informar a licença e a origem reais do corpus. Não declarar um
 
 Os argumentos finais são: épocas, semente inicial, licença, origem e número de repetições. Cada repetição incrementa a semente. O limite de repetições é 20.
 
-## GitHub Actions
+## Automação histórica (workflow removido)
 
-O workflow manual `.github/workflows/g1-benchmark.yml` compila o benchmark, executa os testes do baseline, roda a matriz com o corpus sintético versionado e publica `g1.jsonl` como artifact.
+O workflow que executava essa matriz foi removido. Os resultados abaixo são registros históricos; a execução deve ser refeita manualmente usando o executável de benchmark e o corpus da G1.
 
 O corpus sintético foi criado para testar a mecânica do pipeline e está identificado como CC0-1.0. Ele não representa linguagem natural suficiente para avaliar qualidade linguística, generalização ou eficácia da G1.
 
-Para executar: GitHub → Actions → G1 Benchmark → Run workflow. Os parâmetros permitem ajustar épocas e repetições.
+Não há execução por GitHub Actions disponível no momento.
 
 ## Execução de smoke test registrada
 
@@ -112,4 +112,4 @@ O relatório JSONL está publicado no artifact `g1-benchmark-smoke` do run. Os q
 
 ## Estado
 
-A infraestrutura de benchmark, baseline, testes e workflow automatizado está implementada. A validação experimental com corpus real depende da disponibilização de dados com licença e proveniência verificáveis e da execução da campanha no hardware de referência.
+A infraestrutura de benchmark, baseline e testes está implementada; a automação por workflow está suspensa. A validação experimental com corpus real depende da disponibilização de dados com licença e proveniência verificáveis e da execução da campanha no hardware de referência.
