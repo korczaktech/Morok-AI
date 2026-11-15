@@ -49,6 +49,11 @@ struct TrainingReport {
 };
 
 void initialize(Model& model, std::uint64_t seed);
+// Gradiente analítico da perda de um único byte-alvo, usado em testes numéricos.
+[[nodiscard]] bool compute_target_gradient(
+    const Model& model, std::span<const std::uint8_t> bytes,
+    std::size_t target_index,
+    std::array<float, kParameterCount>& gradient);
 [[nodiscard]] ForwardResult forward(const Model& model,
                                     std::span<const std::uint8_t> context);
 [[nodiscard]] double evaluate_loss(const Model& model,
