@@ -727,7 +727,7 @@ bool save_training_state(const TrainingState& state,
                          const std::filesystem::path& path) {
     if (path.empty()) return false;
     constexpr char magic[8] = {'M','O','R','O','K','A','D','M'};
-    constexpr std::uint32_t version = 6;
+    constexpr std::uint32_t version = 7;
     constexpr std::uint32_t count = static_cast<std::uint32_t>(kParameterCount);
     std::uint64_t hash = 14695981039346656037ULL;
     const auto update_hash = [&hash](const unsigned char* data, std::size_t size) {
@@ -771,7 +771,7 @@ bool load_training_state(TrainingState& state,
     stream.read(reinterpret_cast<char*>(&step), sizeof(step));
     stream.read(reinterpret_cast<char*>(&expected_hash), sizeof(expected_hash));
     if (!stream || std::memcmp(magic, "MOROKADM", 8) != 0 ||
-        version != 6 || count != kParameterCount)
+        version != 7 || count != kParameterCount)
         return false;
     candidate.step = step;
     stream.read(reinterpret_cast<char*>(candidate.first_moment.data()),
