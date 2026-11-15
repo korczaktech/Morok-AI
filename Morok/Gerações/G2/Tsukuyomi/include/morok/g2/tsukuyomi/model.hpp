@@ -37,6 +37,8 @@ struct TrainingReport {
     std::uint64_t target_bytes{0};
     double initial_loss{0.0};
     double final_loss{0.0};
+    double initial_bpb{0.0};
+    double final_bpb{0.0};
 };
 
 void initialize(Model& model, std::uint64_t seed);
