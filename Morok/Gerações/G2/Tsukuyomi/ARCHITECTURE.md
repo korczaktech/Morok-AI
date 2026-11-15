@@ -77,7 +77,7 @@ Comando:
 
 morok-g2-tsukuyomi-generate tsukuyomi-g2-v0.1.ckpt "Olá" 120
 
-A geração restringe transições para manter UTF-8 válido quando o prompt é UTF-8 válido e há espaço para concluir sequências multibyte. Isso garante codificação, não qualidade linguística.
+A geração restringe transições para manter UTF-8 válido quando o prompt é UTF-8 válido e há espaço para concluir sequências multibyte. Isso garante codificação, não qualidade linguística. A API expõe decodificação gulosa padrão e opções de sampling com temperatura, top-k, top-p, seed fixa e penalidade de repetição; a configuração padrão continua determinística.
 
 
 ## Checkpoint
