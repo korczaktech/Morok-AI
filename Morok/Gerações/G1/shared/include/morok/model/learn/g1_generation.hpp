@@ -21,6 +21,8 @@ struct G1GenerationConfig {
     double eos_threshold{0.75};
     std::size_t min_new_bytes{1};
     bool printable_only{false};
+    // RLAH adaptive segment prior; zero disables it without adding neural parameters.
+    double rlah_bias_strength{0.15};
 };
 
 struct G1GenerationReport {
