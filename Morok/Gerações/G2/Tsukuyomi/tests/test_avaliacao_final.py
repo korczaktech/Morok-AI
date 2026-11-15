@@ -85,5 +85,28 @@ class FinalEvaluationTests(unittest.TestCase):
             MODULE.summarize_rows([], [])
 
 
+    def test_tfidf_retrieval_baseline_returns_exact_training_answer(self):
+        training = [
+            ("Qual é seu nome?", "Meu nome é Morok."),
+            ("Como funciona o contexto?", "Contexto ajuda na previsão."),
+        ]
+        questions = [("Qual é seu nome?", "Meu nome é Morok.")]
+        self.assertEqual(
+            MODULE.retrieval_baseline_answers(training, questions),
+            ["Meu nome é Morok."],
+        )
+        result = MODULE.evaluate_retrieval_baseline(training, questions)
+        self.assertEqual(result["exact_matches"], 1)
+        self.assertEqual(result["exact_match_rate"], 1.0)
+
+    def test_retrieval_baseline_rejects_empty_training_and_evaluation(self):
+        with self.assertRaises(ValueError):
+            MODULE.retrieval_baseline_answers([], [("pergunta", "resposta")])
+        with self.assertRaises(ValueError):
+            MODULE.evaluate_retrieval_baseline(
+                [("pergunta", "resposta")], []
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
