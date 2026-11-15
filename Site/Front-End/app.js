@@ -263,7 +263,7 @@
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 12000);
     try {
-      const response = await fetch(state.apiUrl.replace(/\\/+$/,'') + '/health',{method:'GET',mode:'cors',cache:'no-store',signal:controller.signal});
+      const response = await fetch(state.apiUrl.replace(/\/+$/,'') + '/health',{method:'GET',mode:'cors',cache:'no-store',signal:controller.signal});
       const data = await response.json().catch(() => null);
       if (!response.ok || data?.status !== 'ok') throw new Error('Health check inválido (HTTP ' + response.status + ').');
       setConnection('online','API configurada');
