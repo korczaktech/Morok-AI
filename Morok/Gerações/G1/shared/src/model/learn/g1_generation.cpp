@@ -74,9 +74,16 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
     }
 
     G1State recurrent{};
+    bool has_previous_byte = false;
+    std::uint8_t previous_byte = 0;
     for (const char raw_byte : prompt.string()) {
         const auto byte = static_cast<std::uint8_t>(static_cast<unsigned char>(raw_byte));
-        advance_g1_state(parameters, recurrent, byte);
+        const bool separator = is_g1_token_separator(byte);
+        const bool token_start = !separator &&
+            (!has_previous_byte || is_g1_token_separator(previous_byte));
+        advance_g1_state(parameters, recurrent, byte, token_start, separator);
+        previous_byte = byte;
+        has_previous_byte = true;
     }
 
     std::string generated;
@@ -210,7 +217,12 @@ G1GenerationReport generate_g1(const G1Parameters& parameters,
         const auto byte = candidates[selected].byte;
         generated.push_back(static_cast<char>(byte));
         utf8 = candidates[selected].utf8;
-        advance_g1_state(parameters, recurrent, byte);
+        const bool token_separator = is_g1_token_separator(byte);
+        const bool token_start = !token_separator &&
+            (!has_previous_byte || is_g1_token_separator(previous_byte));
+        advance_g1_state(parameters, recurrent, byte, token_start, token_separator);
+        previous_byte = byte;
+        has_previous_byte = true;
     }
 
     auto valid = common::Utf8Text::from_utf8(generated);
