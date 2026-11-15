@@ -20,7 +20,7 @@ int main() {
     using namespace morok::g2::tsukuyomi;
 
     static_assert(kParameterCount == 10000);
-    static_assert(kCheckpointFormatVersion == 7);
+    static_assert(kCheckpointFormatVersion == 8);
     Model model;
     initialize(model, 1234);
     Model same_seed;
