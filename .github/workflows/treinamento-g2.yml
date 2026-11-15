@@ -40,7 +40,7 @@ concurrency:
 
 jobs:
   tsukuyomi:
-    if: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi) }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -95,6 +95,7 @@ jobs:
         run: ctest --test-dir build/g2 -R "g2.tsukuyomi.model|architecture.generation_isolation" --output-on-failure
 
       - name: Treinar e avaliar somente as questões selecionadas
+        if: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi) }}
         working-directory: Morok
         env:
           EPOCAS: ${{ inputs.epocas || 1 }}
