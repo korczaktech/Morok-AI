@@ -52,15 +52,15 @@
     }
   ],
   "totals": {
-    "episodes": 15,
-    "correct": 3,
-    "incorrect": 12,
-    "policy_updates": 15,
+    "episodes": 17,
+    "correct": 4,
+    "incorrect": 13,
+    "policy_updates": 16,
     "skipped_updates": 0,
     "oracle_demonstrations": 9,
-    "memory_replay_experiences": 30,
-    "memory_replay_updates": 30,
-    "memory_replay_skipped": 0
+    "memory_replay_experiences": 45,
+    "memory_replay_updates": 43,
+    "memory_replay_skipped": 2
   },
   "episodes": [
     {
@@ -707,6 +707,70 @@
         "target_loss_decreased": true
       },
       "initial_answer": "A grama e verde."
+    },
+    {
+      "episode": 16,
+      "episode_id": "43667908039:1:1:sky_is_blue",
+      "run_id": "43667908039",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "sky_is_blue",
+      "prompt": "Usuario: O ceu e azul?\nIA: ",
+      "answer": "Sim, o ceu e azul",
+      "verdict": "correct",
+      "reward": 1,
+      "grading_reason": "exact_normalized_answer",
+      "timestamp_utc": "2026-11-15T02:30:54.800155+00:00",
+      "model_sha256_before": "e327d92b3e037cba11a93f26c4314fce343e92335323afadf6f3b905999df87f14b99ef9c69682fe84b67f6226c460abdeed45607ae25c2f5bbf35a3daf0ece2",
+      "model_sha256_after": "5cd1f80e6cdb4f3e08bf3464eaeda597029b4e57a581634edee12bd80443d99efde4522f1817bde45322b615dda3d23c714d4019c14459a65b4d04daa528f7d3",
+      "trainable_parameters": 2000,
+      "policy_update": {
+        "status": "applied",
+        "source": "model_response",
+        "algorithm": "positive_reward_adamw_on_target_sequence",
+        "optimizer_steps": 1000,
+        "report": {
+          "generation": "G2",
+          "reward": 1,
+          "target_bytes": 17,
+          "gradient_norm_first": 36.7107,
+          "gradient_norm_last": 0.244266,
+          "target_loss_before": 0.727183,
+          "target_loss_after": 0.0104257,
+          "target_loss_delta": -0.716757,
+          "parameter_delta_l2": 0.578744,
+          "optimizer": "AdamW",
+          "optimizer_steps_per_expert": 34,
+          "expert_a_optimizer_step": 34,
+          "expert_b_optimizer_step": 34,
+          "trainable_parameters": 2000
+        },
+        "target_loss_before": 0.727183,
+        "target_loss_after": 0.0104257,
+        "target_loss_decreased": true
+      },
+      "initial_answer": "Sim, o ceu e azul"
+    },
+    {
+      "episode": 17,
+      "episode_id": "43667908039:1:2:mountains_high_or_low",
+      "run_id": "43667908039",
+      "run_attempt": 1,
+      "source": "model_generated",
+      "question_id": "mountains_high_or_low",
+      "prompt": "Usuario: As montanhas sao altas ou baixas?\nIA: ",
+      "answer": "Arama e verde.",
+      "verdict": "incorrect",
+      "reward": -1,
+      "grading_reason": "missing_expected_tokens:altas,as,montanhas,sao",
+      "timestamp_utc": "2026-11-15T02:30:54.822030+00:00",
+      "model_sha256_before": "5cd1f80e6cdb4f3e08bf3464eaeda597029b4e57a581634edee12bd80443d99efde4522f1817bde45322b615dda3d23c714d4019c14459a65b4d04daa528f7d3",
+      "model_sha256_after": null,
+      "trainable_parameters": 2000,
+      "policy_update": {
+        "status": "pending",
+        "algorithm": "signed_bptt_gradient_on_both_experts"
+      }
     }
   ]
 }
