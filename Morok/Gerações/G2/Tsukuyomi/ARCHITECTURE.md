@@ -47,7 +47,7 @@ Argumentos: arquivo de corpus, caminho do checkpoint, épocas opcionais e seed o
 
 ## Auditoria matemática
 
-A disposição dos 10.000 parâmetros é protegida por asserções estáticas encadeadas: cada bloco começa exatamente após o anterior e o último termina no limite do orçamento. Os testes comparam gradientes analíticos e diferenças finitas em representantes dos embeddings compartilhados de entrada/saída, projeção oculta, canais de contexto da pergunta e da resposta, biases, escala, deslocamento e estado inicial. Também verificam o gradiente dos embeddings da pergunta. Um teste independente confere o primeiro passo do Adam, as correções de bias dos momentos e o clipping pela norma global contra o valor numérico esperado. Outros testes cobrem acumulação em mini-lotes, retomada determinística, serialização dos momentos e weight decay seletivo.
+A disposição dos 10.000 parâmetros é protegida por asserções estáticas encadeadas: cada bloco começa exatamente após o anterior e o último termina no limite do orçamento. Os testes comparam gradientes analíticos e diferenças finitas em representantes dos embeddings compartilhados de entrada/saída, projeção oculta, matriz recorrente compartilhada e projeção contextual da pergunta, biases, escala, deslocamento e estado inicial. Também verificam o gradiente dos embeddings da pergunta. Um teste independente confere o primeiro passo do Adam, as correções de bias dos momentos e o clipping pela norma global contra o valor numérico esperado. Outros testes cobrem acumulação em mini-lotes, retomada determinística, serialização dos momentos e weight decay seletivo.
 
 Esses testes verificam a derivada da função atual em pontos representativos; não significam uma prova formal de todos os 10.000 valores para qualquer estado possível. O teste de diferenças finitas da matriz recorrente verifica a cadeia temporal em uma sequência curta. Um teste adicional compara atualizações com janela TBPTT de 1 e de 13 etapas. A janela TBPTT é limitada a 13 para controlar memória e custo; dependências mais antigas influenciam o forward, mas não recebem gradiente direto além desse limite.
 
@@ -73,8 +73,6 @@ morok-g2-tsukuyomi-generate tsukuyomi-g2-v0.1.ckpt "Olá" 120
 A geração restringe transições para manter UTF-8 válido quando o prompt é UTF-8 válido e há espaço para concluir sequências multibyte. Isso garante codificação, não qualidade linguística.
 
 
-A inferência prepara uma única vez as 13 faixas da pergunta imutável e as reutiliza durante a geração autoregressiva. Isso elimina a varredura e a agregação repetidas da pergunta a cada byte gerado; não altera pesos, logits ou o orçamento de parâmetros. Para prompts sem marcador U:, a preparação registra a ausência do contexto e também evita repetir a busca pelo marcador.
-
 ## Checkpoint
 
 Formato binário MOROKG2T, versão 5, contagem explícita de 10.000 floats e checksum FNV-1a de 64 bits. O carregamento ocorre em estrutura temporária e só substitui o modelo ativo depois de validar o arquivo integral.
@@ -89,6 +87,6 @@ Formato binário MOROKG2T, versão 5, contagem explícita de 10.000 floats e che
 - Sem tokenizer; a entrada é byte-level.
 - O treinador aceita bytes arbitrários; a CLI de geração exige prompt UTF-8 válido para produzir continuação útil.
 - O corpus supervisionado foi ampliado de 32 para 56 diálogos, preservando os 32 originais; a validação mantém 40 perguntas e o teste reservado foi ampliado para 12 perguntas. O conjunto continua pequeno e não equivale a um corpus natural amplo.
-- O checkpoint de pesos e o arquivo `.adam` são artefatos separados e ambos são necessários para uma retomada exata do otimizador.
+- O checkpoint de pesos (formato 5) e o arquivo `.adam` (formato 4) são artefatos separados e ambos são necessários para uma retomada exata do otimizador.
 
 A versão 0.1 estabelece uma implementação executável, mensurável e isolada. Evoluções arquiteturais só devem ser aceitas com testes e comparação experimental.
