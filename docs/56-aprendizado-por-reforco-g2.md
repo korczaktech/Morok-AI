@@ -1,44 +1,55 @@
 # Reinforcement-G2
 
-O workflow aplica treinamento e avaliação exclusivamente à G2. A G2 contém dois especialistas independentes de 1.000 parâmetros cada, totalizando exatamente 2.000 parâmetros treináveis.
+A G2 possui dois especialistas independentes de 1.000 parâmetros cada, totalizando exatamente 2.000 parâmetros treináveis.
 
-## Isolamento
+## Componentes
 
-- Checkpoints G2 usam o formato pareado dos especialistas A e B.
-- O histórico fica em `data/reinforcement-g2/answers.json`, separado dos episódios da G1.
-- O workflow é `.github/workflows/reinforcement-g2.yml`.
-- A geração usa `morok-generate-g2`; as atualizações usam `morok-reinforce-g2`.
-- O artefato do Actions preserva os checkpoints e resultados da execução.
+- Checkpoints de inferência: `<prefix>.expert-a` e `<prefix>.expert-b`.
+- Checkpoints de retomada do bootstrap: `<prefix>.expert-a.training` e `<prefix>.expert-b.training`.
+- Histórico: `data/reinforcement-g2/answers.json`.
+- Runner: `scripts/run-g2-reinforcement.py`.
+- Gerador: `morok-generate-g2`.
+- Atualizador: `morok-reinforce-g2`.
 
-## Corpus e perguntas
+## Corpus
 
-O bootstrap usa exatamente um arquivo de texto em `tests/fixtures/g2-single-document/doc-01.txt`. Esse arquivo contém três pares controlados de pergunta e resposta:
+O bootstrap usa um único documento em `tests/fixtures/g2-single-document/doc-01.txt`, com três exemplos controlados:
 
 - `Usuario: O ceu e azul?` → `Sim, o ceu e azul`.
 - `Usuario: As montanhas sao altas ou baixas?` → `As montanhas sao altas.`.
 - `Usuario: Que cor e a grama?` → `A grama e verde.`.
 
-Os três prompts no banco de feedback correspondem aos prefixos literais do corpus. O bootstrap é executado separadamente para os dois especialistas, com até 100 épocas. Como há apenas um documento, a métrica de seleção é calculada sobre o próprio documento de treinamento; isso não constitui validação independente nem demonstra generalização.
+Como há um único documento, a avaliação do bootstrap ocorre no próprio documento de treinamento. Ela não é validação independente e não mede generalização.
 
-## Ciclo de tentativa e correção
+## Correções de aprendizado
 
-Cada tentativa gera uma resposta e a avalia com um verificador lexical limitado às três perguntas controladas.
+O otimizador minimiza a perda subtraindo o gradiente. Portanto, recompensa positiva deve aplicar o gradiente BPTT sem inverter seu sinal; recompensa negativa deve inverter o sinal. O atualizador G2 agora segue essa convenção.
 
-- Se a resposta for correta e não degenerada, ela própria é usada como sequência-alvo para uma atualização positiva.
-- Se a resposta estiver errada ou for degenerada, ela nunca é usada como alvo positivo. O sistema usa a resposta de referência correspondente ao corpus como demonstração-oráculo.
-- Cada demonstração-oráculo aplica 25 passos de atualização positiva aos dois especialistas. A tentativa seguinte é gerada com os pesos já atualizados.
-- O banco registra se a atualização usou a resposta do modelo ou uma demonstração-oráculo.
+O teste unitário compara a perda da sequência antes e depois da atualização para os dois especialistas. Ele exige que recompensa positiva reduza a perda e que o gradiente invertido aumente a perda. Isso valida a direção da atualização, não apenas a alteração dos parâmetros.
 
-Esse mecanismo permite que o modelo receba um sinal de correção após errar. Como a resposta de referência é fornecida pelo sistema, essa etapa é treinamento supervisionado guiado por oráculo; não deve ser descrita como aprendizado autônomo nem como REINFORCE completo. A implementação usa uma aproximação reward-weighted BPTT.
+Quando a resposta gerada está errada ou degenerada, o runner usa a resposta de referência como demonstração-oráculo. Essa correção é treinamento supervisionado guiado por referência, não aprendizado autônomo nem uma implementação completa de REINFORCE.
 
-## Gate comportamental e limites
+## Geração e avaliação
 
-O workflow só passa no gate comportamental se pelo menos uma resposta gerada durante a execução for correta e não degenerada. Se nenhuma passar, o job termina como falha mesmo que compilação e testes de software estejam verdes.
+O executável de geração G2 ativa saída imprimível, penalização de repetição e um limite de bytes. Essas medidas reduzem saídas degeneradas, mas não garantem uma resposta semanticamente correta.
 
-Cada execução começa com bootstrap limpo a partir do corpus versionado; os pesos treinados em uma execução não são restaurados automaticamente na execução seguinte. Os artefatos preservam os resultados e checkpoints para inspeção, mas não implicam persistência automática entre runs.
+O avaliador exige os conceitos esperados em cada resposta:
+- Céu: `sim` e `azul`.
+- Montanhas: `montanhas` e `altas`.
+- Grama: `grama` e `verde`.
 
-O avaliador lexical só mede as três perguntas definidas. Acertar esses exemplos não comprova compreensão geral, capacidade de responder perguntas inéditas ou competência linguística ampla. A quantidade de parâmetros também não é evidência de qualidade por si só.
+Respostas incompletas, negativas ou degeneradas não recebem recompensa positiva.
+
+## Persistência
+
+O runner não apaga mais os checkpoints de inferência a cada execução. Se os dois checkpoints de especialistas já existirem, o treinamento continua a partir desses pesos. Se ambos não existirem, o runner faz o bootstrap; se existir apenas um, interrompe com erro para evitar um par inconsistente.
+
+Os checkpoints de treinamento do bootstrap também podem ser retomados com `--resume` quando ambos estiverem disponíveis. O banco de episódios permanece separado dos pesos do modelo.
+
+## Limitações
+
+A G2 continua sendo uma arquitetura pequena, byte-level e composta por dois especialistas independentes. A seleção entre continuações não equivale a uma arquitetura de especialistas combinados. Acertar as três perguntas do corpus não demonstra compreensão geral, nem capacidade de responder perguntas inéditas.
 
 ## Execução
 
-O workflow não usa cron. Pode ser iniciado manualmente, com caixas de seleção para as três perguntas, quantidade de tentativas e épocas de bootstrap, ou por mudanças relevantes no código. É necessário selecionar pelo menos uma pergunta. O limite de tentativas por execução é 10.
+O workflow não usa cron. Pode ser iniciado manualmente, com seleção das perguntas, número de tentativas e épocas de bootstrap. O limite é de 10 tentativas por execução.
