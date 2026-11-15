@@ -125,8 +125,20 @@ jobs:
           def table(headers, body):
               lines = ["| " + " | ".join(headers) + " |",
                        "| " + " | ".join("---" for _ in headers) + " |"]
-              lines.extend("| " + " | ".join(str(cell).replace("|", "\\|").replace("\n", " ")) + " |" for cell in body)
-              return "\n".join(lines) + "\n"
+              for row in body:
+                  cells = [str(cell).replace("|", "\\|").replace("\\r", " ").replace("\\n", " ") for cell in row]
+                  lines.append("| " + " | ".join(cells) + " |")
+              return "\\n".join(lines) + "\\n"
+
+          def display_answer(answer):
+              # Preserve the model's exact output without allowing control/private-use
+              # Unicode characters to corrupt the Markdown table or terminal rendering.
+              if not answer:
+                  return "(resposta vazia)"
+              escaped = answer.encode("unicode_escape").decode("ascii")
+              if len(escaped) > 100:
+                  escaped = escaped[:100] + "…"
+              return escaped
 
           for row in rows:
               row["latency_ms"] = float(row["latency_ms"])
@@ -155,7 +167,7 @@ jobs:
           for profile in profiles:
               for qid, label in questions.items():
                   row = next(r for r in rows if r["profile"] == profile and r["question_id"] == qid)
-                  answer = row["answer"].strip() or "(sem resposta)"
+                  answer = display_answer(row["answer"].strip())
                   verdict = "Correto" if row["correct"] else "Errado"
                   detailed.append([profile, label, answer, verdict, f'{row["latency_ms"]:.3f} ms'])
 
@@ -176,7 +188,7 @@ jobs:
               table(["Modelo", "Corretas", "Incorretas", "Tempo médio"], individual),
               "",
               "## Avaliação individual de cada resposta",
-              table(["Modelo", "Pergunta", "Resposta", "Estado", "Tempo"], detailed),
+              table(["Modelo", "Pergunta", "Resposta gerada (escapada)", "Estado", "Tempo"], detailed),
           ]
           rendered = "\n".join(report) + "\n"
           if summary_path:
