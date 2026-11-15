@@ -1,4 +1,7 @@
 #include "morok/lang/language_subsystem.hpp"
+#include "morok/g1/tsukuyomi/profile.hpp"
+#include "morok/g1/apollo/profile.hpp"
+#include "morok/g1/mokosh/profile.hpp"
 
 #include <algorithm>
 #include <array>
@@ -100,35 +103,27 @@ DetectedLanguage identify_language(std::string_view text) {
     return DetectedLanguage::spanish;
 }
 
-model::G1GenerationConfig profile_generation(
+model::G1GenerationReport generate_for_profile(
+    const model::G1Parameters& parameters, const common::Utf8Text& prompt,
     LanguageProfile profile, std::size_t max_new_bytes) {
-    model::G1GenerationConfig config{};
-    config.max_new_bytes = max_new_bytes;
-    config.printable_only = true;
     switch (profile) {
-    case LanguageProfile::tsukuyomi:
-        config.max_new_bytes = std::min<std::size_t>(max_new_bytes, 256);
-        config.temperature = 0.8;
-        config.top_k = 0;
-        config.repetition_penalty = 0.35;
-        config.repetition_window = 48;
-        break;
-    case LanguageProfile::apollo:
-        config.max_new_bytes = std::min<std::size_t>(max_new_bytes, 512);
-        config.temperature = 0.8;
-        config.top_k = 0;
-        config.repetition_penalty = 0.35;
-        config.repetition_window = 48;
-        break;
-    case LanguageProfile::mokosh:
-        config.max_new_bytes = std::min<std::size_t>(max_new_bytes, 128);
-        config.temperature = 0.7;
-        config.top_k = 8;
-        config.repetition_penalty = 0.35;
-        config.repetition_window = 32;
-        break;
+    case LanguageProfile::tsukuyomi: {
+        g1::tsukuyomi::Policy policy{};
+        policy.max_new_bytes = max_new_bytes;
+        return g1::tsukuyomi::generate(parameters, prompt, policy);
     }
-    return config;
+    case LanguageProfile::apollo: {
+        g1::apollo::Policy policy{};
+        policy.max_new_bytes = max_new_bytes;
+        return g1::apollo::generate(parameters, prompt, policy);
+    }
+    case LanguageProfile::mokosh: {
+        g1::mokosh::Policy policy{};
+        policy.max_new_bytes = max_new_bytes;
+        return g1::mokosh::generate(parameters, prompt, policy);
+    }
+    }
+    throw std::invalid_argument("unknown IA-LANG G1 profile");
 }
 
 } // namespace
@@ -313,9 +308,8 @@ common::Result<LanguageGeneration> LanguageSubsystem::generate(
     if (!prompt)
         return common::Result<LanguageGeneration>::failure(*prompt.error_if());
     try {
-        auto generation_config = profile_generation(language_config_.profile, max_new_bytes);
-        const auto generated = model::generate_g1(
-            parameters_, *prompt.value_if(), generation_config);
+        const auto generated = generate_for_profile(
+            parameters_, *prompt.value_if(), language_config_.profile, max_new_bytes);
         if (request.is_cancelled())
             return common::Result<LanguageGeneration>::failure(common::Error::make(
                 common::ErrorCode::cancelled,
