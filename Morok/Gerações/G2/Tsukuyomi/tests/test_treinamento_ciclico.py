@@ -47,10 +47,41 @@ class TrainingDataTests(unittest.TestCase):
         ]
         selected = training.select_validation_questions(train, validation, 1)
         self.assertEqual(selected, [validation[0]])
-    def test_split_sizes(self):
-        self.assertEqual(len(training.read_dialogues(DATA_DIR / "treinamento.txt")), 56)
+    def test_split_sizes_and_original_examples_are_preserved(self):
+        train = training.read_dialogues(DATA_DIR / "treinamento.txt")
+        original = training.read_dialogues(DATA_DIR / "treinamento-inicial.txt")
+        self.assertEqual(len(train), 56)
+        self.assertEqual(len(original), 32)
+        self.assertTrue(set(original).issubset(set(train)))
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "validacao.txt")), 40)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "teste.txt")), 12)
+
+    def test_best_checkpoint_and_adam_state_are_saved_and_restored_together(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkpoint = root / "model.ckpt"
+            optimizer = root / "model.ckpt.adam"
+            best_checkpoint = root / "model.ckpt.best"
+            best_optimizer = root / "model.ckpt.adam.best"
+            checkpoint.write_bytes(b"weights-cycle-3")
+            optimizer.write_bytes(b"adam-cycle-3")
+            training.save_best_state(checkpoint, optimizer, best_checkpoint, best_optimizer)
+            checkpoint.write_bytes(b"weights-cycle-4")
+            optimizer.write_bytes(b"adam-cycle-4")
+            training.restore_best_state(best_checkpoint, best_optimizer, checkpoint, optimizer)
+            self.assertEqual(checkpoint.read_bytes(), b"weights-cycle-3")
+            self.assertEqual(optimizer.read_bytes(), b"adam-cycle-3")
+
+    def test_best_state_requires_both_checkpoint_and_optimizer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkpoint = root / "model.ckpt"
+            optimizer = root / "model.ckpt.adam"
+            checkpoint.write_bytes(b"weights")
+            with self.assertRaises(RuntimeError):
+                training.save_best_state(
+                    checkpoint, optimizer, root / "best.ckpt", root / "best.adam"
+                )
 
     def test_report_separates_correct_and_incorrect_answers(self):
         from io import StringIO
