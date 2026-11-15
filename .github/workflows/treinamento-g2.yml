@@ -91,7 +91,9 @@ jobs:
           python3 "Gerações/G2/Tsukuyomi/scripts/treinamento_ciclico.py" \
             build/g2/morok-g2-tsukuyomi-train \
             build/g2/morok-g2-tsukuyomi-generate \
-            "Gerações/G2/Tsukuyomi/data/treinamento-inicial.txt" \
+            "Gerações/G2/Tsukuyomi/data/treinamento.txt" \
+            "Gerações/G2/Tsukuyomi/data/validacao.txt" \
+            "Gerações/G2/Tsukuyomi/data/teste.txt" \
             "$EPOCAS" "$TENTATIVAS" "$CONTINUO"
 
       - name: Publicar tabela de respostas e annotations G2
