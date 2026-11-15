@@ -22,6 +22,10 @@ def select_questions(questions, selected_ids):
  if not selected or len(selected)!=len(selected_ids) or selected-available:
   raise ValueError("select at least one unique known question")
  return [q for q in questions if q["id"] in selected]
+def is_degenerate_response(response):
+ compact=response.strip()
+ if len(compact)<12:return False
+ return len(set(compact))<=2 or max(compact.count(ch) for ch in set(compact))/len(compact)>=0.85
 def run(cmd):
  r=subprocess.run(cmd,capture_output=True,text=True,encoding="utf-8")
  if r.returncode:raise RuntimeError(f"command failed: {' '.join(cmd)}\n{r.stdout}\n{r.stderr}")
@@ -57,8 +61,7 @@ def main():
    before=digest(Path(str(a.checkpoint)+".expert-a"))+digest(Path(str(a.checkpoint)+".expert-b"))
    run([str(a.generator),str(a.checkpoint),str(prompt),str(answer),"48"])
    response=answer.read_text(encoding="utf-8"); verdict,reward,reason=grade(q["id"],response)
-   compact=response.strip()
-   if len(compact)>=12 and (len(set(compact))<=2 or max(compact.count(ch) for ch in set(compact))/len(compact)>=0.85):
+   if is_degenerate_response(response):
     verdict,reward,reason="incorrect",-1,"degenerate_repetition"
    episode_no=len(db["episodes"])+1
    episode={"episode":episode_no,"episode_id":f"{run_id}:{run_attempt}:{i+1}:{q['id']}","run_id":run_id,"run_attempt":int(run_attempt),"source":"model_generated","question_id":q["id"],"prompt":q["prompt"],"answer":response,"verdict":verdict,"reward":reward,"grading_reason":reason,"timestamp_utc":datetime.now(timezone.utc).isoformat(),"model_sha256_before":before,"model_sha256_after":None,"trainable_parameters":2000,"policy_update":{"status":"pending","algorithm":"reward_weighted_bptt_score_gradient_on_both_experts"}}
