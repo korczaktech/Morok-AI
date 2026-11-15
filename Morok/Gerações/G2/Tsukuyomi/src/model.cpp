@@ -26,6 +26,18 @@ constexpr float kAnswerContextScale = 0.025F;
 constexpr std::size_t kHiddenWeightEnd = 9216;
 constexpr std::size_t kContextWeightEnd = 9632;
 
+// Inventário fechado: qualquer alteração de dimensão precisa atualizar
+// explicitamente os offsets e continuar dentro do orçamento de 10.000 pesos.
+static_assert(kEmbeddingWeightEnd == kVocabularySize * kHiddenSize);
+static_assert(kHiddenWeightOffset == kEmbeddingOffset + kEmbeddingWeightEnd);
+static_assert(kHiddenWeightEnd == kHiddenWeightOffset + kHiddenSize * kHiddenSize);
+static_assert(kContextWeightOffset == kHiddenWeightEnd);
+static_assert(kContextWeightEnd == kContextWeightOffset + kContextSize * kHiddenSize);
+static_assert(kHiddenBiasOffset == kContextWeightEnd);
+static_assert(kOutputBiasOffset == kHiddenBiasOffset + kHiddenSize);
+static_assert(kScaleOffset == kOutputBiasOffset + kVocabularySize);
+static_assert(kShiftOffset == kScaleOffset + kHiddenSize);
+static_assert(kStartOffset == kShiftOffset + kHiddenSize);
 static_assert(kStartOffset + 16 == kParameterCount);
 static_assert(sizeof(float) == 4 && std::numeric_limits<float>::is_iec559);
 
