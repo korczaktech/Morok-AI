@@ -31,7 +31,7 @@ on:
         description: "Épocas de treinamento por modelo (1–1000000)"
         type: number
         required: true
-        default: 2
+        default: 50
       question_sky:
         description: "O céu é azul?"
         type: boolean
