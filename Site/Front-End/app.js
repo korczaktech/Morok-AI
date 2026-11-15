@@ -332,7 +332,6 @@
     $('#auth-name').disabled=!!state.authSession || mode!=='signup';
     $('#auth-name-label').hidden=!!state.authSession || mode!=='signup';
     $('#auth-password').hidden=!!state.authSession;
-    $('#auth-forgot').hidden=true;
     $$('.auth-tab').forEach(tab=>tab.hidden=!!state.authSession);
     $('#auth-title').textContent=state.authSession?'Conta conectada':'Entrar na sua conta';
     el.auth.showModal();
@@ -347,7 +346,6 @@
     $('#auth-name-label').hidden=mode!=='signup';
     $('#auth-name').required=mode==='signup';
     $('#auth-password').autocomplete=mode==='signup'?'new-password':'current-password';
-    $('#auth-forgot').hidden=true;
   }
   function saveAuthSession(session) {
     if (session?.access_token && session?.expires_in) {
@@ -393,7 +391,7 @@
     saveAuthSession(null); state.displayName='Visitante'; updateProfile(); persist(); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
   }
   $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
-  $('#auth-form').addEventListener('submit',event=>{if(event.submitter?.id!=='auth-submit')return;event.preventDefault();submitAuth();});
+  $('#auth-form').addEventListener('submit',event=>{event.preventDefault();if(event.submitter && event.submitter.id!=='auth-submit')return;submitAuth();});
   $('#auth-logout').addEventListener('click',logout);
 
   $('#new-chat').addEventListener('click',createConversation);
