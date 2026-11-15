@@ -48,47 +48,34 @@ float at(const Model& model, std::size_t offset) {
 struct QuestionFeatures {
     std::array<float, kContextSize * kHiddenSize> values{};
     std::array<std::size_t, kContextSize> counts{};
-    std::size_t begin{0};
-    std::size_t end{0};
+    std::size_t begin{0}, end{0};
     bool available{false};
 };
 
-// A pergunta é imutável durante a geração. Preparar suas faixas uma vez evita
-// revarrer e re-agregar todos os bytes da pergunta a cada token gerado.
 QuestionFeatures prepare_question_features(
     const Model& model, std::span<const std::uint8_t> context) {
     QuestionFeatures result;
-    result.begin = context.size();
-    result.end = context.size();
+    result.begin = result.end = context.size();
     for (std::size_t line = 0; line < context.size();) {
         std::size_t end = line;
-        while (end < context.size() && context[end] != '\n' && context[end] != '\r')
-            ++end;
+        while (end < context.size() && context[end] != '\n' && context[end] != '\r') ++end;
         std::size_t marker = line;
-        while (marker < end && (context[marker] == ' ' || context[marker] == '\t'))
-            ++marker;
+        while (marker < end && (context[marker] == ' ' || context[marker] == '\t')) ++marker;
         if (end - marker >= 2 && context[marker] == 'U' && context[marker + 1] == ':') {
             result.begin = marker + 2;
             result.end = end;
         }
         line = end;
-        while (line < context.size() && (context[line] == '\n' || context[line] == '\r'))
-            ++line;
+        while (line < context.size() && (context[line] == '\n' || context[line] == '\r')) ++line;
     }
     if (result.begin >= result.end) return result;
-
     result.available = true;
     for (std::size_t position = result.begin; position < result.end; ++position) {
         const std::size_t bucket = (result.end - 1 - position) % kContextSize;
         ++result.counts[bucket];
-        const auto base = kEmbeddingOffset +
-            static_cast<std::size_t>(context[position]) * kHiddenSize;
-        // Metade do vetor contextual fica reservada à pergunta: comprime
-        // pares de dimensões dos embeddings em 16 features por faixa.
-        for (std::size_t h = 0; h < kHiddenSize / 2; ++h)
-            result.values[bucket * kHiddenSize + h] +=
-                0.5F * (at(model, base + h) +
-                        at(model, base + h + kHiddenSize / 2));
+        const auto base = kEmbeddingOffset + static_cast<std::size_t>(context[position]) * kHiddenSize;
+        for (std::size_t h = 0; h < kHiddenSize; ++h)
+            result.values[bucket * kHiddenSize + h] += at(model, base + h);
     }
     for (std::size_t bucket = 0; bucket < kContextSize; ++bucket) {
         if (result.counts[bucket] == 0) continue;
@@ -99,137 +86,108 @@ QuestionFeatures prepare_question_features(
     return result;
 }
 
-struct Cache {
-    std::array<float, kHiddenSize> input{};
+struct RecurrentStep {
+    std::array<float, kHiddenSize> previous_state{};
     std::array<float, kHiddenSize> activation{};
-    std::array<float, kHiddenSize> hidden{};
-    std::array<float, kVocabularySize> probabilities{};
-    std::array<float, kVocabularySize> logits{};
+    std::uint8_t byte{0};
+};
+
+struct Cache {
+    std::array<float, kHiddenSize> initial_activation{}, activation{}, hidden{};
+    std::array<float, kVocabularySize> probabilities{}, logits{};
     std::array<float, kContextSize * kHiddenSize> context_features{};
     std::array<std::size_t, kContextSize> context_counts{};
-    std::size_t question_begin{0};
-    std::size_t question_end{0};
-    std::size_t current_byte{0};
-    bool has_question_context{false};
-    bool has_current{false};
-    bool at_start{false};
+    std::array<RecurrentStep, kBpttTruncation> steps{};
+    std::size_t step_count{0}, question_begin{0}, question_end{0};
+    bool has_question_context{false}, history_truncated{false};
 };
 
 Cache calculate(const Model& model, std::span<const std::uint8_t> context,
                 bool calculate_probabilities = true,
-                const QuestionFeatures* prepared_question = nullptr) {
+                const QuestionFeatures* prepared_question = nullptr,
+                std::size_t bptt_steps = kBpttTruncation) {
     Cache cache;
-    cache.has_current = !context.empty();
-    cache.current_byte = cache.has_current ? context.back() : 0;
-    cache.at_start = context.empty();
-
-    if (cache.has_current) {
-        const auto base = kEmbeddingOffset + cache.current_byte * kHiddenSize;
-        for (std::size_t h = 0; h < kHiddenSize; ++h)
-            cache.input[h] = at(model, base + h);
-    }
-
-    // A inferência pode fornecer as faixas pré-calculadas da pergunta.
-    // No treinamento, elas continuam sendo calculadas com os pesos atuais.
+    bptt_steps = std::clamp<std::size_t>(bptt_steps, 1, kBpttTruncation);
     const QuestionFeatures local_question = prepared_question
         ? QuestionFeatures{} : prepare_question_features(model, context);
-    const QuestionFeatures& question = prepared_question
-        ? *prepared_question : local_question;
+    const QuestionFeatures& question = prepared_question ? *prepared_question : local_question;
+
+    std::array<float, kHiddenSize> state{}, initial_pre{};
+    for (std::size_t h = 0; h < kHiddenSize; ++h) {
+        initial_pre[h] = at(model, kHiddenBiasOffset + h);
+        if (h < 16) initial_pre[h] += at(model, kStartOffset + h);
+    }
     if (question.available) {
         cache.has_question_context = true;
         cache.question_begin = question.begin;
         cache.question_end = question.end;
         cache.context_features = question.values;
         cache.context_counts = question.counts;
-        for (std::size_t j = 0; j < kContextSize; ++j) {
-            for (std::size_t h = 0; h < kHiddenSize / 2; ++h) {
-                const float feature = question.values[j * kHiddenSize + h];
-                cache.input[h] += feature *
-                    at(model, kContextWeightOffset + j * kHiddenSize + h);
-            }
-        }
-    } else {
-        const std::size_t available = context.empty() ? 0 :
-            std::min(kContextSize, context.size() - 1);
-        for (std::size_t j = 0; j < available; ++j) {
-            const auto byte = context[context.size() - 2 - j];
-            const float feature = (static_cast<float>(byte) - 127.5F) / 127.5F;
-            for (std::size_t h = 0; h < kHiddenSize; ++h) {
-                cache.context_features[j * kHiddenSize + h] = feature;
-                cache.input[h] += feature *
-                    at(model, kContextWeightOffset + j * kHiddenSize + h);
-            }
-        }
+        for (std::size_t bucket = 0; bucket < kContextSize; ++bucket)
+            for (std::size_t h = 0; h < kHiddenSize; ++h)
+                initial_pre[h] += question.values[bucket * kHiddenSize + h] *
+                    at(model, kContextWeightOffset + bucket * kHiddenSize + h);
     }
-
-    // Em diálogos U:/IA:, os últimos bytes da resposta anterior também são
-    // contexto do próximo byte. Antes, a rede recebia somente o byte atual,
-    // tornando impossível aprender dependências entre caracteres sucessivos.
-    if (question.available && context.size() >= 3) {
-        std::size_t answer_begin = context.size();
-        for (std::size_t i = 0; i + 2 < context.size(); ++i) {
-            const bool line_start = i == 0 || context[i - 1] == '\n' ||
-                                    context[i - 1] == '\r';
-            if (line_start && context[i] == 'I' && context[i + 1] == 'A' &&
-                context[i + 2] == ':')
-                answer_begin = i + 3;
-        }
-        if (answer_begin < context.size()) {
-            const std::size_t available = std::min(
-                kContextSize, context.size() - answer_begin - 1);
-            for (std::size_t j = 0; j < available; ++j) {
-                const auto byte = context[context.size() - 2 - j];
-                // Bytes crus variam aproximadamente em [-1, 1], enquanto
-                // embeddings começam na escala 0,025. Equaliza a escala dos
-                // canais para que o histórico não domine a representação da pergunta.
-                const float feature =
-                    ((static_cast<float>(byte) - 127.5F) / 127.5F) *
-                    kAnswerContextScale;
-                for (std::size_t h = kHiddenSize / 2; h < kHiddenSize; ++h) {
-                    const std::size_t index = j * kHiddenSize + h;
-                    cache.context_features[index] = feature;
-                    cache.input[h] += feature *
-                        at(model, kContextWeightOffset + j * kHiddenSize + h);
-                }
-            }
-        }
-    }
-
     for (std::size_t h = 0; h < kHiddenSize; ++h) {
-        float value = at(model, kHiddenBiasOffset + h);
-        for (std::size_t k = 0; k < kHiddenSize; ++k)
-            value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
-                     cache.input[k];
-        if (cache.at_start && h < 16)
-            value += at(model, kStartOffset + h);
-        cache.activation[h] = std::tanh(value);
-        cache.hidden[h] = at(model, kScaleOffset + h) * cache.activation[h] +
-                          at(model, kShiftOffset + h);
+        cache.initial_activation[h] = std::tanh(initial_pre[h]);
+        state[h] = cache.initial_activation[h];
     }
+
+    std::size_t sequence_begin = 0;
+    if (question.available) {
+        sequence_begin = context.size();
+        for (std::size_t i = 0; i + 2 < context.size(); ++i) {
+            const bool line_start = i == 0 || context[i - 1] == '\n' || context[i - 1] == '\r';
+            if (line_start && context[i] == 'I' && context[i + 1] == 'A' && context[i + 2] == ':')
+                sequence_begin = i + 3;
+        }
+    }
+
+    std::size_t total_steps = 0;
+    for (std::size_t position = sequence_begin; position < context.size(); ++position) {
+        RecurrentStep step;
+        step.previous_state = state;
+        step.byte = context[position];
+        const auto embedding_base = kEmbeddingOffset +
+            static_cast<std::size_t>(step.byte) * kHiddenSize;
+        for (std::size_t h = 0; h < kHiddenSize; ++h) {
+            float value = at(model, kHiddenBiasOffset + h);
+            for (std::size_t k = 0; k < kHiddenSize; ++k)
+                value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
+                         (at(model, embedding_base + k) + state[k]);
+            step.activation[h] = std::tanh(value);
+        }
+        state = step.activation;
+        if (cache.step_count == bptt_steps) {
+            for (std::size_t i = 1; i < cache.step_count; ++i) cache.steps[i - 1] = cache.steps[i];
+            --cache.step_count;
+        }
+        cache.steps[cache.step_count++] = step;
+        ++total_steps;
+    }
+    cache.history_truncated = total_steps > cache.step_count;
+    cache.activation = state;
+    for (std::size_t h = 0; h < kHiddenSize; ++h)
+        cache.hidden[h] = at(model, kScaleOffset + h) * state[h] + at(model, kShiftOffset + h);
 
     double maximum = -std::numeric_limits<double>::infinity();
     for (std::size_t token = 0; token < kVocabularySize; ++token) {
         float logit = at(model, kOutputBiasOffset + token);
         const auto base = kEmbeddingOffset + token * kHiddenSize;
-        for (std::size_t h = 0; h < kHiddenSize; ++h)
-            logit += at(model, base + h) * cache.hidden[h];
+        for (std::size_t h = 0; h < kHiddenSize; ++h) logit += at(model, base + h) * cache.hidden[h];
         cache.logits[token] = logit;
-        if (calculate_probabilities)
-            maximum = std::max(maximum, static_cast<double>(logit));
+        if (calculate_probabilities) maximum = std::max(maximum, static_cast<double>(logit));
     }
-
     if (calculate_probabilities) {
         double denominator = 0.0;
         for (std::size_t token = 0; token < kVocabularySize; ++token) {
-            const double value = std::exp(
-                static_cast<double>(cache.logits[token]) - maximum);
+            const double value = std::exp(static_cast<double>(cache.logits[token]) - maximum);
             cache.probabilities[token] = static_cast<float>(value);
             denominator += value;
         }
-        if (denominator > 0.0) {
+        if (denominator > 0.0)
             for (auto& probability : cache.probabilities)
                 probability = static_cast<float>(probability / denominator);
-        }
     }
     return cache;
 }
@@ -379,12 +337,12 @@ double evaluate_loss(const Model& model, std::span<const std::uint8_t> bytes,
 
  
 namespace {
-bool accumulate_target_gradient(const Model& model,
-                             std::span<const std::uint8_t> bytes,
+bool accumulate_target_gradient(const Model& model, std::span<const std::uint8_t> bytes,
                              std::size_t target_index,
-                             std::array<float, kParameterCount>& gradient) {
+                             std::array<float, kParameterCount>& gradient,
+                             std::size_t bptt_steps = kBpttTruncation) {
     if (target_index >= bytes.size()) return false;
-    const auto cache = calculate(model, bytes.first(target_index));
+    const auto cache = calculate(model, bytes.first(target_index), true, nullptr, bptt_steps);
     std::array<float, kHiddenSize> hidden_gradient{};
     for (std::size_t token = 0; token < kVocabularySize; ++token) {
         const float delta = cache.probabilities[token] -
@@ -396,50 +354,65 @@ bool accumulate_target_gradient(const Model& model,
             hidden_gradient[h] += delta * at(model, base + h);
         }
     }
-    std::array<float, kHiddenSize> pre_gradient{};
+
+    std::array<float, kHiddenSize> state_gradient{};
     for (std::size_t h = 0; h < kHiddenSize; ++h) {
         gradient[kScaleOffset + h] += hidden_gradient[h] * cache.activation[h];
         gradient[kShiftOffset + h] += hidden_gradient[h];
-        pre_gradient[h] = hidden_gradient[h] * at(model, kScaleOffset + h) *
-            (1.0F - cache.activation[h] * cache.activation[h]);
-        gradient[kHiddenBiasOffset + h] += pre_gradient[h];
-        if (cache.at_start && h < 16)
-            gradient[kStartOffset + h] += pre_gradient[h];
+        state_gradient[h] = hidden_gradient[h] * at(model, kScaleOffset + h);
     }
-    std::array<float, kHiddenSize> input_gradient{};
-    for (std::size_t h = 0; h < kHiddenSize; ++h) {
-        for (std::size_t k = 0; k < kHiddenSize; ++k) {
-            const auto index = kHiddenWeightOffset + h * kHiddenSize + k;
-            gradient[index] += pre_gradient[h] * cache.input[k];
-            input_gradient[k] += pre_gradient[h] * at(model, index);
+
+    // BPTT truncado nas últimas N transições recorrentes.
+    for (std::size_t reverse = cache.step_count; reverse > 0; --reverse) {
+        const RecurrentStep& step = cache.steps[reverse - 1];
+        std::array<float, kHiddenSize> pre_gradient{}, previous_gradient{};
+        for (std::size_t h = 0; h < kHiddenSize; ++h) {
+            pre_gradient[h] = state_gradient[h] *
+                (1.0F - step.activation[h] * step.activation[h]);
+            gradient[kHiddenBiasOffset + h] += pre_gradient[h];
         }
-    }
-    if (cache.has_current) {
-        const auto base = kEmbeddingOffset + cache.current_byte * kHiddenSize;
+        const auto embedding_base = kEmbeddingOffset +
+            static_cast<std::size_t>(step.byte) * kHiddenSize;
+        for (std::size_t h = 0; h < kHiddenSize; ++h) {
+            for (std::size_t k = 0; k < kHiddenSize; ++k) {
+                const std::size_t weight = kHiddenWeightOffset + h * kHiddenSize + k;
+                gradient[weight] += pre_gradient[h] *
+                    (at(model, embedding_base + k) + step.previous_state[k]);
+                previous_gradient[k] += pre_gradient[h] * at(model, weight);
+            }
+        }
         for (std::size_t h = 0; h < kHiddenSize; ++h)
-            gradient[base + h] += input_gradient[h];
+            gradient[embedding_base + h] += previous_gradient[h];
+        state_gradient = previous_gradient;
     }
-    for (std::size_t j = 0; j < kContextSize; ++j) {
-        for (std::size_t h = 0; h < kHiddenSize; ++h)
-            gradient[kContextWeightOffset + j * kHiddenSize + h] +=
-                pre_gradient[h] * cache.context_features[j * kHiddenSize + h];
-    }
-    if (cache.has_question_context) {
-        for (std::size_t position = cache.question_begin;
-             position < cache.question_end; ++position) {
-            const std::size_t bucket =
-                (cache.question_end - 1 - position) % kContextSize;
-            const auto base = kEmbeddingOffset +
-                static_cast<std::size_t>(bytes[position]) * kHiddenSize;
-            const float inverse_count = 1.0F /
-                static_cast<float>(cache.context_counts[bucket]);
-            for (std::size_t h = 0; h < kHiddenSize / 2; ++h) {
-                const auto weight = at(model,
-                    kContextWeightOffset + bucket * kHiddenSize + h);
-                const float contribution =
-                    input_gradient[h] * weight * inverse_count * 0.5F;
-                gradient[base + h] += contribution;
-                gradient[base + h + kHiddenSize / 2] += contribution;
+
+    if (!cache.history_truncated) {
+        std::array<float, kHiddenSize> initial_pre_gradient{};
+        for (std::size_t h = 0; h < kHiddenSize; ++h) {
+            initial_pre_gradient[h] = state_gradient[h] *
+                (1.0F - cache.initial_activation[h] * cache.initial_activation[h]);
+            gradient[kHiddenBiasOffset + h] += initial_pre_gradient[h];
+            if (h < 16) gradient[kStartOffset + h] += initial_pre_gradient[h];
+        }
+        if (cache.has_question_context) {
+            for (std::size_t bucket = 0; bucket < kContextSize; ++bucket)
+                for (std::size_t h = 0; h < kHiddenSize; ++h) {
+                    const std::size_t weight = kContextWeightOffset + bucket * kHiddenSize + h;
+                    gradient[weight] += initial_pre_gradient[h] *
+                        cache.context_features[bucket * kHiddenSize + h];
+                }
+            for (std::size_t position = cache.question_begin;
+                 position < cache.question_end; ++position) {
+                const std::size_t bucket =
+                    (cache.question_end - 1 - position) % kContextSize;
+                const auto base = kEmbeddingOffset +
+                    static_cast<std::size_t>(bytes[position]) * kHiddenSize;
+                const float inverse_count = 1.0F /
+                    static_cast<float>(cache.context_counts[bucket]);
+                for (std::size_t h = 0; h < kHiddenSize; ++h)
+                    gradient[base + h] += initial_pre_gradient[h] *
+                        at(model, kContextWeightOffset + bucket * kHiddenSize + h) *
+                        inverse_count;
             }
         }
     }
@@ -460,7 +433,8 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
                     const TrainingConfig& config, TrainingState* supplied_state,
                     std::span<const std::uint8_t> target_mask) {
     TrainingReport report;
-    if (bytes.size() < 2 || config.epochs == 0 || config.batch_size == 0 ||
+    if (bytes.size() < 2 || config.epochs == 0 || config.batch_size == 0 || config.bptt_steps == 0 ||
+        config.bptt_steps > kBpttTruncation ||
         !std::isfinite(config.learning_rate) || config.learning_rate <= 0.0 ||
         !std::isfinite(config.weight_decay) || config.weight_decay < 0.0 ||
         !std::isfinite(config.gradient_clip) || config.gradient_clip <= 0.0 ||
@@ -518,7 +492,7 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
             config.seed ^ (state.step + 0x9E3779B97F4A7C15ULL));
         std::shuffle(target_order.begin(), target_order.end(), shuffle_rng);
         for (const std::size_t target : target_order) {
-            if (!accumulate_target_gradient(model, bytes, target, gradient))
+            if (!accumulate_target_gradient(model, bytes, target, gradient, config.bptt_steps))
                 return report;
             ++accumulated_targets;
             ++epoch_targets;
@@ -593,7 +567,7 @@ bool save_training_state(const TrainingState& state,
                          const std::filesystem::path& path) {
     if (path.empty()) return false;
     constexpr char magic[8] = {'M','O','R','O','K','A','D','M'};
-    constexpr std::uint32_t version = 3;
+    constexpr std::uint32_t version = 4;
     constexpr std::uint32_t count = static_cast<std::uint32_t>(kParameterCount);
     std::uint64_t hash = 14695981039346656037ULL;
     const auto update_hash = [&hash](const unsigned char* data, std::size_t size) {
@@ -637,7 +611,7 @@ bool load_training_state(TrainingState& state,
     stream.read(reinterpret_cast<char*>(&step), sizeof(step));
     stream.read(reinterpret_cast<char*>(&expected_hash), sizeof(expected_hash));
     if (!stream || std::memcmp(magic, "MOROKADM", 8) != 0 ||
-        version != 3 || count != kParameterCount)
+        version != 4 || count != kParameterCount)
         return false;
     candidate.step = step;
     stream.read(reinterpret_cast<char*>(candidate.first_moment.data()),
