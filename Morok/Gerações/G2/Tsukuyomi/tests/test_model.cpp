@@ -63,7 +63,7 @@ int main() {
     check_gradient(3, 9920); // escala
     check_gradient(3, 9952); // deslocamento
 
-    // Varredura estratificada de diferenças finitas ao longo dos 10.000 offsets (passo 137), incluindo a nova representação contextual.
+    // Varredura estratificada de diferenças finitas ao longo dos 10.000 offsets (passo 137), incluindo o caminho incremental.
     {
         const std::string broad_text = "U: ABCDEFGH\nIA:xy";
         const std::vector<std::uint8_t> broad_bytes(broad_text.begin(), broad_text.end());
