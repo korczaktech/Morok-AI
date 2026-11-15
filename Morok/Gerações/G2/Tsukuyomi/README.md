@@ -95,7 +95,7 @@ Após três ciclos sem melhora significativa, o learning rate é reduzido pela m
 
 ## Etapa 8 — avaliação final independente
 
-O workflow executa, depois de restaurar o melhor checkpoint selecionado exclusivamente pela validação, a avaliação final independente em 40 perguntas de validação e 12 perguntas reservadas de teste. O script `scripts/avaliacao_final.py` repete a geração do teste para verificar determinismo da decodificação gulosa, mede tempo total incluindo carga do checkpoint e vazão de perguntas por segundo, e registra exatidão lexical normalizada, F1, similaridade de caracteres, repetição e diversidade. Os resultados são publicados em JSON e Markdown como artefatos do GitHub Actions.
+O workflow executa, depois de restaurar o melhor checkpoint selecionado exclusivamente pela validação, a avaliação final independente em 40 perguntas de validação e 12 perguntas reservadas de teste. O script `scripts/avaliacao_final.py` repete a geração do teste para verificar determinismo da decodificação gulosa, mede tempo total incluindo carga do checkpoint e vazão de perguntas por segundo, e registra exatidão lexical normalizada, F1, similaridade de caracteres, repetição e diversidade, com métricas agregadas por habilidade (fato, conceito, composição e conversa) no JSON. Os resultados são publicados em JSON e Markdown como artefatos do GitHub Actions.
 
 As métricas lexicais são diagnósticos e não comprovam compreensão semântica. A avaliação final não altera pesos, não treina sobre o teste e não altera a versão pública 0.1.0 nem o orçamento de 10.000 parâmetros. Os 32 exemplos originais permanecem preservados.
 
