@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Treina Tsukuyomi G2, avalia cada resposta contra o gabarito e controla ciclos."""
+"""Treinamento cíclico e avaliação em lote do Tsukuyomi G2."""
 
+from collections import Counter
 from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 import unicodedata
+
+
+MAX_RESPONSE_BYTES = 96
 
 
 def normalize(text: str) -> list[str]:
@@ -15,18 +20,19 @@ def normalize(text: str) -> list[str]:
 
 
 def evaluate(answer: str, expected: str) -> tuple[bool, float]:
-    """Comparação lexical determinística; não afirma compreensão semântica."""
+    """F1 por frequência de palavras; não representa avaliação semântica."""
     actual = normalize(answer)
     reference = normalize(expected)
     if not actual or not reference:
         return False, 0.0
-    actual_set = set(actual)
-    reference_set = set(reference)
-    precision = len(actual_set & reference_set) / len(actual_set)
-    recall = len(actual_set & reference_set) / len(reference_set)
+
+    actual_counts = Counter(actual)
+    reference_counts = Counter(reference)
+    overlap = sum((actual_counts & reference_counts).values())
+    precision = overlap / len(actual)
+    recall = overlap / len(reference)
     score = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-    exact = actual == reference
-    return exact or score >= 0.90, score
+    return actual == reference or score >= 0.90, score
 
 
 def read_dialogues(corpus: Path) -> list[tuple[str, str]]:
@@ -36,7 +42,7 @@ def read_dialogues(corpus: Path) -> list[tuple[str, str]]:
         line = raw.strip()
         if line.startswith("U:"):
             question = line[2:].strip()
-        elif line.startswith("IA:") and question:
+        elif line.startswith("IA:") and question is not None:
             answer = line[3:].strip()
             if answer:
                 dialogues.append((question, answer))
@@ -74,30 +80,49 @@ def main() -> int:
         report.write(f"- Perguntas: {len(dialogues)}\n")
         report.write(f"- Épocas por ciclo: {epochs}\n")
         report.write(f"- Modo contínuo: {'ativado' if continuous else 'desativado'}\n")
-        report.write(f"- Critério contínuo: 10 ciclos consecutivos com 100% das questões corretas\n")
-        report.write("- Avaliador: correspondência lexical determinística (não é compreensão semântica)\n\n")
+        report.write("- Geração: um único processo por ciclo, checkpoint carregado uma vez\n")
+        report.write(f"- Limite por resposta: {MAX_RESPONSE_BYTES} bytes\n")
+        report.write("- Critério contínuo: 10 ciclos consecutivos com 100% das questões corretas\n")
+        report.write("- Avaliador: F1 lexical por frequência de palavras (não semântico)\n\n")
 
         while cycle < maximum_cycles:
             cycle += 1
             command = [str(trainer), str(corpus), str(checkpoint), str(epochs), "42"]
             if cycle > 1:
                 command.append("--resume")
+
             print(
                 f"\n=== Ciclo {cycle}: {epochs} época(s), "
                 f"{len(dialogues)} pergunta(s); sequência correta: {streak}/10 ===",
                 flush=True,
             )
+            started = time.perf_counter()
             subprocess.run(command, check=True)
+
+            # O gerador mantém o modelo carregado durante todas as perguntas.
+            prompts = "".join(question.replace("\n", " ").replace("\r", " ") + "\n"
+                              for question, _ in dialogues)
+            generated = subprocess.run(
+                [str(generator), "--batch", str(checkpoint), str(MAX_RESPONSE_BYTES)],
+                input=prompts,
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            ).stdout.splitlines()
+
+            if len(generated) != len(dialogues):
+                raise RuntimeError(
+                    f"Gerador retornou {len(generated)} respostas para "
+                    f"{len(dialogues)} perguntas."
+                )
 
             cycle_results = []
             report.write(f"## Tentativa {cycle}\n\n")
-            for index, (question, expected) in enumerate(dialogues, start=1):
-                prompt = f"U: {question}\nIA:"
-                result = subprocess.run(
-                    [str(generator), str(checkpoint), prompt, "256"],
-                    check=True, capture_output=True, text=True, encoding="utf-8",
-                )
-                answer = result.stdout.strip()
+            for index, ((question, expected), answer) in enumerate(
+                zip(dialogues, generated), start=1
+            ):
+                answer = answer.strip()
                 correct, score = evaluate(answer, expected)
                 cycle_results.append(correct)
                 verdict = "CORRETA" if correct else "INCORRETA"
@@ -113,17 +138,19 @@ def main() -> int:
                     flush=True,
                 )
 
+            elapsed = time.perf_counter() - started
+            correct_count = sum(cycle_results)
             all_correct = len(cycle_results) == len(dialogues) and all(cycle_results)
             streak = streak + 1 if all_correct else 0
             report.write(
-                f"**Resultado da tentativa {cycle}: "
-                f"{sum(cycle_results)}/{len(dialogues)} corretas. "
-                f"Sequência de ciclos perfeitos: {streak}/10.**\n\n"
+                f"**Resultado da tentativa {cycle}: {correct_count}/{len(dialogues)} "
+                f"corretas. Sequência de ciclos perfeitos: {streak}/10. "
+                f"Tempo do ciclo: {elapsed:.2f} s.**\n\n"
             )
             report.flush()
             print(
-                f"Ciclo {cycle}: {sum(cycle_results)}/{len(dialogues)} corretas; "
-                f"sequência {streak}/10.",
+                f"Ciclo {cycle}: {correct_count}/{len(dialogues)} corretas; "
+                f"sequência {streak}/10; duração {elapsed:.2f}s.",
                 flush=True,
             )
 
