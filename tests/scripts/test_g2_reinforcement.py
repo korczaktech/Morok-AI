@@ -43,6 +43,17 @@ class G2ReinforcementTests(unittest.TestCase):
         self.assertEqual(select_training_target("sky_is_blue", "Sim, o ceu e azul", "correct"),
                          ("Sim, o ceu e azul", "model_response"))
 
+
+    def test_runner_uses_adaptive_training_and_reports_sequence_loss(self):
+        runner = (ROOT / "scripts" / "run-g2-reinforcement.py").read_text(encoding="utf-8")
+        app = (ROOT / "apps" / "reinforce_g2.cpp").read_text(encoding="utf-8")
+        self.assertIn('default=100)', runner)
+        self.assertIn('default=.001)', runner)
+        self.assertIn('str(a.learning_rate),"100"', runner)
+        self.assertIn('target_loss_before', app)
+        self.assertIn('target_loss_after', app)
+        self.assertIn('G1OptimizerConfig::adamw()', app)
+
     def test_question_selection_keeps_database_order_and_rejects_empty_or_unknown(self):
         questions = [{"id": "sky_is_blue"}, {"id": "grass_color"}, {"id": "mountains_high_or_low"}]
         self.assertEqual([q["id"] for q in select_questions(questions, ["grass_color", "sky_is_blue"])],

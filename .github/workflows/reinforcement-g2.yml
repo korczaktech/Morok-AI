@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/reinforcement-g2.yml"
       - "apps/reinforce_g2.cpp"
+      - "apps/generate_g2.cpp"
       - "src/model/learn/g1_training.cpp"
       - "src/model/learn/g2_training.cpp"
       - "include/morok/model/learn/g1_training.hpp"
