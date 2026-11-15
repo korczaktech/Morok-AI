@@ -44,7 +44,15 @@ Respostas incompletas, negativas ou degeneradas não recebem recompensa positiva
 
 O runner não apaga mais os checkpoints de inferência a cada execução. Se os dois checkpoints de especialistas já existirem, o treinamento continua a partir desses pesos. Se ambos não existirem, o runner faz o bootstrap; se existir apenas um, interrompe com erro para evitar um par inconsistente.
 
-Os checkpoints de treinamento do bootstrap também podem ser retomados com `--resume` quando ambos estiverem disponíveis. O banco de episódios permanece separado dos pesos do modelo. Checkpoints produzidos por versões anteriores à correção do sinal do gradiente devem ser descartados uma única vez antes de executar a versão corrigida; caso contrário, o runner continuará a partir dos pesos antigos.
+Os checkpoints de treinamento do bootstrap também podem ser retomados com `--resume` quando ambos estiverem disponíveis. O banco de episódios permanece separado dos pesos do modelo.
+
+### Memória persistente de experiências
+
+Antes de gerar novas respostas, o runner consulta os 32 episódios mais recentes do banco e reapresenta seus exemplos ao atualizador dos dois especialistas. A memória é limitada por `--memory-replay-limit` (padrão 32; zero desativa) e cada exemplo usa 25 passos por padrão, configuráveis por `--memory-replay-steps`. Isso acontece mesmo quando a execução atual solicita apenas uma tentativa e uma época de bootstrap.
+
+Experiências cuja atualização original usou uma resposta correta do próprio modelo são reproduzidas com essa resposta inicial. Experiências corrigidas pelo oráculo são reproduzidas com a resposta de referência, em vez de reforçar a saída incorreta. O runner registra quantas experiências foram consideradas, quantas atualizações de replay reduziram a perda e quantas foram ignoradas. O banco continua sendo versionado no repositório pelo workflow, então a memória atravessa execuções distintas do GitHub Actions.
+
+O replay é uma forma de rehearsal supervisionado sobre experiências armazenadas. Ele não transforma o sistema em REINFORCE/PPO nem fornece julgamento semântico geral; a avaliação continua limitada ao avaliador lexical controlado. Checkpoints produzidos por versões anteriores à correção do sinal do gradiente devem ser descartados uma única vez antes de executar a versão corrigida; caso contrário, o runner continuará a partir dos pesos antigos.
 
 ## Limitações
 
