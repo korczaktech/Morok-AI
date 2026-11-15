@@ -78,11 +78,36 @@ jobs:
           MOROK_GENERATE_BIN=./build/g1/morok_generate \
             bash Gerações/G1/scripts/first-training.sh artifacts/g1-first-training 2 42
 
-      - name: Evaluate all G1 profiles and publish answers and latency
+      - name: Publish reinforcement results as GitHub Actions annotations
+        if: always()
         working-directory: Morok
         run: |
-          ./build/g1/morok-g1-profile-evaluate artifacts/g1-first-training/g1-best.morokckp artifacts/g1-first-training/profile-results.tsv
-          python3 Gerações/G1/scripts/report-profile-evaluation.py artifacts/g1-first-training/profile-results.tsv artifacts/g1-first-training/profile-evaluation.md
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("Gerações/G1/data/reinforcement/answers.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          episodes = data.get("episodes", [])
+          labels = {
+              "sky_is_blue": "O céu é azul?",
+              "grass_color": "Que cor é a grama?",
+              "mountains_high_or_low": "As montanhas são baixas ou altas?",
+          }
+          print("::notice title=Reforço G1::O histórico contém {} episódios, {} demonstrações-oráculo e {} tentativas geradas.".format(
+              len(episodes),
+              sum(e.get("source") == "oracle_demonstration" for e in episodes),
+              sum(e.get("source") == "model_generated" for e in episodes)))
+          for qid, label in labels.items():
+              selected = [e for e in episodes if e.get("question_id") == qid and e.get("source") == "model_generated"]
+              correct = sum(e.get("verdict") == "correct" for e in selected)
+              incorrect = sum(e.get("verdict") == "incorrect" for e in selected)
+              print("::warning title=Histórico: {}::{} tentativas geradas; {} corretas; {} incorretas. Este histórico não separa os perfis.".format(
+                  label, len(selected), correct, incorrect))
+          for profile in ("Tsukuyomi", "Mokosh", "Apollo"):
+              print("::warning title=Avaliação {}::Resposta e latência individuais ainda não foram medidas nesta execução. Não há resultado por perfil para publicar.".format(profile))
+          print("::notice title=Limite da avaliação::O histórico de reforço não contém duração de inferência nem identificador de perfil; não é possível calcular velocidade individual.")
+          PY
 
       - name: Upload G1 training artifacts
         if: always()
