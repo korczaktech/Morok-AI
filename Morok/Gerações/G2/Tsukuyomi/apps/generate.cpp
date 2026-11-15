@@ -37,14 +37,14 @@ std::string answer_for(const morok::g2::tsukuyomi::Model& model,
 
 int main(int argc, char** argv) {
     const bool batch = argc == 4 && std::string(argv[1]) == "--batch";
-    if ((!batch && argc != 4) || (batch && argc != 4)) {
+    if (argc != 4) {
         std::cerr << "Uso: morok-g2-tsukuyomi-generate <checkpoint> <prompt> <max_bytes>\n"
                   << "Ou: morok-g2-tsukuyomi-generate --batch <checkpoint> <max_bytes>\n";
         return 2;
     }
 
     const char* checkpoint = batch ? argv[2] : argv[1];
-    const char* limit_text = batch ? argv[3] : argv[3];
+    const char* limit_text = argv[3];
     std::size_t maximum = 0;
     if (!parse_limit(limit_text, maximum)) {
         std::cerr << "Limite de geração inválido (1 a 4096 bytes).\n";
