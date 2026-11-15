@@ -36,7 +36,7 @@ Os offsets e a soma são verificados por asserção estática no código. O chec
 
 ## Treinamento
 
-O treinador percorre o corpus byte a byte e atualiza os parâmetros com gradientes da entropia cruzada, Adam, clipping global e weight decay. O relatório expõe loss em nats e train_bpb (bits por byte). A implementação v0.1 usa contexto finito e atualizações por alvo; não usa BPTT nem treinamento online. O executável limita o corpus a 512 MiB para manter o consumo de memória previsível.
+O treinador percorre o corpus byte a byte e atualiza os parâmetros com gradientes da entropia cruzada, Adam, clipping global e weight decay. O estado do Adam (momentos de primeira e segunda ordem e contador global) pode ser serializado separadamente, com versão e checksum, e é restaurado na retomada. Isso faz ciclos separados equivalerem a uma execução contínua, desde que a configuração seja mantida. O relatório expõe loss em nats e train_bpb (bits por byte). A implementação usa contexto finito e atualizações por alvo; não usa BPTT nem treinamento online. O executável limita o corpus a 512 MiB para manter o consumo de memória previsível.
 
 Comando:
 
@@ -46,7 +46,7 @@ Argumentos: arquivo de corpus, caminho do checkpoint, épocas opcionais e seed o
 
 ## Inferência
 
-A geração é autoregressiva e greedy. Cada byte gerado passa a integrar o contexto das previsões seguintes. O limite máximo é obrigatório e limitado a 65.536 bytes na CLI.
+A geração é autoregressiva e greedy. Cada byte gerado passa a integrar o contexto das previsões seguintes. A CLI oferece modo batch: carrega o checkpoint uma vez e atende várias perguntas recebidas por stdin. A saída de resposta é encerrada no primeiro LF/CR/NUL ou no limite configurado (1 a 4.096 bytes); o workflow usa 96 bytes.
 
 Comando:
 
@@ -65,6 +65,6 @@ Formato binário MOROKG2T, versão 1, contagem explícita de 10.000 floats e che
 - Sem tokenizer; a entrada é byte-level.
 - O treinador aceita bytes arbitrários; a CLI de geração exige prompt UTF-8 válido para produzir continuação útil.
 - Sem corpus natural embutido, benchmark linguístico ou alegação de compreensão.
-- O checkpoint armazena pesos, mas não o estado do otimizador; retomada exata de treinamento ainda não está disponível.
+- O checkpoint de pesos e o arquivo `.adam` são artefatos separados e ambos são necessários para uma retomada exata do otimizador.
 
 A versão 0.1 estabelece uma implementação executável, mensurável e isolada. Evoluções arquiteturais só devem ser aceitas com testes e comparação experimental.
