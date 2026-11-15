@@ -393,7 +393,7 @@
     saveAuthSession(null); state.displayName='Visitante'; updateProfile(); persist(); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
   }
   $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
-  $('#auth-form').addEventListener('submit',event=>{event.preventDefault();submitAuth();});
+  $('#auth-form').addEventListener('submit',event=>{if(event.submitter?.id!=='auth-submit')return;event.preventDefault();submitAuth();});
   $('#auth-logout').addEventListener('click',logout);
 
   $('#new-chat').addEventListener('click',createConversation);
