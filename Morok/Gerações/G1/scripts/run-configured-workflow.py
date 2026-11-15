@@ -60,7 +60,7 @@ for profile in profiles:
     ], check=True)
 
 with results.open(encoding="utf-8", newline="") as stream:
-    rows = list(csv.DictReader(stream, delimiter="\\t"))
+    rows = list(csv.DictReader(stream, delimiter="\t"))
 expected = len(profiles) * len(questions) * attempts
 if len(rows) != expected:
     raise SystemExit(f"Expected {expected} evaluation rows, got {len(rows)}")
