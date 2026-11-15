@@ -86,6 +86,82 @@ jobs:
             "Gerações/G2/Tsukuyomi/data/treinamento-inicial.txt" \
             "$EPOCAS" "$TENTATIVAS"
 
+      - name: Publicar tabela de respostas e annotations G2
+        if: always()
+        working-directory: Morok
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          report = Path("build/g2/respostas-tsukuyomi.md")
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+
+          def table(headers, rows):
+              lines = ["| " + " | ".join(headers) + " |",
+                       "| " + " | ".join("---" for _ in headers) + " |"]
+              for row in rows:
+                  cells = [str(cell).replace("|", "\\|").replace("\\r", " ").replace("\\n", " ") for cell in row]
+                  lines.append("| " + " | ".join(cells) + " |")
+              return "\\n".join(lines) + "\\n"
+
+          if not report.is_file():
+              message = "O relatório de respostas não foi produzido; verifique o treinamento cíclico."
+              print(f"::error title=Tsukuyomi G2::{message}")
+              rendered = "# Treinamento G2 — respostas e annotations\\n\\n" + message + "\\n"
+              if summary_path:
+                  with open(summary_path, "a", encoding="utf-8") as summary:
+                      summary.write(rendered)
+              raise SystemExit(0)
+
+          content = report.read_text(encoding="utf-8")
+          questions = []
+          current = None
+          for line in content.splitlines():
+              if line.startswith("### "):
+                  if current is not None:
+                      questions.append(current)
+                  match = re.match(r"###\\s+(\\d+)\\.\\s+(.*)", line)
+                  current = {"number": match.group(1) if match else "?", "question": match.group(2) if match else line[4:], "answer": ""}
+              elif current is not None and line.strip() and not line.startswith("#"):
+                  current["answer"] = (current["answer"] + " " + line.strip()).strip()
+          if current is not None:
+              questions.append(current)
+
+          cycle = 0
+          for line in content.splitlines():
+              match = re.match(r"## Tentativa (\\d+)", line)
+              if match:
+                  cycle = int(match.group(1))
+                  # Cada tentativa é marcada na própria tabela via cabeçalho.
+          cycles = int(re.search(r"Ciclos/tentativas: (\\d+)", content).group(1)) if re.search(r"Ciclos/tentativas: (\\d+)", content) else 0
+          expected = len(questions)
+          generated = sum(bool(item["answer"]) for item in questions)
+          empty = expected - generated
+
+          rows = []
+          for item in questions:
+              answer = item["answer"] or "(nenhuma saída gerada)"
+              visible = answer if len(answer) <= 160 else answer[:157] + "..."
+              rows.append([item["number"], item["question"], visible, "Gerada — não avaliada"])
+              safe = visible.replace("%", "%25").replace("\\r", "%0D").replace("\\n", "%0A").replace(":", "%3A").replace(",", "%2C")
+              level = "notice" if item["answer"] else "warning"
+              print(f"::{level} title=Tsukuyomi G2::Pergunta {item['number']}: {item['question']}; resposta: {safe}; avaliação semântica: pendente")
+
+          rendered = [
+              "# Treinamento G2 — respostas e annotations", "",
+              f"Ciclos configurados: {cycles}. Perguntas registradas: {expected}. Respostas não vazias: {generated}. Saídas vazias: {empty}.", "",
+              "As respostas são saídas reais da inferência do modelo. Ainda não existe avaliador semântico nesta versão; portanto, nenhuma resposta é marcada como correta ou incorreta.", "",
+              table(["Nº", "Pergunta", "Resposta gerada", "Avaliação"], rows)
+          ]
+          text = "\\n".join(rendered) + "\\n"
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as summary:
+                  summary.write(text)
+          print(text)
+          PY
+
       - name: Publicar checkpoint e respostas
         if: always()
         uses: actions/upload-artifact@v4
