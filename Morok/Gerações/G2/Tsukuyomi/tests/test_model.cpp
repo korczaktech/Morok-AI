@@ -63,6 +63,27 @@ int main() {
     const auto negative_decay_report = train(invalid_config_model, sample, invalid_config);
     assert(negative_decay_report.epochs_completed == 0);
     assert(invalid_config_model.parameters == model.parameters);
+
+    // Weight decay altera matrizes, mas deixa biases e parâmetros afins intactos.
+    Model without_decay;
+    Model with_decay;
+    initialize(without_decay, 777);
+    initialize(with_decay, 777);
+    TrainingConfig no_decay_config;
+    no_decay_config.epochs = 1;
+    no_decay_config.batch_size = sample.size();
+    no_decay_config.weight_decay = 0.0;
+    TrainingConfig selective_decay_config = no_decay_config;
+    selective_decay_config.weight_decay = 0.5;
+    const auto no_decay_report = train(without_decay, sample, no_decay_config);
+    const auto selective_decay_report = train(with_decay, sample, selective_decay_config);
+    assert(no_decay_report.epochs_completed == 1);
+    assert(selective_decay_report.epochs_completed == 1);
+    assert(with_decay.parameters[8192] != without_decay.parameters[8192]);
+    for (std::size_t i = 9632; i < kParameterCount; ++i)
+        assert(with_decay.parameters[i] == without_decay.parameters[i]);
+    for (std::size_t i = 9216; i < 9632; ++i)
+        assert(with_decay.parameters[i] != without_decay.parameters[i]);
 \n    const auto before = evaluate_loss(model, sample);
     assert(std::isfinite(before) && before > 0.0);
 
