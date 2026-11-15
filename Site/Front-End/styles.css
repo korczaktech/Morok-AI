@@ -60,3 +60,7 @@
 .profile-button.signed-in .avatar{background:color-mix(in srgb,#65c995 18%,var(--panel));color:#65c995}
 @media(max-width:760px){.conversation{padding-top:22px;gap:21px}.message.user .message-content{max-width:86%}.model-popover{width:min(330px,calc(100vw - 70px))}.composer-dock{padding-top:9px;padding-bottom:10px}}
 @media(max-height:700px){.conversation{padding-top:18px;gap:18px}.composer-dock{padding-top:7px;padding-bottom:8px}}
+
+.generation-back{display:block;width:100%;margin:0 0 9px;padding:5px 7px;border:0;border-radius:6px;background:transparent;color:var(--muted);text-align:left;font-size:9px;cursor:pointer}
+.generation-back:hover{background:var(--panel-2);color:var(--text)}
+.generation-list[hidden],.model-submenu[hidden]{display:none}
