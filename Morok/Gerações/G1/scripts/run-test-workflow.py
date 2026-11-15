@@ -48,7 +48,7 @@ for model in selected:
         raise RuntimeError(f"Estado de conclusão inválido para {model}.")
 if results_path.exists() and results_path.stat().st_size:
     with results_path.open(encoding="utf-8", newline="") as stream:
-        header = next(csv.reader(stream, delimiter="\\t"), None)
+        header = next(csv.reader(stream, delimiter="\t"), None)
     if header != ["model", "epoch", "question_id", "verdict", "answer"]:
         raise RuntimeError("Cabeçalho de history.tsv incompatível; não será anexado histórico corrompido.")
 
