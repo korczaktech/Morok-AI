@@ -47,11 +47,15 @@ Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a prim
 
 Cada geração implementará os quatro perfis. Mokosh mantém a prioridade de eficiência; Tsukuyomi usa exatamente um agente; Artemis usa mais de dois agentes; Apollo prioriza baixa latência. A quantidade de parâmetros, mecanismos cognitivos e capacidades de cada geração será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
 
+## Separação de build já aplicada
+
+O CMake mantém G2 em uma biblioteca independente (`Morok::G2`). A biblioteca base `Morok::Core` não compila fontes de G2. Configurar com `-DMOROK_BUILD_G2=OFF` exclui a biblioteca, executáveis e testes específicos de G2. Os workflows dedicados à G1 usam essa configuração. Os aplicativos e testes G2 vinculam explicitamente a biblioteca G2.
+
 ## Estado da migração
 
 Esta especificação e a estrutura inicial de diretórios estabelecem a organização de destino. O código C++ atual da G1 e G2 permanece nas pastas históricas `src/`, `include/`, `apps/` e `tests/`. Ele ainda não foi atribuído a Mokosh, Tsukuyomi, Artemis ou Apollo. Não movi esses arquivos sem esse mapeamento, pois isso poderia atribuir incorretamente a arquitetura atual e quebrar workflows, testes e checkpoints.
 
-A próxima etapa técnica é inventariar dependências, separar bibliotecas e alvos CMake e, então, migrar o código para o modelo correto. Até lá, os novos diretórios são estrutura organizacional e especificação, não implementações executáveis independentes.
+A próxima etapa técnica é inventariar dependências e migrar fisicamente o código para o modelo correto, preservando contratos e workflows. Até lá, os novos diretórios são estrutura organizacional e especificação, não implementações executáveis independentes.
 
 ## Modelo removido
 Hephaestus não faz parte da arquitetura aprovada.

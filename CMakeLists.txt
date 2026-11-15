@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 project(MorokAI VERSION 0.1.0 DESCRIPTION "Morok AI" LANGUAGES CXX)
 
 option(MOROK_BUILD_TESTS "Build automated tests" ON)
+option(MOROK_BUILD_G2 "Build the G2 model library, applications and tests" ON)
 option(MOROK_BUILD_APPS "Build user-facing applications" ON)
 option(MOROK_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(MOROK_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
@@ -33,9 +34,7 @@ add_library(morok_core STATIC
     src/security/security_subsystem.cpp
     src/learn/learning_subsystem.cpp
     src/model/parameters/g1_parameters.cpp
-    src/model/parameters/g2_parameters.cpp
     src/model/g1_forward.cpp
-    src/model/g2_forward.cpp
     src/model/learn/g1_bptt.cpp
     src/model/learn/optimizer.cpp
     src/model/learn/g1_training.cpp
@@ -43,9 +42,6 @@ add_library(morok_core STATIC
     src/model/learn/g1_benchmark.cpp
     src/model/learn/g1_evaluation.cpp
     src/model/learn/g1_generation.cpp
-    src/model/learn/g2_checkpoint.cpp
-    src/model/learn/g2_training.cpp
-    src/model/learn/g2_generation.cpp
 )
 add_library(Morok::Core ALIAS morok_core)
 
@@ -58,6 +54,24 @@ target_include_directories(morok_core
 target_link_libraries(morok_core PRIVATE morok_build_options SQLite::SQLite3)
 target_compile_definitions(morok_core PUBLIC MOROK_VERSION_STRING="${PROJECT_VERSION}")
 morok_enable_sanitizers(morok_core)
+
+# G2 is an optional, separate library. G1-only builds do not compile G2 sources.
+if(MOROK_BUILD_G2)
+    add_library(morok_g2 STATIC
+        src/model/parameters/g2_parameters.cpp
+        src/model/g2_forward.cpp
+        src/model/learn/g2_checkpoint.cpp
+        src/model/learn/g2_training.cpp
+        src/model/learn/g2_generation.cpp
+    )
+    add_library(Morok::G2 ALIAS morok_g2)
+    target_compile_features(morok_g2 PUBLIC cxx_std_20)
+    target_include_directories(morok_g2 PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>)
+    target_link_libraries(morok_g2 PUBLIC Morok::Core PRIVATE morok_build_options)
+    morok_enable_sanitizers(morok_g2)
+endif()
 
 if(MOROK_BUILD_APPS)
     add_executable(morok_cli apps/morok-cli/main.cpp)
@@ -116,32 +130,39 @@ add_executable(morok_generate apps/generate_g1.cpp)
 target_link_libraries(morok_generate PRIVATE Morok::Core morok_build_options)
 morok_enable_sanitizers(morok_generate)
 
+if(MOROK_BUILD_G2)
 add_executable(morok_train_g2 apps/train_g2.cpp)
-target_link_libraries(morok_train_g2 PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_train_g2 PRIVATE Morok::G2 morok_build_options)
 set_target_properties(morok_train_g2 PROPERTIES OUTPUT_NAME "morok-train-g2")
 morok_enable_sanitizers(morok_train_g2)
 
 add_executable(morok_generate_g2 apps/generate_g2.cpp)
-target_link_libraries(morok_generate_g2 PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_generate_g2 PRIVATE Morok::G2 morok_build_options)
 set_target_properties(morok_generate_g2 PROPERTIES OUTPUT_NAME "morok-generate-g2")
 morok_enable_sanitizers(morok_generate_g2)
+endif()
 
 add_executable(morok_reinforce apps/reinforce_g1.cpp)
 target_link_libraries(morok_reinforce PRIVATE Morok::Core morok_build_options)
 set_target_properties(morok_reinforce PROPERTIES OUTPUT_NAME "morok-reinforce")
 morok_enable_sanitizers(morok_reinforce)
 
+if(MOROK_BUILD_G2)
 add_executable(morok_reinforce_g2 apps/reinforce_g2.cpp)
-target_link_libraries(morok_reinforce_g2 PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_reinforce_g2 PRIVATE Morok::G2 morok_build_options)
 set_target_properties(morok_reinforce_g2 PROPERTIES OUTPUT_NAME "morok-reinforce-g2")
 morok_enable_sanitizers(morok_reinforce_g2)
+endif()
 endif()
 
 if(MOROK_BUILD_APPS)
     install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
         morok_train morok_benchmark morok_generate morok_reinforce morok_complete
-        morok_train_g2 morok_generate_g2 morok_reinforce_g2
         RUNTIME DESTINATION bin)
+    if(MOROK_BUILD_G2)
+        install(TARGETS morok_g2 morok_train_g2 morok_generate_g2 morok_reinforce_g2
+            ARCHIVE DESTINATION lib RUNTIME DESTINATION bin)
+    endif()
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
     endif()

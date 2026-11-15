@@ -24,7 +24,7 @@ jobs:
       - name: Install build tools
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_G2=OFF
       - name: Build benchmark
         run: cmake --build build --parallel 2 --target morok_benchmark morok_test_g1_benchmark
       - name: Run baseline tests

@@ -45,7 +45,7 @@ jobs:
           sudo apt-get install -y cmake ninja-build
 
       - name: Configure Release
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON -DMOROK_BUILD_G2=OFF
 
       - name: Build all applications and tests
         run: cmake --build build --parallel 2

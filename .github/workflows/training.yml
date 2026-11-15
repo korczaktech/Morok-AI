@@ -126,7 +126,7 @@ jobs:
 
       - name: Configure Release
         if: steps.restore.outputs.stop != 'true'
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON -DMOROK_BUILD_G2=OFF
 
       - name: Build
         if: steps.restore.outputs.stop != 'true'
