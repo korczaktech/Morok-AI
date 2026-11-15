@@ -35,11 +35,11 @@ def select_training_target(question_id,response,verdict):
  return SEED_ANSWERS[question_id],"oracle_demonstration"
 def run(cmd):
  r=subprocess.run(cmd,capture_output=True,text=True,encoding="utf-8")
- if r.returncode:raise RuntimeError(f"command failed: {' '.join(cmd)}\\n{r.stdout}\\n{r.stderr}")
+ if r.returncode:raise RuntimeError(f"command failed: {' '.join(cmd)}\n{r.stdout}\n{r.stderr}")
  return r.stdout.strip()
 def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def atomic(p,d):
- p.parent.mkdir(parents=True,exist_ok=True); t=p.with_name(p.name+".tmp"); t.write_text(json.dumps(d,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8"); os.replace(t,p)
+ p.parent.mkdir(parents=True,exist_ok=True); t=p.with_name(p.name+".tmp"); t.write_text(json.dumps(d,ensure_ascii=False,indent=2)+"\n",encoding="utf-8"); os.replace(t,p)
 def main():
  ap=argparse.ArgumentParser()
  ap.add_argument("--checkpoint",type=Path,required=True); ap.add_argument("--database",type=Path,default=ROOT/"data/reinforcement-g2/answers.json")
@@ -91,17 +91,17 @@ def main():
    episode["model_sha256_after"]=digest(inference_a)+digest(inference_b); atomic(a.database,db)
    results.append({"attempt":i+1,"question_id":q["id"],"answer":response,"verdict":verdict,"reward":reward,"policy_update":episode["policy_update"]["status"],"grading_reason":reason})
  lines=[f"{x['attempt']}. {x['answer'].replace(chr(10),' ').strip() or '[resposta vazia]'} - {'correto' if x['verdict']=='correct' else 'errado'}" for x in results]
- a.results_file.parent.mkdir(parents=True,exist_ok=True); a.results_file.write_text("\\n".join(lines)+"\\n",encoding="utf-8")
+ a.results_file.parent.mkdir(parents=True,exist_ok=True); a.results_file.write_text("\n".join(lines)+"\n",encoding="utf-8")
  correct_count=sum(x["verdict"]=="correct" for x in results)
  report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"selected_questions":[q["id"] for q in selected_questions],"results":results,"correct_in_this_run":correct_count,"behavioral_gate":"passed" if correct_count else "failed","totals":db["totals"],"trainable_parameters":2000,"checkpoint_reused":True}
  summary=os.environ.get("GITHUB_STEP_SUMMARY")
  if summary:
   with open(summary,"a",encoding="utf-8") as f:
-   f.write("## Reinforcement-G2 results\\n\\n| # | Pergunta | Resposta | Resultado |\\n|---:|---|---|---|\\n")
+   f.write("## Reinforcement-G2 results\n\n| # | Pergunta | Resposta | Resultado |\n|---:|---|---|---|\n")
    for x in results:
-    escaped=x["answer"].replace("|","\\|").replace("\\n"," ").replace("\\r"," ")
+    escaped=x["answer"].replace("|","\\|").replace("\n"," ").replace("\r"," ")
     verdict="correto" if x["verdict"]=="correct" else "errado"
-    f.write(f"| {x['attempt']} | {x['question_id']} | {escaped} | {verdict} |\\n")
+    f.write(f"| {x['attempt']} | {x['question_id']} | {escaped} | {verdict} |\n")
  print(json.dumps(report,ensure_ascii=False,indent=2))
  if correct_count==0:raise RuntimeError("G2 behavioral gate failed: no correct, non-degenerate model response; reinforcement updates were applied but no answer passed")
 if __name__=="__main__":
