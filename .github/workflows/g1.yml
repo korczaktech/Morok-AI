@@ -31,7 +31,7 @@ on:
         description: "Épocas de treinamento por modelo (1–1000000)"
         type: number
         required: true
-        default: 50
+        default: 500
       question_sky:
         description: "O céu é azul?"
         type: boolean
@@ -116,7 +116,7 @@ jobs:
         working-directory: Morok
         env:
           G1_ATTEMPTS: ${{ inputs.attempts || 1 }}
-          G1_EPOCHS: ${{ inputs.epochs || 50 }}
+          G1_EPOCHS: ${{ inputs.epochs || 500 }}
           G1_QUESTION_SKY: ${{ github.event_name != 'workflow_dispatch' || inputs.question_sky }}
           G1_QUESTION_GRASS: ${{ github.event_name != 'workflow_dispatch' || inputs.question_grass }}
           G1_QUESTION_MOUNTAINS: ${{ github.event_name != 'workflow_dispatch' || inputs.question_mountains }}
