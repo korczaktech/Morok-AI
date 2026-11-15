@@ -41,7 +41,11 @@
       width: 264px; flex: 0 0 264px; display: flex; flex-direction: column;
       padding: 22px 14px 15px; background: var(--sidebar);
       border-right: 1px solid var(--line); transition: width .25s ease, flex-basis .25s ease, transform .25s ease;
-      z-index: 20;
+      z-index: 20; overflow: hidden; white-space: nowrap;
+    }
+    .app.sidebar-collapsed .sidebar {
+      width: 0; flex-basis: 0; padding-left: 0; padding-right: 0;
+      border-right: 0; overflow: hidden;
     }
     .brand-row { display:flex; align-items:center; justify-content:space-between; padding: 0 7px 25px; }
     .brand { display:flex; align-items:center; gap:11px; color:var(--text); text-decoration:none; font-weight:800; letter-spacing:-.055em; font-size:19px; }
@@ -75,11 +79,11 @@
     }
     .side-link:hover, .side-link.active { background:rgba(255,255,255,.045); color:var(--text); }
     .nav-icon { display:grid; place-items:center; width:18px; color:inherit; }
-    .history { min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:#394033 transparent; }
+    .history { min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:#51476b transparent; }
     .history-item {
       display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
       padding:9px 10px; margin:2px 0; border:0; border-radius:8px; background:transparent;
-      color:#a7ad9e; font-size:11.5px; text-align:left; cursor:pointer;
+      color:var(--muted); font-size:11.5px; text-align:left; cursor:pointer;
     }
     .history-item:hover { background:rgba(255,255,255,.04); color:var(--text); }
     .history-item.selected { background:rgba(167,139,250,.10); color:var(--accent); }
@@ -94,7 +98,7 @@
     .main { flex:1; min-width:0; display:flex; flex-direction:column; position:relative; }
     .topbar {
       height:70px; flex:0 0 70px; display:flex; align-items:center; justify-content:space-between;
-      padding:0 34px; border-bottom:1px solid var(--line); background:rgba(16,18,15,.72);
+      padding:0 34px; border-bottom:1px solid var(--line); background:rgba(16,14,23,.82);
       backdrop-filter:blur(18px); z-index:5;
     }
     .top-left, .top-right { display:flex; align-items:center; gap:12px; }
@@ -208,7 +212,11 @@
     @keyframes fade { from { opacity:0; } to { opacity:1; } }
     @media (min-width:1200px) { .welcome { padding-top:82px; } }
     @media (max-width:760px) {
-      .sidebar { position:fixed; inset:0 auto 0 0; width:270px; transform:translateX(-102%); box-shadow:20px 0 60px rgba(0,0,0,.35); }
+      .sidebar, .app.sidebar-collapsed .sidebar {
+        position:fixed; inset:0 auto 0 0; width:270px; flex-basis:270px;
+        padding:22px 14px 15px; border-right:1px solid var(--line);
+        transform:translateX(-102%); box-shadow:20px 0 60px rgba(0,0,0,.35);
+      }
       .sidebar.open { transform:translateX(0); }
       .backdrop.show { display:block; position:fixed; inset:0; z-index:15; background:rgba(0,0,0,.5); }
       .topbar { height:61px; flex-basis:61px; padding:0 17px; }
@@ -285,7 +293,7 @@
     <main class="main">
       <header class="topbar">
         <div class="top-left">
-          <button class="icon-btn" id="open-sidebar" aria-label="Abrir barra lateral" title="Abrir menu">
+          <button class="icon-btn" id="open-sidebar" aria-label="Recolher ou expandir barra lateral" aria-controls="sidebar" aria-expanded="true" title="Recolher ou expandir menu">
             <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
           <div class="mobile-brand"><span class="brand-symbol">m</span><span>morok<span style="color:var(--accent)">.</span></span></div>
@@ -390,9 +398,32 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
     }
+    const app = $('.app');
+    const mobileSidebar = window.matchMedia('(max-width: 760px)');
+
     function closeSidebar() {
       sidebar.classList.remove('open');
       backdrop.classList.remove('show');
+      if (!mobileSidebar.matches) app.classList.add('sidebar-collapsed');
+      $('#open-sidebar').setAttribute('aria-expanded', 'false');
+    }
+    function openSidebar() {
+      if (mobileSidebar.matches) {
+        sidebar.classList.add('open');
+        backdrop.classList.add('show');
+      } else {
+        app.classList.remove('sidebar-collapsed');
+      }
+      $('#open-sidebar').setAttribute('aria-expanded', 'true');
+    }
+    function toggleSidebar() {
+      if (mobileSidebar.matches) {
+        if (sidebar.classList.contains('open')) closeSidebar();
+        else openSidebar();
+      } else {
+        const collapsed = app.classList.toggle('sidebar-collapsed');
+        $('#open-sidebar').setAttribute('aria-expanded', String(!collapsed));
+      }
     }
     function newConversation() {
       chatArea.innerHTML = '';
@@ -443,8 +474,14 @@
 
     $('#new-chat').addEventListener('click', newConversation);
     $('#brand-home').addEventListener('click', (event) => { event.preventDefault(); newConversation(); });
-    $('#open-sidebar').addEventListener('click', () => { sidebar.classList.add('open'); backdrop.classList.add('show'); });
+    $('#open-sidebar').addEventListener('click', toggleSidebar);
     $('#collapse-sidebar').addEventListener('click', closeSidebar);
+    mobileSidebar.addEventListener('change', () => {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('show');
+      app.classList.remove('sidebar-collapsed');
+      $('#open-sidebar').setAttribute('aria-expanded', String(!mobileSidebar.matches));
+    });
     backdrop.addEventListener('click', closeSidebar);
     $('#nav-chats').addEventListener('click', newConversation);
     $('#search-chats').addEventListener('click', () => {
