@@ -53,8 +53,9 @@ std::string answer_for(const morok::g2::tsukuyomi::Model& model,
 int main(int argc, char** argv) {
     const bool batch = argc >= 2 && std::string(argv[1]) == "--batch";
     if ((batch && argc != 4) || (!batch && (argc < 4 || argc > 18))) {
-        std::cerr << "Uso: morok-g2-tsukuyomi-generate <checkpoint> <prompt> <max_bytes>\n"
-                  << "Ou: morok-g2-tsukuyomi-generate --batch <checkpoint> <max_bytes>\n";
+        std::cerr << "Uso: morok-g2-tsukuyomi-generate <checkpoint> <prompt> <max_bytes> "
+                  << "[--sample] [--temperature N] [--top-k N] [--top-p N] "
+                  << "[--repetition-penalty N] [--repetition-window N] [--seed N]\n"
         return 2;
     }
 
@@ -93,7 +94,7 @@ int main(int argc, char** argv) {
             continue;
         }
         if (index + 1 >= argc) {
-            std::cerr << "Opção sem valor: " << option << '\\n';
+            std::cerr << "Opção sem valor: " << option << '\n';
             return 2;
         }
         const char* value = argv[++index];
@@ -110,7 +111,7 @@ int main(int argc, char** argv) {
         } else if (option == "--seed") {
             if (!parse_size_value(value, generation_config.seed)) return 2;
         } else {
-            std::cerr << "Opção desconhecida: " << option << '\\n';
+            std::cerr << "Opção desconhecida: " << option << '\n';
             return 2;
         }
     }
