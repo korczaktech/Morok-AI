@@ -89,8 +89,8 @@ def evaluate_split(generator: Path, checkpoint: Path, dialogues: list[tuple[str,
 
 
 def main() -> int:
-    if len(sys.argv) != 6:
-        print("Uso: avaliacao_final.py <gerador> <checkpoint> <validacao.txt> <teste.txt> <saida.json>", file=sys.stderr)
+    if len(sys.argv) not in (6, 8):
+        print("Uso: avaliacao_final.py <gerador> <checkpoint> <validacao.txt> <teste.txt> <saida.json> [<gerador_baseline> <checkpoint_baseline>]", file=sys.stderr)
         return 2
     generator, checkpoint, validation_path, test_path, output = map(Path, sys.argv[1:])
     if not generator.is_file() or not checkpoint.is_file():
@@ -103,6 +103,26 @@ def main() -> int:
     test_result = evaluate_split(generator, checkpoint, test)
     repeat_answers, repeat_seconds = generate(generator, checkpoint, test)
     deterministic = repeat_answers == [item["generated"] for item in test_result["answers"]]
+    comparison = {
+        "previous_architecture_checkpoint_available": False,
+        "status": "not_comparable_without_a_compatible_baseline_checkpoint",
+        "note": "Pass a baseline generator and checkpoint to compare both architectures on identical validation and test splits."
+    }
+    if len(sys.argv) == 8:
+        baseline_generator, baseline_checkpoint = map(Path, sys.argv[6:8])
+        if not baseline_generator.is_file() or not baseline_checkpoint.is_file():
+            raise FileNotFoundError("Gerador ou checkpoint baseline não encontrado.")
+        baseline_validation = evaluate_split(baseline_generator, baseline_checkpoint, validation)
+        baseline_test = evaluate_split(baseline_generator, baseline_checkpoint, test)
+        comparison = {
+            "previous_architecture_checkpoint_available": True,
+            "status": "compared_on_identical_splits",
+            "baseline_validation": baseline_validation,
+            "baseline_reserved_test": baseline_test,
+            "candidate_minus_baseline_test_exact_matches": test_result["exact_matches"] - baseline_test["exact_matches"],
+            "candidate_minus_baseline_test_lexical_f1": test_result["mean_lexical_f1"] - baseline_test["mean_lexical_f1"],
+            "candidate_minus_baseline_test_character_similarity": test_result["mean_character_similarity"] - baseline_test["mean_character_similarity"]
+        }
     values = [validation_result["exact_match_rate"], test_result["exact_match_rate"],
               test_result["mean_lexical_f1"], test_result["mean_character_similarity"],
               test_result["mean_consecutive_repetition"], test_result["mean_character_diversity"],
@@ -122,11 +142,7 @@ def main() -> int:
         "reserved_test": test_result,
         "deterministic_greedy_generation": deterministic,
         "repeat_test_generation_seconds": repeat_seconds,
-        "comparison": {
-            "previous_architecture_checkpoint_available": False,
-            "status": "not_comparable_without_a_compatible_baseline_checkpoint",
-            "note": "The previous architecture checkpoint is not present in the repository. No baseline score is fabricated."
-        },
+        "comparison": comparison,
         "interpretation": {
             "semantic_understanding_proven": False,
             "lexical_metrics_are_diagnostics_only": True,
