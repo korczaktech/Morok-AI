@@ -16,6 +16,12 @@ def grade(q,a):
  if t&NEGATIONS:return "incorrect",-1,"negated_response"
  m=sorted(t&TASK_CONCEPTS[q])
  return ("correct",1,"matched_expected_concept:"+",".join(m)) if m else ("incorrect",-1,"expected_concept_not_found")
+def select_questions(questions, selected_ids):
+ selected=set(selected_ids)
+ available={q["id"] for q in questions}
+ if not selected or len(selected)!=len(selected_ids) or selected-available:
+  raise ValueError("select at least one unique known question")
+ return [q for q in questions if q["id"] in selected]
 def run(cmd):
  r=subprocess.run(cmd,capture_output=True,text=True,encoding="utf-8")
  if r.returncode:raise RuntimeError(f"command failed: {' '.join(cmd)}\n{r.stdout}\n{r.stderr}")
