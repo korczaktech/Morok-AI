@@ -36,9 +36,9 @@ int main() {
         const auto generated=generate_g2(p,*prompt.value_if(),generation);
         if(generated.generated_bytes>2)throw std::runtime_error("G2 generation exceeded its byte bound");
         const auto corpus=dir/"corpus"; std::filesystem::create_directories(corpus);
-        {std::ofstream f(corpus/"doc-01.txt");f<<"Usuario: O ceu e azul?\\nIA: Sim, o ceu e azul";}
-        {std::ofstream f(corpus/"doc-02.txt");f<<"Usuario: As montanhas sao altas ou baixas?\\nIA: As montanhas sao altas.";}
-        {std::ofstream f(corpus/"doc-03.txt");f<<"Usuario: Que cor e a grama?\\nIA: A grama e verde.";}
+        {std::ofstream f(corpus/"doc-01.txt");f<<"Usuario: O ceu e azul?\nIA: Sim, o ceu e azul";}
+        {std::ofstream f(corpus/"doc-02.txt");f<<"Usuario: As montanhas sao altas ou baixas?\nIA: As montanhas sao altas.";}
+        {std::ofstream f(corpus/"doc-03.txt");f<<"Usuario: Que cor e a grama?\nIA: A grama e verde.";}
         G2TrainingConfig training; training.base.corpus_directory=corpus;
         training.base.max_epochs=1; training.base.patience=5; training.base.truncation_length=128;
         training.base.train_all_documents=true;
