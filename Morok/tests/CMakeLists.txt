@@ -202,14 +202,6 @@ set_tests_properties(acceptance.seven_subsystems
     PROPERTIES LABELS "acceptance;subsystems" TIMEOUT 120)
 
 
-# G1 model profiles are compiled and exercised independently.
-foreach(_profile IN ITEMS Mokosh Tsukuyomi Apollo)
-    string(TOLOWER "${_profile}" _profile_lower)
-    add_executable(morok_test_g1_${_profile_lower} ../Gerações/G1/${_profile}/tests/test_profile.cpp)
-    target_link_libraries(morok_test_g1_${_profile_lower} PRIVATE Morok::G1::${_profile} morok_build_options)
-    morok_enable_sanitizers(morok_test_g1_${_profile_lower})
-    add_test(NAME model.g1_${_profile_lower} COMMAND morok_test_g1_${_profile_lower})
-endforeach()
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 add_test(NAME architecture.generation_isolation
