@@ -87,6 +87,10 @@ jobs:
         working-directory: Morok
         run: cmake --build build/g1 --parallel 2
 
+      - name: Validate semantic response evaluator
+        working-directory: Morok
+        run: build/g1/morok-g1-profile-evaluate --self-test
+
       - name: Train one epoch and test one response per selected model
         id: loop
         working-directory: Morok
