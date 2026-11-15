@@ -290,7 +290,16 @@
       try { const parsed = new URL(url); if (!['https:','http:'].includes(parsed.protocol)) throw new Error(); }
       catch { toast('Informe uma URL válida começando com https:// ou http://.'); return false; }
     }
-    state.apiUrl = url.replace(/\/+$/,''); state.theme = $('#theme-select').value;
+    const sbUrl = $('#supabase-url').value.trim();
+    const sbKey = $('#supabase-key').value.trim();
+    if (sbUrl) {
+      try { const parsed = new URL(sbUrl); if (!['https:','http:'].includes(parsed.protocol)) throw new Error(); }
+      catch { toast('URL do Supabase inválida.'); return false; }
+    }
+    state.apiUrl = url.replace(/\/+$/,'');
+    state.supabaseUrl = sbUrl.replace(/\/+$/,'');
+    state.supabaseKey = sbKey;
+    state.theme = $('#theme-select').value;
     applyTheme(); persist(); el.settings.close(); checkHealth(); toast('Configurações salvas.'); return true;
   }
   function addFiles(files) {
