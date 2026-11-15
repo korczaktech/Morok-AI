@@ -54,6 +54,15 @@ class G2ReinforcementTests(unittest.TestCase):
         self.assertIn('target_loss_after', app)
         self.assertIn('G1OptimizerConfig::adamw()', app)
 
+    def test_runner_isolates_new_checkpoints_and_requires_loss_progress(self):
+        runner = (ROOT / "scripts" / "run-g2-reinforcement.py").read_text(encoding="utf-8")
+        app = (ROOT / "apps" / "reinforce_g2.cpp").read_text(encoding="utf-8")
+        self.assertIn('checkpoint=Path(str(a.checkpoint)+".v2")', runner)
+        self.assertIn('if not target_loss_decreased:', runner)
+        self.assertIn('target_loss_before', app)
+        self.assertIn('target_loss_after', app)
+        self.assertIn('for(unsigned int retry=0;retry<10;++retry)', app)
+
     def test_question_selection_keeps_database_order_and_rejects_empty_or_unknown(self):
         questions = [{"id": "sky_is_blue"}, {"id": "grass_color"}, {"id": "mountains_high_or_low"}]
         self.assertEqual([q["id"] for q in select_questions(questions, ["grass_color", "sky_is_blue"])],

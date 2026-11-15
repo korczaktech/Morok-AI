@@ -12,6 +12,7 @@
 #include <iterator>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 namespace {
 double target_loss(const morok::model::G1Parameters& parameters,
