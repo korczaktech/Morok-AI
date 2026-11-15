@@ -130,10 +130,10 @@
     }
     .login-btn:hover { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
     .login-btn svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:1.8; }
-    .content { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; }
+    .content { flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; }
     .welcome {
-      width:min(790px, calc(100% - 48px)); margin:auto; padding:65px 0 35px;
-      display:flex; flex-direction:column; align-items:center; text-align:center;
+      width:min(790px, calc(100% - 48px)); min-height:0; margin:auto; padding:clamp(14px,4vh,48px) 0;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
       animation:rise .55s cubic-bezier(.2,.7,.2,1) both;
     }
     .sigil {
@@ -155,7 +155,7 @@
       color:#c5bddb; font-size:10.5px; cursor:pointer; transition:.18s;
     }
     .prompt-chip:hover { border-color:rgba(167,139,250,.48); color:var(--accent); background:rgba(236,72,153,.07); transform:translateY(-1px); }
-    .chat-area { width:min(790px,calc(100% - 48px)); margin:0 auto; padding:28px 0 20px; display:none; flex-direction:column; gap:23px; }
+    .chat-area { width:min(790px,calc(100% - 48px)); min-height:0; flex:1; overflow:auto; margin:0 auto; padding:28px 0 20px; display:none; flex-direction:column; gap:23px; }
     .chat-area.visible { display:flex; }
     .message { display:flex; gap:13px; align-items:flex-start; animation:rise .25s ease both; }
     .message-avatar { width:27px; height:27px; flex:0 0 27px; display:grid; place-items:center; border-radius:9px; font-size:10px; font-weight:800; }
@@ -165,7 +165,7 @@
     .message-name { margin-bottom:7px; color:var(--muted); font:9px 'DM Mono',monospace; letter-spacing:.1em; text-transform:uppercase; }
     .message-text { color:#e0e5d9; font-size:13px; line-height:1.85; white-space:pre-wrap; overflow-wrap:anywhere; }
     .message.assistant .message-text { color:#b9c2b1; }
-    .composer-zone { width:min(790px,calc(100% - 48px)); margin: auto auto 0; padding:18px 0 17px; }
+    .composer-zone { width:min(790px,calc(100% - 48px)); flex:0 0 auto; margin:0 auto; padding:clamp(8px,1.8vh,18px) 0 clamp(8px,1.8vh,17px); }
     .composer {
       position:relative; padding:12px 13px 10px; border:1px solid rgba(167,139,250,.24);
       border-radius:16px; background:linear-gradient(145deg,#191624,#171b15);
@@ -211,7 +211,27 @@
     @keyframes rise { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:translateY(0); } }
     @keyframes pop { from { opacity:0; transform:translateY(-4px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
     @keyframes fade { from { opacity:0; } to { opacity:1; } }
-    @media (min-width:1200px) { .welcome { padding-top:82px; } }
+    @media (max-height:760px) {
+      .sigil { width:43px; height:43px; margin-bottom:14px; border-radius:15px; }
+      h1 { margin:10px 0 8px; font-size:clamp(31px,4.2vw,45px); }
+      .welcome-copy { font-size:12px; line-height:1.55; }
+      .prompt-grid { gap:7px; margin-top:17px; }
+      .prompt-chip { padding:7px 11px; }
+      .composer-hint { margin-top:6px; }
+    }
+    @media (max-height:620px) {
+      .welcome { padding:7px 0; }
+      .sigil { width:34px; height:34px; margin-bottom:8px; }
+      .eyebrow { font-size:9px; }
+      h1 { margin:7px 0 6px; font-size:clamp(27px,3.8vw,38px); }
+      .welcome-copy { max-width:430px; font-size:11px; line-height:1.4; }
+      .prompt-grid { margin-top:10px; gap:5px; }
+      .prompt-chip { padding:6px 9px; font-size:9px; }
+      .composer-zone { padding-top:6px; padding-bottom:6px; }
+      .composer { padding:8px 10px 7px; }
+      .composer textarea { min-height:34px; max-height:90px; }
+    }
+    @media (min-width:1200px) and (min-height:761px) { .welcome { padding-top:48px; } }
     @media (max-width:760px) {
       .sidebar, .app.sidebar-collapsed .sidebar {
         position:fixed; inset:0 auto 0 0; width:270px !important;
