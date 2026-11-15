@@ -89,6 +89,14 @@ class TrainingDataTests(unittest.TestCase):
             )
             self.assertEqual(training.read_dialogues(corpus), [("pergunta", "resposta")])
 
+    def test_generation_diagnostics_detect_repetition_and_diversity(self):
+        repetition, diversity = training.generation_diagnostics("aaaa")
+        self.assertEqual(repetition, 1.0)
+        self.assertEqual(diversity, 0.25)
+        repetition, diversity = training.generation_diagnostics("abcd")
+        self.assertEqual(repetition, 0.25)
+        self.assertEqual(diversity, 1.0)
+
     def test_exact_answer_scores_one(self):
         correct, score = training.evaluate("Sim, o céu é azul.", "Sim, o céu é azul.")
         self.assertTrue(correct)
