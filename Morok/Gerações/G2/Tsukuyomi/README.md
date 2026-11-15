@@ -6,7 +6,7 @@
 **Perfil:** modelo mais avançado da linha G2  
 **Orçamento:** exatamente 10.000 parâmetros treináveis
 
-O Tsukuyomi prioriza capacidade e tarefas complexas. A versão 0.1 entrega um modelo neural autoregressivo byte-level, com embeddings compartilhados, contexto da pergunta em 13 faixas posicionais, treinamento Adam, métricas train_bpb, geração greedy com transições UTF-8 seguras e checkpoints versionados. A implementação é privada da G2 e não importa código da G1.
+O Tsukuyomi prioriza capacidade e tarefas complexas. A versão 0.1 entrega um modelo neural autoregressivo byte-level com RNN tanh de estado oculto 32, matriz recorrente compartilhada, contexto inicial da pergunta em 13 faixas posicionais e BPTT truncado em até 13 etapas. Usa embeddings compartilhados, Adam, métricas train_bpb, geração greedy com transições UTF-8 seguras e checkpoints versionados. A implementação é privada da G2 e não importa código da G1.
 
 ## Estrutura
 
@@ -29,7 +29,7 @@ cmake --build build/g2 --target morok_g2_tsukuyomi morok_g2_tsukuyomi_train moro
 ctest --test-dir build/g2 -R g2.tsukuyomi.model --output-on-failure
 
 ## Treinamento e inferência
-Na inferência, as 13 faixas da pergunta são preparadas uma única vez por prompt e reutilizadas em todos os bytes gerados. Isso remove a varredura e a agregação repetidas da pergunta dentro do loop autoregressivo, sem alterar arquitetura, pesos ou os 10.000 parâmetros.
+Na inferência, as 13 faixas da pergunta são preparadas uma única vez e usadas para inicializar o estado recorrente. O estado oculto de 32 dimensões é atualizado a cada byte gerado e mantido entre os passos, sem exceder os 10.000 parâmetros.
 
 
 build/g2/morok-g2-tsukuyomi-train corpus.bin tsukuyomi-g2-v0.1.ckpt 10 42
@@ -55,13 +55,13 @@ O primeiro ciclo inicializa o modelo. Os ciclos seguintes carregam os parâmetro
 
 O avaliador é determinístico: remove diferenças de caixa, acentuação e pontuação e aprova somente igualdade lexical normalizada. O F1 lexical é exibido apenas como diagnóstico e nunca aprova sozinho uma resposta, reduzindo aprovações falsas por coincidência de palavras. Ainda não há avaliação semântica real: paráfrases corretas podem ser rejeitadas. A aprovação indica correspondência normalizada ao gabarito, não prova de compreensão.
 
-O treinamento acumula gradientes em mini-lotes de 16 bytes-alvo por padrão, reduzindo as atualizações do Adam. O learning rate inicial é 0,001 (0,1%); o executor cíclico reduz pela metade após cinco ciclos sem melhora de train_bpb, até 0,00005; Adam usa β1=0,9, β2=0,999 e epsilon=1e-8, com clipping global 1,0 e weight decay seletivo 0,00001. Não há dropout na versão 0.1; o scheduler é controlado pelo executor cíclico e reduz o learning rate quando train_bpb deixa de melhorar. O estado do Adam é salvo em arquivo separado com versão e checksum, junto do checkpoint. O formato binário do checkpoint é a versão interna 2 para rejeitar pesos antigos incompatíveis; o Tsukuyomi continua na versão pública 0.1. A retomada exige os dois arquivos válidos. O workflow tem limite operacional de seis horas, portanto uma execução contínua pode ser interrompida pelo limite do GitHub Actions antes de atingir a aprovação da questão selecionada.
+O treinamento acumula gradientes em mini-lotes de 16 bytes-alvo por padrão, reduzindo as atualizações do Adam. A retropropagação temporal é truncada em 13 etapas por padrão (configurável entre 1 e 13), enquanto o forward percorre sequencialmente todo o histórico disponível. O learning rate inicial é 0,001 (0,1%); o executor cíclico reduz pela metade após cinco ciclos sem melhora de train_bpb, até 0,00005; Adam usa β1=0,9, β2=0,999 e epsilon=1e-8, com clipping global 1,0 e weight decay seletivo 0,00001. Não há dropout na versão 0.1; o scheduler é controlado pelo executor cíclico e reduz o learning rate quando train_bpb deixa de melhorar. O estado do Adam é salvo em arquivo separado com versão e checksum, junto do checkpoint. O formato binário do checkpoint é a versão interna 5 para rejeitar pesos antigos incompatíveis; o Tsukuyomi continua na versão pública 0.1. A retomada exige os dois arquivos válidos. O workflow tem limite operacional de seis horas, portanto uma execução contínua pode ser interrompida pelo limite do GitHub Actions antes de atingir a aprovação da questão selecionada.
 
 ## Escopo e limitações
 
 A versão 0.1 continua sendo um modelo byte-level com orçamento de 10.000 parâmetros. Para prompts U:/IA:, a pergunta inteira é representada por embeddings compartilhados agregados em 13 faixas posicionais; essa compressão ainda perde algumas relações de ordem. O treinador agora aplica uma máscara de alvos em corpora U:/IA: e calcula a perda somente sobre os bytes das respostas IA:, incluindo o terminador de linha para que a geração aprenda quando encerrar a resposta. Os marcadores toleram BOM UTF-8 no início do arquivo e espaços/tabs antes de U: e IA:, mantendo o contexto anterior disponível. Isso torna o objetivo mais direcionado à resposta, mas não resolve a limitação de contexto: o modelo ainda não consegue reter a pergunta inteira quando ela excede a janela efetiva.
 
-Ainda não há recorrência, BPTT, atenção, memória externa ou Reinforcement Learning (RL). A avaliação lexical não fornece recompensa ao modelo nem atualiza os pesos. A geração preserva UTF-8 válido para prompts válidos, mas isso não comprova qualidade linguística ou compreensão. Consulte ARCHITECTURE.md.
+A recorrência atual é uma RNN tanh simples, sem portas GRU/LSTM; há BPTT truncado de 13 etapas. Ainda não há atenção, memória externa ou Reinforcement Learning (RL). A avaliação lexical não fornece recompensa ao modelo nem atualiza os pesos. A geração preserva UTF-8 válido para prompts válidos, mas isso não comprova qualidade linguística ou compreensão. Consulte ARCHITECTURE.md.
 
 O orçamento é conferido estaticamente e representa parâmetros implementados, não qualidade ou desempenho comprovados.
 
