@@ -14,37 +14,37 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261115-18">
-  <script src="./app.js?v=20261115-17" defer></script>
+  <link rel="stylesheet" href="./styles.css?v=20261115-20">
+  <script src="./app.js?v=20261115-19" defer></script>
 </head>
 <body>
   <div class="app" id="app">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-head">
-        <a class="brand" href="#" id="brand-home" aria-label="Morok início"><span class="brand-mark">m</span><span>morok<span class="brand-dot">.</span></span></a>
-        <button class="icon-button sidebar-close" id="sidebar-close" aria-label="Fechar menu" title="Fechar menu">×</button>
+        <a class="brand" href="#" id="brand-home" aria-label="Morok início"><span class="brand-mark" data-icon="brand" aria-hidden="true"></span><span>morok<span class="brand-dot">.</span></span></a>
+        <button class="icon-button sidebar-close" id="sidebar-close" aria-label="Fechar menu" title="Fechar menu"><span data-icon="close"></span></button>
       </div>
-      <button class="new-chat" id="new-chat"><span class="plus">＋</span><span>Novo chat</span><kbd>⌘ K</kbd></button>
+      <button class="new-chat" id="new-chat"><span class="plus" data-icon="new-chat"></span><span>Novo chat</span><kbd>⌘ K</kbd></button>
       <div class="sidebar-section-title">Seu espaço</div>
       <div class="sidebar-tools">
-        <button class="side-action active" id="all-chats"><span class="line-icon">▤</span>Conversas</button>
-        <button class="side-action" id="search-open"><span class="line-icon">⌕</span>Buscar conversas</button>
-        <button class="side-action" data-workspace-page="images"><span class="line-icon">▧</span>Imagens</button>
-        <button class="side-action" data-workspace-page="tasks"><span class="line-icon">✓</span>Tarefas</button>
-        <button class="side-action" data-workspace-page="library"><span class="line-icon">▤</span>Biblioteca</button>
-        <button class="side-action" data-workspace-page="plugins"><span class="line-icon">⊞</span>Plugins</button>
-        <button class="side-action more-options-toggle" id="more-options-toggle" aria-expanded="false"><span class="line-icon">···</span>Mais opções<span class="nav-chevron">⌄</span></button>
+        <button class="side-action active" id="all-chats"><span class="line-icon" data-icon="conversations"></span>Conversas</button>
+        <button class="side-action" id="search-open"><span class="line-icon" data-icon="search"></span>Buscar conversas</button>
+        <button class="side-action" data-workspace-page="images"><span class="line-icon" data-icon="images"></span>Imagens</button>
+        <button class="side-action" data-workspace-page="tasks"><span class="line-icon" data-icon="tasks"></span>Tarefas</button>
+        <button class="side-action" data-workspace-page="library"><span class="line-icon" data-icon="library"></span>Biblioteca</button>
+        <button class="side-action" data-workspace-page="plugins"><span class="line-icon" data-icon="plugins"></span>Plugins</button>
+        <button class="side-action more-options-toggle" id="more-options-toggle" aria-expanded="false"><span class="line-icon" data-icon="more"></span>Mais opções<span class="nav-chevron" data-icon="chevron"></span></button>
         <div class="side-submenu" id="side-submenu" hidden>
-          <button class="side-action" data-workspace-page="locations"><span class="line-icon">⌖</span>Localizações</button>
-          <button class="side-action" data-workspace-page="personalization"><span class="line-icon">◈</span>Personalização</button>
-          <button class="side-action" data-workspace-page="instructions"><span class="line-icon">≡</span>Instruções</button>
+          <button class="side-action" data-workspace-page="locations"><span class="line-icon" data-icon="location"></span>Localizações</button>
+          <button class="side-action" data-workspace-page="personalization"><span class="line-icon" data-icon="personalization"></span>Personalização</button>
+          <button class="side-action" data-workspace-page="instructions"><span class="line-icon" data-icon="instructions"></span>Instruções</button>
         </div>
       </div>
       <div class="history-heading"><span>Recentes</span><span id="history-count">0</span></div>
       <div class="history-list" id="history-list" aria-label="Histórico de conversas"></div>
       <div class="sidebar-bottom">
-        <div class="service-status"><span class="status-dot" id="status-dot"></span><span id="status-label">Verificando API...</span><button class="status-refresh" id="status-refresh" title="Verificar conexão" aria-label="Verificar conexão">↻</button></div>
-        <button class="profile-button" id="profile-button"><span class="avatar" id="profile-avatar">V</span><span class="profile-text"><strong id="profile-name">Visitante</strong><small id="profile-subtitle">Entre para acessar sua conta</small></span><span class="more">···</span></button>
+        <div class="service-status"><span class="status-dot" id="status-dot"></span><span id="status-label">Verificando API...</span><button class="status-refresh" id="status-refresh" title="Verificar conexão" aria-label="Verificar conexão"><span data-icon="refresh"></span></button></div>
+        <button class="profile-button" id="profile-button"><span class="avatar" id="profile-avatar">V</span><span class="profile-text"><strong id="profile-name">Visitante</strong><small id="profile-subtitle">Entre para acessar sua conta</small></span><span class="more" data-icon="more"></span></button>
         <div class="profile-menu" id="profile-menu" hidden>
           <div class="profile-menu-head"><strong id="profile-menu-name">Visitante</strong><small id="profile-menu-email">Conta local</small></div>
           <button data-profile-action="account">Minha conta</button>
@@ -63,32 +63,32 @@
     <main class="main">
       <header class="topbar">
         <div class="topbar-left">
-          <button class="icon-button menu-toggle" id="menu-toggle" aria-label="Abrir menu" title="Abrir menu">☰</button>
+          <button class="icon-button menu-toggle" id="menu-toggle" aria-label="Abrir menu" title="Abrir menu"><span data-icon="menu"></span></button>
           <div class="model-select-wrap">
-            <button class="model-select" id="model-select" aria-haspopup="true" aria-expanded="false"><span class="model-glyph"></span><span id="model-select-label">Morok</span><span class="chevron">⌄</span></button>
+            <button class="model-select" id="model-select" aria-haspopup="true" aria-expanded="false"><span class="model-glyph" data-icon="model"></span><span id="model-select-label">Morok</span><span class="chevron" data-icon="chevron"></span></button>
             <div class="model-popover generation-menu" id="model-popover" hidden>
               <div class="generation-list" id="generation-list"><div class="popover-label">ESCOLHA UMA GERAÇÃO</div>
-              <button class="generation-option selected" data-generation="G1" aria-current="true" type="button"><span class="generation-mark">G1</span><span><strong>Geração 1</strong><small>Primeira geração do Morok</small></span><span class="check">✓</span></button></div>
-              <div class="model-submenu" id="model-submenu" hidden><button class="generation-back" id="generation-back" type="button">← Voltar às gerações</button><div class="popover-label">MODELOS DA GERAÇÃO 1</div>
-                <button class="profile-option" data-model="Tsukuyomi" type="button"><span class="profile-symbol"></span><span><strong>Tsukuyomi</strong><small>Modelo da geração 1</small></span><span class="check">✓</span></button>
-                <button class="profile-option" data-model="Apollo" type="button"><span class="profile-symbol apollo"></span><span><strong>Apollo</strong><small>Modelo da geração 1</small></span><span class="check">✓</span></button>
-                <button class="profile-option" data-model="Mokosh" type="button"><span class="profile-symbol mokosh"></span><span><strong>Mokosh</strong><small>Modelo da geração 1</small></span><span class="check">✓</span></button>
+              <button class="generation-option selected" data-generation="G1" aria-current="true" type="button"><span class="generation-mark">G1</span><span><strong>Geração 1</strong><small>Primeira geração do Morok</small></span><span class="check" data-icon="check"></span></button></div>
+              <div class="model-submenu" id="model-submenu" hidden><button class="generation-back" id="generation-back" type="button"><span data-icon="back"></span> Voltar às gerações</button><div class="popover-label">MODELOS DA GERAÇÃO 1</div>
+                <button class="profile-option" data-model="Tsukuyomi" type="button"><span class="profile-symbol" data-icon="tsukuyomi"></span><span><strong>Tsukuyomi</strong><small>Modelo da geração 1</small></span><span class="check" data-icon="check"></span></button>
+                <button class="profile-option" data-model="Apollo" type="button"><span class="profile-symbol apollo" data-icon="apollo"></span><span><strong>Apollo</strong><small>Modelo da geração 1</small></span><span class="check" data-icon="check"></span></button>
+                <button class="profile-option" data-model="Mokosh" type="button"><span class="profile-symbol mokosh" data-icon="mokosh"></span><span><strong>Mokosh</strong><small>Modelo da geração 1</small></span><span class="check" data-icon="check"></span></button>
               </div>
             </div>
           </div>
         </div>
-        <div class="topbar-right"><span class="connection-pill" id="connection-pill"><i></i><span>Desconectado</span></span><button class="icon-button" id="settings-open" aria-label="Configurações" title="Configurações">⚙</button></div>
+        <div class="topbar-right"><span class="connection-pill" id="connection-pill"><i></i><span>Desconectado</span></span><button class="icon-button" id="settings-open" aria-label="Configurações" title="Configurações"><span data-icon="settings"></span></button></div>
       </header>
       <section class="workspace" id="workspace">
         <section class="welcome" id="welcome">
-          <div class="welcome-orb"><span></span></div>
+          <div class="welcome-orb" data-icon="welcome" aria-hidden="true"></div>
           <div class="eyebrow">ASSISTENTE MOROK</div>
           <h1>O que vamos<br><span>explorar hoje?</span></h1>
           <p class="welcome-description">Um espaço para organizar ideias, fazer perguntas e acompanhar a evolução do Morok.</p>
           <div class="suggestions">
-            <button class="suggestion" data-prompt="Explique como funciona uma rede neural recorrente."><span>⌘</span><strong>Aprender</strong><small>Entender um conceito</small></button>
-            <button class="suggestion" data-prompt="Ajude-me a organizar esta ideia em etapas claras."><span>↗</span><strong>Planejar</strong><small>Transformar uma ideia</small></button>
-            <button class="suggestion" data-prompt="Revise este texto e sugira melhorias de clareza."><span>✎</span><strong>Escrever</strong><small>Revisar um texto</small></button>
+            <button class="suggestion" data-prompt="Explique como funciona uma rede neural recorrente."><span data-icon="learn"></span><strong>Aprender</strong><small>Entender um conceito</small></button>
+            <button class="suggestion" data-prompt="Ajude-me a organizar esta ideia em etapas claras."><span data-icon="plan"></span><strong>Planejar</strong><small>Transformar uma ideia</small></button>
+            <button class="suggestion" data-prompt="Revise este texto e sugira melhorias de clareza."><span data-icon="write"></span><strong>Escrever</strong><small>Revisar um texto</small></button>
           </div>
           <div class="welcome-note"><span class="note-dot"></span> As respostas dependem da disponibilidade do servidor Morok.</div>
         </section>
@@ -99,11 +99,11 @@
             <textarea id="message-input" rows="1" maxlength="12000" placeholder="Envie uma mensagem ao Morok..." aria-label="Escreva uma mensagem"></textarea>
             <div class="composer-bottom">
               <div class="composer-actions">
-                <button class="tool-button" type="button" id="attach-button" title="Anexar arquivo"><span>＋</span><span class="tool-label">Anexar</span></button>
+                <button class="tool-button" type="button" id="attach-button" title="Anexar arquivo"><span data-icon="attach"></span><span class="tool-label">Anexar</span></button>
                 <input id="file-input" type="file" hidden multiple accept=".txt,.md,.csv,.json,.log,image/png,image/jpeg,image/webp">
                 <span class="composer-divider"></span><span class="composer-hint">Enter para enviar · Shift + Enter para quebrar linha</span>
               </div>
-              <button class="send-button" id="send-button" type="submit" aria-label="Enviar mensagem" disabled><span>↑</span></button>
+              <button class="send-button" id="send-button" type="submit" aria-label="Enviar mensagem" disabled><span data-icon="send"></span></button>
             </div>
           </form>
           <div class="disclaimer">O Morok é experimental. Não envie informações confidenciais.</div>
@@ -114,7 +114,7 @@
 
   <dialog class="dialog" id="settings-dialog">
     <form method="dialog" class="dialog-card" id="settings-form">
-      <div class="dialog-heading"><div><div class="dialog-eyebrow">PREFERÊNCIAS</div><h2>Configurações</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar">×</button></div>
+      <div class="dialog-heading"><div><div class="dialog-eyebrow">PREFERÊNCIAS</div><h2>Configurações</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar"><span data-icon="close"></span></button></div>
       <section class="settings-section"><h3>Aparência</h3><label class="setting-row"><span><strong>Tema</strong><small>Escolha como o Morok aparece.</small></span><select id="theme-select"><option value="dark">Escuro</option><option value="light">Claro</option><option value="system">Sistema</option></select></label></section>
       <section class="settings-section"><h3>Conta</h3><p class="field-help">Gerencie seu acesso e suas preferências de conta.</p><button class="secondary-button" id="auth-open" type="button">Entrar ou criar conta</button></section>
       <section class="settings-section"><h3>Conexão</h3><p class="field-help">A conexão com o Morok é configurada automaticamente.</p></section>
@@ -123,21 +123,21 @@
     </form>
   </dialog>
 
-  <dialog class="dialog compact-dialog" id="rename-dialog"><form method="dialog" class="dialog-card"><div class="dialog-heading"><h2>Renomear conversa</h2><button class="icon-button dialog-close" value="cancel" aria-label="Fechar">×</button></div><label class="field-label" for="rename-input">Nome da conversa</label><input class="text-field" id="rename-input" maxlength="80"><div class="dialog-footer"><button class="secondary-button" value="cancel">Cancelar</button><button class="primary-button" id="rename-save" value="save">Salvar</button></div></form></dialog>
+  <dialog class="dialog compact-dialog" id="rename-dialog"><form method="dialog" class="dialog-card"><div class="dialog-heading"><h2>Renomear conversa</h2><button class="icon-button dialog-close" value="cancel" aria-label="Fechar"><span data-icon="close"></span></button></div><label class="field-label" for="rename-input">Nome da conversa</label><input class="text-field" id="rename-input" maxlength="80"><div class="dialog-footer"><button class="secondary-button" value="cancel">Cancelar</button><button class="primary-button" id="rename-save" value="save">Salvar</button></div></form></dialog>
 
-  <dialog class="dialog compact-dialog auth-dialog" id="auth-dialog"><form method="dialog" class="dialog-card" id="auth-form"><div class="dialog-heading"><div><div class="dialog-eyebrow">CONTA MOROK</div><h2 id="auth-title">Entrar na sua conta</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar">×</button></div><div class="auth-tabs"><button type="button" class="auth-tab active" data-auth-mode="login">Entrar</button><button type="button" class="auth-tab" data-auth-mode="signup">Criar conta</button></div><label class="field-label" id="auth-name-label" for="auth-name" hidden>Nome</label><input class="text-field" id="auth-name" type="text" autocomplete="name" maxlength="64" placeholder="Seu nome" hidden disabled><label class="field-label" for="auth-email">E-mail</label><input class="text-field" id="auth-email" type="email" autocomplete="email" required placeholder="voce@exemplo.com"><label class="field-label" for="auth-password">Senha</label><input class="text-field" id="auth-password" type="password" autocomplete="current-password" minlength="8" required placeholder="Mínimo de 8 caracteres"><p class="auth-message" id="auth-message" role="status"></p><div class="dialog-footer"><button class="secondary-button" value="cancel">Cancelar</button><button class="primary-button" id="auth-submit" value="submit">Entrar</button></div><button class="danger-button auth-logout" type="button" id="auth-logout" hidden>Sair da conta</button></form></dialog>
+  <dialog class="dialog compact-dialog auth-dialog" id="auth-dialog"><form method="dialog" class="dialog-card" id="auth-form"><div class="dialog-heading"><div><div class="dialog-eyebrow">CONTA MOROK</div><h2 id="auth-title">Entrar na sua conta</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar"><span data-icon="close"></span></button></div><div class="auth-tabs"><button type="button" class="auth-tab active" data-auth-mode="login">Entrar</button><button type="button" class="auth-tab" data-auth-mode="signup">Criar conta</button></div><label class="field-label" id="auth-name-label" for="auth-name" hidden>Nome</label><input class="text-field" id="auth-name" type="text" autocomplete="name" maxlength="64" placeholder="Seu nome" hidden disabled><label class="field-label" for="auth-email">E-mail</label><input class="text-field" id="auth-email" type="email" autocomplete="email" required placeholder="voce@exemplo.com"><label class="field-label" for="auth-password">Senha</label><input class="text-field" id="auth-password" type="password" autocomplete="current-password" minlength="8" required placeholder="Mínimo de 8 caracteres"><p class="auth-message" id="auth-message" role="status"></p><div class="dialog-footer"><button class="secondary-button" value="cancel">Cancelar</button><button class="primary-button" id="auth-submit" value="submit">Entrar</button></div><button class="danger-button auth-logout" type="button" id="auth-logout" hidden>Sair da conta</button></form></dialog>
 
-  <dialog class="dialog compact-dialog" id="profile-dialog"><form method="dialog" class="dialog-card"><div class="dialog-heading"><h2>Perfil local</h2><button class="icon-button dialog-close" value="cancel" aria-label="Fechar">×</button></div><p class="field-help">Esta versão funciona sem conta. Seu histórico permanece neste navegador e não é sincronizado entre dispositivos.</p><label class="field-label" for="display-name">Como devemos chamar você?</label><input class="text-field" id="display-name" maxlength="32" placeholder="Seu nome"><div class="dialog-footer"><button class="secondary-button" value="cancel">Cancelar</button><button class="primary-button" id="profile-save" value="save">Salvar</button></div></form></dialog>
+  <dialog class="dialog compact-dialog" id="profile-dialog"><form method="dialog" class="dialog-card"><div class="dialog-heading"><h2>Perfil local</h2><button class="icon-button dialog-close" value="cancel" aria-label="Fechar"><span data-icon="close"></span></button></div><p class="field-help">Esta versão funciona sem conta. Seu histórico permanece neste navegador e não é sincronizado entre dispositivos.</p><label class="field-label" for="display-name">Como devemos chamar você?</label><input class="text-field" id="display-name" maxlength="32" placeholder="Seu nome"><div class="dialog-footer"><button class="secondary-button" value="cancel">Cancelar</button><button class="primary-button" id="profile-save" value="save">Salvar</button></div></form></dialog>
 
   <dialog class="dialog workspace-dialog" id="workspace-dialog">
     <div class="dialog-card">
-      <div class="dialog-heading"><div><div class="dialog-eyebrow">ESPAÇO MOROK</div><h2 id="workspace-title">Biblioteca</h2></div><button class="icon-button" id="workspace-close" type="button" aria-label="Fechar">×</button></div>
+      <div class="dialog-heading"><div><div class="dialog-eyebrow">ESPAÇO MOROK</div><h2 id="workspace-title">Biblioteca</h2></div><button class="icon-button" id="workspace-close" type="button" aria-label="Fechar"><span data-icon="close"></span></button></div>
       <div class="workspace-page" id="workspace-page"></div>
     </div>
   </dialog>
   <dialog class="dialog compact-dialog" id="search-dialog">
     <form method="dialog" class="dialog-card search-card">
-      <div class="dialog-heading"><div><div class="dialog-eyebrow">HISTÓRICO</div><h2>Buscar conversas</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar">×</button></div>
+      <div class="dialog-heading"><div><div class="dialog-eyebrow">HISTÓRICO</div><h2>Buscar conversas</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar"><span data-icon="close"></span></button></div>
       <input class="text-field" id="conversation-search-input" type="search" maxlength="120" placeholder="Buscar por título ou mensagem..." autocomplete="off">
       <div class="search-results" id="conversation-search-results"><div class="workspace-empty">Digite para pesquisar suas conversas.</div></div>
       <div class="dialog-footer"><button class="secondary-button dialog-close" value="cancel">Fechar</button></div>
@@ -145,7 +145,7 @@
   </dialog>
   <dialog class="dialog compact-dialog" id="confirm-dialog">
     <form method="dialog" class="dialog-card">
-      <div class="dialog-heading"><div><div class="dialog-eyebrow">CONFIRMAÇÃO</div><h2 id="confirm-title">Confirmar ação</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar">×</button></div>
+      <div class="dialog-heading"><div><div class="dialog-eyebrow">CONFIRMAÇÃO</div><h2 id="confirm-title">Confirmar ação</h2></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar"><span data-icon="close"></span></button></div>
       <p class="field-help" id="confirm-message"></p>
       <div class="dialog-footer"><button class="secondary-button" id="confirm-cancel" type="button">Cancelar</button><button class="danger-button" id="confirm-accept" type="button">Confirmar</button></div>
     </form>
