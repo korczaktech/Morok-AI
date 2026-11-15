@@ -61,9 +61,10 @@ print("Pergunta selecionada: " + question, flush=True)
 while not all(completed.get(model, False) for model in selected):
     if time.monotonic() >= deadline:
         break
-    for model_index, (model, key) in enumerate(models):
-        if model not in selected or completed.get(model, False):
+    for model_index, model in enumerate(selected):
+        if completed.get(model, False):
             continue
+        key = next(key for name, key in models if name == model)
         remaining = int(deadline - time.monotonic())
         if remaining <= 0:
             break
