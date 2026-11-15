@@ -349,6 +349,18 @@
     if(session?.user?.email) state.displayName=session.user.email.split('@')[0].slice(0,32);
     updateProfile(); persist();
   }
+  async function refreshAuthSession() {
+    const session=state.authSession;
+    if(!session?.refresh_token) return;
+    const expiresAt=Number(session.expires_at||0);
+    if(expiresAt && expiresAt>Date.now()/1000+90) return;
+    try {
+      const refreshed=await supabaseAuth('token?grant_type=refresh_token',{body:{refresh_token:session.refresh_token}});
+      saveAuthSession(refreshed);
+    } catch {
+      saveAuthSession(null);
+    }
+  }
   async function submitAuth() {
     const email=$('#auth-email').value.trim(); const password=$('#auth-password').value;
     const message=$('#auth-message'); message.className='auth-message'; message.textContent='Conectando ao Supabase…';
@@ -421,5 +433,5 @@ s=s.replace("$('#generation-back').addEventListener('click',()=>{$('#model-subme
     if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='o'){event.preventDefault();createConversation();}
   });
   matchMedia('(prefers-color-scheme: light)').addEventListener?.('change',()=>{if(state.theme==='system')applyTheme();});
-  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); checkHealth();
+  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); checkHealth(); refreshAuthSession();
 })();
