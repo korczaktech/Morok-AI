@@ -46,6 +46,19 @@ void test_byte_encoding() {
             "multibyte UTF-8 bytes must retain explicit lexical context");
 }
 
+void test_lexical_boundaries_change_recurrent_state() {
+    using namespace morok::model;
+    G1Parameters parameters{};
+    initialize_g1_parameters(parameters, 8181);
+    G1State word_start{};
+    G1State word_continuation{};
+    advance_g1_state(parameters, word_start, static_cast<std::uint8_t>('a'), true, false);
+    advance_g1_state(parameters, word_continuation, static_cast<std::uint8_t>('a'), false, false);
+    require(word_start.fast != word_continuation.fast ||
+            word_start.slow != word_continuation.slow,
+            "lexical boundary signals must influence recurrent prediction state");
+}
+
 void test_zero_parameters_produce_uniform_distribution() {
     using namespace morok::model;
     G1Parameters parameters{};
@@ -179,6 +192,7 @@ void test_recurrent_state_changes_with_input() {
 int main() {
     try {
         test_byte_encoding();
+        test_lexical_boundaries_change_recurrent_state();
         test_zero_parameters_produce_uniform_distribution();
         test_joint_distribution_normalizes_with_conditional_dependencies();
         test_state_update_and_prediction_are_deterministic();
