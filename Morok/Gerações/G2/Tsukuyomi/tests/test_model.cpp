@@ -5,9 +5,14 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <limits>
 #include <vector>
+
+// Os testes precisam continuar ativos também em builds Release (-DNDEBUG).
+#undef assert
+#define assert(condition) do { if (!(condition)) std::abort(); } while (false)
 
 int main() {
     using namespace morok::g2::tsukuyomi;
