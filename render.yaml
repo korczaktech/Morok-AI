@@ -1,22 +1,26 @@
-services:
-  - type: web
-    name: morok-accounts-api
-    runtime: node
-    plan: free
-    region: virginia
-    rootDir: Site/Back-End
-    buildCommand: npm install
-    startCommand: npm start
-    healthCheckPath: /health
-    autoDeploy: true
-    envVars:
-      - key: MONGODB_URI
-        sync: false
-      - key: MONGODB_DATABASE
-        value: Contas
-      - key: MONGODB_COLLECTION
-        value: morok_accounts
-      - key: JWT_SECRET
-        generateValue: true
-      - key: CORS_ORIGINS
-        value: https://korczaktech.github.io
+projects:
+  - name: My Projects
+    environments:
+      - name: production
+        services:
+          - type: web
+            name: Morok-AI
+            runtime: node
+            plan: free
+            region: virginia
+            rootDir: Site/Back-End
+            buildCommand: npm install
+            startCommand: npm start
+            healthCheckPath: /health
+            autoDeployTrigger: commit
+            envVars:
+              - key: MONGODB_URI
+                sync: false
+              - key: MONGODB_DATABASE
+                value: Contas
+              - key: MONGODB_COLLECTION
+                value: morok_accounts
+              - key: JWT_SECRET
+                generateValue: true
+              - key: CORS_ORIGINS
+                value: https://morokai.korczaktech.com.br
