@@ -6,8 +6,8 @@ on:
     paths:
       - "include/**"
       - "src/**"
-      - "G1/**"
-      - "G2/**"
+      - "Gerações/G1/**"
+      - "Gerações/G2/**"
       - "tests/**"
       - "CMakeLists.txt"
       - "CMakePresets.json"
@@ -17,8 +17,8 @@ on:
     paths:
       - "include/**"
       - "src/**"
-      - "G1/**"
-      - "G2/**"
+      - "Gerações/G1/**"
+      - "Gerações/G2/**"
       - "tests/**"
       - "CMakeLists.txt"
       - "CMakePresets.json"
