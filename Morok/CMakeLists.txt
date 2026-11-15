@@ -175,7 +175,8 @@ endif()
 
 if(MOROK_BUILD_APPS)
     install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
-        morok_train morok_benchmark morok_generate morok_reinforce morok_complete morok_g1_profile_evaluate RUNTIME DESTINATION bin)
+        morok_train morok_benchmark morok_generate morok_reinforce morok_complete morok_g1_profile_evaluate
+        morok_g2_tsukuyomi_train morok_g2_tsukuyomi_generate RUNTIME DESTINATION bin)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
     endif()
