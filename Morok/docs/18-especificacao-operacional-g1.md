@@ -357,7 +357,7 @@ Todos os inteiros são little-endian. Cabeçalho fixo:
 - format_version: u16 = 1;
 - header_size: u16;
 - flags: u32; bit 0 indica estados AdamW presentes; bit 1 indica estado RNG presente; bit 2 indica cursor de treinamento presente;
-- architecture_id: 32 bytes identificando RLAH-G1-fastslow-d11-bit8;
+- architecture_id: 32 bytes identificando RLAH-G1-fastslow-d11-lex-eos;
 - parameter_count: u32, deve ser 1000;
 - dtype: u8 = 1 (FP32);
 - reserved: três bytes zero;
@@ -406,7 +406,7 @@ A serialização, inventário e carregamento usam esta ordem exata, row-major pa
 13. v: 22;
 14. θ_len: sete valores na ordem de comprimentos 2,3,4,5,6,7,8.
 
-Soma: 506 + 253 + 212 + 29 = 1.000. O carregador deverá verificar cada segmento e o total antes de copiar qualquer parâmetro. architecture_id é a string ASCII `RLAH-G1-fastslow-d11-bit8`, completada com bytes NUL até 32 bytes. FP32 é IEEE-754 binary32.
+Soma: 506 + 253 + 212 + 29 = 1.000. O carregador deverá verificar cada segmento e o total antes de copiar qualquer parâmetro. architecture_id é a string ASCII `RLAH-G1-fastslow-d11-lex-eos`, completada com bytes NUL até 32 bytes. FP32 é IEEE-754 binary32.
 
 ## 18.21 Precisões dos formatos e retomada
 
