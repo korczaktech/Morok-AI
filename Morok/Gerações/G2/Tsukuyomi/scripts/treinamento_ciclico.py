@@ -71,17 +71,35 @@ def evaluate_set(generator: Path, checkpoint: Path,
 
 
 def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
+    correct_items = []
+    incorrect_items = []
+    for index, (dialogue, result) in enumerate(zip(dialogues, results), start=1):
+        question, expected = dialogue
+        answer, correct, score = result
+        item = (index, question, expected, answer, score)
+        (correct_items if correct else incorrect_items).append(item)
+
     report.write(f"## {title}\n\n")
-    for index, ((question, expected), (answer, correct, score)) in enumerate(
-        zip(dialogues, results), start=1
+    report.write(f"- Respostas corretas: {len(correct_items)}\n")
+    report.write(f"- Respostas incorretas: {len(incorrect_items)}\n")
+    report.write(f"- Total avaliado: {len(results)}\n\n")
+
+    for heading, items, verdict in (
+        ("Respostas corretas", correct_items, "CORRETA"),
+        ("Respostas incorretas", incorrect_items, "INCORRETA"),
     ):
-        verdict = "CORRETA" if correct else "INCORRETA"
-        report.write(f"### {index}. {question}\n\n")
-        report.write(f"- Resposta gerada: {answer or '(vazia)'}\n")
-        report.write(f"- Gabarito: {expected}\n")
-        report.write(f"- Correspondência lexical: {score:.1%}\n")
-        report.write(f"- Resultado: **{verdict}**\n\n")
-    return sum(result[1] for result in results), len(results)
+        report.write(f"### {heading} ({len(items)})\n\n")
+        if not items:
+            report.write("Nenhuma resposta nesta categoria.\n\n")
+            continue
+        for index, question, expected, answer, score in items:
+            report.write(f"#### {index}. {question}\n\n")
+            report.write(f"- Resposta gerada: {answer or '(vazia)'}\n")
+            report.write(f"- Gabarito: {expected}\n")
+            report.write(f"- Correspondência lexical: {score:.1%}\n")
+            report.write(f"- Resultado: **{verdict}**\n\n")
+
+    return len(correct_items), len(results)
 
 
 def main() -> int:
