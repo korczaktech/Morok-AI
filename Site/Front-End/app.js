@@ -3,7 +3,7 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const STORAGE_KEY = 'morok.web.state.v2';
-  const AUTH_API_URL = 'https://morok-accounts-api.onrender.com';
+  const AUTH_API_URL = 'https://morok-ai.onrender.com';
   const MAX_LOCAL_BYTES = 3_500_000;
   const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: '', authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
   const el = {
