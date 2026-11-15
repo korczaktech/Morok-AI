@@ -60,7 +60,11 @@ void initialize(Model& model, std::uint64_t seed);
     std::size_t max_new_bytes);
 [[nodiscard]] bool save_checkpoint(const Model& model,
                                    const std::filesystem::path& path);
-[[nodiscard]] bool save_training_state(const TrainingState& state,\n                                       const std::filesystem::path& path);\n[[nodiscard]] bool load_training_state(TrainingState& state,\n                                       const std::filesystem::path& path);\n[[nodiscard]] bool load_checkpoint(Model& model,
+[[nodiscard]] bool save_training_state(const TrainingState& state,
+                                       const std::filesystem::path& path);
+[[nodiscard]] bool load_training_state(TrainingState& state,
+                                       const std::filesystem::path& path);
+[[nodiscard]] bool load_checkpoint(Model& model,
                                    const std::filesystem::path& path);
 
 } // namespace morok::g2::tsukuyomi
