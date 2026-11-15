@@ -341,6 +341,19 @@ int main() {
         assert(truncated_one.parameters != truncated_full.parameters);
     }
 
+    // Quando o histórico excede 13 etapas, o gradiente não atravessa o limite TBPTT.
+    {
+        const std::string long_dialogue = "U: Q\\nIA:abcdefghijklmnop";
+        const std::vector<std::uint8_t> long_bytes(
+            long_dialogue.begin(), long_dialogue.end());
+        assert(compute_target_gradient(
+            model, long_bytes, long_bytes.size() - 1, analytic));
+        for (std::size_t i = 9216; i < 9632; ++i)
+            assert(std::abs(analytic[i]) < 1.0e-8F);
+        for (std::size_t i = 9984; i < 10000; ++i)
+            assert(std::abs(analytic[i]) < 1.0e-8F);
+    }
+
     // O treinamento supervisionado atualiza somente os bytes marcados como resposta.
     const std::array<std::uint8_t, 9> dialogue{
         'U', ':', 'Q', '\n', 'I', 'A', ':', 'A', '\n'
