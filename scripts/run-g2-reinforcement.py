@@ -67,11 +67,14 @@ def main():
  ap.add_argument("--trainer",type=Path,default=ROOT/"build/morok-train-g2"); ap.add_argument("--generator",type=Path,default=ROOT/"build/morok-generate-g2")
  ap.add_argument("--reinforcer",type=Path,default=ROOT/"build/morok-reinforce-g2"); ap.add_argument("--bootstrap-epochs",type=int,default=10000)
  ap.add_argument("--attempts",type=int,default=3); ap.add_argument("--questions",nargs="+",choices=sorted(TASK_CONCEPTS),default=list(TASK_CONCEPTS)); ap.add_argument("--learning-rate",type=float,default=.001)
- ap.add_argument("--results-file",type=Path,default=ROOT/"artifacts/reinforcement-g2/attempt-results.txt")\n ap.add_argument("--memory-replay-limit",type=int,default=32,help="number of latest persisted experiences to rehearse (0 disables replay)")\n ap.add_argument("--memory-replay-steps",type=int,default=25,help="optimizer steps per remembered experience")
+ ap.add_argument("--results-file",type=Path,default=ROOT/"artifacts/reinforcement-g2/attempt-results.txt")
+ ap.add_argument("--memory-replay-limit",type=int,default=32,help="number of latest persisted experiences to rehearse (0 disables replay)")
+ ap.add_argument("--memory-replay-steps",type=int,default=25,help="optimizer steps per remembered experience")
  a=ap.parse_args()
  a.results_file.parent.mkdir(parents=True,exist_ok=True)
  if not 1<=a.attempts<=10 or not 1<=a.bootstrap_epochs<=MAX_BOOTSTRAP_EPOCHS:raise ValueError(f"attempts must be in [1,10] and bootstrap epochs in [1,{MAX_BOOTSTRAP_EPOCHS}]")
- if not a.questions or len(a.questions)!=len(set(a.questions)):raise ValueError("select at least one unique question")\n if not 0<=a.memory_replay_limit<=256 or not 1<=a.memory_replay_steps<=1000:raise ValueError("memory replay limit must be in [0,256] and replay steps in [1,1000]")
+ if not a.questions or len(a.questions)!=len(set(a.questions)):raise ValueError("select at least one unique question")
+ if not 0<=a.memory_replay_limit<=256 or not 1<=a.memory_replay_steps<=1000:raise ValueError("memory replay limit must be in [0,256] and replay steps in [1,1000]")
  if not a.database.is_file():raise FileNotFoundError(a.database)
  db=json.loads(a.database.read_text(encoding="utf-8"))
  if db.get("schema_version")!=1 or {q["id"] for q in db["questions"]}!=set(TASK_CONCEPTS):raise ValueError("invalid G2 feedback database")
@@ -92,9 +95,26 @@ def main():
   if not inference_a.is_file() or not inference_b.is_file():
    raise RuntimeError("G2 bootstrap did not produce both expert checkpoints")
  selected_questions=select_questions(db["questions"],a.questions)
+ for key in ("memory_replay_experiences","memory_replay_updates","memory_replay_skipped"):db["totals"].setdefault(key,0)
  run_id=os.environ.get("GITHUB_RUN_ID","local"); run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT","1"); results=[]
  with tempfile.TemporaryDirectory(prefix="morok-g2-reinforcement-",dir=a.checkpoint.parent) as td:
   tmp=Path(td)
+  # Rehearse persisted episodes before sampling a new answer, even for one attempt.
+  memory=build_memory_replay(db["episodes"],a.memory_replay_limit)
+  memory_updates=0
+  for index,experience in enumerate(memory,1):
+   memory_prompt=tmp/f"memory-{index}-prompt.txt"
+   memory_target=tmp/f"memory-{index}-target.txt"
+   memory_prompt.write_text(experience["prompt"],encoding="utf-8")
+   memory_target.write_text(experience["target"],encoding="utf-8")
+   replay_report=json.loads(run([str(a.reinforcer),str(checkpoint),str(memory_prompt),str(memory_target),
+                                 str(experience["reward"]),str(a.learning_rate),str(a.memory_replay_steps)]))
+   improved=replay_report.get("target_loss_after",float("inf"))<replay_report.get("target_loss_before",float("-inf"))
+   if improved:memory_updates+=1
+   else:db["totals"]["memory_replay_skipped"]+=1
+  db["totals"]["memory_replay_experiences"]+=len(memory)
+  db["totals"]["memory_replay_updates"]+=memory_updates
+  atomic(a.database,db)
   for i in range(a.attempts):
    q=selected_questions[i%len(selected_questions)]; prompt=tmp/"prompt.txt"; answer=tmp/"answer.txt"; answer_file=answer; prompt.write_text(q["prompt"],encoding="utf-8")
    before=digest(inference_a)+digest(inference_b)
