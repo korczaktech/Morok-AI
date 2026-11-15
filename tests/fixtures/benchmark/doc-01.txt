@@ -1,1 +1,2 @@
-Morok AI pesquisa modelos pequenos. Aprender linguagem exige dados, testes e medidas.\n
+Usuario: O ceu e azul?
+IA: Sim, o ceu e azul
