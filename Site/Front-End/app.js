@@ -214,7 +214,6 @@
     if (conversation.title === 'Nova conversa') conversation.title = titleFrom(raw || attachments[0]?.name || 'Arquivo');
     conversation.updatedAt = now(); state.attachments = []; renderAttachments(); el.input.value = ''; resizeInput();
     persist(); renderHistory(); renderConversation();
-    void syncConversation(conversation);
     await requestAnswer(conversation, prompt);
   }
   async function requestAnswer(conversation, prompt) {
