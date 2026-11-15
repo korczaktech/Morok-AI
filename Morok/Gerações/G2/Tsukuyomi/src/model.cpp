@@ -112,7 +112,10 @@ std::array<float, kHiddenSize> advance_recurrent_state(
         for (std::size_t k = 0; k < kHiddenSize; ++k)
             value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
                 (at(model, embedding_base + k) + previous[k]);
-        next[h] = std::tanh(value);
+        const float candidate = std::tanh(value);
+        const float retention = 1.0F / (1.0F + std::exp(-value));
+        next[h] = retention * previous[h] +
+                  (1.0F - retention) * candidate;
     }
     return next;
 }
@@ -136,6 +139,8 @@ std::array<float, kVocabularySize> logits_for_state(
 struct RecurrentStep {
     std::array<float, kHiddenSize> previous_state{};
     std::array<float, kHiddenSize> activation{};
+    std::array<float, kHiddenSize> candidate{};
+    std::array<float, kHiddenSize> retention{};
     std::uint8_t byte{0};
 };
 
@@ -184,7 +189,18 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
         RecurrentStep step;
         step.previous_state = state;
         step.byte = context[position];
-        step.activation = advance_recurrent_state(model, state, step.byte);
+        const auto embedding_base = kEmbeddingOffset +
+            static_cast<std::size_t>(step.byte) * kHiddenSize;
+        for (std::size_t h = 0; h < kHiddenSize; ++h) {
+            float value = at(model, kHiddenBiasOffset + h);
+            for (std::size_t k = 0; k < kHiddenSize; ++k)
+                value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
+                    (at(model, embedding_base + k) + state[k]);
+            step.candidate[h] = std::tanh(value);
+            step.retention[h] = 1.0F / (1.0F + std::exp(-value));
+            step.activation[h] = step.retention[h] * state[h] +
+                (1.0F - step.retention[h]) * step.candidate[h];
+        }
         state = step.activation;
         if (cache.step_count == bptt_steps) {
             for (std::size_t i = 1; i < cache.step_count; ++i) cache.steps[i - 1] = cache.steps[i];
@@ -392,8 +408,16 @@ bool accumulate_target_gradient(const Model& model, std::span<const std::uint8_t
         const RecurrentStep& step = cache.steps[reverse - 1];
         std::array<float, kHiddenSize> pre_gradient{}, previous_gradient{};
         for (std::size_t h = 0; h < kHiddenSize; ++h) {
-            pre_gradient[h] = state_gradient[h] *
-                (1.0F - step.activation[h] * step.activation[h]);
+            const float gate = step.retention[h];
+            const float candidate = step.candidate[h];
+            const float previous = step.previous_state[h];
+            const float d_candidate = 1.0F - candidate * candidate;
+            const float d_gate = gate * (1.0F - gate);
+            const float d_state_d_pre =
+                (1.0F - gate) * d_candidate +
+                d_gate * (previous - candidate);
+            pre_gradient[h] = state_gradient[h] * d_state_d_pre;
+            previous_gradient[h] += state_gradient[h] * gate;
             gradient[kHiddenBiasOffset + h] += pre_gradient[h];
         }
         const auto embedding_base = kEmbeddingOffset +
@@ -607,7 +631,7 @@ bool save_training_state(const TrainingState& state,
                          const std::filesystem::path& path) {
     if (path.empty()) return false;
     constexpr char magic[8] = {'M','O','R','O','K','A','D','M'};
-    constexpr std::uint32_t version = 4;
+    constexpr std::uint32_t version = 5;
     constexpr std::uint32_t count = static_cast<std::uint32_t>(kParameterCount);
     std::uint64_t hash = 14695981039346656037ULL;
     const auto update_hash = [&hash](const unsigned char* data, std::size_t size) {
@@ -651,7 +675,7 @@ bool load_training_state(TrainingState& state,
     stream.read(reinterpret_cast<char*>(&step), sizeof(step));
     stream.read(reinterpret_cast<char*>(&expected_hash), sizeof(expected_hash));
     if (!stream || std::memcmp(magic, "MOROKADM", 8) != 0 ||
-        version != 4 || count != kParameterCount)
+        version != 5 || count != kParameterCount)
         return false;
     candidate.step = step;
     stream.read(reinterpret_cast<char*>(candidate.first_moment.data()),
