@@ -1,0 +1,83 @@
+name: Fuzzing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "include/**"
+      - "src/**"
+      - "G1/**"
+      - "tests/fuzz/**"
+      - "tests/fixtures/fuzz/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - ".github/workflows/fuzzing.yml"
+  pull_request:
+    paths:
+      - "include/**"
+      - "src/**"
+      - "G1/**"
+      - "tests/fuzz/**"
+      - "tests/fixtures/fuzz/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - ".github/workflows/fuzzing.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzzing-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  libfuzzer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang lld ninja-build libsqlite3-dev
+
+      - name: Configure Clang fuzzers
+        run: >-
+          cmake -S . -B build/fuzz -G Ninja
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DCMAKE_CXX_COMPILER=clang++
+          -DMOROK_BUILD_TESTS=OFF
+          -DMOROK_BUILD_APPS=OFF
+          -DMOROK_BUILD_G2=OFF
+          -DMOROK_BUILD_FUZZERS=ON
+
+      - name: Build fuzz targets
+        run: cmake --build build/fuzz --parallel 2
+
+      - name: Prepare seed corpora
+        run: |
+          mkdir -p build/fuzz-corpus/utf8 build/fuzz-corpus/rlah build/fuzz-corpus/checkpoint
+          cp tests/fixtures/fuzz/rlah-valid.hex build/fuzz-corpus/utf8/
+          cp tests/fixtures/fuzz/rlah-valid.hex build/fuzz-corpus/rlah/
+          cp G1/shared/tests/fuzz/checkpoint-valid.hex build/fuzz-corpus/checkpoint/
+
+      - name: Fuzz UTF-8 parser
+        run: build/fuzz/morok_fuzz_utf8 build/fuzz-corpus/utf8 -max_total_time=45 -timeout=5 -max_len=65536
+
+      - name: Fuzz RLAH decoder
+        run: build/fuzz/morok_fuzz_rlah_decode build/fuzz-corpus/rlah -max_total_time=45 -timeout=5 -max_len=65536
+
+      - name: Fuzz G1 checkpoint loader
+        run: build/fuzz/morok_fuzz_checkpoint build/fuzz-corpus/checkpoint -max_total_time=45 -timeout=5 -max_len=1048576
+
+      - name: Upload fuzz artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: morok-fuzz-corpora
+          path: build/fuzz-corpus/
+          if-no-files-found: ignore
+          retention-days: 7

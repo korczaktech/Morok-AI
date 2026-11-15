@@ -1,0 +1,72 @@
+name: G1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "G1/**"
+      - "include/**"
+      - "src/**"
+      - "tests/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - ".github/workflows/g1.yml"
+  pull_request:
+    paths:
+      - "G1/**"
+      - "include/**"
+      - "src/**"
+      - "tests/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - ".github/workflows/g1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  g1-build-test-training:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build libsqlite3-dev
+
+      - name: Configure G1 without G2
+        run: >-
+          cmake -S . -B build/g1 -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DMOROK_BUILD_G2=OFF
+          -DMOROK_BUILD_TESTS=ON
+          -DMOROK_BUILD_APPS=ON
+
+      - name: Build G1
+        run: cmake --build build/g1 --parallel 2
+
+      - name: Test G1 and shared core
+        run: ctest --test-dir build/g1 --output-on-failure --parallel 2
+
+      - name: First-training and resume smoke test
+        run: |
+          MOROK_TRAIN_BIN=./build/g1/morok-train \
+          MOROK_GENERATE_BIN=./build/g1/morok_generate \
+            bash G1/scripts/first-training.sh artifacts/g1-first-training 2 42
+
+      - name: Upload G1 training artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: morok-g1-training
+          path: artifacts/g1-first-training/
+          if-no-files-found: ignore
+          retention-days: 14
