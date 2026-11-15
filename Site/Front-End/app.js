@@ -15,6 +15,19 @@
     search: $('#search-dialog'), confirm: $('#confirm-dialog')
   };
 
+  const iconPaths = {"brand":"<path d=\"M4 18V6l5 8 3-5 3 5 5-8v12\"/><path d=\"M4 6h4M16 6h4\"/>","close":"<path d=\"m6 6 12 12M18 6 6 18\"/>","new-chat":"<path d=\"M12 4v16M4 12h16\"/><path d=\"M5 5h3M16 19h3\"/>","conversations":"<rect x=\"4\" y=\"5\" width=\"13\" height=\"15\" rx=\"2\"/><path d=\"M8 3h10a2 2 0 0 1 2 2v12M7 9h7M7 13h7M7 17h4\"/>","search":"<circle cx=\"10.8\" cy=\"10.8\" r=\"6.4\"/><path d=\"m16 16 4 4M8.5 10.8h4.6M10.8 8.5v4.6\"/>","images":"<rect x=\"3.5\" y=\"4.5\" width=\"17\" height=\"15\" rx=\"2.5\"/><circle cx=\"9\" cy=\"9.5\" r=\"1.7\"/><path d=\"m5 17 5-4 3 2 3.5-4 3.5 4\"/>","tasks":"<rect x=\"4\" y=\"4\" width=\"16\" height=\"17\" rx=\"2.5\"/><path d=\"m7.5 9 1.5 1.5 3-3M13.5 9H17M7.5 15l1.5 1.5 3-3M13.5 15H17\"/>","library":"<path d=\"M5 4.5h11a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2z\"/><path d=\"M5 7H3v12a2 2 0 0 0 2 2h13M8.5 9h6M8.5 13h6M8.5 17h4\"/>","plugins":"<path d=\"M9 4v4M15 4v4M8 8h8v3a3 3 0 0 0 3 3h1v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3h1a3 3 0 0 0 3-3z\"/><path d=\"M12 12v2\"/>","more":"<circle cx=\"5\" cy=\"12\" r=\"1.2\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"12\" cy=\"12\" r=\"1.2\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"19\" cy=\"12\" r=\"1.2\" fill=\"currentColor\" stroke=\"none\"/>","chevron":"<path d=\"m6 9 6 6 6-6\"/>","location":"<path d=\"M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z\"/><circle cx=\"12\" cy=\"10\" r=\"2.2\"/><path d=\"M12 3v2\"/>","personalization":"<path d=\"M12 3 20 8v8l-8 5-8-5V8z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 3v6M20 8l-5 3M20 16l-5-3M4 16l5-3M4 8l5 3\"/>","instructions":"<path d=\"M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z\"/><path d=\"M8 9h8M8 13h8M8 17h5\"/>","refresh":"<path d=\"M19 8a7.5 7.5 0 0 0-13.2-2L4 8\"/><path d=\"M4 4v4h4M5 16a7.5 7.5 0 0 0 13.2 2L20 16\"/><path d=\"M20 20v-4h-4\"/>","menu":"<path d=\"M4 6h16M4 12h16M4 18h16\"/><circle cx=\"4\" cy=\"6\" r=\".8\" fill=\"currentColor\"/><circle cx=\"4\" cy=\"18\" r=\".8\" fill=\"currentColor\"/>","model":"<path d=\"M12 2.8 20 7v10l-8 4.2L4 17V7z\"/><path d=\"m8 9 4-2 4 2-4 2zM8 9v5l4 2 4-2V9M12 11v5\"/>","check":"<path d=\"m4.5 12.5 5 5L20 7\"/>","back":"<path d=\"M19 12H5M11 6l-6 6 6 6\"/>","settings":"<path d=\"M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18\"/><circle cx=\"12\" cy=\"12\" r=\"5.2\"/><circle cx=\"12\" cy=\"12\" r=\"1.8\"/>","welcome":"<path d=\"M12 2.5 14.5 9.5 21.5 12l-7 2.5-2.5 7-2.5-7L2.5 12l7-2.5z\"/><circle cx=\"12\" cy=\"12\" r=\"2.2\"/>","learn":"<path d=\"M4 5.5c3.2-1.4 5.9-.9 8 1.1 2.1-2 4.8-2.5 8-1.1v12c-3.2-1.4-5.9-.9-8 1.1-2.1-2-4.8-2.5-8-1.1z\"/><path d=\"M12 6.6v12M7 9h2M7 12h2M15 9h2M15 12h2\"/>","plan":"<path d=\"M4 17.5 17.5 4M8 4h10v10\"/><path d=\"M4 8v12h12\"/>","write":"<path d=\"m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5z\"/><path d=\"m13.8 6.7 3.5 3.5M4 4h6\"/>","attach":"<path d=\"m8 12.5 6.8-6.8a3.2 3.2 0 0 1 4.5 4.5l-8.5 8.5a5 5 0 0 1-7.1-7.1l8.1-8.1\"/><path d=\"m7.5 14 7.8-7.8\"/>","send":"<path d=\"M3 11.5 21 3l-5.5 18-3.2-7.3z\"/><path d=\"M12.3 13.7 21 3\"/>","stop":"<rect x=\"5\" y=\"5\" width=\"14\" height=\"14\" rx=\"2\"/>","file":"<path d=\"M6 3.5h8l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20z\"/><path d=\"M14 3.5V8h4M9 13h6M9 16.5h6\"/>","copy":"<rect x=\"8\" y=\"7\" width=\"11\" height=\"13\" rx=\"2\"/><path d=\"M16 7V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2\"/>","regenerate":"<path d=\"M19 8a7.5 7.5 0 0 0-13.2-2L4 8\"/><path d=\"M4 4v4h4M5 16a7.5 7.5 0 0 0 13.2 2L20 16\"/><path d=\"M20 20v-4h-4\"/>","tsukuyomi":"<path d=\"M16.8 3.5a8.5 8.5 0 1 0 3.7 15.8A9.5 9.5 0 0 1 16.8 3.5Z\"/><path d=\"m7 8 1.2 2.4L11 11l-2.8.8L7 14l-1.1-2.2L3.5 11l2.4-.6z\"/>","apollo":"<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"m12 5 2.1 5.1L19 12l-4.9 1.9L12 19l-2.1-5.1L5 12l4.9-1.9z\"/>","mokosh":"<path d=\"M12 3 20 8v8l-8 5-8-5V8z\"/><path d=\"M12 3v18M4 8l16 8M20 8 4 16\"/>"};
+  function svgIcon(name, className = 'ui-icon') {
+    const paths = iconPaths[name];
+    if (!paths) return '';
+    return '<svg class="' + className + '" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + paths + '</svg>';
+  }
+  function hydrateIcons(root = document) {
+    root.querySelectorAll('[data-icon]').forEach(node => {
+      const name = node.dataset.icon;
+      node.innerHTML = svgIcon(name, 'ui-icon ui-icon-' + name);
+      node.removeAttribute('data-icon');
+    });
+  }
   function id() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)); }
   function now() { return new Date().toISOString(); }
   function formatTime(value) { try { return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); } catch { return ''; } }
@@ -76,7 +89,7 @@
       const item = document.createElement('div'); item.className = 'history-item' + (conversation.id === state.activeId ? ' selected' : ''); item.dataset.id = conversation.id;
       const title = document.createElement('button'); title.type = 'button'; title.className = 'history-title'; title.textContent = conversation.title; title.title = conversation.title;
       title.addEventListener('click', () => openConversation(conversation.id));
-      const menu = document.createElement('button'); menu.type = 'button'; menu.className = 'history-menu'; menu.textContent = '···'; menu.title = 'Opções da conversa'; menu.setAttribute('aria-label', 'Opções de ' + conversation.title);
+      const menu = document.createElement('button'); menu.type = 'button'; menu.className = 'history-menu'; menu.innerHTML = svgIcon('more'); menu.title = 'Opções da conversa'; menu.setAttribute('aria-label', 'Opções de ' + conversation.title);
       menu.addEventListener('click', event => { event.stopPropagation(); openContextMenu(event, conversation.id); });
       item.append(title, menu); el.history.append(item);
     }
@@ -104,7 +117,7 @@
     const article = document.createElement('article');
     article.className = 'message ' + (message.role === 'user' ? 'user' : 'assistant') + (message.error ? ' message-error' : '');
     article.dataset.messageId = message.id;
-    const avatar = document.createElement('div'); avatar.className = 'message-avatar'; avatar.textContent = message.role === 'user' ? initials(state.displayName) : 'm';
+    const avatar = document.createElement('div'); avatar.className = 'message-avatar'; if (message.role === 'user') avatar.textContent = initials(state.displayName); else avatar.innerHTML = svgIcon('brand');
     const content = document.createElement('div'); content.className = 'message-content';
     const meta = document.createElement('div'); meta.className = 'message-meta';
     const name = document.createElement('span'); name.className = 'message-name'; name.textContent = message.role === 'user' ? (state.displayName || 'Você') : 'Morok';
@@ -114,16 +127,16 @@
     content.append(meta,text);
     if (message.attachments?.length) {
       const files = document.createElement('div'); files.className = 'message-attachments';
-      message.attachments.forEach(file => { const chip = document.createElement('div'); chip.className = 'message-file'; chip.textContent = '▧ ' + file.name; files.append(chip); });
+      message.attachments.forEach(file => { const chip = document.createElement('div'); chip.className = 'message-file'; chip.innerHTML = svgIcon('file') + '<span>' + escapeHtml(file.name) + '</span>';  files.append(chip); });
       content.append(files);
     }
     if (message.role === 'assistant' && !message.error) {
       const actions = document.createElement('div'); actions.className = 'message-actions';
-      const copy = document.createElement('button'); copy.className = 'message-action'; copy.textContent = 'Copiar'; copy.addEventListener('click', () => copyText(message.content));
+      const copy = document.createElement('button'); copy.className = 'message-action'; copy.innerHTML = svgIcon('copy') + '<span>Copiar</span>';  copy.addEventListener('click', () => copyText(message.content));
       actions.append(copy);
       const conversation = activeConversation();
       if (conversation && conversation.messages.at(-1)?.id === message.id) {
-        const retry = document.createElement('button'); retry.className = 'message-action'; retry.textContent = 'Gerar novamente'; retry.addEventListener('click', regenerateLast); actions.append(retry);
+        const retry = document.createElement('button'); retry.className = 'message-action'; retry.innerHTML = svgIcon('regenerate') + '<span>Gerar novamente</span>';  retry.addEventListener('click', regenerateLast); actions.append(retry);
       }
       content.append(actions);
     }
@@ -242,7 +255,7 @@
     state.attachments.forEach((file,index) => {
       const chip = document.createElement('div'); chip.className = 'attachment-chip';
       const name = document.createElement('span'); name.textContent = file.name;
-      const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label','Remover ' + file.name);
+      const remove = document.createElement('button'); remove.type = 'button'; remove.innerHTML = svgIcon('close'); remove.setAttribute('aria-label','Remover ' + file.name);
       remove.addEventListener('click', () => { state.attachments.splice(index,1); renderAttachments(); });
       chip.append(name,remove); el.tray.append(chip);
     });
@@ -301,7 +314,7 @@
     }
   }
   function setBusy(busy) {
-    el.send.classList.toggle('busy',busy); el.send.querySelector('span').textContent = busy ? '■' : '↑';
+    el.send.classList.toggle('busy',busy); el.send.querySelector('span').innerHTML = svgIcon(busy ? 'stop' : 'send');
     el.send.setAttribute('aria-label',busy ? 'Interromper geração' : 'Enviar mensagem');
     el.send.disabled = !busy && !el.input.value.trim();
   }
@@ -363,7 +376,7 @@
       menu.className = 'site-select-menu';
       menu.setAttribute('role', 'listbox');
       menu.hidden = true;
-      const syncLabel = () => { trigger.textContent = select.selectedOptions[0]?.textContent || 'Selecione'; };
+      const syncLabel = () => { trigger.innerHTML = '<span>' + escapeHtml(select.selectedOptions[0]?.textContent || 'Selecione') + '</span>' + svgIcon('chevron'); };
       [...select.options].forEach(option => {
         const item = document.createElement('button');
         item.type = 'button';
@@ -616,7 +629,7 @@
     saveAuthSession(null); state.displayName='Visitante'; updateProfile(); persist(); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
   }
   // Start API health check before optional UI bindings.
-  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); enhanceSelects(); checkHealth(); refreshAuthSession();
+  hydrateIcons(); restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); enhanceSelects(); checkHealth(); refreshAuthSession();
 
   $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
   $('#auth-form').addEventListener('submit',event=>{if(event.submitter && event.submitter.id!=='auth-submit')return;event.preventDefault();submitAuth();});
@@ -706,5 +719,5 @@
     if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='o'){event.preventDefault();createConversation();}
   });
   matchMedia('(prefers-color-scheme: light)').addEventListener?.('change',()=>{if(state.theme==='system')applyTheme();});
-  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); refreshAuthSession();
+  hydrateIcons(); restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); refreshAuthSession();
 })();
