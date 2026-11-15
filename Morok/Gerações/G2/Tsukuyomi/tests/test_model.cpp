@@ -58,6 +58,41 @@ int main() {
     check_gradient(3, 9920); // escala
     check_gradient(3, 9952); // deslocamento
 
+    // O gradiente também deve refletir a pergunta inteira no protocolo U:/IA:.
+    const std::array<std::uint8_t, 13> question_gradient_sample{
+        'U', ':', 'A', 'B', 'C', 'D', 'E', 'F', 'G', '\\n', 'I', 'A', ':'
+    };
+    assert(compute_target_gradient(model, question_gradient_sample, 12, analytic));
+    {
+        constexpr float epsilon = 1.0e-3F;
+        Model plus = model;
+        Model minus = model;
+        plus.parameters[9216] += epsilon;
+        minus.parameters[9216] -= epsilon;
+        std::array<std::uint8_t, 13> one_target_mask{};
+        one_target_mask[12] = 1;
+        const double loss_plus = evaluate_loss(plus, question_gradient_sample, one_target_mask);
+        const double loss_minus = evaluate_loss(minus, question_gradient_sample, one_target_mask);
+        const double numerical = (loss_plus - loss_minus) / (2.0 * epsilon);
+        assert(std::abs(numerical - analytic[9216]) <=
+               3.0e-2 + 3.0e-2 * std::abs(numerical));
+    }
+
+    // Perguntas longas que diferem no início não podem colapsar ao mesmo contexto.
+    const std::string prompt_a = "U: A pergunta inteira tem contexto longo?\\nIA:";
+    const std::string prompt_b = "U: B pergunta inteira tem contexto longo?\\nIA:";
+    const std::vector<std::uint8_t> bytes_a(prompt_a.begin(), prompt_a.end());
+    const std::vector<std::uint8_t> bytes_b(prompt_b.begin(), prompt_b.end());
+    assert(forward(model, bytes_a).hidden != forward(model, bytes_b).hidden);
+
+    // A geração gulosa deve parar no primeiro terminador, sem produzir bytes extras.
+    Model newline_model;
+    newline_model.parameters[9664 + static_cast<std::size_t>('\\n')] = 10.0F;
+    const std::array<std::uint8_t, 3> generation_prompt{'I', 'A', ':'};
+    const auto stopped = generate(newline_model, generation_prompt, 32);
+    assert(stopped.size() == generation_prompt.size() + 1);
+    assert(stopped.back() == static_cast<std::uint8_t>('\\n'));
+
     // Hiperparâmetros inválidos não podem alterar o modelo.
     Model invalid_config_model = model;
     TrainingConfig invalid_config;
