@@ -265,15 +265,15 @@ def main() -> int:
             validation_score = 0.8 * (correct_count / max(1, total)) + 0.2 * mean_f1
             if not math.isfinite(validation_score):
                 raise RuntimeError("A pontuação de validação não é finita.")
-            if validation_score > best_validation_score + 1.0e-6:
-                save_best_state(checkpoint, optimizer_state,
-                                best_checkpoint, best_optimizer_state)
-                best_validation_score = validation_score
-                best_validation_correct = correct_count
-                best_validation_cycle = cycle
+            previous_best_score = best_validation_score
             learning_rate, best_validation_score, plateau_cycles, reduced = update_learning_rate(
                 learning_rate, best_validation_score, plateau_cycles, validation_score
             )
+            if validation_score > previous_best_score + 1.0e-6:
+                save_best_state(checkpoint, optimizer_state,
+                                best_checkpoint, best_optimizer_state)
+                best_validation_correct = correct_count
+                best_validation_cycle = cycle
             if reduced:
                 print(
                     f"Scheduler: validação estagnada; learning rate reduzido para {learning_rate:.6f}.",
