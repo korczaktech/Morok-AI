@@ -93,6 +93,37 @@ class G2ReinforcementTests(unittest.TestCase):
         self.assertEqual(replay[0]["target"], SEED_ANSWERS["sky_is_blue"])
         self.assertEqual(replay[0]["source"], "oracle_demonstration")
 
+    def test_memory_replay_deduplicates_repeated_question_targets(self):
+        prompt = "Usuario: O ceu e azul?\\nIA: "
+        episodes = [
+            {"episode_id": "older", "question_id": "sky_is_blue", "prompt": prompt,
+             "initial_answer": "Sim, o ceu e azul",
+             "policy_update": {"status": "applied", "source": "model_response"}},
+            {"episode_id": "newer", "question_id": "sky_is_blue", "prompt": prompt,
+             "initial_answer": "Sim, o ceu e azul",
+             "policy_update": {"status": "applied", "source": "model_response"}},
+        ]
+        replay = build_memory_replay(episodes, 32)
+        self.assertEqual(len(replay), 1)
+        self.assertEqual(replay[0]["episode_id"], "newer")
+
+    def test_reconciliation_marks_interrupted_updates_as_skipped(self):
+        db = {
+            "episodes": [{
+                "question_id": "sky_is_blue",
+                "answer": "Sim, o ceu e azul",
+                "policy_update": {"status": "pending"},
+            }],
+            "totals": {"episodes": 1, "correct": 1, "incorrect": 0,
+                       "policy_updates": 0, "skipped_updates": 0,
+                       "oracle_demonstrations": 0},
+        }
+        reconcile_episode_outcomes(db)
+        self.assertEqual(db["episodes"][0]["policy_update"]["status"], "skipped")
+        self.assertEqual(db["episodes"][0]["policy_update"]["reason"], "interrupted_before_completion")
+        self.assertEqual(db["totals"]["policy_updates"], 0)
+        self.assertEqual(db["totals"]["skipped_updates"], 1)
+
     def test_reconciles_legacy_totals_against_strict_grader(self):
         db = {
             "episodes": [{
