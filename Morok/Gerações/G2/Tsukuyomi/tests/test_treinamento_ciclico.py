@@ -16,6 +16,16 @@ class TrainingDataTests(unittest.TestCase):
         self.assertFalse(training.should_stop(True, 0, 1))
         self.assertFalse(training.should_stop(True, 1, 2))
         self.assertFalse(training.should_stop(False, 1, 1))
+
+    def test_single_question_prefers_answer_present_in_training(self):
+        train = [("pergunta original", "O orçamento planejado para Apollo é de 5.000 parâmetros.")]
+        validation = [
+            ("pergunta sem resposta aprendida", "Uma resposta ainda não treinada."),
+            ("Qual é o orçamento do Apollo?", "O orçamento planejado para Apollo é de 5.000 parâmetros."),
+            ("outra pergunta", "outra resposta"),
+        ]
+        selected = training.select_validation_questions(train, validation, 1)
+        self.assertEqual(selected, [validation[1]])
     def test_split_sizes(self):
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "treinamento.txt")), 32)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "validacao.txt")), 40)
