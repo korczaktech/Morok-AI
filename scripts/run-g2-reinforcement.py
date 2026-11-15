@@ -71,7 +71,7 @@ def main():
    raise RuntimeError("G2 bootstrap did not produce both expert checkpoints")
  selected_questions=select_questions(db["questions"],a.questions)
  run_id=os.environ.get("GITHUB_RUN_ID","local"); run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT","1"); results=[]
- with tempfile.TemporaryDirectory(prefix="morok-g2-reinforcement-") as td:
+ with tempfile.TemporaryDirectory(prefix="morok-g2-reinforcement-",dir=a.checkpoint.parent) as td:
   tmp=Path(td)
   for i in range(a.attempts):
    q=selected_questions[i%len(selected_questions)]; prompt=tmp/"prompt.txt"; answer=tmp/"answer.txt"; answer_file=answer; prompt.write_text(q["prompt"],encoding="utf-8")
