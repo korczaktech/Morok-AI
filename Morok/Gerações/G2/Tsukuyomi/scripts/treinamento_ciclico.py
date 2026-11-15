@@ -37,11 +37,6 @@ def validation_rank(correct_count: int, total: int, mean_f1: float,
     return correct_count, 0.5 * mean_f1 + 0.5 * mean_char_similarity
 
 
-def initial_validation_rank() -> tuple[int, float]:
-    """Sentinela que garante que o primeiro ciclo seja salvo como melhor estado."""
-    return -1, -1.0
-
-
 def update_learning_rate(current: float, best_rank: tuple[int, float], plateau: int,
                          observed_rank: tuple[int, float]) -> tuple[float, tuple[int, float], int, bool]:
     """Reduz LR após três ciclos sem melhora real; exatidão sempre domina o desempate."""
@@ -302,7 +297,6 @@ def main() -> int:
     best_validation_score = -1.0
     best_validation_correct = 0
     best_validation_cycle = 0
-    best_validation_rank = initial_validation_rank()
     plateau_cycles = 0
     maximum_cycles = min(attempts, MAX_CYCLES)
     with output.open("w", encoding="utf-8") as report:
@@ -318,9 +312,7 @@ def main() -> int:
         report.write("- Critério contínuo: encerrar quando todas as questões selecionadas estiverem corretas\n")
         report.write("- Critério de aprovação: igualdade lexical normalizada; não mede semântica\n")
         report.write("- F1 lexical, similaridade de caracteres, repetição e diversidade são diagnósticos; não aprovam respostas.\n")
-        report.write("- Score diagnóstico: 70% exatidão + 15% F1 lexical + 15% similaridade de caracteres.\n")
-        report.write("- Scheduler: ranking lexicográfico (respostas exatas primeiro; F1/similaridade apenas no empate).\n")
-        report.write(f"- Delta mínimo do desempate: {LR_MIN_DELTA:.3f}; platô: {LR_PLATEAU_CYCLES} ciclos.\n")
+        report.write("- Scheduler: 70% exatidão + 15% F1 lexical + 15% similaridade de caracteres da validação.\n")
         report.write(f"- Learning rate inicial: {learning_rate:.6f}; scheduler reduz após {LR_PLATEAU_CYCLES} ciclos sem melhora da validação.\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
