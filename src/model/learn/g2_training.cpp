@@ -6,6 +6,7 @@ G2TrainingReport train_g2_corpus(const G2TrainingConfig& config,G2Parameters& p)
     if(config.checkpoint_prefix.empty()) throw std::invalid_argument("G2 checkpoint_prefix is required");
     auto a=config.base;
     a.allow_single_document=true;
+    a.train_all_documents=true;
     // The byte-level recurrent model needs the full QA pair in one BPTT window.
     a.truncation_length=128;
     a.optimizer.learning_rate=0.003;
@@ -15,9 +16,11 @@ G2TrainingReport train_g2_corpus(const G2TrainingConfig& config,G2Parameters& p)
     if(!config.base.metrics_log_path.empty()) a.metrics_log_path=config.base.metrics_log_path.string()+".expert-a";
     auto b=config.base;
     b.allow_single_document=true;
+    b.train_all_documents=true;
     b.truncation_length=128;
     b.optimizer.learning_rate=0.003;
-    // Keep the same deterministic corpus split; initialization already gives B an independent seed.
+    // Train each QA document independently so EOS is supervised at every answer boundary.
+    // Initialization gives expert B an independent seed.
     b.checkpoint_path=config.checkpoint_prefix.string()+".expert-b.training";
     b.best_model_path=config.checkpoint_prefix.string()+".expert-b.inference";
     if(config.resume) b.resume_from_checkpoint=b.checkpoint_path;
