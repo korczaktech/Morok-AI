@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <charconv>
 #include <cstdint>
+#include <cstdlib>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -65,8 +67,8 @@ bool parse_size(const char* text, std::size_t& value) {
 }
 
 int main(int argc, char** argv) {
-    if (argc < 3 || argc > 6) {
-        std::cerr << "Uso: morok-g2-tsukuyomi-train <corpus.bin> <checkpoint> [epocas] [seed] [--resume]\n";
+    if (argc < 3 || argc > 7) {
+        std::cerr << "Uso: morok-g2-tsukuyomi-train <corpus.bin> <checkpoint> [epocas] [seed] [learning_rate] [--resume]\n";
         return 2;
     }
 
@@ -111,10 +113,29 @@ int main(int argc, char** argv) {
         config.seed = seed;
     }
 
-    const bool resume = argc == 6 && std::string(argv[5]) == "--resume";
-    if (argc == 6 && !resume) {
-        std::cerr << "Opção inválida: use --resume.\n";
-        return 2;
+    bool resume = false;
+    if (argc >= 6) {
+        const std::string option(argv[5]);
+        if (option == "--resume") {
+            resume = true;
+        } else {
+            char* end = nullptr;
+            const double learning_rate = std::strtod(option.c_str(), &end);
+            if (end != option.c_str() + option.size() ||
+                !std::isfinite(learning_rate) || learning_rate <= 0.0 ||
+                learning_rate > 0.1) {
+                std::cerr << "Learning rate inválido (0 < valor <= 0,1).\n";
+                return 2;
+            }
+            config.learning_rate = learning_rate;
+            if (argc == 7) {
+                resume = std::string(argv[6]) == "--resume";
+                if (!resume) {
+                    std::cerr << "Opção inválida: use --resume.\n";
+                    return 2;
+                }
+            }
+        }
     }
 
     morok::g2::tsukuyomi::Model model;
