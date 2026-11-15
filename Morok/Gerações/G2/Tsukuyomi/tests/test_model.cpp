@@ -343,7 +343,7 @@ int main() {
 
     // Quando o histórico excede 13 etapas, o gradiente não atravessa o limite TBPTT.
     {
-        const std::string long_dialogue = "U: Q\\nIA:abcdefghijklmnop";
+        const std::string long_dialogue = "U: Q\nIA:abcdefghijklmnop";
         const std::vector<std::uint8_t> long_bytes(
             long_dialogue.begin(), long_dialogue.end());
         assert(compute_target_gradient(
