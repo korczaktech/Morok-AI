@@ -106,6 +106,12 @@ int main() {
     const std::vector<std::uint8_t> bytes_b(prompt_b.begin(), prompt_b.end());
     assert(forward(model, bytes_a).hidden != forward(model, bytes_b).hidden);
 
+    // O canal de histórico da resposta não pode alterar uma pergunta ainda sem resposta.
+    Model answer_channel_changed = model;
+    answer_channel_changed.parameters[9232] += 0.5F;
+    assert(forward(model, bytes_a).hidden ==
+           forward(answer_channel_changed, bytes_a).hidden);
+
     // A resposta anterior precisa influenciar a previsão: pergunta e último
     // byte iguais, mas histórico de resposta diferente, devem gerar estados distintos.
     const std::string history_a = "U: Q\nIA:ab";
