@@ -47,6 +47,26 @@ on:
         type: boolean
         required: true
         default: true
+      question_greeting:
+        description: "Teste de saudação"
+        type: boolean
+        required: true
+        default: true
+      question_english:
+        description: "Teste em inglês"
+        type: boolean
+        required: true
+        default: true
+      question_spanish:
+        description: "Teste em espanhol"
+        type: boolean
+        required: true
+        default: true
+      question_multi_turn:
+        description: "Teste de múltiplos turnos"
+        type: boolean
+        required: true
+        default: true
       model_tsukuyomi:
         description: "Executar Tsukuyomi"
         type: boolean
@@ -120,6 +140,10 @@ jobs:
           G1_QUESTION_SKY: ${{ github.event_name != 'workflow_dispatch' || inputs.question_sky }}
           G1_QUESTION_GRASS: ${{ github.event_name != 'workflow_dispatch' || inputs.question_grass }}
           G1_QUESTION_MOUNTAINS: ${{ github.event_name != 'workflow_dispatch' || inputs.question_mountains }}
+          G1_QUESTION_GREETING: ${{ github.event_name != 'workflow_dispatch' || inputs.question_greeting }}
+          G1_QUESTION_ENGLISH_SKY: ${{ github.event_name != 'workflow_dispatch' || inputs.question_english }}
+          G1_QUESTION_SPANISH_SKY: ${{ github.event_name != 'workflow_dispatch' || inputs.question_spanish }}
+          G1_QUESTION_MULTI_TURN: ${{ github.event_name != 'workflow_dispatch' || inputs.question_multi_turn }}
           G1_MODEL_TSUKUYOMI: ${{ github.event_name != 'workflow_dispatch' || inputs.model_tsukuyomi }}
           G1_MODEL_APOLLO: ${{ github.event_name != 'workflow_dispatch' || inputs.model_apollo }}
           G1_MODEL_MOKOSH: ${{ github.event_name != 'workflow_dispatch' || inputs.model_mokosh }}
