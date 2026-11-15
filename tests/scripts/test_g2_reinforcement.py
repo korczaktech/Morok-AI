@@ -10,6 +10,7 @@ select_questions = MODULE["select_questions"]
 is_degenerate_response = MODULE["is_degenerate_response"]
 select_training_target = MODULE["select_training_target"]
 build_memory_replay = MODULE["build_memory_replay"]
+reconcile_episode_outcomes = MODULE["reconcile_episode_outcomes"]
 SEED_ANSWERS = MODULE["SEED_ANSWERS"]
 
 
@@ -27,6 +28,14 @@ class G2ReinforcementTests(unittest.TestCase):
     def test_rejects_negation_and_wrong_concept(self):
         self.assertEqual(grade("sky_is_blue", "Não, o céu não é azul.")[0:2], ("incorrect", -1))
         self.assertEqual(grade("mountains_high_or_low", "As montanhas são baixas.")[0:2], ("incorrect", -1))
+
+    def test_rejects_correct_prefix_followed_by_garbage(self):
+        self.assertEqual(grade("sky_is_blue", "Sim, o ceu e azul*garbage text")[0:2],
+                         ("incorrect", -1))
+        self.assertEqual(grade("grass_color", "A grama e verde. texto aleatorio")[0:2],
+                         ("incorrect", -1))
+        self.assertEqual(grade("mountains_high_or_low", "As montanhas sao altas. As montanhas sao altas.")[0:2],
+                         ("incorrect", -1))
 
     def test_degenerate_output_detector_rejects_repeated_characters(self):
         self.assertTrue(is_degenerate_response("aaaaaaaaaaaaaaaaaaaaaaaa"))
@@ -68,6 +77,39 @@ class G2ReinforcementTests(unittest.TestCase):
         self.assertEqual(build_memory_replay(episodes, 0), [])
         with self.assertRaises(ValueError):
             build_memory_replay(episodes, 257)
+
+
+    def test_memory_replay_replaces_historical_noisy_model_targets_with_oracle(self):
+        episodes = [{
+            "episode_id": "legacy-noisy",
+            "question_id": "sky_is_blue",
+            "prompt": "Usuario: O ceu e azul?\\nIA: ",
+            "initial_answer": "Sim, o ceu e azul*garbage",
+            "answer": "Sim, o ceu e azul*more-garbage",
+            "policy_update": {"status": "applied", "source": "model_response"},
+        }]
+        replay = build_memory_replay(episodes, 32)
+        self.assertEqual(len(replay), 1)
+        self.assertEqual(replay[0]["target"], SEED_ANSWERS["sky_is_blue"])
+        self.assertEqual(replay[0]["source"], "oracle_demonstration")
+
+    def test_reconciles_legacy_totals_against_strict_grader(self):
+        db = {
+            "episodes": [{
+                "question_id": "sky_is_blue",
+                "answer": "Sim, o ceu e azul*garbage",
+                "policy_update": {"status": "applied", "source": "model_response"},
+            }],
+            "totals": {"episodes": 1, "correct": 1, "incorrect": 0,
+                       "policy_updates": 1, "skipped_updates": 0,
+                       "oracle_demonstrations": 0},
+        }
+        reconcile_episode_outcomes(db)
+        self.assertEqual(db["episodes"][0]["verdict"], "incorrect")
+        self.assertEqual(db["episodes"][0]["reward"], -1)
+        self.assertEqual(db["totals"]["correct"], 0)
+        self.assertEqual(db["totals"]["incorrect"], 1)
+        self.assertEqual(db["totals"]["policy_updates"], 1)
 
     def test_runner_replays_memory_before_new_attempts(self):
         runner = (ROOT / "scripts" / "run-g2-reinforcement.py").read_text(encoding="utf-8")
