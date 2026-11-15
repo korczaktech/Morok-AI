@@ -156,7 +156,6 @@ def main() -> int:
     output = Path("build/g2/respostas-tsukuyomi.md")
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    streak = 0
     cycle = 0
     learning_rate = INITIAL_LEARNING_RATE
     best_train_bpb = float("inf")
@@ -197,7 +196,7 @@ def main() -> int:
             )
             print(training_process.stdout, end="", flush=True)
             bpb_match = re.search(
-                r"train_bpb final:\\s*([0-9.eE+-]+)", training_process.stdout
+                r"train_bpb final:\s*([0-9.eE+-]+)", training_process.stdout
             )
             if bpb_match:
                 train_bpb = float(bpb_match.group(1))
@@ -219,8 +218,6 @@ def main() -> int:
             correct_count, total = write_results(
                 report, f"Validação — tentativa {cycle}", validation, validation_results
             )
-            all_correct = total > 0 and correct_count == total
-            streak = streak + 1 if all_correct else 0
             elapsed = time.perf_counter() - started
             report.write(
                 f"**Validação: {correct_count}/{total}. F1 é diagnóstico, não critério de aprovação. "
