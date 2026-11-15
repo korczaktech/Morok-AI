@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <optional>
 
 namespace morok::model {
 
@@ -39,7 +40,8 @@ struct G1EosResult {
     std::span<const std::uint8_t> bytes,
     std::size_t truncation_length,
     const G1State& initial_state = {},
-    std::size_t context_offset = 0);
+    std::size_t context_offset = 0,
+    std::optional<std::uint8_t> previous_context_byte = std::nullopt);
 
 // Computes the learned stop-head loss for a document boundary or continuation.
 // The recurrent state is treated as input; this helper updates only EOS values.
