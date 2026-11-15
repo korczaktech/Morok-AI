@@ -36,7 +36,7 @@ Os offsets e a soma são verificados por asserção estática no código. O chec
 
 ## Treinamento
 
-O treinador percorre o corpus byte a byte e atualiza os parâmetros com gradientes da entropia cruzada, Adam, clipping global e weight decay. O estado do Adam (momentos de primeira e segunda ordem e contador global) pode ser serializado separadamente, com versão e checksum, e é restaurado na retomada. Isso faz ciclos separados equivalerem a uma execução contínua, desde que a configuração seja mantida. O relatório expõe loss em nats e train_bpb (bits por byte). A implementação usa contexto finito e atualizações por alvo; não usa BPTT nem treinamento online. O executável limita o corpus a 512 MiB para manter o consumo de memória previsível.
+O treinador percorre o corpus byte a byte e atualiza os parâmetros com gradientes da entropia cruzada, Adam, clipping global e weight decay. Os gradientes são acumulados em mini-lotes (16 alvos por padrão) e aplicados uma vez por lote, reduzindo a quantidade de atualizações Adam. O tamanho do lote é configurável pela API. O estado do Adam (momentos de primeira e segunda ordem e contador global de atualizações) pode ser serializado separadamente, com versão e checksum, e é restaurado na retomada. Isso faz ciclos separados equivalerem a uma execução contínua, desde que a configuração seja mantida. O relatório expõe loss em nats e train_bpb (bits por byte). A implementação usa contexto finito e atualizações por alvo; não usa BPTT nem treinamento online. O executável limita o corpus a 512 MiB para manter o consumo de memória previsível.
 
 Comando:
 
@@ -62,6 +62,7 @@ Formato binário MOROKG2T, versão 1, contagem explícita de 10.000 floats e che
 
 - Contexto limitado a 13 bytes anteriores e ao byte corrente.
 - Sem atenção, recorrência, BPTT, memória externa ou subsistemas cognitivos G2.
+- O pipeline atual usa entropia cruzada supervisionada; ainda não implementa Reinforcement Learning (RL) nem recompensa semântica.
 - Sem tokenizer; a entrada é byte-level.
 - O treinador aceita bytes arbitrários; a CLI de geração exige prompt UTF-8 válido para produzir continuação útil.
 - Sem corpus natural embutido, benchmark linguístico ou alegação de compreensão.
