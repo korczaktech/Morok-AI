@@ -73,6 +73,18 @@ target_compile_features(morok_g1_tsukuyomimax PUBLIC cxx_std_20)
 target_include_directories(morok_g1_tsukuyomimax PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G1/TsukuyomiMax/include>)
 target_link_libraries(morok_g1_tsukuyomimax PUBLIC Morok::G1 PRIVATE morok_build_options)
 morok_enable_sanitizers(morok_g1_tsukuyomimax)
+
+# G2 Tsukuyomi v0.1 is isolated from all G1 implementation sources.
+add_library(morok_g2_tsukuyomi STATIC
+    Gerações/G2/Tsukuyomi/src/model.cpp
+)
+add_library(Morok::G2::Tsukuyomi ALIAS morok_g2_tsukuyomi)
+target_compile_features(morok_g2_tsukuyomi PUBLIC cxx_std_20)
+target_include_directories(morok_g2_tsukuyomi PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G2/Tsukuyomi/include>
+    $<INSTALL_INTERFACE:include>)
+target_link_libraries(morok_g2_tsukuyomi PRIVATE morok_build_options)
+morok_enable_sanitizers(morok_g2_tsukuyomi)
 if(MOROK_BUILD_APPS)
     add_executable(morok_cli Gerações/G1/apps/cli/main.cpp)
     target_link_libraries(morok_cli PRIVATE Morok::G1 morok_build_options)
@@ -100,6 +112,20 @@ if(MOROK_BUILD_APPS)
         set_target_properties(morok_server PROPERTIES OUTPUT_NAME "morok-server")
         morok_enable_sanitizers(morok_server)
     endif()
+
+endif()
+
+if(MOROK_BUILD_APPS)
+
+    add_executable(morok_g2_tsukuyomi_train Gerações/G2/Tsukuyomi/apps/train.cpp)
+    target_link_libraries(morok_g2_tsukuyomi_train PRIVATE Morok::G2::Tsukuyomi morok_build_options)
+    set_target_properties(morok_g2_tsukuyomi_train PROPERTIES OUTPUT_NAME "morok-g2-tsukuyomi-train")
+    morok_enable_sanitizers(morok_g2_tsukuyomi_train)
+
+    add_executable(morok_g2_tsukuyomi_generate Gerações/G2/Tsukuyomi/apps/generate.cpp)
+    target_link_libraries(morok_g2_tsukuyomi_generate PRIVATE Morok::G2::Tsukuyomi morok_build_options)
+    set_target_properties(morok_g2_tsukuyomi_generate PROPERTIES OUTPUT_NAME "morok-g2-tsukuyomi-generate")
+    morok_enable_sanitizers(morok_g2_tsukuyomi_generate)
 
 endif()
 
@@ -157,11 +183,13 @@ if(MOROK_BUILD_APPS)
         morok_core
         morok_g1
         morok_g1_tsukuyomimax
+        morok_g2_tsukuyomi
         ARCHIVE DESTINATION lib)
     install(DIRECTORY
         include/
         Gerações/G1/shared/include/
         Gerações/G1/TsukuyomiMax/include/
+        Gerações/G2/Tsukuyomi/include/
         DESTINATION include)
 endif()
 
@@ -172,6 +200,8 @@ if(MOROK_BUILD_FUZZERS)
     target_compile_options(morok_core PRIVATE
         -fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer)
     target_compile_options(morok_g1 PRIVATE
+        -fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer)
+    target_compile_options(morok_g2_tsukuyomi PRIVATE
         -fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer)
     foreach(_fuzz_target IN ITEMS utf8 rlah_decode)
         add_executable(morok_fuzz_${_fuzz_target} tests/fuzz/fuzz_${_fuzz_target}.cpp)
