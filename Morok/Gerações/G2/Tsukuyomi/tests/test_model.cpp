@@ -45,7 +45,7 @@ int main() {
     assert(generated.size() == sample.size() + 12);
     assert(std::equal(sample.begin(), sample.end(), generated.begin()));
     for (std::size_t i = sample.size(); i < generated.size(); ++i)
-        assert(generated[i] <= 0x7F || generated[i] >= 0xC2);
+        assert(generated[i] <= 0x7F || (generated[i] >= 0x80 && generated[i] <= 0xBF) || (generated[i] >= 0xC2 && generated[i] <= 0xF4));
 
     const auto path = std::filesystem::temp_directory_path() /
                       "morok-tsukuyomi-g2-v0.1.ckpt";
@@ -53,7 +53,6 @@ int main() {
     Model restored;
     assert(load_checkpoint(restored, path));
     assert(restored.parameters == model.parameters);
-    Model rejected;
     const std::array<std::uint8_t, 1> invalid_utf8{0xC0};
     const auto unchanged = generate(model, invalid_utf8, 4);
     assert(unchanged.size() == invalid_utf8.size());
