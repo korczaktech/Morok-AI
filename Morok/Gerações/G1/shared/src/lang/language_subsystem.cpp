@@ -320,7 +320,7 @@ common::Result<LanguageGeneration> LanguageSubsystem::generate(
         return common::Result<LanguageGeneration>::failure(*prompt.error_if());
     try {
         const auto generated = generate_for_profile(
-            parameters_, *prompt.value_if(), language_config_.profile, max_new_bytes);
+            parameters_, *prompt.value_if(), max_new_bytes);
         if (request.is_cancelled())
             return common::Result<LanguageGeneration>::failure(common::Error::make(
                 common::ErrorCode::cancelled,
