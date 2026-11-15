@@ -13,6 +13,7 @@ int main(int argc,char** argv) {
         for(int i=3;i<argc;++i) {
             const std::string arg=argv[i];
             if(arg=="--resume") c.resume=true;
+            else if(arg=="--patience") { if(i+1>=argc) throw std::invalid_argument("--patience requires a value"); c.base.patience=static_cast<std::size_t>(std::stoull(argv[++i])); if(c.base.patience==0||c.base.patience>100000) throw std::invalid_argument("--patience must be in [1, 100000]"); }
             else if(!epochs_seen) { c.base.max_epochs=static_cast<std::size_t>(std::stoull(arg)); epochs_seen=true; }
             else if(!seed_seen) { c.base.seed=std::stoull(arg); seed_seen=true; }
             else throw std::invalid_argument("argumento desconhecido: "+arg);
