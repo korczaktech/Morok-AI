@@ -626,3 +626,63 @@ h1 span,.welcome h1 span{
 .secondary-button:hover{border-color:#59336f}
 .context-menu{background:#07040c;border-color:#241431}
 .toast{background:#09050e;border-color:#241431}
+
+
+/* Pure black + deep violet; remove residual pink accents */
+:root{
+  --bg:#010005;
+  --sidebar:#020008;
+  --panel:#05020b;
+  --panel-2:#090313;
+  --line:#160a25;
+  --text:#f4effb;
+  --muted:#a99bbd;
+  --dim:#665676;
+  --accent:#7627c5;
+  --accent-2:#4b1594;
+  --danger:#9856c7;
+  --shadow:0 28px 90px #000;
+}
+body,.app,.main,.workspace{background:#010005}
+.sidebar{background:#020008;border-color:#10071b}
+.topbar{background:rgba(1,0,5,.98);border-color:#10071b}
+.brand-mark,.welcome-orb{
+  background:linear-gradient(145deg,#2b0b4b 0%,#180629 58%,#090211 100%);
+  border-color:#321052;color:#eee7fa;
+}
+.brand-dot,.line-icon,.new-chat .plus,.eyebrow,.dialog-eyebrow{color:#9564c9}
+.model-glyph{background:linear-gradient(135deg,#64249b,#260b48);box-shadow:none}
+.welcome-orb{box-shadow:0 0 32px #260b481c,inset 0 0 18px #7627c511}
+.welcome-orb span{border-color:#704b91}
+.welcome-orb span:after{background:#8855bb;box-shadow:0 0 8px #64249b}
+h1 span,.welcome h1 span{
+  background:linear-gradient(100deg,#b99bdf 0%,#8b5ac4 55%,#6330a0 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.suggestion{background:#030107;border-color:#160a25;box-shadow:0 8px 26px #000}
+.suggestion:hover{background:#080211;border-color:#48216c;box-shadow:0 12px 30px #000}
+.suggestion>span{color:#a783d0;border-color:#351653;background:#10061b}
+.composer{background:#05020a;border-color:#211032;box-shadow:0 14px 42px #000}
+.composer:focus-within{border-color:#542b7b;box-shadow:0 0 0 2px #542b7b20,0 16px 46px #000}
+.send-button,.primary-button{
+  background:linear-gradient(135deg,#7833b5 0%,#57218e 58%,#351052 100%);
+  color:#fff;border-color:#48216c;box-shadow:0 4px 14px #000;
+}
+.message.user .message-content{background:#0b0413;border-color:#28123d}
+.message.assistant .message-avatar{color:#a783d0;background:#05020a;border-color:#211032}
+.connection-pill{background:#030107;border-color:#160a25}
+.dialog{background:#05020b;border-color:#211032}
+.dialog::backdrop{background:rgba(0,0,0,.96);backdrop-filter:blur(10px)}
+.secondary-button{background:#080311;border-color:#211032}
+.secondary-button:hover{border-color:#542b7b}
+.context-menu{background:#05020b;border-color:#211032}
+.toast{background:#05020b;border-color:#211032}
+:root[data-theme="light"]{
+  --accent:#6d28a8;
+  --accent-2:#4b1683;
+  --danger:#7440a0;
+}
+:root[data-theme="light"] .send-button,
+:root[data-theme="light"] .primary-button{
+  background:linear-gradient(135deg,#7833b5,#4b1683);
+}
