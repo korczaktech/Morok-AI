@@ -150,6 +150,11 @@ int main(int argc, char** argv) {
               << "Épocas: " << report.epochs_completed << '\n'
               << "Objetivo: " << (target_mask.empty() ? "todos os bytes" : "somente respostas IA:") << '\n'
               << "Mini-lote: " << config.batch_size << '\n'
+              << "Learning rate: " << config.learning_rate << " ("
+              << config.learning_rate * 100.0 << "%)" << '\n'
+              << "Weight decay: " << config.weight_decay << " (seletivo)" << '\n'
+              << "Dropout: não utilizado" << '\n'
+              << "Gradient clipping: " << config.gradient_clip << '\n'
               << "Atualizações Adam: " << optimizer_state.step << '\n'
               << "Bytes-alvo: " << report.target_bytes << '\n'
               << "Loss inicial: " << report.initial_loss << '\n'
