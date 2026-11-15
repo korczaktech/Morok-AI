@@ -35,6 +35,18 @@ class FinalEvaluationTests(unittest.TestCase):
         self.assertGreaterEqual(result["character_diversity"], 0.0)
         self.assertLessEqual(result["character_diversity"], 1.0)
 
+    def test_original_training_examples_are_preserved_and_splits_do_not_leak(self):
+        data = SCRIPT.parents[1] / "data"
+        original = set(MODULE.read_dialogues(data / "treinamento-inicial.txt"))
+        training = set(MODULE.read_dialogues(data / "treinamento.txt"))
+        validation = set(MODULE.read_dialogues(data / "validacao.txt"))
+        test = set(MODULE.read_dialogues(data / "teste.txt"))
+        self.assertEqual(len(training), 56)
+        self.assertEqual(len(original & training), 32)
+        self.assertFalse(training & validation)
+        self.assertFalse(training & test)
+        self.assertFalse(validation & test)
+
     def test_corpora_keep_validation_and_test_sizes(self):
         data = SCRIPT.parents[1] / "data"
         self.assertEqual(len(MODULE.read_dialogues(data / "validacao.txt")), 40)
