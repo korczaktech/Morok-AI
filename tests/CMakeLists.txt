@@ -23,71 +23,71 @@ morok_enable_sanitizers(morok_test_math_primitives)
 add_test(NAME model.math_primitives COMMAND morok_test_math_primitives)
 
 if(MOROK_BUILD_G2)
-    add_executable(morok_test_g2 unit/model/test_g2.cpp)
+    add_executable(morok_test_g2 G2/tests/unit/test_g2.cpp)
     target_link_libraries(morok_test_g2 PRIVATE Morok::G2 morok_build_options)
     morok_enable_sanitizers(morok_test_g2)
     add_test(NAME model.g2 COMMAND morok_test_g2)
 
-    add_executable(morok_test_g2_reinforcement unit/model/test_g2_reinforcement.cpp)
+    add_executable(morok_test_g2_reinforcement G2/tests/unit/test_g2_reinforcement.cpp)
     target_link_libraries(morok_test_g2_reinforcement PRIVATE Morok::G2 morok_build_options)
     morok_enable_sanitizers(morok_test_g2_reinforcement)
     add_test(NAME model.g2_reinforcement COMMAND morok_test_g2_reinforcement)
 endif()
 
 add_executable(morok_test_g1_parameters
-    unit/model/test_g1_parameters.cpp
+    G1/shared/tests/unit/model/test_g1_parameters.cpp
 )
 target_link_libraries(morok_test_g1_parameters PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_parameters)
 add_test(NAME model.g1_parameters COMMAND morok_test_g1_parameters)
 
 add_executable(morok_test_g1_forward
-    unit/model/test_g1_forward.cpp
+    G1/shared/tests/unit/model/test_g1_forward.cpp
 )
 target_link_libraries(morok_test_g1_forward PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_forward)
 add_test(NAME model.g1_forward COMMAND morok_test_g1_forward)
 
 add_executable(morok_test_g1_bptt
-    unit/model/test_g1_bptt.cpp
+    G1/shared/tests/unit/model/test_g1_bptt.cpp
 )
 target_link_libraries(morok_test_g1_bptt PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_bptt)
 add_test(NAME model.g1_bptt COMMAND morok_test_g1_bptt)
 
-add_executable(morok_test_g1_reinforcement unit/model/test_g1_reinforcement.cpp)
+add_executable(morok_test_g1_reinforcement G1/shared/tests/unit/model/test_g1_reinforcement.cpp)
 target_link_libraries(morok_test_g1_reinforcement PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_reinforcement)
 add_test(NAME model.g1_reinforcement COMMAND morok_test_g1_reinforcement)
 
 add_executable(morok_test_g1_optimizer
-    unit/model/test_g1_optimizer.cpp
+    G1/shared/tests/unit/model/test_g1_optimizer.cpp
 )
 target_link_libraries(morok_test_g1_optimizer PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_optimizer)
 add_test(NAME model.g1_optimizer COMMAND morok_test_g1_optimizer)
 
-add_executable(morok_test_g1_training unit/model/test_g1_training.cpp)
+add_executable(morok_test_g1_training G1/shared/tests/unit/model/test_g1_training.cpp)
 target_link_libraries(morok_test_g1_training PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_training)
 add_test(NAME model.g1_training COMMAND morok_test_g1_training)
 
-add_executable(morok_test_g1_checkpoint unit/model/test_g1_checkpoint.cpp)
+add_executable(morok_test_g1_checkpoint G1/shared/tests/unit/model/test_g1_checkpoint.cpp)
 target_link_libraries(morok_test_g1_checkpoint PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_checkpoint)
 add_test(NAME model.g1_checkpoint COMMAND morok_test_g1_checkpoint)
 
-add_executable(morok_test_g1_benchmark unit/model/test_g1_benchmark.cpp)
+add_executable(morok_test_g1_benchmark G1/shared/tests/unit/model/test_g1_benchmark.cpp)
 target_link_libraries(morok_test_g1_benchmark PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_benchmark)
 add_test(NAME model.g1_benchmark COMMAND morok_test_g1_benchmark)
 
-add_executable(morok_test_g1_generation unit/model/test_g1_generation.cpp)
+add_executable(morok_test_g1_generation G1/shared/tests/unit/model/test_g1_generation.cpp)
 target_link_libraries(morok_test_g1_generation PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_generation)
 add_test(NAME model.g1_generation COMMAND morok_test_g1_generation)
 
-add_executable(morok_test_g1_evaluation unit/model/test_g1_evaluation.cpp)
+add_executable(morok_test_g1_evaluation G1/shared/tests/unit/model/test_g1_evaluation.cpp)
 target_link_libraries(morok_test_g1_evaluation PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_g1_evaluation)
 add_test(NAME model.g1_evaluation COMMAND morok_test_g1_evaluation)
@@ -102,13 +102,13 @@ target_link_libraries(morok_test_memory_store PRIVATE Morok::Core morok_build_op
 morok_enable_sanitizers(morok_test_memory_store)
 add_test(NAME memory.store COMMAND morok_test_memory_store)
 
-add_executable(morok_test_language_subsystem unit/lang/test_language_subsystem.cpp)
+add_executable(morok_test_language_subsystem G1/shared/tests/unit/lang/test_language_subsystem.cpp)
 target_link_libraries(morok_test_language_subsystem PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_language_subsystem)
 add_test(NAME lang.language_subsystem COMMAND morok_test_language_subsystem)
 
 add_executable(morok_test_communication_subsystem
-    unit/comm/test_communication_subsystem.cpp
+    G1/shared/tests/unit/comm/test_communication_subsystem.cpp
 )
 target_link_libraries(morok_test_communication_subsystem PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_communication_subsystem)
@@ -121,7 +121,7 @@ target_link_libraries(morok_test_reasoning_subsystem PRIVATE Morok::Core morok_b
 morok_enable_sanitizers(morok_test_reasoning_subsystem)
 add_test(NAME reason.reasoning_subsystem COMMAND morok_test_reasoning_subsystem)
 
-add_executable(morok_test_learning_subsystem unit/learn/test_learning_subsystem.cpp)
+add_executable(morok_test_learning_subsystem G1/shared/tests/unit/learn/test_learning_subsystem.cpp)
 target_link_libraries(morok_test_learning_subsystem PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_test_learning_subsystem)
 add_test(NAME learn.learning_subsystem COMMAND morok_test_learning_subsystem)
@@ -142,7 +142,7 @@ morok_enable_sanitizers(morok_test_security_subsystem)
 add_test(NAME security.security_subsystem COMMAND morok_test_security_subsystem)
 
 if(MOROK_BUILD_APPS)
-    add_executable(morok_test_application_runtime unit/apps/test_application_runtime.cpp)
+    add_executable(morok_test_application_runtime G1/shared/tests/unit/apps/test_application_runtime.cpp)
     target_link_libraries(morok_test_application_runtime PRIVATE Morok::G1 morok_build_options)
     morok_enable_sanitizers(morok_test_application_runtime)
     add_test(NAME apps.application_runtime COMMAND morok_test_application_runtime)
@@ -180,7 +180,7 @@ add_test(NAME property.model_invariants COMMAND morok_test_model_properties)
 set_tests_properties(property.model_invariants PROPERTIES LABELS "property;fast" TIMEOUT 30)
 
 add_executable(morok_test_training_generation_pipeline
-    integration/model_training_generation_pipeline.cpp)
+    G1/shared/tests/integration/model_training_generation_pipeline.cpp)
 target_link_libraries(morok_test_training_generation_pipeline PRIVATE Morok::G1 morok_build_options)
 target_compile_definitions(morok_test_training_generation_pipeline PRIVATE
     MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
@@ -197,7 +197,7 @@ add_test(NAME regression.runtime_rollback COMMAND morok_test_runtime_rollback)
 set_tests_properties(regression.runtime_rollback PROPERTIES LABELS "regression;core" TIMEOUT 30)
 
 # Stage 19: acceptance coverage across the G1 artifact flow and seven subsystems.
-add_executable(morok_acceptance_g1 acceptance/g1/test_g1_acceptance.cpp)
+add_executable(morok_acceptance_g1 G1/shared/tests/acceptance/test_g1_acceptance.cpp)
 target_link_libraries(morok_acceptance_g1 PRIVATE Morok::G1 morok_build_options)
 target_compile_definitions(morok_acceptance_g1 PRIVATE
     MOROK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
@@ -208,7 +208,7 @@ set_tests_properties(acceptance.g1_training_checkpoint_generation
     PROPERTIES LABELS "acceptance;g1" TIMEOUT 180)
 
 add_executable(morok_acceptance_seven_subsystems
-    acceptance/end_to_end/test_seven_subsystems.cpp)
+    G1/shared/tests/acceptance/test_seven_subsystems.cpp)
 target_link_libraries(morok_acceptance_seven_subsystems
     PRIVATE Morok::G1 morok_build_options SQLite::SQLite3)
 target_compile_definitions(morok_acceptance_seven_subsystems PRIVATE
