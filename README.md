@@ -80,6 +80,8 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 50. [Etapa 19 — Testes de aceitação](docs/51-etapa-19-testes-aceitacao.md)
 51. [Etapa 20 — Primeiro treinamento completo da G1](docs/52-etapa-20-primeiro-treinamento-g1.md)
 52. [Experimento de aprendizado por reforço da G1](docs/54-aprendizado-por-reforco-g1.md)
+53. [Geração 2](docs/55-geracao-2.md)
+54. [Aprendizado por reforço da G2](docs/56-aprendizado-por-reforco-g2.md)
 
 ## Estado atual
 
@@ -87,7 +89,7 @@ O projeto prioriza eficiência mensurável, modularidade, reprodutibilidade, bai
 
 - Etapa 14 — Aplicações executáveis: CLI unificada, conversor UTF-8 de corpus, treinamento, avaliação BPB, benchmark, geração offline e servidor HTTP local com composição de lifecycle IA-CORE implementados. CI GCC/Clang Debug/Release aprovado; Sanitizers ASan/UBSan aprovado; smoke test ponta a ponta de conversão, treino, inspeção, geração, avaliação e HTTP aprovado. Consulte [Etapa 14 — Aplicações executáveis](docs/47-etapa-14-aplicacoes-executaveis.md).
 
-- Etapa 15 — Testes automatizados: camadas unitária, integração, propriedades, regressão e fuzzing adicionadas. Inclui pipeline treinamento → checkpoint → geração, invariantes determinísticos de parâmetros/UTF-8/G1/RLAH, regressão de rollback do IA-CORE e harnesses libFuzzer para UTF-8, RLAH e checkpoints. CI GCC/Clang Debug/Release aprovado com 32/32 testes em cada perfil; ASan/UBSan e três campanhas libFuzzer de 2.000 iterações aprovados no commit `08e7abeb`. Consulte [Etapa 15 — Testes automatizados](docs/48-etapa-15-testes-automatizados.md).
+- Etapa 15 — Testes automatizados: camadas unitária, integração, propriedades, regressão e fuzzing adicionadas. Inclui pipeline treinamento → checkpoint → geração, invariantes determinísticos de parâmetros/UTF-8/G1/RLAH, regressão de rollback do IA-CORE e harnesses libFuzzer para UTF-8, RLAH e checkpoints. CI GCC/Clang Debug/Release aprovado com 43/43 testes no conjunto atual; ASan/UBSan e libFuzzer aprovados nos workflows recentes. Consulte [Etapa 15 — Testes automatizados](docs/48-etapa-15-testes-automatizados.md).
 
 - Etapa 16 — Documentação e experimentos: protocolo reproduzível, manifesto JSON, proveniência/licenças/hashes de corpus, critérios de análise, estrutura para ablações e escala de geração e índice de resultados implementados. O smoke test sintético anterior está documentado com resultado negativo da G1 frente ao baseline unigram. Campanha real/licenciada e medição em hardware físico de 4 GB permanecem pendentes. Consulte [Etapa 16 — Documentação e experimentos](docs/49-etapa-16-documentacao-experimentos.md).
 - Controles complementares de segurança e integração: validação de entrada/saída, identidade vinculada à sessão, revogação de grants e confirmações no encerramento, política de negação por padrão, checkpoint com CRC32 e escrita atômica em arquivo privado, logs sem conteúdo sensível e teto Linux de espaço virtual do servidor. Este trabalho complementar não altera a numeração do roteiro oficial; a etapa 18 é IA-LEARN. Consulte [Controles complementares de segurança e integração](docs/50-etapa-18-seguranca-integracao.md).
@@ -134,6 +136,6 @@ Toda hipótese deve ser testável. Uma otimização só será considerada válid
 ## Aprendizado por reforço
 
 - **[Reinforcement-G1](.github/workflows/reinforcement-g1.yml):** atualiza os 1.000 parâmetros da G1, com histórico em [answers.json](data/reinforcement/answers.json), checkpoint e artefatos próprios. Usa três perguntas controladas, avaliador lexical e gradiente reward-weighted baseado em BPTT; isso não demonstra compreensão semântica geral. Consulte [Experimento G1](docs/54-aprendizado-por-reforco-g1.md).
-- **[Reinforcement-G2](.github/workflows/reinforcement-g2.yml):** atualiza os dois especialistas independentes da G2, totalizando 2.000 parâmetros. Mantém banco de feedback, checkpoint e artefatos isolados em relação à G1. Cada especialista recebe sua própria atualização BPTT ponderada pela recompensa. O avaliador também é lexical e restrito às perguntas controladas. Consulte [Experimento G2](docs/56-aprendizado-por-reforco-g2.md).
+- **[Reinforcement-G2](.github/workflows/reinforcement-g2.yml):** atualiza os dois especialistas independentes da G2, totalizando 2.000 parâmetros. Mantém banco de feedback, checkpoints v3 restaurados entre execuções e artefatos isolados da G1. O replay consolida experiências duplicadas e dispensa atualizações quando a resposta/perda já convergiu. O corpus usa um documento por pergunta para treinar EOS em cada resposta; o avaliador exige correspondência lexical completa. É treinamento supervisionado por demonstrações e replay, não REINFORCE/PPO nem avaliação semântica geral. Consulte [Geração 2](docs/55-geracao-2.md) e [Experimento G2](docs/56-aprendizado-por-reforco-g2.md).
 
 Os dois workflows são independentes. O workflow anterior [training](.github/workflows/training.yml) continua disponível apenas para execução manual.
