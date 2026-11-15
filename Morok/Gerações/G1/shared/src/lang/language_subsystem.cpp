@@ -20,14 +20,6 @@ std::string normalize_input(std::string_view input) {
             ++position;
         }
     };
-    for (const auto& [forms, base] : std::array<std::pair<std::string_view, char>, 9>{{
-        {"áàâãäÁÀÂÃÄ", 'a'}, {"éèêëÉÈÊË", 'e'}, {"íìîïÍÌÎÏ", 'i'},
-        {"óòôõöÓÒÔÕÖ", 'o'}, {"úùûüÚÙÛÜ", 'u'}, {"çÇ", 'c'},
-        {"ñÑ", 'n'}, {"ýÿÝŸ", 'y'}, {"œŒ", 'o'}
-    }}) {
-        (void)forms;
-        (void)base;
-    }
     const std::array<std::pair<std::string_view, char>, 28> accents{{
         {"á",'a'},{"à",'a'},{"â",'a'},{"ã",'a'},{"ä",'a'},
         {"Á",'a'},{"À",'a'},{"Â",'a'},{"Ã",'a'},{"Ä",'a'},
