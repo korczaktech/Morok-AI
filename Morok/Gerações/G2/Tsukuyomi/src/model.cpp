@@ -488,8 +488,7 @@ std::vector<std::uint8_t> generate(const Model& model,
 
     const QuestionFeatures question_features = prepare_question_features(model, prompt);
     for (std::size_t i = 0; i < max_new_bytes; ++i) {
-        const auto cache = calculate(model, output, false,
-            question_features.available ? &question_features : nullptr);
+        const auto cache = calculate(model, output, false, &question_features);
         std::size_t best = kVocabularySize;
         float best_logit = -std::numeric_limits<float>::infinity();
         const std::size_t slots_after = max_new_bytes - i - 1;
