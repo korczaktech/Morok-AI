@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <filesystem>
 
 namespace {
 struct Question { const char* id; const char* prompt; const char* expected; };
