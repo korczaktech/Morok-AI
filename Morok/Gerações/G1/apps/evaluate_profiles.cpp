@@ -3,6 +3,7 @@
 #include "morok/g1/mokosh/profile.hpp"
 #include "morok/g1/apollo/profile.hpp"
 #include <chrono>
+#include <cctype>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -26,7 +27,9 @@ void run_profile(const char* name,const morok::model::G1Parameters& p,std::ofstr
   const auto stop=std::chrono::steady_clock::now();
   const double ms=std::chrono::duration<double,std::milli>(stop-start).count();
   const auto answer=result.continuation.string();
-  const bool correct=answer.find(q.expected)!=std::string::npos;
+  std::string normalized=answer;
+  for(char& ch:normalized) ch=static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+  const bool correct=normalized.find(q.expected)!=std::string::npos;
   out<<name<<'\t'<<q.id<<'\t'<<(correct?"correct":"incorrect")<<'\t'<<ms<<'\t'<<clean(answer)<<'\n';
   std::cout<<name<<" | "<<q.id<<" | "<<(correct?"correct":"incorrect")<<" | "<<ms<<" ms | "<<clean(answer)<<'\n';
  }
