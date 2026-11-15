@@ -79,6 +79,25 @@ int main() {
                3.0e-2 + 3.0e-2 * std::abs(numerical));
     }
 
+    // O gradiente alcança os embeddings de todos os bytes da pergunta.
+    assert(compute_target_gradient(model, question_gradient_sample, 12, analytic));
+    {
+        constexpr float epsilon = 1.0e-3F;
+        Model plus = model;
+        Model minus = model;
+        const std::size_t question_embedding =
+            static_cast<std::size_t>('A') * kHiddenSize;
+        plus.parameters[question_embedding] += epsilon;
+        minus.parameters[question_embedding] -= epsilon;
+        std::array<std::uint8_t, 13> one_target_mask{};
+        one_target_mask[12] = 1;
+        const double loss_plus = evaluate_loss(plus, question_gradient_sample, one_target_mask);
+        const double loss_minus = evaluate_loss(minus, question_gradient_sample, one_target_mask);
+        const double numerical = (loss_plus - loss_minus) / (2.0 * epsilon);
+        assert(std::abs(numerical - analytic[question_embedding]) <=
+               3.0e-2 + 3.0e-2 * std::abs(numerical));
+    }
+
     // Perguntas longas que diferem no início não podem colapsar ao mesmo contexto.
     const std::string prompt_a = "U: A pergunta inteira tem contexto longo?\nIA:";
     const std::string prompt_b = "U: B pergunta inteira tem contexto longo?\nIA:";
