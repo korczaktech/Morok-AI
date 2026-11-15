@@ -13,11 +13,19 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace morok::lang {
 
 enum class LanguageProfile { tsukuyomi, apollo, mokosh };
 enum class DetectedLanguage { portuguese, english, spanish, unknown };
+enum class ConversationRole { user, assistant };
+
+struct ConversationMessage final {
+    ConversationRole role{ConversationRole::user};
+    std::string text;
+    DetectedLanguage language{DetectedLanguage::unknown};
+};
 
 struct LanguageConfig final {
     std::size_t max_context_bytes{64U * 1024U};
@@ -63,6 +71,7 @@ private:
     std::size_t max_sessions_{1};
     mutable std::mutex mutex_;
     std::unordered_map<std::string, std::string> session_contexts_;
+    std::unordered_map<std::string, std::vector<ConversationMessage>> session_messages_;
     std::unordered_map<std::string, DetectedLanguage> session_languages_;
     bool initialized_{false};
 };
