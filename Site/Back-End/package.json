@@ -1,0 +1,16 @@
+{
+  "name": "@morok/accounts-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Autenticação do site Morok com MongoDB Atlas",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "mongodb": "^6.20.0"
+  }
+}
