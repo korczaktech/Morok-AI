@@ -44,7 +44,8 @@ int main() {
         assert(error <= 3.0e-2 + 3.0e-2 * std::abs(numerical));
     };
     check_gradient(0, 9984); // vetor inicial
-    check_gradient(3, 0);    // embedding compartilhado
+    check_gradient(3, 0);    // embedding usado na saída
+    check_gradient(3, 101 * kHiddenSize); // embedding de entrada compartilhado
     check_gradient(3, 8192); // projeção oculta
     check_gradient(3, 9216); // projeção de contexto
     check_gradient(3, 9632); // bias oculto
