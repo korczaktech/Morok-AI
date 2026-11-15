@@ -32,6 +32,14 @@ if(MOROK_BUILD_G2)
     target_link_libraries(morok_test_g2_reinforcement PRIVATE Morok::G2 morok_build_options)
     morok_enable_sanitizers(morok_test_g2_reinforcement)
     add_test(NAME model.g2_reinforcement COMMAND morok_test_g2_reinforcement)
+
+    foreach(_profile IN ITEMS Mokosh Tsukuyomi Artemis Apollo)
+        string(TOLOWER "${_profile}" _profile_lower)
+        add_executable(morok_test_g2_${_profile_lower} ../G2/${_profile}/tests/test_profile.cpp)
+        target_link_libraries(morok_test_g2_${_profile_lower} PRIVATE Morok::G2::${_profile} morok_build_options)
+        morok_enable_sanitizers(morok_test_g2_${_profile_lower})
+        add_test(NAME model.g2_${_profile_lower} COMMAND morok_test_g2_${_profile_lower})
+    endforeach()
 endif()
 
 add_executable(morok_test_g1_parameters

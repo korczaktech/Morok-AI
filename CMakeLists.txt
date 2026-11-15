@@ -106,6 +106,19 @@ if(MOROK_BUILD_G2)
         $<INSTALL_INTERFACE:include>)
     target_link_libraries(morok_g2 PUBLIC Morok::Core PRIVATE morok_build_options)
     morok_enable_sanitizers(morok_g2)
+
+    # Each G2 profile is isolated from the other profiles and uses only G2.
+    foreach(_profile IN ITEMS Mokosh Tsukuyomi Artemis Apollo)
+        string(TOLOWER "${_profile}" _profile_lower)
+        add_library(morok_g2_${_profile_lower} STATIC
+            G2/${_profile}/src/profile.cpp)
+        add_library(Morok::G2::${_profile} ALIAS morok_g2_${_profile_lower})
+        target_compile_features(morok_g2_${_profile_lower} PUBLIC cxx_std_20)
+        target_include_directories(morok_g2_${_profile_lower} PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G2/${_profile}/include>)
+        target_link_libraries(morok_g2_${_profile_lower} PUBLIC Morok::G2 PRIVATE morok_build_options)
+        morok_enable_sanitizers(morok_g2_${_profile_lower})
+    endforeach()
 endif()
 
 if(MOROK_BUILD_APPS)
