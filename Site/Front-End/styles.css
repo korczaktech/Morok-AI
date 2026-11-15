@@ -686,3 +686,49 @@ h1 span,.welcome h1 span{
 :root[data-theme="light"] .primary-button{
   background:linear-gradient(135deg,#7833b5,#4b1683);
 }
+
+
+/* Sidebar workspace navigation and account menu */
+.sidebar-tools{gap:2px}
+.sidebar .side-action{min-height:35px;padding:8px 10px}
+.side-submenu{display:grid;gap:2px;padding-left:14px}
+.side-submenu[hidden],.profile-menu[hidden]{display:none}
+.nav-chevron{margin-left:auto;color:var(--dim);font-size:13px}
+.sidebar-bottom{position:relative}
+.profile-menu{position:absolute;left:8px;right:8px;bottom:58px;z-index:50;display:grid;gap:3px;padding:8px;border:1px solid #281638;border-radius:13px;background:#07030d;box-shadow:0 18px 60px #000}
+.profile-menu-head{display:grid;gap:4px;padding:10px;border-bottom:1px solid #21102e;margin-bottom:4px}
+.profile-menu-head strong{font-size:12px;color:#f4effb}
+.profile-menu-head small{font-size:10px;color:#9584a8}
+.profile-menu button{min-height:34px;padding:8px 10px;border:0;border-radius:7px;background:transparent;color:#c9bdd6;text-align:left;font-size:11px;cursor:pointer}
+.profile-menu button:hover{background:#160b22;color:#fff}
+.profile-menu .profile-menu-danger{color:#c18bdc}
+.workspace-dialog{width:min(620px,calc(100% - 24px))}
+.workspace-dialog .dialog-card{min-width:0}
+.workspace-page{display:grid;gap:14px;min-width:0}
+.inline-create{display:flex;gap:8px}
+.inline-create .text-field{flex:1;min-width:0}
+.workspace-empty{padding:18px 12px;border:1px dashed #281638;border-radius:10px;color:#82718f;text-align:center;font-size:11px}
+.task-list{display:grid;gap:6px}
+.task-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid #1e102b;border-radius:9px;background:#05020a;color:#d8cde3;font-size:11px}
+.task-row label{display:flex;align-items:center;gap:9px;min-width:0}
+.task-row label span{overflow-wrap:anywhere}
+.task-row small{display:block;color:#81718d;font-size:9px}
+.task-done{text-decoration:line-through;color:#776987}
+.upload-card{display:grid;place-items:center;min-height:78px;border:1px dashed #482565;border-radius:11px;background:#080311;color:#b98bdc;font-size:12px;cursor:pointer}
+.upload-card:hover{border-color:#8544b5;background:#10061a}
+.workspace-image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:9px}
+.workspace-image-grid img{width:100%;height:110px;object-fit:cover;border-radius:9px;border:1px solid #281638}
+.feature-card{padding:16px;border:1px solid #281638;border-radius:11px;background:#07030d}
+.feature-card strong{font-size:13px}
+.feature-card p{color:#a99bbd;font-size:11px;line-height:1.6}
+.feature-status{color:#9d76bd;font-size:10px}
+.settings-textarea{min-height:90px;resize:vertical}
+.settings-textarea.tall{min-height:190px}
+.workspace-page .field-label{margin-top:4px}
+:root[data-theme="light"] .profile-menu{background:#fff;border-color:#e0d3eb;box-shadow:0 18px 50px #24143b20}
+:root[data-theme="light"] .profile-menu-head{border-color:#eee5f5}
+:root[data-theme="light"] .profile-menu-head strong,:root[data-theme="light"] .profile-menu button{color:#352443}
+:root[data-theme="light"] .profile-menu button:hover{background:#f1eafa}
+:root[data-theme="light"] .task-row,:root[data-theme="light"] .feature-card{background:#fff;border-color:#e4d9ef;color:#352443}
+:root[data-theme="light"] .upload-card{background:#faf7ff}
+@media(max-width:760px){.profile-menu{bottom:58px}.workspace-dialog{width:calc(100% - 18px)}.inline-create{flex-direction:column}}
