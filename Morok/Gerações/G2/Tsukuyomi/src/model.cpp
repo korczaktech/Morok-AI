@@ -314,6 +314,15 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
     report.initial_bpb = report.initial_loss / std::log(2.0);
     TrainingState local_state;
     TrainingState& state = supplied_state ? *supplied_state : local_state;
+    if (state.step == std::numeric_limits<std::uint64_t>::max() ||
+        !std::all_of(model.parameters.begin(), model.parameters.end(),
+                     [](float value) { return std::isfinite(value); }))
+        return report;
+    for (std::size_t i = 0; i < kParameterCount; ++i) {
+        if (!std::isfinite(state.first_moment[i]) ||
+            !std::isfinite(state.second_moment[i]) || state.second_moment[i] < 0.0)
+            return report;
+    }
     std::array<float, kParameterCount> gradient{};
     std::size_t accumulated_targets = 0;
     const auto apply_batch = [&]() {
@@ -330,57 +339,11 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
         std::uint64_t epoch_targets = 0;
         for (std::size_t target = 0; target < bytes.size(); ++target) {
             if (!target_mask.empty() && target_mask[target] == 0) continue;
-            const auto context = bytes.first(target);
-            const auto cache = calculate(model, context);
-
-            std::array<float, kHiddenSize> hidden_gradient{};
-            for (std::size_t token = 0; token < kVocabularySize; ++token) {
-                const float delta = cache.probabilities[token] -
-                    (token == bytes[target] ? 1.0F : 0.0F);
-                gradient[kOutputBiasOffset + token] += delta;
-                const auto base = kEmbeddingOffset + token * kHiddenSize;
-                for (std::size_t h = 0; h < kHiddenSize; ++h) {
-                    gradient[base + h] += delta * cache.hidden[h];
-                    hidden_gradient[h] += delta * at(model, base + h);
-                }
-            }
-
-            std::array<float, kHiddenSize> pre_gradient{};
-            for (std::size_t h = 0; h < kHiddenSize; ++h) {
-                gradient[kScaleOffset + h] +=
-                    hidden_gradient[h] * cache.activation[h];
-                gradient[kShiftOffset + h] += hidden_gradient[h];
-                pre_gradient[h] = hidden_gradient[h] *
-                    at(model, kScaleOffset + h) *
-                    (1.0F - cache.activation[h] * cache.activation[h]);
-                gradient[kHiddenBiasOffset + h] += pre_gradient[h];
-                if (cache.at_start && h < 16)
-                    gradient[kStartOffset + h] += pre_gradient[h];
-            }
-
-            std::array<float, kHiddenSize> input_gradient{};
-            for (std::size_t h = 0; h < kHiddenSize; ++h) {
-                for (std::size_t k = 0; k < kHiddenSize; ++k) {
-                    const auto index = kHiddenWeightOffset +
-                        h * kHiddenSize + k;
-                    gradient[index] += pre_gradient[h] * cache.input[k];
-                    input_gradient[k] += pre_gradient[h] * at(model, index);
-                }
-            }
-
-            if (cache.has_current) {
-                const auto base = kEmbeddingOffset +
-                    cache.current_byte * kHiddenSize;
-                for (std::size_t h = 0; h < kHiddenSize; ++h)
-                    gradient[base + h] += input_gradient[h];
-            }
-
-            for (std::size_t j = 0; j < kContextSize; ++j) {
-                for (std::size_t h = 0; h < kHiddenSize; ++h) {
-                    gradient[kContextWeightOffset + j * kHiddenSize + h] +=
-                        pre_gradient[h] * cache.context_features[j];
-                }
-            }
+            std::array<float, kParameterCount> target_gradient{};
+            if (!compute_target_gradient(model, bytes, target, target_gradient))
+                return report;
+            for (std::size_t i = 0; i < kParameterCount; ++i)
+                gradient[i] += target_gradient[i];
 
             ++accumulated_targets;
             ++epoch_targets;
