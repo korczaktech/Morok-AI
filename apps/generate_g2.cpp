@@ -15,8 +15,8 @@ int main(int argc,char** argv) {
         morok::model::G1GenerationConfig c;
         c.max_new_bytes=48;
         c.printable_only=true;
-        c.repetition_penalty=0.65;
-        c.repetition_window=16;
+        c.repetition_penalty=1.25;
+        c.repetition_window=24;
         c.eos_threshold=0.85;
         c.min_new_bytes=2;
         if(argc>4)c.max_new_bytes=static_cast<std::size_t>(std::stoull(argv[4]));

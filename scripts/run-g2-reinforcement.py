@@ -44,8 +44,8 @@ def main():
  ap=argparse.ArgumentParser()
  ap.add_argument("--checkpoint",type=Path,required=True); ap.add_argument("--database",type=Path,default=ROOT/"data/reinforcement-g2/answers.json")
  ap.add_argument("--trainer",type=Path,default=ROOT/"build/morok-train-g2"); ap.add_argument("--generator",type=Path,default=ROOT/"build/morok-generate-g2")
- ap.add_argument("--reinforcer",type=Path,default=ROOT/"build/morok-reinforce-g2"); ap.add_argument("--bootstrap-epochs",type=int,default=8)
- ap.add_argument("--attempts",type=int,default=3); ap.add_argument("--questions",nargs="+",choices=sorted(TASK_CONCEPTS),default=list(TASK_CONCEPTS)); ap.add_argument("--learning-rate",type=float,default=.0001)
+ ap.add_argument("--reinforcer",type=Path,default=ROOT/"build/morok-reinforce-g2"); ap.add_argument("--bootstrap-epochs",type=int,default=100)
+ ap.add_argument("--attempts",type=int,default=3); ap.add_argument("--questions",nargs="+",choices=sorted(TASK_CONCEPTS),default=list(TASK_CONCEPTS)); ap.add_argument("--learning-rate",type=float,default=.001)
  ap.add_argument("--results-file",type=Path,default=ROOT/"artifacts/reinforcement-g2/attempt-results.txt")
  a=ap.parse_args()
  if not 1<=a.attempts<=10 or not 1<=a.bootstrap_epochs<=100:raise ValueError("attempts must be in [1,10] and bootstrap epochs in [1,100]")
@@ -82,8 +82,8 @@ def main():
    training_target,training_source=select_training_target(q["id"],response,verdict)
    if training_source=="oracle_demonstration":answer_file.write_text(training_target,encoding="utf-8")
    if len(training_target.encode("utf-8"))>=2:
-    report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate),"25"]))
-    episode["policy_update"]={"status":"applied","source":training_source,"algorithm":"positive_reward_gradient_descent_on_target_sequence","report":report}
+    report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate),"100"]))
+    episode["policy_update"]={"status":"applied","source":training_source,"algorithm":"positive_reward_adamw_on_target_sequence","report":report,"target_loss_before":report.get("target_loss_before"),"target_loss_after":report.get("target_loss_after"),"target_loss_decreased":report.get("target_loss_after",float("inf")) < report.get("target_loss_before",float("-inf"))}
     db["totals"]["policy_updates"]+=1
     if training_source=="oracle_demonstration":db["totals"]["oracle_demonstrations"]+=1
    else:
