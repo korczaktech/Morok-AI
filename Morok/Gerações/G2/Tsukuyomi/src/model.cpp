@@ -58,6 +58,13 @@ bool word_byte(std::uint8_t byte) {
            (byte >= 0x80 && byte <= 0xBF) ||
            (byte >= 0xC2 && byte <= 0xF4);
 }
+std::size_t question_position_bucket(std::size_t position,
+                                    std::size_t begin, std::size_t end) {
+    const std::size_t length = end - begin;
+    if (length == 0 || position < begin || position >= end) return 0;
+    return std::min(kContextSize - 1, ((position - begin) * kContextSize) / length);
+}
+
 bool reserved_feature_byte(std::uint8_t byte) {
     return byte == 0xC0 || byte == 0xC1 || byte >= 0xF5;
 }
@@ -109,7 +116,7 @@ QuestionFeatures prepare_question_features(
     if (result.begin >= result.end) return result;
     result.available = true;
     for (std::size_t position = result.begin; position < result.end; ++position) {
-        const std::size_t bucket = (result.end - 1 - position) % kContextSize;
+        const std::size_t bucket = question_position_bucket(position, result.begin, result.end);
         ++result.counts[bucket];
         const auto base = kEmbeddingOffset + static_cast<std::size_t>(context[position]) * kHiddenSize;
         const auto features = linguistic_features(context[position],
@@ -534,7 +541,7 @@ bool accumulate_target_gradient(const Model& model, std::span<const std::uint8_t
             for (std::size_t position = cache.question_begin;
                  position < cache.question_end; ++position) {
                 const std::size_t bucket =
-                    (cache.question_end - 1 - position) % kContextSize;
+                    question_position_bucket(position, cache.question_begin, cache.question_end);
                 const auto base = kEmbeddingOffset +
                     static_cast<std::size_t>(bytes[position]) * kHiddenSize;
                 const auto features = linguistic_features(bytes[position],
@@ -727,7 +734,7 @@ bool save_training_state(const TrainingState& state,
                          const std::filesystem::path& path) {
     if (path.empty()) return false;
     constexpr char magic[8] = {'M','O','R','O','K','A','D','M'};
-    constexpr std::uint32_t version = 7;
+    constexpr std::uint32_t version = 8;
     constexpr std::uint32_t count = static_cast<std::uint32_t>(kParameterCount);
     std::uint64_t hash = 14695981039346656037ULL;
     const auto update_hash = [&hash](const unsigned char* data, std::size_t size) {
