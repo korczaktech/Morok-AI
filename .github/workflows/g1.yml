@@ -78,35 +78,111 @@ jobs:
           MOROK_GENERATE_BIN=./build/g1/morok_generate \
             bash Gerações/G1/scripts/first-training.sh artifacts/g1-first-training 2 42
 
-      - name: Publish reinforcement results as GitHub Actions annotations
+      - name: Evaluate every G1 profile on the same trained checkpoint
+        working-directory: Morok
+        run: |
+          ./build/g1/morok-g1-profile-evaluate \
+            artifacts/g1-first-training/g1-best.morokckp \
+            artifacts/g1-first-training/profile-evaluation.tsv
+
+      - name: Publish G1 evaluation tables and annotations
         if: always()
         working-directory: Morok
         run: |
           python3 - <<'PY'
-          import json
+          import csv
+          import os
           from pathlib import Path
 
-          path = Path("Gerações/G1/data/reinforcement/answers.json")
-          data = json.loads(path.read_text(encoding="utf-8"))
-          episodes = data.get("episodes", [])
-          labels = {
+          results = Path("artifacts/g1-first-training/profile-evaluation.tsv")
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          profiles = ("Tsukuyomi", "Apollo", "Mokosh")
+          questions = {
               "sky_is_blue": "O céu é azul?",
-              "grass_color": "Que cor é a grama?",
-              "mountains_high_or_low": "As montanhas são baixas ou altas?",
+              "grass_color": "A grama é verde?",
+              "mountains_high_or_low": "As montanhas são altas?",
           }
-          print("::notice title=Reforço G1::O histórico contém {} episódios, {} demonstrações-oráculo e {} tentativas geradas.".format(
-              len(episodes),
-              sum(e.get("source") == "oracle_demonstration" for e in episodes),
-              sum(e.get("source") == "model_generated" for e in episodes)))
-          for qid, label in labels.items():
-              selected = [e for e in episodes if e.get("question_id") == qid and e.get("source") == "model_generated"]
-              correct = sum(e.get("verdict") == "correct" for e in selected)
-              incorrect = sum(e.get("verdict") == "incorrect" for e in selected)
-              print("::warning title=Histórico: {}::{} tentativas geradas; {} corretas; {} incorretas. Este histórico não separa os perfis.".format(
-                  label, len(selected), correct, incorrect))
-          for profile in ("Tsukuyomi", "Mokosh", "Apollo"):
-              print("::warning title=Avaliação {}::Resposta e latência individuais ainda não foram medidas nesta execução. Não há resultado por perfil para publicar.".format(profile))
-          print("::notice title=Limite da avaliação::O histórico de reforço não contém duração de inferência nem identificador de perfil; não é possível calcular velocidade individual.")
+
+          if not results.is_file():
+              message = "Avaliação individual não foi executada; arquivo de resultados ausente."
+              print(f"::error title=Avaliação G1::{message}")
+              if summary_path:
+                  with open(summary_path, "a", encoding="utf-8") as summary:
+                      summary.write("# Avaliação G1\n\n" + message + "\n")
+              raise SystemExit(0)
+
+          with results.open(encoding="utf-8", newline="") as stream:
+              rows = list(csv.DictReader(stream, delimiter="\\t"))
+
+          expected = {(profile, qid) for profile in profiles for qid in questions}
+          actual = {(row["profile"], row["question_id"]) for row in rows}
+          if actual != expected:
+              missing = sorted(expected - actual)
+              extra = sorted(actual - expected)
+              print(f"::error title=Avaliação G1::Resultados incompletos. Ausentes: {missing}; extras: {extra}")
+              raise SystemExit(1)
+
+          def table(headers, body):
+              lines = ["| " + " | ".join(headers) + " |",
+                       "| " + " | ".join("---" for _ in headers) + " |"]
+              lines.extend("| " + " | ".join(str(cell).replace("|", "\\\\|").replace("\\n", " ")) + " |" for cell in body)
+              return "\\n".join(lines) + "\\n"
+
+          for row in rows:
+              row["latency_ms"] = float(row["latency_ms"])
+              row["correct"] = row["verdict"] == "correct"
+
+          # Table 1: combined question totals across all three profiles.
+          overall = []
+          for qid, label in questions.items():
+              selected = [r for r in rows if r["question_id"] == qid]
+              correct = sum(r["correct"] for r in selected)
+              incorrect = len(selected) - correct
+              state = "Correto" if correct == len(selected) else ("Errado" if correct == 0 else "Parcial")
+              overall.append([label, incorrect, correct, state])
+
+          # Table 2: profile-level totals and mean latency.
+          individual = []
+          for profile in profiles:
+              selected = [r for r in rows if r["profile"] == profile]
+              correct = sum(r["correct"] for r in selected)
+              incorrect = len(selected) - correct
+              mean_ms = sum(r["latency_ms"] for r in selected) / len(selected)
+              individual.append([profile, correct, incorrect, f"{mean_ms:.3f} ms"])
+
+          # Table 3: each profile's answer to each question.
+          detailed = []
+          for profile in profiles:
+              for qid, label in questions.items():
+                  row = next(r for r in rows if r["profile"] == profile and r["question_id"] == qid)
+                  answer = row["answer"].strip() or "(sem resposta)"
+                  verdict = "Correto" if row["correct"] else "Errado"
+                  detailed.append([profile, label, answer, verdict, f'{row["latency_ms"]:.3f} ms'])
+
+                  # Annotations are individual messages; Markdown tables do not render in annotations.
+                  level = "notice" if row["correct"] else "warning"
+                  safe = answer.replace("%", "%25").replace("\\r", "%0D").replace("\\n", "%0A").replace(":", "%3A").replace(",", "%2C")
+                  print(f"::{level} title={profile} - {label}::{verdict}; resposta: {safe}; latência: {row['latency_ms']:.3f} ms")
+
+          report = [
+              "# Avaliação G1 — checkpoint treinado nesta execução",
+              "",
+              "Cada perfil foi avaliado nas mesmas três perguntas usando o checkpoint produzido pelo treinamento desta execução.",
+              "",
+              "## G1 ao todo — todos os modelos",
+              table(["Pergunta", "Respostas Erradas", "Respostas Certas", "Estado"], overall),
+              "",
+              "## Resultado individual por modelo",
+              table(["Modelo", "Corretas", "Incorretas", "Tempo médio"], individual),
+              "",
+              "## Avaliação individual de cada resposta",
+              table(["Modelo", "Pergunta", "Resposta", "Estado", "Tempo"], detailed),
+          ]
+          rendered = "\\n".join(report) + "\\n"
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as summary:
+                  summary.write(rendered)
+          print(rendered)
           PY
 
       - name: Upload G1 training artifacts
