@@ -6,7 +6,7 @@ model::G1GenerationReport generate(const model::G1Parameters& parameters,
                                   const Policy& policy) {
     model::G1GenerationConfig config{};
     config.max_new_bytes = std::clamp<std::size_t>(policy.max_new_bytes, 1, 128);
-    config.top_k = 0;
+    config.top_k = policy.top_k;
     config.temperature = 0.7;
     config.repetition_penalty = 0.35;
     config.repetition_window = 32;
