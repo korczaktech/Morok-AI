@@ -37,7 +37,7 @@ def main():
  if db.get("schema_version")!=1 or {q["id"] for q in db["questions"]}!=set(TASK_CONCEPTS):raise ValueError("invalid G2 feedback database")
  a.checkpoint.parent.mkdir(parents=True,exist_ok=True)
  if not Path(str(a.checkpoint)+".expert-a").is_file() or not Path(str(a.checkpoint)+".expert-b").is_file():
-  run([str(a.trainer),str(ROOT/"tests/fixtures/benchmark"),str(a.checkpoint),str(a.bootstrap_epochs),"42"])
+  run([str(a.trainer),str(ROOT/"tests/fixtures/g2-single-document"),str(a.checkpoint),str(a.bootstrap_epochs),"42"])
  run_id=os.environ.get("GITHUB_RUN_ID","local"); run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT","1"); results=[]
  with tempfile.TemporaryDirectory(prefix="morok-g2-reinforcement-") as td:
   tmp=Path(td)
