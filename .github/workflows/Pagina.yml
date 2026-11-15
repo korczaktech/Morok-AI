@@ -3,7 +3,7 @@ name: Pagina
 on:
   push:
     branches:
-      - main
+      - Website
     paths:
       - "Site/Front-End/**"
       - ".github/workflows/Pagina.yml"
@@ -29,6 +29,8 @@ jobs:
     steps:
       - name: Baixar repositório
         uses: actions/checkout@v4
+        with:
+          ref: Website
 
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
