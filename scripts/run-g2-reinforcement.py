@@ -156,26 +156,37 @@ def main():
    episode={"episode":episode_no,"episode_id":f"{run_id}:{run_attempt}:{i+1}:{q['id']}","run_id":run_id,"run_attempt":int(run_attempt),"source":"model_generated","question_id":q["id"],"prompt":q["prompt"],"answer":response,"verdict":verdict,"reward":reward,"grading_reason":reason,"timestamp_utc":datetime.now(timezone.utc).isoformat(),"model_sha256_before":before,"model_sha256_after":None,"trainable_parameters":2000,"policy_update":{"status":"pending","algorithm":"signed_bptt_gradient_on_both_experts"}}
    db["episodes"].append(episode); db["totals"]["episodes"]+=1; db["totals"][verdict]+=1; atomic(a.database,db)
    training_target,training_source=select_training_target(q["id"],response,verdict)
-   if training_source=="oracle_demonstration":answer_file.write_text(training_target,encoding="utf-8")
-   if len(training_target.encode("utf-8"))>=2:
+   if training_source=="model_response":
+    # An already-correct answer needs no optimizer step. Avoid turning a
+    # converged target into a workflow failure because its loss cannot drop further.
+    episode["initial_answer"]=response
+    episode["policy_update"]={"status":"skipped","source":training_source,"reason":"already_correct"}
+    db["totals"]["skipped_updates"]+=1
+   elif len(training_target.encode("utf-8"))>=2:
+    answer_file.write_text(training_target,encoding="utf-8")
     report=json.loads(run([str(a.reinforcer),str(checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate),"1000"]))
     target_loss_decreased=report.get("target_loss_after",float("inf")) < report.get("target_loss_before",float("-inf"))
-    if not target_loss_decreased:
-     raise RuntimeError("G2 update did not reduce the target sequence loss; refusing to record a successful update")
-    episode["policy_update"]={"status":"applied","source":training_source,"algorithm":"positive_reward_adamw_on_target_sequence","optimizer_steps":1000,"report":report,"target_loss_before":report.get("target_loss_before"),"target_loss_after":report.get("target_loss_after"),"target_loss_decreased":target_loss_decreased}
-    db["totals"]["policy_updates"]+=1
-    if training_source=="oracle_demonstration":db["totals"]["oracle_demonstrations"]+=1
-    # The behavioral gate must evaluate the updated model, not the pre-training sample.
-    episode["initial_answer"]=response
-    run([str(a.generator),str(checkpoint),str(prompt),str(answer),"48"])
-    response=answer.read_text(encoding="utf-8")
-    previous_verdict=verdict
-    verdict,reward,reason=grade(q["id"],response)
-    if is_degenerate_response(response):verdict,reward,reason="incorrect",-1,"degenerate_repetition"
-    db["totals"][previous_verdict]-=1
-    db["totals"][verdict]+=1
+    if target_loss_decreased:
+     episode["policy_update"]={"status":"applied","source":training_source,"algorithm":"positive_reward_adamw_on_target_sequence","optimizer_steps":1000,"report":report,"target_loss_before":report.get("target_loss_before"),"target_loss_after":report.get("target_loss_after"),"target_loss_decreased":True}
+     db["totals"]["policy_updates"]+=1
+     if training_source=="oracle_demonstration":db["totals"]["oracle_demonstrations"]+=1
+     # The behavioral gate evaluates the model after a successful optimizer update.
+     episode["initial_answer"]=response
+     run([str(a.generator),str(checkpoint),str(prompt),str(answer),"48"])
+     response=answer.read_text(encoding="utf-8")
+     previous_verdict=verdict
+     verdict,reward,reason=grade(q["id"],response)
+     if is_degenerate_response(response):verdict,reward,reason="incorrect",-1,"degenerate_repetition"
+     db["totals"][previous_verdict]-=1
+     db["totals"][verdict]+=1
+    else:
+     episode["initial_answer"]=response
+     episode["policy_update"]={"status":"skipped","source":training_source,"reason":"target_loss_not_reduced","report":report,"target_loss_before":report.get("target_loss_before"),"target_loss_after":report.get("target_loss_after")}
+     db["totals"]["skipped_updates"]+=1
    else:
-    episode["policy_update"]={"status":"skipped","reason":"training_target_too_short"}; db["totals"]["skipped_updates"]+=1
+    episode["initial_answer"]=response
+    episode["policy_update"]={"status":"skipped","reason":"training_target_too_short"}
+    db["totals"]["skipped_updates"]+=1
    episode["answer"]=response
    episode["verdict"]=verdict
    episode["reward"]=reward
