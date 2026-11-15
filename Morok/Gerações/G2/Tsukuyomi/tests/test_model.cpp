@@ -63,6 +63,28 @@ int main() {
     check_gradient(3, 9920); // escala
     check_gradient(3, 9952); // deslocamento
 
+    // Varredura estratificada de diferenças finitas ao longo dos 10.000 offsets.
+    {
+        const std::string broad_text = "U: ABCDEFGH\\nIA:xy";
+        const std::vector<std::uint8_t> broad_bytes(broad_text.begin(), broad_text.end());
+        const std::size_t target = broad_bytes.size() - 1;
+        std::vector<std::uint8_t> mask(broad_bytes.size(), 0);
+        mask[target] = 1;
+        assert(compute_target_gradient(model, broad_bytes, target, analytic));
+        constexpr float epsilon = 1.0e-3F;
+        for (std::size_t parameter = 0; parameter < kParameterCount; parameter += 137) {
+            Model plus = model;
+            Model minus = model;
+            plus.parameters[parameter] += epsilon;
+            minus.parameters[parameter] -= epsilon;
+            const double numerical =
+                (evaluate_loss(plus, broad_bytes, mask) -
+                 evaluate_loss(minus, broad_bytes, mask)) / (2.0 * epsilon);
+            const double error = std::abs(numerical - analytic[parameter]);
+            assert(error <= 3.0e-2 + 3.0e-2 * std::abs(numerical));
+        }
+    }
+
     // O gradiente também deve refletir a pergunta inteira no protocolo U:/IA:.
     const std::array<std::uint8_t, 13> question_gradient_sample{
         'U', ':', 'A', 'B', 'C', 'D', 'E', 'F', 'G', '\n', 'I', 'A', ':'
