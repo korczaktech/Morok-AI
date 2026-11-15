@@ -193,6 +193,12 @@ void test_shared_profile_generation_policies() {
             "Mokosh must honor the configured top-k policy");
     require(mokosh.rlah_bias_strength > 0.0,
             "RLAH prior must be enabled in the inference policy");
+    const auto max = g1::make_generation_config(
+        g1::ProfileKind::tsukuyomi_max, 900, 10);
+    require(max.max_new_bytes == 512,
+            "Tsukuyomi Max must support the unified 512-byte response limit");
+    require(max.top_k == 16 && max.temperature == 0.75,
+            "Tsukuyomi Max must use its balanced unified generation policy");
 }
 
 void test_invalid_limits_rejected() {
