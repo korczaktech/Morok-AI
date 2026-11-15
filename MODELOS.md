@@ -47,15 +47,19 @@ Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a prim
 
 Cada geração implementará os quatro perfis. Mokosh mantém a prioridade de eficiência; Tsukuyomi usa exatamente um agente; Artemis usa mais de dois agentes; Apollo prioriza baixa latência. A quantidade de parâmetros, mecanismos cognitivos e capacidades de cada geração será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
 
-## Separação de build já aplicada
+## Separação de código e dependências
 
-O CMake mantém G2 em uma biblioteca independente (`Morok::G2`). A biblioteca base `Morok::Core` não compila fontes de G2. Configurar com `-DMOROK_BUILD_G2=OFF` exclui a biblioteca, executáveis e testes específicos de G2. Os workflows dedicados à G1 usam essa configuração. Os aplicativos e testes G2 vinculam explicitamente a biblioteca G2.
+O `core/` público contém infraestrutura compartilhada. As bibliotecas de geração são alvos separados: `Morok::G1` e `Morok::G2`. G1 e G2 podem depender do core, mas não podem importar headers, tipos, parâmetros, treinamento, inferência ou checkpoints privados um do outro.
+
+A implementação da G2 foi desmembrada em `G2/engine/`. Ela possui inventário de parâmetros, estado recorrente, forward pass, BPTT, otimizador, checkpoint, treinamento e geração próprios. Os dois especialistas internos da G2 usam esse motor privado da própria geração. Não são instâncias da implementação da G1.
+
+A implementação da G1 está isolada no alvo `Morok::G1`, separado do alvo público `Morok::Core`. Os executáveis e testes de G1 vinculam a biblioteca G1. G2 vincula apenas `Morok::G2` e `Morok::Core`. A separação é reforçada por um teste estático que impede referências da G2 a símbolos ou headers privados da G1.
 
 ## Estado da migração
 
-Esta especificação e a estrutura inicial de diretórios estabelecem a organização de destino. O código C++ atual da G1 e G2 permanece nas pastas históricas `src/`, `include/`, `apps/` e `tests/`. Ele ainda não foi atribuído a Mokosh, Tsukuyomi, Artemis ou Apollo. Não movi esses arquivos sem esse mapeamento, pois isso poderia atribuir incorretamente a arquitetura atual e quebrar workflows, testes e checkpoints.
+A separação entre os motores de G1 e G2 e o desacoplamento da G2 são etapas implementadas nesta revisão. Ainda há arquivos históricos de G1 em `src/` e `include/`; a próxima migração física deve movê-los para `G1/engine/` e atualizar seus consumidores sem deixar headers privados na camada pública.
 
-A próxima etapa técnica é inventariar dependências e migrar fisicamente o código para o modelo correto, preservando contratos e workflows. Até lá, os novos diretórios são estrutura organizacional e especificação, não implementações executáveis independentes.
+Os diretórios `G1/`, `G2/` e `G3/` contêm os perfis nomeados, mas isso não significa que os quatro modelos de cada geração já tenham quatro motores executáveis independentes. Mokosh, Tsukuyomi, Artemis e Apollo ainda precisam de suas políticas e implementações exclusivas integradas aos respectivos motores. G3 permanece sem motor implementado. A documentação não deve ser interpretada como prova de implementação.
 
 ## Modelo removido
 Hephaestus não faz parte da arquitetura aprovada.

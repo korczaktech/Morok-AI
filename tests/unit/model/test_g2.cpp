@@ -32,7 +32,7 @@ int main() {
         if(loaded.flatten()!=p.flatten())throw std::runtime_error("G2 checkpoint roundtrip failed");
         auto prompt=morok::common::Utf8Text::from_utf8("Q");
         if(!prompt)throw std::runtime_error("test prompt is not valid UTF-8");
-        G1GenerationConfig generation; generation.max_new_bytes=2; generation.min_new_bytes=2;
+        G2ExpertGenerationConfig generation; generation.max_new_bytes=2; generation.min_new_bytes=2;
         const auto generated=generate_g2(p,*prompt.value_if(),generation);
         if(generated.generated_bytes>2)throw std::runtime_error("G2 generation exceeded its byte bound");
         const auto corpus=dir/"corpus"; std::filesystem::create_directories(corpus);

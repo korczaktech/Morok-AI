@@ -12,7 +12,7 @@ int main(int argc,char** argv) {
         std::ifstream in(argv[2],std::ios::binary); if(!in)throw std::runtime_error("não foi possível abrir prompt");
         std::string raw((std::istreambuf_iterator<char>(in)),{}); auto text=morok::common::Utf8Text::from_utf8(raw);
         if(!text)throw std::runtime_error("prompt UTF-8 inválido");
-        morok::model::G1GenerationConfig c;
+        morok::model::G2ExpertGenerationConfig c;
         c.max_new_bytes=48;
         c.printable_only=true;
         c.repetition_penalty=1.25;

@@ -33,15 +33,6 @@ add_library(morok_core STATIC
     src/tools/tool_subsystem.cpp
     src/security/security_subsystem.cpp
     src/learn/learning_subsystem.cpp
-    src/model/parameters/g1_parameters.cpp
-    src/model/g1_forward.cpp
-    src/model/learn/g1_bptt.cpp
-    src/model/learn/optimizer.cpp
-    src/model/learn/g1_training.cpp
-    src/model/learn/g1_checkpoint.cpp
-    src/model/learn/g1_benchmark.cpp
-    src/model/learn/g1_evaluation.cpp
-    src/model/learn/g1_generation.cpp
 )
 add_library(Morok::Core ALIAS morok_core)
 
@@ -55,6 +46,26 @@ target_link_libraries(morok_core PRIVATE morok_build_options SQLite::SQLite3)
 target_compile_definitions(morok_core PUBLIC MOROK_VERSION_STRING="${PROJECT_VERSION}")
 morok_enable_sanitizers(morok_core)
 
+# G1 is a private generation library; the public core contains only shared infrastructure.
+add_library(morok_g1 STATIC
+    src/model/parameters/g1_parameters.cpp
+    src/model/g1_forward.cpp
+    src/model/learn/g1_bptt.cpp
+    src/model/learn/optimizer.cpp
+    src/model/learn/g1_training.cpp
+    src/model/learn/g1_checkpoint.cpp
+    src/model/learn/g1_benchmark.cpp
+    src/model/learn/g1_evaluation.cpp
+    src/model/learn/g1_generation.cpp
+)
+add_library(Morok::G1 ALIAS morok_g1)
+target_compile_features(morok_g1 PUBLIC cxx_std_20)
+target_include_directories(morok_g1 PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+target_link_libraries(morok_g1 PUBLIC Morok::Core PRIVATE morok_build_options)
+morok_enable_sanitizers(morok_g1)
+
 # G2 is an optional, separate library. G1-only builds do not compile G2 sources.
 if(MOROK_BUILD_G2)
     add_library(morok_g2 STATIC
@@ -63,11 +74,19 @@ if(MOROK_BUILD_G2)
         src/model/learn/g2_checkpoint.cpp
         src/model/learn/g2_training.cpp
         src/model/learn/g2_generation.cpp
+        G2/engine/src/parameters.cpp
+        G2/engine/src/forward.cpp
+        G2/engine/src/bptt.cpp
+        G2/engine/src/optimizer.cpp
+        G2/engine/src/checkpoint.cpp
+        G2/engine/src/training.cpp
+        G2/engine/src/generation.cpp
     )
     add_library(Morok::G2 ALIAS morok_g2)
     target_compile_features(morok_g2 PUBLIC cxx_std_20)
     target_include_directories(morok_g2 PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/G2/engine/include>
         $<INSTALL_INTERFACE:include>)
     target_link_libraries(morok_g2 PUBLIC Morok::Core PRIVATE morok_build_options)
     morok_enable_sanitizers(morok_g2)
@@ -90,7 +109,7 @@ if(MOROK_BUILD_APPS)
     morok_enable_sanitizers(morok_evaluate)
 
     add_executable(morok_train_cli apps/train_g1.cpp)
-    target_link_libraries(morok_train_cli PRIVATE Morok::Core morok_build_options)
+    target_link_libraries(morok_train_cli PRIVATE Morok::G1 morok_build_options)
     set_target_properties(morok_train_cli PROPERTIES OUTPUT_NAME "morok-train")
     morok_enable_sanitizers(morok_train_cli)
 
@@ -115,19 +134,19 @@ message(STATUS "Tests: ${MOROK_BUILD_TESTS}")
 
 if(MOROK_BUILD_APPS)
 add_executable(morok_train apps/train_g1.cpp)
-target_link_libraries(morok_train PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_train PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_train)
 
 add_executable(morok_benchmark apps/benchmark_g1.cpp)
-target_link_libraries(morok_benchmark PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_benchmark PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_benchmark)
 
 add_executable(morok_complete apps/complete_g1.cpp)
-target_link_libraries(morok_complete PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_complete PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_complete)
 
 add_executable(morok_generate apps/generate_g1.cpp)
-target_link_libraries(morok_generate PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_generate PRIVATE Morok::G1 morok_build_options)
 morok_enable_sanitizers(morok_generate)
 
 if(MOROK_BUILD_G2)
@@ -143,7 +162,7 @@ morok_enable_sanitizers(morok_generate_g2)
 endif()
 
 add_executable(morok_reinforce apps/reinforce_g1.cpp)
-target_link_libraries(morok_reinforce PRIVATE Morok::Core morok_build_options)
+target_link_libraries(morok_reinforce PRIVATE Morok::G1 morok_build_options)
 set_target_properties(morok_reinforce PROPERTIES OUTPUT_NAME "morok-reinforce")
 morok_enable_sanitizers(morok_reinforce)
 
@@ -166,7 +185,7 @@ if(MOROK_BUILD_APPS)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
     endif()
-    install(TARGETS morok_core ARCHIVE DESTINATION lib)
+    install(TARGETS morok_core morok_g1 ARCHIVE DESTINATION lib)
     install(DIRECTORY include/ DESTINATION include)
 endif()
 

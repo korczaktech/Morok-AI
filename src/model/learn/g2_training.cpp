@@ -26,8 +26,8 @@ G2TrainingReport train_g2_corpus(const G2TrainingConfig& config,G2Parameters& p)
     if(config.resume) b.resume_from_checkpoint=b.checkpoint_path;
     if(!config.base.metrics_log_path.empty()) b.metrics_log_path=config.base.metrics_log_path.string()+".expert-b";
     G2TrainingReport report;
-    report.expert_a=train_g1_corpus(a,p.expert_a);
-    report.expert_b=train_g1_corpus(b,p.expert_b);
+    report.expert_a=train_g2_expert_corpus(a,p.expert_a);
+    report.expert_b=train_g2_expert_corpus(b,p.expert_b);
     save_g2_checkpoint(config.checkpoint_prefix,p);
     return report;
 }

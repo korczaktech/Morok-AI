@@ -1,6 +1,6 @@
 #include "morok/model/learn/g2_generation.hpp"
 #include "morok/model/g2_forward.hpp"
-#include "morok/model/learn/g1_generation.hpp"
+#include "morok/g2/engine/generation.hpp"
 #include <cstdint>
 namespace morok::model {
 namespace {
@@ -15,10 +15,10 @@ double score(const G2Parameters& p,const common::Utf8Text& prompt,const common::
     return count?total/static_cast<double>(count):0.0;
 }
 }
-G2GenerationReport generate_g2(const G2Parameters& p,const common::Utf8Text& prompt,const G1GenerationConfig& cfg) {
-    auto a=generate_g1(p.expert_a,prompt,cfg);
+G2GenerationReport generate_g2(const G2Parameters& p,const common::Utf8Text& prompt,const G2ExpertGenerationConfig& cfg) {
+    auto a=generate_g2_expert(p.expert_a,prompt,cfg);
     auto bcfg=cfg; bcfg.seed^=0x9E3779B97F4A7C15ULL;
-    auto b=generate_g1(p.expert_b,prompt,bcfg);
+    auto b=generate_g2_expert(p.expert_b,prompt,bcfg);
     const double sa=score(p,prompt,a.continuation), sb=score(p,prompt,b.continuation);
     const auto& chosen=sa<=sb?a:b;
     return {chosen.continuation,a.candidate_evaluations+b.candidate_evaluations,

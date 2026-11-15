@@ -1,8 +1,8 @@
 #include "morok/common/utf8_text.hpp"
-#include "morok/model/g1_forward.hpp"
-#include "morok/model/learn/g1_bptt.hpp"
+#include "morok/g2/engine/forward.hpp"
+#include "morok/g2/engine/bptt.hpp"
 #include "morok/model/learn/g2_checkpoint.hpp"
-#include "morok/model/learn/optimizer.hpp"
+#include "morok/g2/engine/optimizer.hpp"
 #include "morok/model/parameters/g2_parameters.hpp"
 #include <algorithm>
 #include <cmath>
@@ -15,16 +15,16 @@
 #include <utility>
 #include <vector>
 namespace {
-double target_loss(const morok::model::G1Parameters& parameters,
+double target_loss(const morok::model::G2ExpertParameters& parameters,
                   const std::string& prompt, const std::string& response) {
- morok::model::G1State state{};
+ morok::model::G2ExpertState state{};
  for(std::size_t i=0;i+1<prompt.size();++i)
-  morok::model::advance_g1_state(parameters,state,static_cast<std::uint8_t>(static_cast<unsigned char>(prompt[i])));
+  morok::model::advance_g2_expert_state(parameters,state,static_cast<std::uint8_t>(static_cast<unsigned char>(prompt[i])));
  std::vector<std::uint8_t> sequence;
  sequence.reserve(response.size()+1);
  sequence.push_back(static_cast<std::uint8_t>(static_cast<unsigned char>(prompt.back())));
  for(unsigned char byte:response) sequence.push_back(byte);
- return morok::model::compute_g1_bptt_gradients(parameters,sequence,64,state,prompt.size()-1).mean_loss_nats;
+ return morok::model::compute_g2_expert_bptt_gradients(parameters,sequence,64,state,prompt.size()-1).mean_loss_nats;
 }
 std::string read_file(const char* path) {
  std::ifstream f(path,std::ios::binary); if(!f) throw std::runtime_error(std::string("cannot open ")+path);
@@ -47,23 +47,23 @@ int main(int argc,char** argv) {
   std::vector<std::uint8_t> sequence; sequence.reserve(response_text.size()+1);
   sequence.push_back(static_cast<std::uint8_t>(static_cast<unsigned char>(prompt_text.back())));
   for(unsigned char b:response_text) sequence.push_back(b);
-  auto config=morok::model::G1OptimizerConfig::adamw(); config.learning_rate=lr; config.weight_decay=0.0; config.max_gradient_norm=5.0;
-  auto optimizer_a=morok::model::make_g1_optimizer_state(morok::model::G1OptimizerKind::AdamW);
-  auto optimizer_b=morok::model::make_g1_optimizer_state(morok::model::G1OptimizerKind::AdamW);
+  auto config=morok::model::G2ExpertOptimizerConfig::adamw(); config.learning_rate=lr; config.weight_decay=0.0; config.max_gradient_norm=5.0;
+  auto optimizer_a=morok::model::make_g2_expert_optimizer_state(morok::model::G2ExpertOptimizerKind::AdamW);
+  auto optimizer_b=morok::model::make_g2_expert_optimizer_state(morok::model::G2ExpertOptimizerKind::AdamW);
   const auto before=parameters.flatten(); double first_norm=0,last_norm=0;
   const double loss_before=(target_loss(parameters.expert_a,prompt_text,response_text)+target_loss(parameters.expert_b,prompt_text,response_text))*0.5;
-  morok::model::G1OptimizerStepResult last_a{},last_b{};
+  morok::model::G2ExpertOptimizerStepResult last_a{},last_b{};
   std::size_t applied_steps=0;
   double current_loss=loss_before;
   for(std::size_t n=0;n<steps;++n) {
-   morok::model::G1State state_a{},state_b{};
+   morok::model::G2ExpertState state_a{},state_b{};
    for(std::size_t i=0;i+1<prompt_text.size();++i) {
     const auto byte=static_cast<std::uint8_t>(static_cast<unsigned char>(prompt_text[i]));
-    morok::model::advance_g1_state(parameters.expert_a,state_a,byte);
-    morok::model::advance_g1_state(parameters.expert_b,state_b,byte);
+    morok::model::advance_g2_expert_state(parameters.expert_a,state_a,byte);
+    morok::model::advance_g2_expert_state(parameters.expert_b,state_b,byte);
    }
-   auto ga=morok::model::compute_g1_bptt_gradients(parameters.expert_a,sequence,64,state_a,prompt_text.size()-1);
-   auto gb=morok::model::compute_g1_bptt_gradients(parameters.expert_b,sequence,64,state_b,prompt_text.size()-1);
+   auto ga=morok::model::compute_g2_expert_bptt_gradients(parameters.expert_a,sequence,64,state_a,prompt_text.size()-1);
+   auto gb=morok::model::compute_g2_expert_bptt_gradients(parameters.expert_b,sequence,64,state_b,prompt_text.size()-1);
    last_norm=std::max(ga.gradients.global_norm(),gb.gradients.global_norm()); if(n==0) first_norm=last_norm;
    // Positive reward minimizes the demonstrated sequence loss; negative reward maximizes it.
    for(double& v:ga.gradients.values)v*=reward;
@@ -75,8 +75,8 @@ int main(int argc,char** argv) {
     config.learning_rate=lr*std::pow(0.5,static_cast<double>(retry));
     auto candidate_a=saved_a, candidate_b=saved_b;
     auto candidate_optimizer_a=saved_optimizer_a, candidate_optimizer_b=saved_optimizer_b;
-    const auto step_a=morok::model::apply_g1_optimizer_step(candidate_a,ga.gradients,config,candidate_optimizer_a);
-    const auto step_b=morok::model::apply_g1_optimizer_step(candidate_b,gb.gradients,config,candidate_optimizer_b);
+    const auto step_a=morok::model::apply_g2_expert_optimizer_step(candidate_a,ga.gradients,config,candidate_optimizer_a);
+    const auto step_b=morok::model::apply_g2_expert_optimizer_step(candidate_b,gb.gradients,config,candidate_optimizer_b);
     const double candidate_loss=(target_loss(candidate_a,prompt_text,response_text)+target_loss(candidate_b,prompt_text,response_text))*0.5;
     const bool improved=reward>0.0?candidate_loss<current_loss:candidate_loss>current_loss;
     if(improved) {
