@@ -40,3 +40,13 @@ O corpus é um arquivo binário de 2 bytes a 512 MiB. O modelo não inclui corpu
 A versão 0.1 é um pipeline funcional de modelo de linguagem byte-level, não uma demonstração de raciocínio geral. O contexto é finito; não há BPTT, memória externa, tokenizer, subsistemas cognitivos G2, retomada do estado do otimizador ou qualidade linguística comprovada. A geração preserva UTF-8 válido para prompts válidos. Qualidade linguística depende de treinamento e avaliação com corpus apropriado. Consulte ARCHITECTURE.md.
 
 O orçamento é conferido estaticamente e representa parâmetros implementados, não qualidade ou desempenho comprovados.
+
+## Corpus conversacional inicial
+
+O diretório `data/` contém `treinamento-inicial.txt`, com 40 pares de diálogo em português e 4.439 bytes em UTF-8 (aproximadamente 4,33 KiB). Os exemplos apresentam identidade, geração, versão, capacidades, limitações e conceitos básicos do projeto Morok.
+
+Para treinar usando esse material, a partir de `Morok/`:
+
+`build/g2/morok-g2-tsukuyomi-train "Gerações/G2/Tsukuyomi/data/treinamento-inicial.txt" build/g2/tsukuyomi-inicial.ckpt 10 42`
+
+O arquivo é um corpus de modelagem de linguagem, não um conjunto de pares supervisionados com rótulos separados. O modelo aprende a prever a sequência inteira de bytes, incluindo os prefixos `U:` e `IA:`; isso não garante que ele aprenda a seguir o formato de diálogo ou responder corretamente a cada pergunta. A qualidade deve ser medida em exemplos que não estejam no corpus.
