@@ -37,19 +37,20 @@ if not questions:
 
 results = out / "profile-evaluation.tsv"
 results.write_text("", encoding="utf-8")
-for profile in profiles:
+for profile_index, profile in enumerate(profiles):
     model_dir = out / profile.lower()
     model_dir.mkdir(parents=True, exist_ok=True)
     checkpoint = model_dir / "model.morokckp"
     best = model_dir / "best.morokckp"
     metrics = model_dir / "metrics.jsonl"
-    print(f"Training {profile}: {epochs} epochs requested", flush=True)
+    profile_seed = (seed + profile_index) % (1 << 64)
+    print(f"Training {profile}: {epochs} epochs requested (seed={profile_seed})", flush=True)
     subprocess.run([
-        str(train), str(corpus), str(epochs), str(seed),
+        str(train), str(corpus), str(epochs), str(profile_seed),
         "--checkpoint", str(checkpoint),
         "--log", str(metrics),
         "--export-best", str(best),
-        "--patience", "1000000",
+        "--patience", "50",
         "--truncation", "64",
         "--optimizer", "adamw",
         "--learning-rate", "0.001",
