@@ -154,8 +154,20 @@ if(MOROK_BUILD_APPS)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
     endif()
-    install(TARGETS morok_core morok_g1 ARCHIVE DESTINATION lib)
-    install(DIRECTORY include/ DESTINATION include)
+    install(TARGETS
+        morok_core
+        morok_g1
+        morok_g1_mokosh
+        morok_g1_tsukuyomi
+        morok_g1_apollo
+        ARCHIVE DESTINATION lib)
+    install(DIRECTORY
+        include/
+        Gerações/G1/shared/include/
+        Gerações/G1/Mokosh/include/
+        Gerações/G1/Tsukuyomi/include/
+        Gerações/G1/Apollo/include/
+        DESTINATION include)
 endif()
 
 if(MOROK_BUILD_FUZZERS)

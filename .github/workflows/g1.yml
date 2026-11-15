@@ -54,6 +54,19 @@ jobs:
         working-directory: Morok
         run: cmake --build build/g1 --parallel 2
 
+      - name: Verify installed G1 libraries and headers
+        working-directory: Morok
+        run: |
+          cmake --install build/g1 --prefix build/g1/install
+          test -f build/g1/install/include/morok/model/learn/g1_generation.hpp
+          test -f build/g1/install/include/morok/g1/mokosh/profile.hpp
+          test -f build/g1/install/include/morok/g1/tsukuyomi/profile.hpp
+          test -f build/g1/install/include/morok/g1/apollo/profile.hpp
+          test -f build/g1/install/lib/libmorok_g1.a
+          test -f build/g1/install/lib/libmorok_g1_mokosh.a
+          test -f build/g1/install/lib/libmorok_g1_tsukuyomi.a
+          test -f build/g1/install/lib/libmorok_g1_apollo.a
+
       - name: Test G1 and shared core
         working-directory: Morok
         run: ctest --test-dir build/g1 --output-on-failure --parallel 2
