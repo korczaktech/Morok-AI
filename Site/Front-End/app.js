@@ -324,13 +324,13 @@
     $('#auth-email').disabled=!!state.authSession;
     $('#auth-password').hidden=!!state.authSession;
     $('#auth-forgot').hidden=!!state.authSession;
-    $('.auth-tab').forEach(tab=>tab.hidden=!!state.authSession);
+    $$('.auth-tab').forEach(tab=>tab.hidden=!!state.authSession);
     $('#auth-title').textContent=state.authSession?'Conta conectada':'Entrar na sua conta';
     el.auth.showModal();
   }
   function setAuthMode(mode) {
     state.authMode=mode;
-    $('.auth-tab').forEach(tab=>tab.classList.toggle('active',tab.dataset.authMode===mode));
+    $$('.auth-tab').forEach(tab=>tab.classList.toggle('active',tab.dataset.authMode===mode));
     $('#auth-title').textContent=mode==='signup'?'Criar sua conta':'Entrar na sua conta';
     $('#auth-submit').textContent=mode==='signup'?'Criar conta':'Entrar';
     $('#auth-password').autocomplete=mode==='signup'?'new-password':'current-password';
@@ -377,7 +377,7 @@
     try { if(state.authSession?.access_token) await supabaseAuth('logout',{token:state.authSession.access_token}); } catch {}
     saveAuthSession(null); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
   }
-  $('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
+  $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
   $('#auth-submit').addEventListener('click',event=>{event.preventDefault();submitAuth();});
   $('#auth-forgot').addEventListener('click',recoverPassword);
   $('#auth-logout').addEventListener('click',logout);
@@ -395,11 +395,11 @@
   $('#model-select').addEventListener('click',()=>{const pop=$('#model-popover');pop.hidden=!pop.hidden;$('#model-select').setAttribute('aria-expanded',String(!pop.hidden));});
   function updateModelMenu() {
     $('#model-select-label').textContent = state.generation + ' · ' + state.model;
-    $('[data-generation]').forEach(button=>button.classList.toggle('selected',button.dataset.generation===state.generation));
-    $('[data-model]').forEach(button=>button.classList.toggle('selected',button.dataset.model===state.model));
+    $$('[data-generation]').forEach(button=>button.classList.toggle('selected',button.dataset.generation===state.generation));
+    $$('[data-model]').forEach(button=>button.classList.toggle('selected',button.dataset.model===state.model));
   }
-  $('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;updateModelMenu();persist();}));
-  $('[data-model]').forEach(button=>button.addEventListener('click',()=>{state.model=button.dataset.model;updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Perfil selecionado: '+state.generation+' · '+state.model+'. O servidor ainda usa o checkpoint carregado.');}));
+  $$('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;updateModelMenu();persist();}));
+  $$('[data-model]').forEach(button=>button.addEventListener('click',()=>{state.model=button.dataset.model;updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Perfil selecionado: '+state.generation+' · '+state.model+'. O servidor ainda usa o checkpoint carregado.');}));
   document.addEventListener('click',event=>{if(!event.target.closest('.model-select-wrap')){$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');}if(!event.target.closest('.context-menu')&&!event.target.closest('.history-menu'))closeContextMenu();});
   el.context.addEventListener('click',event=>{const action=event.target.dataset.action;if(action==='rename')renameConversation(state.contextId);if(action==='delete')deleteConversation(state.contextId);closeContextMenu();});
   $('#rename-save').addEventListener('click',()=>{const conversation=state.conversations.find(c=>c.id===state.renameId);if(conversation){conversation.title=$('#rename-input').value.trim()||'Nova conversa';conversation.updatedAt=now();persist();renderHistory();}state.renameId=null;});
