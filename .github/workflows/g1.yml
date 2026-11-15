@@ -132,6 +132,7 @@ jobs:
           python3 - <<'PY'
           import csv
           import os
+          import json
           from pathlib import Path
 
           results = Path("artifacts/g1-first-training/profile-evaluation.tsv")
@@ -217,6 +218,13 @@ jobs:
               safe = answer.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A").replace(":", "%3A").replace(",", "%2C")
               print(f"::{level} title={profile}::{questions[qid]}; acerto médio: {accuracy:.1f}%; estado: {verdict}; resposta representativa: {safe}; latência média: {mean_ms:.3f} ms")
 
+          gate_reports = []
+          for profile in profiles:
+              gate_path = Path("artifacts/g1-first-training") / profile.lower() / "quality-gate.json"
+              if gate_path.is_file():
+                  with gate_path.open(encoding="utf-8") as gate_file:
+                      gate_reports.append(json.load(gate_file))
+
           report = [
               "# Avaliação G1 — execução configurada", "",
               f"Modelos: {', '.join(profiles)}. Perguntas selecionadas: {len(question_ids)}. Resultados consolidados pela média das tentativas.", "",
@@ -224,6 +232,11 @@ jobs:
               table(["Pergunta", "Respostas Erradas", "Respostas Certas", "Estado"], overall), "",
               "## Resultado individual por modelo",
               table(["Modelo", "Corretas", "Incorretas", "Tempo médio"], individual), "",
+              "## Aprovação de qualidade dos modelos",
+              table(["Modelo", "Estado", "Acertos", "Saídas legíveis", "Checkpoint aprovado"],
+                    [[g["profile"], g["status"], str(g["correct"]) + "/" + str(g["expected_evaluations"]),
+                      str(g["readable"]) + "/" + str(g["expected_evaluations"]),
+                      g["approved_checkpoint"] or "Não aprovado"] for g in gate_reports]), "",
               "## Resultado médio por modelo e pergunta",
               table(["Modelo", "Pergunta", "Resposta representativa", "Estado", "Acerto médio", "Latência média"], detailed)
           ]
