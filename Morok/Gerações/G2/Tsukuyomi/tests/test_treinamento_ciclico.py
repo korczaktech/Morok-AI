@@ -58,14 +58,14 @@ class TrainingDataTests(unittest.TestCase):
 
     def test_training_metrics_are_parsed_and_must_be_finite(self):
         output = (
-            "Épocas: 1\\nBytes-alvo: 512\\n"
-            "train_bpb inicial: 7.5\\ntrain_bpb final: 6.9\\n"
+            "Épocas: 1\nBytes-alvo: 512\n"
+            "train_bpb inicial: 7.5\ntrain_bpb final: 6.9\n"
         )
         self.assertEqual(training.extract_training_metric(output, "Épocas"), 1.0)
         self.assertEqual(training.extract_training_metric(output, "Bytes-alvo"), 512.0)
         self.assertAlmostEqual(training.extract_training_metric(output, "train_bpb final"), 6.9)
         with self.assertRaises(RuntimeError):
-            training.extract_training_metric("train_bpb final: nan\\n", "train_bpb final")
+            training.extract_training_metric("train_bpb final: nan\n", "train_bpb final")
         with self.assertRaises(RuntimeError):
             training.extract_training_metric("", "train_bpb final")
 
