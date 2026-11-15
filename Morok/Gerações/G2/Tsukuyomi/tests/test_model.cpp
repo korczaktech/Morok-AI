@@ -400,9 +400,22 @@ int main() {
         assert(truncated_one.parameters != truncated_full.parameters);
     }
 
-    // Quando o histórico excede 13 etapas, o gradiente não atravessa o limite TBPTT.
+    // Com 32 bytes de resposta, BPTT=64 permite que a perda alcance o contexto da pergunta.
     {
-        const std::string long_dialogue = "U: Q\nIA:abcdefghijklmnop";
+        const std::string dialogue = "U: pergunta\nIA:" + std::string(32, 'a');
+        const std::vector<std::uint8_t> bytes(dialogue.begin(), dialogue.end());
+        assert(compute_target_gradient(model, bytes, bytes.size() - 1, analytic));
+        bool question_gradient_present = false;
+        for (std::size_t i = 9216; i < 9632; ++i)
+            question_gradient_present = question_gradient_present ||
+                std::abs(analytic[i]) > 1.0e-8F;
+        assert(question_gradient_present);
+    }
+
+    // Quando o histórico excede 64 etapas, o gradiente não atravessa o limite TBPTT.
+    {
+        const std::string long_dialogue = "U: Q
+IA:" + std::string(80, 'a');
         const std::vector<std::uint8_t> long_bytes(
             long_dialogue.begin(), long_dialogue.end());
         assert(compute_target_gradient(
