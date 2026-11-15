@@ -87,15 +87,28 @@ def main():
    training_target,training_source=select_training_target(q["id"],response,verdict)
    if training_source=="oracle_demonstration":answer_file.write_text(training_target,encoding="utf-8")
    if len(training_target.encode("utf-8"))>=2:
-    report=json.loads(run([str(a.reinforcer),str(checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate),"100"]))
+    report=json.loads(run([str(a.reinforcer),str(checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate),"1000"]))
     target_loss_decreased=report.get("target_loss_after",float("inf")) < report.get("target_loss_before",float("-inf"))
     if not target_loss_decreased:
      raise RuntimeError("G2 update did not reduce the target sequence loss; refusing to record a successful update")
-    episode["policy_update"]={"status":"applied","source":training_source,"algorithm":"positive_reward_adamw_on_target_sequence","report":report,"target_loss_before":report.get("target_loss_before"),"target_loss_after":report.get("target_loss_after"),"target_loss_decreased":target_loss_decreased}
+    episode["policy_update"]={"status":"applied","source":training_source,"algorithm":"positive_reward_adamw_on_target_sequence","optimizer_steps":1000,"report":report,"target_loss_before":report.get("target_loss_before"),"target_loss_after":report.get("target_loss_after"),"target_loss_decreased":target_loss_decreased}
     db["totals"]["policy_updates"]+=1
     if training_source=="oracle_demonstration":db["totals"]["oracle_demonstrations"]+=1
+    # The behavioral gate must evaluate the updated model, not the pre-training sample.
+    episode["initial_answer"]=response
+    run([str(a.generator),str(checkpoint),str(prompt),str(answer),"48"])
+    response=answer.read_text(encoding="utf-8")
+    previous_verdict=verdict
+    verdict,reward,reason=grade(q["id"],response)
+    if is_degenerate_response(response):verdict,reward,reason="incorrect",-1,"degenerate_repetition"
+    db["totals"][previous_verdict]-=1
+    db["totals"][verdict]+=1
    else:
     episode["policy_update"]={"status":"skipped","reason":"training_target_too_short"}; db["totals"]["skipped_updates"]+=1
+   episode["answer"]=response
+   episode["verdict"]=verdict
+   episode["reward"]=reward
+   episode["grading_reason"]=reason
    episode["model_sha256_after"]=digest(inference_a)+digest(inference_b); atomic(a.database,db)
    results.append({"attempt":i+1,"question_id":q["id"],"answer":response,"verdict":verdict,"reward":reward,"policy_update":episode["policy_update"]["status"],"grading_reason":reason})
  lines=[f"{x['attempt']}. {x['answer'].replace(chr(10),' ').strip() or '[resposta vazia]'} - {'correto' if x['verdict']=='correct' else 'errado'}" for x in results]
