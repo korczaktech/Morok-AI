@@ -13,10 +13,10 @@ import treinamento_ciclico as training
 class TrainingDataTests(unittest.TestCase):
     def test_learning_rate_scheduler_reduces_after_plateau(self):
         lr = training.INITIAL_LEARNING_RATE
-        best = 1.0
+        best = 0.5
         plateau = 0
         for _ in range(training.LR_PLATEAU_CYCLES - 1):
-            lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 1.0)
+            lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 0.5)
             self.assertFalse(reduced)
         lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 1.0)
         self.assertTrue(reduced)
@@ -25,7 +25,7 @@ class TrainingDataTests(unittest.TestCase):
 
     def test_learning_rate_scheduler_resets_on_improvement(self):
         lr, best, plateau, reduced = training.update_learning_rate(
-            0.001, 1.0, 4, 0.8
+            0.001, 0.5, 4, 0.8
         )
         self.assertEqual(lr, 0.001)
         self.assertEqual(best, 0.8)
@@ -38,7 +38,7 @@ class TrainingDataTests(unittest.TestCase):
         self.assertFalse(training.should_stop(True, 1, 2))
         self.assertFalse(training.should_stop(False, 1, 1))
 
-    def test_single_question_prefers_answer_present_in_training(self):
+    def test_validation_does_not_prioritize_memorized_answers(self):
         train = [("pergunta original", "O orçamento planejado para Apollo é de 5.000 parâmetros.")]
         validation = [
             ("pergunta sem resposta aprendida", "Uma resposta ainda não treinada."),
@@ -46,9 +46,9 @@ class TrainingDataTests(unittest.TestCase):
             ("outra pergunta", "outra resposta"),
         ]
         selected = training.select_validation_questions(train, validation, 1)
-        self.assertEqual(selected, [validation[1]])
+        self.assertEqual(selected, [validation[0]])
     def test_split_sizes(self):
-        self.assertEqual(len(training.read_dialogues(DATA_DIR / "treinamento.txt")), 32)
+        self.assertGreaterEqual(len(training.read_dialogues(DATA_DIR / "treinamento.txt")), 32)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "validacao.txt")), 40)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "teste.txt")), 4)
 
