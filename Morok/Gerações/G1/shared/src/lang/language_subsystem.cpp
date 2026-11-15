@@ -13,8 +13,7 @@
 namespace morok::lang {
 namespace {
 
-std::string normalize_input(std::string_view input) {
-    std::string folded(input);
+std::string fold_accents(std::string folded) {
     const auto replace_all = [&folded](std::string_view from, char to) {
         std::size_t position = 0;
         while ((position = folded.find(from, position)) != std::string::npos) {
@@ -35,23 +34,25 @@ std::string normalize_input(std::string_view input) {
         {"Ô",'o'},{"Õ",'o'},{"Ö",'o'},{"ú",'u'},{"ù",'u'},{"û",'u'},{"ü",'u'}
     }};
     for (const auto& [from, to] : more_accents) replace_all(from, to);
-    const std::array<std::pair<std::string_view, char>, 5> final_accents{{
-        {"Ú",'u'},{"Ù",'u'},{"Û",'u'},{"Ü",'u'},{"ñ",'n'}
+    const std::array<std::pair<std::string_view, char>, 6> final_accents{{
+        {"Ú",'u'},{"Ù",'u'},{"Û",'u'},{"Ü",'u'},{"ñ",'n'},{"Ñ",'n'}
     }};
     for (const auto& [from, to] : final_accents) replace_all(from, to);
+    return folded;
+}
 
+std::string normalize_input(std::string_view input) {
     std::string output;
-    output.reserve(folded.size());
+    output.reserve(input.size());
     bool pending_space = false;
-    for (const unsigned char byte : folded) {
+    for (const unsigned char byte : input) {
         if (byte == '\r' || byte == '\n' || byte == '\t' || byte == ' ') {
             pending_space = !output.empty();
             continue;
         }
         if (pending_space) output.push_back(' ');
         pending_space = false;
-        output.push_back(static_cast<char>(byte < 128U
-            ? std::tolower(byte) : byte));
+        output.push_back(static_cast<char>(byte));
     }
     return output;
 }
@@ -98,11 +99,11 @@ std::string serialize_conversation(
 }
 
 DetectedLanguage identify_language(std::string_view text) {
-    std::string lower;
-    lower.reserve(text.size());
-    for (const unsigned char byte : text)
-        lower.push_back(static_cast<char>(byte < 128U
-            ? std::tolower(byte) : byte));
+    std::string lower = fold_accents(std::string(text));
+    for (char& character : lower) {
+        const auto byte = static_cast<unsigned char>(character);
+        if (byte < 128U) character = static_cast<char>(std::tolower(byte));
+    }
 
     const auto count = [&lower](std::initializer_list<std::string_view> words) {
         std::size_t matches = 0;
