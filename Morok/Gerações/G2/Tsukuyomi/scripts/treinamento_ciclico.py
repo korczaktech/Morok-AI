@@ -49,7 +49,7 @@ def read_dialogues(corpus: Path) -> list[tuple[str, str]]:
 
 
 def evaluate_set(generator: Path, checkpoint: Path,
-                 dialogues: list[tuple[str, str]]) -> list[tuple[str, str, bool, float]]:
+                 dialogues: list[tuple[str, str]]) -> list[tuple[str, bool, float]]:
     prompts = "".join(
         question.replace("\n", " ").replace("\r", " ") + "\n"
         for question, _ in dialogues
@@ -63,35 +63,15 @@ def evaluate_set(generator: Path, checkpoint: Path,
         raise RuntimeError(
             f"Gerador retornou {len(generated)} respostas para {len(dialogues)} perguntas."
         )
-    results = []
-    for (question, expected), answer in zip(dialogues, generated):
-        answer = answer.strip()
-        correct, score = evaluate(answer, expected)
-        results.append((question, answer, correct, score))
-    return results
+    return [
+        (answer.strip(), *evaluate(answer.strip(), expected))
+        for (_, expected), answer in zip(dialogues, generated)
+    ]
 
 
-def write_results(report, title: str, results) -> tuple[int, int]:
+def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
     report.write(f"## {title}\n\n")
-    for index, (question, answer, correct, score) in enumerate(results, start=1):
-        verdict = "CORRETA" if correct else "INCORRETA"
-        report.write(f"### {index}. {question}\n\n")
-        report.write(f"- Resposta gerada: {answer or '(vazia)'}\n")
-        report.write(f"- Gabarito: {results_expected_placeholder(question)}\n")
-        report.write(f"- Correspondência lexical: {score:.1%}\n")
-        report.write(f"- Resultado: **{verdict}**\n\n")
-    correct_count = sum(item[2] for item in results)
-    return correct_count, len(results)
-
-
-def results_expected_placeholder(question: str) -> str:
-    # O gabarito é acrescentado por write_dialogue_results para evitar estado global.
-    return "(ver gabarito no arquivo de origem)"
-
-
-def write_dialogue_results(report, title: str, dialogues, results) -> tuple[int, int]:
-    report.write(f"## {title}\n\n")
-    for index, ((question, expected), (_, answer, correct, score)) in enumerate(
+    for index, ((question, expected), (answer, correct, score)) in enumerate(
         zip(dialogues, results), start=1
     ):
         verdict = "CORRETA" if correct else "INCORRETA"
@@ -100,7 +80,7 @@ def write_dialogue_results(report, title: str, dialogues, results) -> tuple[int,
         report.write(f"- Gabarito: {expected}\n")
         report.write(f"- Correspondência lexical: {score:.1%}\n")
         report.write(f"- Resultado: **{verdict}**\n\n")
-    return sum(item[2] for item in results), len(results)
+    return sum(result[1] for result in results), len(results)
 
 
 def main() -> int:
@@ -120,9 +100,9 @@ def main() -> int:
     if epochs < 1 or attempts < 1:
         raise ValueError("Épocas e tentativas precisam ser maiores que zero.")
 
+    train_dialogues = read_dialogues(train_corpus)
     validation = read_dialogues(validation_corpus)
     test = read_dialogues(test_corpus)
-    train_dialogues = read_dialogues(train_corpus)
     checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
     output = Path("build/g2/respostas-tsukuyomi.md")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -156,7 +136,7 @@ def main() -> int:
             started = time.perf_counter()
             subprocess.run(command, check=True)
             validation_results = evaluate_set(generator, checkpoint, validation)
-            correct_count, total = write_dialogue_results(
+            correct_count, total = write_results(
                 report, f"Validação — tentativa {cycle}", validation, validation_results
             )
             all_correct = total > 0 and correct_count == total
@@ -186,7 +166,7 @@ def main() -> int:
 
         # O teste reservado não participa da escolha de ciclos nem do critério de parada.
         test_results = evaluate_set(generator, checkpoint, test)
-        test_correct, test_total = write_dialogue_results(
+        test_correct, test_total = write_results(
             report, "Teste final reservado", test, test_results
         )
         report.write(
