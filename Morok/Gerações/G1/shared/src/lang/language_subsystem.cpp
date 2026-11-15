@@ -1,11 +1,95 @@
 #include "morok/lang/language_subsystem.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <exception>
 #include <cmath>
 #include <utility>
 
 namespace morok::lang {
+namespace {
+
+std::string normalize_input(std::string_view input) {
+    std::string output;
+    output.reserve(input.size());
+    bool pending_space = false;
+    for (const unsigned char byte : input) {
+        if (byte == '\r' || byte == '\n' || byte == '\t' || byte == ' ') {
+            pending_space = !output.empty();
+            continue;
+        }
+        if (pending_space) output.push_back(' ');
+        pending_space = false;
+        output.push_back(static_cast<char>(byte));
+    }
+    return output;
+}
+
+DetectedLanguage identify_language(std::string_view text) {
+    std::string lower;
+    lower.reserve(text.size());
+    for (const unsigned char byte : text)
+        lower.push_back(static_cast<char>(byte < 128U
+            ? std::tolower(byte) : byte));
+
+    const auto count = [&lower](std::initializer_list<std::string_view> words) {
+        std::size_t matches = 0;
+        for (const auto word : words) {
+            std::size_t at = 0;
+            while ((at = lower.find(word, at)) != std::string::npos) {
+                const bool left = at == 0 || !std::isalnum(
+                    static_cast<unsigned char>(lower[at - 1]));
+                const auto end = at + word.size();
+                const bool right = end == lower.size() || !std::isalnum(
+                    static_cast<unsigned char>(lower[end]));
+                if (left && right) ++matches;
+                at = end;
+            }
+        }
+        return matches;
+    };
+
+    const auto pt = count({"que", "não", "uma", "com", "para", "como", "você", "olá", "sim", "qual", "céu"});
+    const auto en = count({"the", "is", "are", "what", "with", "you", "hello", "yes", "how"});
+    const auto es = count({"que", "no", "una", "con", "para", "como", "hola", "sí", "qué"});
+    if (pt == 0 && en == 0 && es == 0) return DetectedLanguage::unknown;
+    if (pt >= en && pt >= es) return DetectedLanguage::portuguese;
+    if (en >= es) return DetectedLanguage::english;
+    return DetectedLanguage::spanish;
+}
+
+model::G1GenerationConfig profile_generation(
+    LanguageProfile profile, std::size_t max_new_bytes) {
+    model::G1GenerationConfig config{};
+    config.max_new_bytes = max_new_bytes;
+    config.printable_only = true;
+    switch (profile) {
+    case LanguageProfile::tsukuyomi:
+        config.max_new_bytes = std::min<std::size_t>(max_new_bytes, 256);
+        config.temperature = 0.8;
+        config.top_k = 0;
+        config.repetition_penalty = 0.35;
+        config.repetition_window = 48;
+        break;
+    case LanguageProfile::apollo:
+        config.max_new_bytes = std::min<std::size_t>(max_new_bytes, 512);
+        config.temperature = 0.8;
+        config.top_k = 0;
+        config.repetition_penalty = 0.35;
+        config.repetition_window = 48;
+        break;
+    case LanguageProfile::mokosh:
+        config.max_new_bytes = std::min<std::size_t>(max_new_bytes, 128);
+        config.temperature = 0.7;
+        config.top_k = 8;
+        config.repetition_penalty = 0.35;
+        config.repetition_window = 32;
+        break;
+    }
+    return config;
+}
+
+} // namespace
 
 LanguageSubsystem::LanguageSubsystem(const model::G1Parameters& parameters,
                                      LanguageConfig config)
@@ -43,6 +127,7 @@ common::Status LanguageSubsystem::initialize(const core::RuntimeConfig& config) 
 common::Status LanguageSubsystem::shutdown() noexcept {
     std::lock_guard lock(mutex_);
     session_contexts_.clear();
+    session_languages_.clear();
     initialized_ = false;
     return common::Status::success();
 }
@@ -74,7 +159,10 @@ common::Result<common::SessionId> LanguageSubsystem::create_session(
                 common::ErrorCode::internal_error,
                 "duplicate language session identifier", "lang", "session.create"));
         }
+        session_languages_.emplace(id.to_string(), DetectedLanguage::unknown);
     } catch (...) {
+        session_contexts_.erase(id.to_string());
+        session_languages_.erase(id.to_string());
         (void)registry.close(id);
         return common::Result<common::SessionId>::failure(common::Error::make(
             common::ErrorCode::out_of_memory,
@@ -96,6 +184,7 @@ common::Status LanguageSubsystem::reset_session(
             common::ErrorCode::invalid_argument,
             "language session does not exist", "lang", "session.reset"));
     found->second.clear();
+    session_languages_[session_id.to_string()] = DetectedLanguage::unknown;
     return common::Status::success();
 }
 
@@ -126,8 +215,16 @@ common::Status LanguageSubsystem::observe(
         return common::Status::failure(common::Error::make(
             common::ErrorCode::input_too_large,
             "language input exceeds IA-CORE limit", "lang", "observe"));
+
+    const auto normalized = normalize_input(text.view());
+    if (normalized.empty())
+        return common::Status::failure(common::Error::make(
+            common::ErrorCode::invalid_argument,
+            "language input is empty after normalization", "lang", "observe"));
+
     auto& context = session_contexts_.at(request.session_id().to_string());
-    if (text.size_bytes() > language_config_.max_context_bytes -
+    const std::string turn = "U: " + normalized + "\nIA: ";
+    if (turn.size() > language_config_.max_context_bytes -
         std::min(context.size(), language_config_.max_context_bytes)) {
         return common::Status::failure(common::Error::make(
             common::ErrorCode::resource_limit,
@@ -135,7 +232,9 @@ common::Status LanguageSubsystem::observe(
             "lang", "observe"));
     }
     try {
-        context.append(text.view());
+        context.append(turn);
+        session_languages_[request.session_id().to_string()] =
+            identify_language(normalized);
     } catch (...) {
         return common::Status::failure(common::Error::make(
             common::ErrorCode::out_of_memory,
@@ -150,25 +249,30 @@ common::Result<LanguageGeneration> LanguageSubsystem::generate(
     std::lock_guard lock(mutex_);
     const auto valid = validate_request_locked(request);
     if (!valid) return common::Result<LanguageGeneration>::failure(*valid.error_if());
+    const std::size_t profile_limit = language_config_.profile == LanguageProfile::apollo
+        ? 512U : (language_config_.profile == LanguageProfile::mokosh ? 128U : 256U);
     if (max_new_bytes == 0 || !resource_limits_.permits_generation(max_new_bytes) ||
-        max_new_bytes > 256U) {
+        max_new_bytes > profile_limit) {
         return common::Result<LanguageGeneration>::failure(common::Error::make(
             common::ErrorCode::resource_limit,
-            "generation length must fit IA-CORE and G1 limits",
+            "generation length exceeds IA-CORE or selected G1 profile limits",
             "lang", "generate"));
     }
-    const auto& context = session_contexts_.at(request.session_id().to_string());
+    const auto key = request.session_id().to_string();
+    const auto& context = session_contexts_.at(key);
     auto prompt = common::Utf8Text::from_utf8(context);
     if (!prompt)
         return common::Result<LanguageGeneration>::failure(*prompt.error_if());
     try {
+        auto generation_config = profile_generation(language_config_.profile, max_new_bytes);
         const auto generated = model::generate_g1(
-            parameters_, *prompt.value_if(), model::G1GenerationConfig{max_new_bytes});
+            parameters_, *prompt.value_if(), generation_config);
         if (request.is_cancelled())
             return common::Result<LanguageGeneration>::failure(common::Error::make(
                 common::ErrorCode::cancelled,
                 "language request was cancelled", "lang", "generate"));
-        if (generated.continuation.size_bytes() >
+        const std::string continuation = generated.continuation.string() + "\n";
+        if (continuation.size() >
             language_config_.max_context_bytes -
             std::min(context.size(), language_config_.max_context_bytes)) {
             return common::Result<LanguageGeneration>::failure(common::Error::make(
@@ -176,11 +280,11 @@ common::Result<LanguageGeneration> LanguageSubsystem::generate(
                 "generated continuation would exceed session context capacity",
                 "lang", "generate"));
         }
-        session_contexts_.at(request.session_id().to_string()).append(
-            generated.continuation.view());
+        session_contexts_.at(key).append(continuation);
         LanguageGeneration result{
             generated.continuation, generated.generated_bytes,
-            generated.candidate_evaluations, generated.reached_byte_limit};
+            generated.candidate_evaluations, generated.reached_byte_limit,
+            session_languages_.at(key)};
         return common::Result<LanguageGeneration>::success(std::move(result));
     } catch (const std::bad_alloc&) {
         return common::Result<LanguageGeneration>::failure(common::Error::make(
@@ -203,6 +307,7 @@ common::Status LanguageSubsystem::close_session(
             "language session does not exist", "lang", "session.close"));
     const auto closed = registry.close(session_id);
     if (!closed) return closed;
+    session_languages_.erase(session_id.to_string());
     session_contexts_.erase(found);
     return common::Status::success();
 }
@@ -210,16 +315,13 @@ common::Status LanguageSubsystem::close_session(
 core::Runtime::Initializer LanguageSubsystem::initializer() {
     return [this](const core::RuntimeConfig& config) { return initialize(config); };
 }
-
 core::Runtime::Shutdown LanguageSubsystem::shutdown_callback() {
     return [this] { (void)shutdown(); };
 }
-
 bool LanguageSubsystem::initialized() const noexcept {
     std::lock_guard lock(mutex_);
     return initialized_;
 }
-
 std::size_t LanguageSubsystem::active_sessions() const noexcept {
     std::lock_guard lock(mutex_);
     return session_contexts_.size();
