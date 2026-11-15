@@ -59,5 +59,31 @@ class FinalEvaluationTests(unittest.TestCase):
         self.assertEqual(len(MODULE.read_dialogues(data / "teste.txt")), 12)
 
 
+    def test_benchmark_categories_cover_all_skills(self):
+        self.assertEqual(MODULE.benchmark_category("Compare Apollo e Mokosh"), "composicao")
+        self.assertEqual(MODULE.benchmark_category("Explique o contexto"), "conceito")
+        self.assertEqual(MODULE.benchmark_category("Quantos parâmetros existem?"), "fato")
+        self.assertEqual(MODULE.benchmark_category("Olá, tudo bem?"), "conversa")
+
+    def test_final_report_summarizes_each_skill(self):
+        dialogues = [
+            ("Compare Apollo e Mokosh", "Apollo é equilibrado; Mokosh é rápido."),
+            ("Explique o contexto", "Contexto ajuda na previsão."),
+            ("Quantos parâmetros existem?", "São dez mil parâmetros."),
+            ("Olá, tudo bem?", "Olá."),
+        ]
+        answers = [answer for _, answer in dialogues]
+        summary = MODULE.summarize_rows(dialogues, answers)
+        self.assertEqual(set(summary), {"composicao", "conceito", "fato", "conversa"})
+        self.assertTrue(all(item["questions"] == 1 for item in summary.values()))
+        self.assertTrue(all(item["exact_matches"] == 1 for item in summary.values()))
+
+    def test_skill_summary_rejects_mismatched_inputs(self):
+        with self.assertRaises(ValueError):
+            MODULE.summarize_rows([("pergunta", "resposta")], [])
+        with self.assertRaises(ValueError):
+            MODULE.summarize_rows([], [])
+
+
 if __name__ == "__main__":
     unittest.main()
