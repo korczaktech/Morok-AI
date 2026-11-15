@@ -47,11 +47,11 @@ class G2ReinforcementTests(unittest.TestCase):
     def test_memory_replays_persisted_model_answers_and_oracle_corrections(self):
         episodes = [
             {"episode_id": "1", "question_id": "sky_is_blue",
-             "prompt": "Usuario: O ceu e azul?\\nIA: ",
+             "prompt": "Usuario: O ceu e azul?\nIA: ",
              "initial_answer": "Sim, o ceu e azul", "answer": "Sim, o ceu e azul!",
              "policy_update": {"status": "applied", "source": "model_response"}},
             {"episode_id": "2", "question_id": "grass_color",
-             "prompt": "Usuario: Que cor e a grama?\\nIA: ",
+             "prompt": "Usuario: Que cor e a grama?\nIA: ",
              "initial_answer": "grama roxa", "answer": "A grama e verde.",
              "policy_update": {"status": "applied", "source": "oracle_demonstration"}},
             {"episode_id": "3", "question_id": "mountains_high_or_low",
