@@ -14,7 +14,7 @@ Hardware de referência: máquina com 4 GB de RAM física.
 - Precisão inicial: FP32 para parâmetros, estados, gradientes e cálculo da perda.
 - Corpus carregado em fluxo; não carregar o corpus inteiro na RAM.
 - Bloco de leitura do corpus: 64 KiB.
-- Blocos BPTT testados inicialmente: 32, 64 e 128 bytes; padrão inicial B=64.
+- Blocos BPTT testados inicialmente: 32, 64 e 128 bytes; implementação atual usa padrão B=256 e limite rígido B=512, sujeito a medição de memória.
 - Lote inicial: uma sequência/documento por fluxo recorrente. Micro-lotes só serão habilitados após medir RAM e confirmar semântica correta de estado.
 - Paralelismo inicial: um único worker de treinamento e um worker de carregamento no máximo. Paralelismo adicional exige benchmark.
 - Toda alocação de cache deve ter limite explícito. Falha de alocação não pode ser ignorada.
@@ -34,7 +34,7 @@ A indexação fica definida sem ambiguidade:
 
 Portanto, a previsão não pode usar o byte-alvo nem bytes posteriores. O teste causal deverá alterar bytes futuros e verificar que logits anteriores permanecem idênticos.
 
-A entrada do núcleo é o vetor fixo de **11 características** definido no documento 13: oito bits, paridade, contagem normalizada de bits 1 e valor normalizado do byte. Qualquer referência a vetor de oito dimensões no protocolo de treinamento significa somente os oito bits-alvo da cabeça, não a entrada do núcleo.
+A entrada do núcleo é o vetor fixo de **11 características**: oito bits MSB-first, início de token, byte separador e byte de conteúdo. As três últimas substituem paridade, popcount e valor normalizado do byte; são derivadas do byte atual e do byte anterior. Qualquer referência a vetor de oito dimensões no protocolo de treinamento significa somente os oito bits-alvo da cabeça, não a entrada do núcleo.
 
 ## 18.3 Política de UTF-8 e dados
 
@@ -104,7 +104,7 @@ O bias positivo do gate lento favorece retenção inicial maior; não é garanti
 
 ## 18.7 Segmentação: limites numéricos iniciais
 
-A segmentação G1 é um subsistema experimental auxiliar. O núcleo de predição principal continua consumindo bytes em ordem causal. Na primeira implementação, a hierarquia **não substitui bytes por tokens no caminho do núcleo**. Assim, não atribuir à segmentação redução de latência ou melhoria de BPB end-to-end sem uma variante que realmente alimente a representação agrupada ao preditor.
+A segmentação G1 permanece experimental. O núcleo continua consumindo e prevendo bytes em ordem causal, mas três features auxiliares do vetor de entrada já carregam início de token, separador e conteúdo. Além disso, o decoder de inferência consulta candidatos ativos do Segmenter RLAH e aplica um viés de continuação aos bytes compatíveis. A hierarquia ainda **não substitui bytes por IDs de tokens**. O pontuador treinável RLAH não participa do BPTT; o viés atual usa utilidade heurística dos candidatos. Não atribuir ganhos de BPB ou compreensão à integração sem avaliação comparativa.
 
 Padrões iniciais:
 
@@ -240,9 +240,11 @@ O encerramento documental não significa implementação, teste ou validação c
 ### Codificação exata das 11 características
 
 Para byte b em [0,255], os oito bits são extraídos do mais significativo ao menos significativo e convertidos para {-1,+1}: bit 1 vira +1; bit 0 vira -1. As três características restantes são:
-- paridade: +1 quando popcount(b) é par; -1 quando é ímpar;
-- contagem: popcount(b)/4 - 1, no intervalo [-1,1];
-- valor: b/127,5 - 1, no intervalo [-1,1].
+- início de token: +1 quando o byte atual inicia conteúdo após início de sequência, espaço ou pontuação; caso contrário -1;
+- separador: +1 quando o byte ASCII atual é espaço em branco ou pontuação; caso contrário -1;
+- conteúdo: -1 para separador e +1 para byte de conteúdo.
+
+O mesmo cálculo deve ser usado em BPTT, avaliação, geração e reforço. Ao atravessar janelas BPTT, o byte imediatamente anterior à janela é passado explicitamente para não perder a fronteira lexical.
 
 ### BPB e redução da perda
 
