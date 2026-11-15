@@ -109,7 +109,7 @@ def main():
  if db.get("schema_version")!=1 or {q["id"] for q in db["questions"]}!=set(TASK_CONCEPTS):raise ValueError("invalid G2 feedback database")
  a.checkpoint.parent.mkdir(parents=True,exist_ok=True)
  # Versioned prefix prevents silently reusing checkpoints trained with the old optimizer.
- checkpoint=Path(str(a.checkpoint)+".v2")
+ checkpoint=Path(str(a.checkpoint)+".v3")
  inference_a=Path(str(checkpoint)+".expert-a")
  inference_b=Path(str(checkpoint)+".expert-b")
  checkpoint_reused=inference_a.is_file() and inference_b.is_file()
@@ -184,7 +184,7 @@ def main():
  lines=[f"{x['attempt']}. {x['answer'].replace(chr(10),' ').strip() or '[resposta vazia]'} - {'correto' if x['verdict']=='correct' else 'errado'}" for x in results]
  a.results_file.parent.mkdir(parents=True,exist_ok=True); a.results_file.write_text("\n".join(lines)+"\n",encoding="utf-8")
  correct_count=sum(x["verdict"]=="correct" for x in results)
- report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"selected_questions":[q["id"] for q in selected_questions],"results":results,"correct_in_this_run":correct_count,"behavioral_gate":"passed" if correct_count else "failed","totals":db["totals"],"trainable_parameters":2000,"checkpoint_reused":checkpoint_reused,"checkpoint_version":"v2","memory_replay":{"experiences_considered":len(memory),"updates_applied":memory_updates,"steps_per_experience":a.memory_replay_steps,"limit":a.memory_replay_limit}}
+ report={"generation":"G2","attempts_requested":a.attempts,"attempts_completed":len(results),"selected_questions":[q["id"] for q in selected_questions],"results":results,"correct_in_this_run":correct_count,"behavioral_gate":"passed" if correct_count else "failed","totals":db["totals"],"trainable_parameters":2000,"checkpoint_reused":checkpoint_reused,"checkpoint_version":"v3","memory_replay":{"experiences_considered":len(memory),"updates_applied":memory_updates,"steps_per_experience":a.memory_replay_steps,"limit":a.memory_replay_limit}}
  summary=os.environ.get("GITHUB_STEP_SUMMARY")
  if summary:
   with open(summary,"a",encoding="utf-8") as f:
