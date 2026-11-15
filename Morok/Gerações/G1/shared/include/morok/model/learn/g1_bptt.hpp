@@ -9,7 +9,7 @@
 
 namespace morok::model {
 
-inline constexpr std::size_t kG1MaxBpttTruncationLength = 128;
+inline constexpr std::size_t kG1MaxBpttTruncationLength = 512;
 
 struct G1Gradients {
     std::array<double, kG1ParameterCount> values{};
@@ -33,7 +33,7 @@ struct G1EosResult {
 // initial_state is the state immediately before bytes[0] is consumed.
 // final_state is immediately before consuming the final target byte; overlap
 // that target as the next window's first context byte to preserve continuity.
-// The maximum window is bounded to 128 target bytes to cap the temporary tape.
+// The maximum window is bounded to 512 target bytes to cap the temporary tape.
 [[nodiscard]] G1BpttResult compute_g1_bptt_gradients(
     const G1Parameters& parameters,
     std::span<const std::uint8_t> bytes,
