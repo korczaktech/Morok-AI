@@ -1,4 +1,5 @@
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -23,6 +24,15 @@ class TrainingDataTests(unittest.TestCase):
         self.assertTrue(groups[0].isdisjoint(groups[1]))
         self.assertTrue(groups[0].isdisjoint(groups[2]))
         self.assertTrue(groups[1].isdisjoint(groups[2]))
+
+
+    def test_bom_and_indented_markers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            corpus = Path(directory) / "dialogue.txt"
+            corpus.write_bytes(
+                b"\\xef\\xbb\\xbf  U: pergunta\\r\\n  IA: resposta\\r\\n"
+            )
+            self.assertEqual(training.read_dialogues(corpus), [("pergunta", "resposta")])
 
     def test_exact_answer_scores_one(self):
         correct, score = training.evaluate("Sim, o céu é azul.", "Sim, o céu é azul.")
