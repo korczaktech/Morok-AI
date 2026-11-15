@@ -333,7 +333,15 @@ def main() -> int:
                 report, f"Validação — ciclo {cycle}", validation, validation_results
             )
             mean_f1 = sum(result[2] for result in validation_results) / max(1, total)
-            mean_char_similarity = sum(character_similarity(result[0], expected)\n                                       for (_, expected), result in zip(validation, validation_results)) / max(1, total)\n            validation_score = (0.70 * (correct_count / max(1, total)) +\n                                0.15 * mean_f1 + 0.15 * mean_char_similarity)
+            mean_char_similarity = sum(
+                character_similarity(result[0], expected)
+                for (_, expected), result in zip(validation, validation_results)
+            ) / max(1, total)
+            validation_score = (
+                0.70 * (correct_count / max(1, total))
+                + 0.15 * mean_f1
+                + 0.15 * mean_char_similarity
+            )
             if not math.isfinite(validation_score):
                 raise RuntimeError("A pontuação de validação não é finita.")
             previous_best_score = best_validation_score
