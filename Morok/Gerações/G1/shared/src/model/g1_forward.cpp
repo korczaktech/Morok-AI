@@ -3,6 +3,7 @@
 #include "morok/model/math/primitives.hpp"
 
 #include <cmath>
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -75,26 +76,40 @@ double conditional_logit(const G1Parameters& parameters,
 
 } // namespace
 
-std::array<float, kG1InputDimension> encode_g1_byte(std::uint8_t byte) noexcept {
-    std::array<float, kG1InputDimension> features{};
-    unsigned int ones = 0;
+bool is_g1_token_separator(std::uint8_t byte) noexcept {
+    if (byte < 0x80U)
+        return std::isspace(byte) != 0 || std::ispunct(byte) != 0;
+    return false;
+}
 
+std::array<float, kG1InputDimension> encode_g1_byte(std::uint8_t byte) noexcept {
+    return encode_g1_byte(byte, false, is_g1_token_separator(byte));
+}
+
+std::array<float, kG1InputDimension> encode_g1_byte(
+    std::uint8_t byte, bool token_start, bool token_separator) noexcept {
+    std::array<float, kG1InputDimension> features{};
     for (std::size_t bit = 0; bit < 8; ++bit) {
         const bool set = (byte & static_cast<std::uint8_t>(1U << (7U - bit))) != 0;
         features[bit] = set ? 1.0F : -1.0F;
-        ones += set ? 1U : 0U;
     }
-
-    features[8] = (ones % 2U == 0U) ? 1.0F : -1.0F;
-    features[9] = static_cast<float>(ones) / 4.0F - 1.0F;
-    features[10] = static_cast<float>(byte) / 127.5F - 1.0F;
+    features[8] = token_start ? 1.0F : -1.0F;
+    features[9] = token_separator ? 1.0F : -1.0F;
+    features[10] = token_separator ? -1.0F : 1.0F;
     return features;
 }
 
 void advance_g1_state(const G1Parameters& parameters, G1State& state,
                       std::uint8_t observed_byte) {
+    advance_g1_state(parameters, state, observed_byte, false,
+                     is_g1_token_separator(observed_byte));
+}
+
+void advance_g1_state(const G1Parameters& parameters, G1State& state,
+                      std::uint8_t observed_byte, bool token_start,
+                      bool token_separator) {
     require_finite_state(state);
-    const auto input = encode_g1_byte(observed_byte);
+    const auto input = encode_g1_byte(observed_byte, token_start, token_separator);
 
     std::array<double, kDimension> next_fast{};
     std::array<double, kDimension> next_slow{};
