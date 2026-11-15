@@ -39,7 +39,8 @@ def main():
  a.checkpoint.parent.mkdir(parents=True,exist_ok=True)
  if not Path(str(a.checkpoint)+".expert-a").is_file() or not Path(str(a.checkpoint)+".expert-b").is_file():
   run([str(a.trainer),str(ROOT/"tests/fixtures/g2-single-document"),str(a.checkpoint),str(a.bootstrap_epochs),"42"])
- selected_questions=[q for q in db["questions"] if q["id"] in set(a.questions)]\n run_id=os.environ.get("GITHUB_RUN_ID","local"); run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT","1"); results=[]
+ selected_questions=[q for q in db["questions"] if q["id"] in set(a.questions)]
+ run_id=os.environ.get("GITHUB_RUN_ID","local"); run_attempt=os.environ.get("GITHUB_RUN_ATTEMPT","1"); results=[]
  with tempfile.TemporaryDirectory(prefix="morok-g2-reinforcement-") as td:
   tmp=Path(td)
   for i in range(a.attempts):
