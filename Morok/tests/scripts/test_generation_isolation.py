@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Validate G1 layout, profile isolation and shared-core ownership."""
 from pathlib import Path
-import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -37,11 +36,6 @@ def main() -> int:
                 if other != profile and f"morok::g1::{other.lower()}::" in content:
                     errors.append(f"G1/{profile} imports private G1/{other}: {file.relative_to(ROOT)}")
 
-    private_profile = re.compile(r"morok::g1::(?:mokosh|tsukuyomi)::")
-    for file in sources(ROOT / "include"):
-        if private_profile.search(file.read_text(encoding="utf-8")):
-            errors.append(f"shared public API imports private G1 profile: {file.relative_to(ROOT)}")
-
     cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
     core = cmake.split("add_library(morok_core STATIC", 1)[1].split("add_library(Morok::Core", 1)[0]
     if "Gerações/G1/" in core or "Gerações/G3/" in core:
@@ -53,6 +47,8 @@ def main() -> int:
         errors.append("CMake contains removed G2 or G1 Artemis configuration")
     if "TsukuyomiMax" not in cmake or "morok_g1_tsukuyomimax" not in cmake:
         errors.append("CMake does not declare the Tsukuyomi Max G1 target")
+    if any((g1 / name).exists() for name in ("Apollo", "Mokosh", "Tsukuyomi")):
+        errors.append("G1 contains a retired model directory")
 
     if errors:
         print("G1 architecture validation failed:", file=sys.stderr)
