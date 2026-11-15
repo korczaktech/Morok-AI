@@ -48,7 +48,7 @@ def main() -> int:
     if "TsukuyomiMax" not in cmake or "morok_g1_tsukuyomimax" not in cmake:
         errors.append("CMake does not declare the Tsukuyomi Max G1 target")
     model_directories = sorted(p.name for p in g1.iterdir()
-                                if p.is_dir() and (p / "include").exists())
+                                if p.is_dir() and (p / "src" / "profile.cpp").is_file())
     if model_directories != ["TsukuyomiMax"]:
         errors.append("G1 must contain only the Tsukuyomi Max model directory")
 
