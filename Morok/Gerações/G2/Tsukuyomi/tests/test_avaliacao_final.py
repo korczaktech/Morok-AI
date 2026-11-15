@@ -62,6 +62,7 @@ class FinalEvaluationTests(unittest.TestCase):
     def test_benchmark_categories_cover_all_skills(self):
         self.assertEqual(MODULE.benchmark_category("Compare Apollo e Mokosh"), "composicao")
         self.assertEqual(MODULE.benchmark_category("Explique o contexto"), "conceito")
+        self.assertEqual(MODULE.benchmark_category("O que é contexto?"), "conceito")
         self.assertEqual(MODULE.benchmark_category("Quantos parâmetros existem?"), "fato")
         self.assertEqual(MODULE.benchmark_category("Olá, tudo bem?"), "conversa")
 
