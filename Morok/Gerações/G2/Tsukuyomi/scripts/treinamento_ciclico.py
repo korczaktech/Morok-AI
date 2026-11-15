@@ -21,21 +21,37 @@ MAX_TOTAL_EPOCHS = 200
 INITIAL_LEARNING_RATE = 0.001
 MIN_LEARNING_RATE = 0.00005
 LR_REDUCE_FACTOR = 0.5
-LR_PLATEAU_CYCLES = 5
+LR_PLATEAU_CYCLES = 3
+LR_MIN_DELTA = 0.005
 
 
-def update_learning_rate(current: float, best_score: float, plateau: int,
-                         observed_score: float) -> tuple[float, float, int, bool]:
-    """Reduz o LR após cinco ciclos sem melhora na qualidade das respostas."""
-    if not 0.0 <= observed_score <= 1.0:
-        raise ValueError("A pontuação de validação precisa estar entre 0 e 1.")
-    if observed_score > best_score + 1.0e-6:
-        return current, observed_score, 0, False
+def validation_rank(correct_count: int, total: int, mean_f1: float,
+                    mean_char_similarity: float) -> tuple[int, float]:
+    """Ordena primeiro por respostas exatas; métricas aproximadas só desempatem."""
+    if total <= 0 or not 0 <= correct_count <= total:
+        raise ValueError("Contagem de validação inválida.")
+    if not 0.0 <= mean_f1 <= 1.0 or not 0.0 <= mean_char_similarity <= 1.0:
+        raise ValueError("Métricas de validação precisam estar entre 0 e 1.")
+    if not math.isfinite(mean_f1) or not math.isfinite(mean_char_similarity):
+        raise ValueError("Métricas de validação precisam ser finitas.")
+    return correct_count, 0.5 * mean_f1 + 0.5 * mean_char_similarity
+
+
+def update_learning_rate(current: float, best_rank: tuple[int, float], plateau: int,
+                         observed_rank: tuple[int, float]) -> tuple[float, tuple[int, float], int, bool]:
+    """Reduz LR após três ciclos sem melhora real; exatidão sempre domina o desempate."""
+    correct, quality = observed_rank
+    if correct < 0 or not 0.0 <= quality <= 1.0 or not math.isfinite(quality):
+        raise ValueError("Ranking de validação inválido.")
+    if correct > best_rank[0] or (
+        correct == best_rank[0] and quality > best_rank[1] + LR_MIN_DELTA
+    ):
+        return current, observed_rank, 0, False
     plateau += 1
     if plateau >= LR_PLATEAU_CYCLES and current > MIN_LEARNING_RATE:
         reduced = max(MIN_LEARNING_RATE, current * LR_REDUCE_FACTOR)
-        return reduced, best_score, 0, reduced < current
-    return current, best_score, plateau, False
+        return reduced, best_rank, 0, reduced < current
+    return current, best_rank, plateau, False
 
 
 def save_best_state(checkpoint: Path, optimizer_state: Path,
@@ -344,15 +360,19 @@ def main() -> int:
             )
             if not math.isfinite(validation_score):
                 raise RuntimeError("A pontuação de validação não é finita.")
-            previous_best_score = best_validation_score
-            learning_rate, best_validation_score, plateau_cycles, reduced = update_learning_rate(
-                learning_rate, best_validation_score, plateau_cycles, validation_score
+            observed_rank = validation_rank(
+                correct_count, total, mean_f1, mean_char_similarity
             )
-            if validation_score > previous_best_score + 1.0e-6:
+            previous_best_rank = best_validation_rank
+            learning_rate, best_validation_rank, plateau_cycles, reduced = update_learning_rate(
+                learning_rate, best_validation_rank, plateau_cycles, observed_rank
+            )
+            if best_validation_rank != previous_best_rank:
                 save_best_state(checkpoint, optimizer_state,
                                 best_checkpoint, best_optimizer_state)
                 best_validation_correct = correct_count
                 best_validation_cycle = cycle
+                best_validation_score = validation_score
             if reduced:
                 print(
                     f"Scheduler: validação estagnada; learning rate reduzido para {learning_rate:.6f}.",
