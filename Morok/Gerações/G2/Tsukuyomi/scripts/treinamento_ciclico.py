@@ -183,7 +183,7 @@ def main() -> int:
         report.write("- Critério de aprovação: igualdade lexical normalizada; não mede semântica\n")
         report.write("- F1 lexical é diagnóstico; similaridade não aprova uma resposta.\n")
         report.write("- Scheduler: 80% exatidão + 20% F1 lexical médio da validação.\n")
-        report.write(f"- Learning rate inicial: {learning_rate:.6f}; scheduler reduz após {LR_PLATEAU_CYCLES} ciclos sem melhora de train_bpb.\n")
+        report.write(f"- Learning rate inicial: {learning_rate:.6f}; scheduler reduz após {LR_PLATEAU_CYCLES} ciclos sem melhora da validação.\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
         while cycle < maximum_cycles:
@@ -205,7 +205,7 @@ def main() -> int:
                 command, check=True, capture_output=True, text=True, encoding="utf-8"
             )
             print(training_process.stdout, end="", flush=True)
-            if not re.search(r"train_bpb final:\\s*[0-9.eE+-]+", training_process.stdout):
+            if not re.search(r"train_bpb final:\s*[0-9.eE+-]+", training_process.stdout):
                 raise RuntimeError("O treinador não informou train_bpb final.")
             validation_results = evaluate_set(generator, checkpoint, validation)
             correct_count, total = write_results(
@@ -235,7 +235,7 @@ def main() -> int:
             )
 
             if should_stop(continuous, correct_count, total):
-                report.write("Questão selecionada respondida corretamente; treinamento encerrado.\n\n")
+                report.write("Todas as questões selecionadas foram respondidas corretamente; treinamento encerrado.\n\n")
                 break
             if not continuous and cycle >= attempts:
                 break
