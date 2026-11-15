@@ -135,8 +135,8 @@ class G2ReinforcementTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "reinforcement-g2.yml").read_text(encoding="utf-8")
         self.assertIn('inputs.epochs || 10000', workflow)
         self.assertIn('gh run download "$previous_run"', workflow)
-        self.assertIn('model.v2.expert-a', workflow)
-        self.assertIn('model.v2.expert-b', workflow)
+        self.assertIn('model.v3.expert-a', workflow)
+        self.assertIn('model.v3.expert-b', workflow)
         self.assertIn("if-no-files-found: warn", workflow)
         self.assertIn('target_loss_before', app)
         self.assertIn('target_loss_after', app)
@@ -145,7 +145,7 @@ class G2ReinforcementTests(unittest.TestCase):
     def test_runner_isolates_new_checkpoints_and_requires_loss_progress(self):
         runner = (ROOT / "scripts" / "run-g2-reinforcement.py").read_text(encoding="utf-8")
         app = (ROOT / "apps" / "reinforce_g2.cpp").read_text(encoding="utf-8")
-        self.assertIn('checkpoint=Path(str(a.checkpoint)+".v2")', runner)
+        self.assertIn('checkpoint=Path(str(a.checkpoint)+".v3")', runner)
         self.assertIn('if not target_loss_decreased:', runner)
         self.assertIn('target_loss_before', app)
         self.assertIn('target_loss_after', app)
@@ -162,21 +162,24 @@ class G2ReinforcementTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             select_questions(questions, ["sky_is_blue", "sky_is_blue"])
 
-    def test_single_corpus_contains_all_three_feedback_prompts_and_targets(self):
+    def test_g2_corpus_uses_independent_documents_for_each_eos_boundary(self):
         fixture_dir = ROOT / "tests" / "fixtures" / "g2-single-document"
         documents = sorted(fixture_dir.glob("*.txt"))
-        self.assertEqual(len(documents), 1)
-        corpus = documents[0].read_text(encoding="utf-8")
+        self.assertEqual(len(documents), 3)
         expected = {
-            "sky_is_blue": ("Usuario: O ceu e azul?\nIA: ", "Sim, o ceu e azul"),
-            "mountains_high_or_low": ("Usuario: As montanhas sao altas ou baixas?\nIA: ", "As montanhas sao altas."),
-            "grass_color": ("Usuario: Que cor e a grama?\nIA: ", "A grama e verde."),
+            "sky_is_blue": ("Usuario: O ceu e azul?\\nIA: ", "Sim, o ceu e azul"),
+            "mountains_high_or_low": ("Usuario: As montanhas sao altas ou baixas?\\nIA: ", "As montanhas sao altas."),
+            "grass_color": ("Usuario: Que cor e a grama?\\nIA: ", "A grama e verde."),
         }
+        corpus = [path.read_text(encoding="utf-8") for path in documents]
         db = json.loads((ROOT / "data" / "reinforcement-g2" / "answers.json").read_text(encoding="utf-8"))
         for question in db["questions"]:
             prompt, target = expected[question["id"]]
             self.assertEqual(question["prompt"], prompt)
             self.assertIn(prompt + target, corpus)
+        self.assertTrue(all(not document.endswith("\\n") for document in corpus))
+        trainer = (ROOT / "src" / "model" / "learn" / "g2_training.cpp").read_text(encoding="utf-8")
+        self.assertEqual(trainer.count("train_all_documents=true;"), 2)
         self.assertEqual(db["totals"]["episodes"], len(db["episodes"]))
 
     def test_database_is_isolated_and_has_2000_parameter_policy(self):
