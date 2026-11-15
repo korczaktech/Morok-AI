@@ -13,6 +13,7 @@
 #include <limits>
 #include <map>
 #include <random>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
@@ -43,8 +44,48 @@ bool equal_files(const std::filesystem::path&a,const std::filesystem::path&b,con
 std::vector<Doc>discover(const G1TrainingConfig&c,std::size_t&count){if(!std::filesystem::is_directory(c.corpus_directory))throw std::invalid_argument("corpus_directory must be a directory");std::vector<std::filesystem::path>paths;for(const auto&e:std::filesystem::recursive_directory_iterator(c.corpus_directory)){if(c.cancellation_requested&&c.cancellation_requested())throw std::runtime_error("training cancelled");if(e.is_regular_file()&&e.path().extension()==".txt"){paths.push_back(e.path());if(paths.size()>c.max_documents)throw std::runtime_error("max_documents exceeded");}}std::sort(paths.begin(),paths.end());count=paths.size();std::vector<Doc>d;std::unordered_map<std::uint64_t,std::vector<std::size_t>>seen;for(const auto&p:paths){auto x=scan(p,c.max_document_bytes,c.cancellation_requested);bool dup=false;auto it=seen.find(x.hash);if(it!=seen.end())for(auto i:it->second)if(d[i].size==x.size&&equal_files(d[i].path,p,c.cancellation_requested)){dup=true;break;}if(!dup){seen[x.hash].push_back(d.size());d.push_back(std::move(x));}}if(d.size()<3&&!(c.allow_single_document&&d.size()==1))throw std::runtime_error("at least three unique documents are required (or enable single-document mode for exactly one)");return d;}
 std::string corpus_hash(const std::vector<Doc>&d){std::uint64_t h=kOffset;for(const auto&x:d){for(auto v:{x.hash,x.size})for(int i=0;i<8;++i){h^=static_cast<std::uint8_t>(v&255);h*=kPrime;v>>=8;}}constexpr char hex[]="0123456789abcdef";std::string s(16,'0');for(int i=15;i>=0;--i){s[i]=hex[h&15];h>>=4;}return s;}
 void split(std::vector<Doc>&d,std::uint64_t seed,bool train_all_documents){if(train_all_documents||d.size()==1){for(auto&doc:d)doc.split=Split::train;return;}std::vector<std::size_t>ix(d.size());for(std::size_t i=0;i<ix.size();++i)ix[i]=i;std::mt19937_64 rng(seed);std::shuffle(ix.begin(),ix.end(),rng);const auto tr=d.size()>=20?d.size()*90/100:d.size()-2;const auto va=d.size()>=20?std::max<std::size_t>(1,d.size()*5/100):1;if(!tr||tr+va>=d.size())throw std::runtime_error("cannot form all corpus splits");for(std::size_t i=0;i<ix.size();++i)d[ix[i]].split=i<tr?Split::train:(i<tr+va?Split::valid:Split::test);}
-struct Eval{double bpb;std::uint64_t count;};
-Eval evaluate(const std::vector<Doc>&docs,Split which,const G1Parameters&p,const std::function<bool()>&cancel){if(cancel&&cancel())throw std::runtime_error("training cancelled");double nats=0;std::uint64_t count=0;std::array<char,kRead>b{};for(const auto&d:docs)if(d.split==which){if(cancel&&cancel())throw std::runtime_error("training cancelled");std::ifstream f(d.path,std::ios::binary);if(!f)throw std::runtime_error("cannot reopen "+d.path.string());G1State state{};bool has=false;std::uint8_t prev=0;while(f){f.read(b.data(),b.size());auto n=static_cast<std::size_t>(f.gcount());if(cancel&&cancel())throw std::runtime_error("training cancelled");for(std::size_t i=0;i<n;++i){auto x=static_cast<std::uint8_t>(static_cast<unsigned char>(b[i]));if(has){advance_g1_state(p,state,prev);nats+=evaluate_g1_next_byte(p,state,x).negative_log_likelihood_nats;++count;}prev=x;has=true;}}if(!f.eof())throw std::runtime_error("evaluation I/O error");}if(!count)throw std::runtime_error("evaluation split has no next-byte targets");return{nats/(static_cast<double>(count)*kLn2),count};}
+struct Eval { double bpb; std::uint64_t count; };
+Eval evaluate(const std::vector<Doc>& docs, Split which, const G1Parameters& p,
+              const std::function<bool()>& cancel) {
+    if (cancel && cancel()) throw std::runtime_error("training cancelled");
+    double nats = 0.0;
+    std::uint64_t count = 0;
+    std::array<char, kRead> buffer{};
+    for (const auto& doc : docs) {
+        if (doc.split != which) continue;
+        if (cancel && cancel()) throw std::runtime_error("training cancelled");
+        std::ifstream file(doc.path, std::ios::binary);
+        if (!file) throw std::runtime_error("cannot reopen " + doc.path.string());
+        G1State state{};
+        bool has_previous = false;
+        bool has_previous_previous = false;
+        std::uint8_t previous = 0;
+        std::uint8_t previous_previous = 0;
+        while (file) {
+            file.read(buffer.data(), buffer.size());
+            const auto size = static_cast<std::size_t>(file.gcount());
+            if (cancel && cancel()) throw std::runtime_error("training cancelled");
+            for (std::size_t i = 0; i < size; ++i) {
+                const auto current = static_cast<std::uint8_t>(static_cast<unsigned char>(buffer[i]));
+                if (has_previous) {
+                    const bool separator = is_g1_token_separator(previous);
+                    const bool token_start = !separator &&
+                        (!has_previous_previous || is_g1_token_separator(previous_previous));
+                    advance_g1_state(p, state, previous, token_start, separator);
+                    nats += evaluate_g1_next_byte(p, state, current).negative_log_likelihood_nats;
+                    ++count;
+                }
+                previous_previous = previous;
+                has_previous_previous = has_previous;
+                previous = current;
+                has_previous = true;
+            }
+        }
+        if (!file.eof()) throw std::runtime_error("evaluation I/O error");
+    }
+    if (!count) throw std::runtime_error("evaluation split has no next-byte targets");
+    return {nats / (static_cast<double>(count) * kLn2), count};
+}
 struct Totals{double nats{};std::uint64_t targets{},updates{};double norm{},norm_sum{},max_norm{};std::uint64_t norm_count{};};
 void train_doc(const Doc& d, const G1TrainingConfig& c, G1Parameters& p,
                G1OptimizerState& o, Totals& t, std::size_t& high,
