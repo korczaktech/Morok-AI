@@ -73,6 +73,18 @@ class TrainingDataTests(unittest.TestCase):
         self.assertTrue(correct)
         self.assertEqual(score, 1.0)
 
+    def test_near_match_does_not_pass_as_correct(self):
+        correct, score = training.evaluate(
+            "Sim, o céu é azul e verde.", "Sim, o céu é azul."
+        )
+        self.assertFalse(correct)
+        self.assertGreater(score, 0.0)
+
+    def test_accent_and_punctuation_normalization(self):
+        correct, score = training.evaluate("O ceu e azul!", "O céu é azul.")
+        self.assertTrue(correct)
+        self.assertEqual(score, 1.0)
+
     def test_repeated_words_are_counted(self):
         correct, score = training.evaluate("azul azul", "azul")
         self.assertFalse(correct)
