@@ -55,6 +55,18 @@ std::string normalize_input(std::string_view input) {
     return output;
 }
 
+std::string serialize_conversation(
+    const std::vector<ConversationMessage>& messages) {
+    std::string serialized;
+    for (const auto& message : messages) {
+        if (message.role == ConversationRole::user)
+            serialized += "U: " + message.text + "\nIA: ";
+        else
+            serialized += message.text + "\n";
+    }
+    return serialized;
+}
+
 DetectedLanguage identify_language(std::string_view text) {
     std::string lower;
     lower.reserve(text.size());
@@ -157,6 +169,7 @@ common::Status LanguageSubsystem::initialize(const core::RuntimeConfig& config) 
 common::Status LanguageSubsystem::shutdown() noexcept {
     std::lock_guard lock(mutex_);
     session_contexts_.clear();
+    session_messages_.clear();
     session_languages_.clear();
     initialized_ = false;
     return common::Status::success();
@@ -189,9 +202,11 @@ common::Result<common::SessionId> LanguageSubsystem::create_session(
                 common::ErrorCode::internal_error,
                 "duplicate language session identifier", "lang", "session.create"));
         }
+        session_messages_.emplace(id.to_string(), std::vector<ConversationMessage>{});
         session_languages_.emplace(id.to_string(), DetectedLanguage::unknown);
     } catch (...) {
         session_contexts_.erase(id.to_string());
+        session_messages_.erase(id.to_string());
         session_languages_.erase(id.to_string());
         (void)registry.close(id);
         return common::Result<common::SessionId>::failure(common::Error::make(
@@ -214,6 +229,7 @@ common::Status LanguageSubsystem::reset_session(
             common::ErrorCode::invalid_argument,
             "language session does not exist", "lang", "session.reset"));
     found->second.clear();
+    session_messages_[session_id.to_string()].clear();
     session_languages_[session_id.to_string()] = DetectedLanguage::unknown;
     return common::Status::success();
 }
@@ -252,19 +268,22 @@ common::Status LanguageSubsystem::observe(
             common::ErrorCode::invalid_argument,
             "language input is empty after normalization", "lang", "observe"));
 
-    auto& context = session_contexts_.at(request.session_id().to_string());
-    const std::string turn = "U: " + normalized + "\nIA: ";
-    if (turn.size() > language_config_.max_context_bytes -
-        std::min(context.size(), language_config_.max_context_bytes)) {
-        return common::Status::failure(common::Error::make(
-            common::ErrorCode::resource_limit,
-            "language session context capacity exceeded; reset or close the session",
-            "lang", "observe"));
-    }
+    const auto key = request.session_id().to_string();
+    const auto detected = identify_language(normalized);
     try {
-        context.append(turn);
-        session_languages_[request.session_id().to_string()] =
-            identify_language(normalized);
+        auto candidate_messages = session_messages_.at(key);
+        candidate_messages.push_back(
+            ConversationMessage{ConversationRole::user, normalized, detected});
+        auto serialized = serialize_conversation(candidate_messages);
+        if (serialized.size() > language_config_.max_context_bytes) {
+            return common::Status::failure(common::Error::make(
+                common::ErrorCode::resource_limit,
+                "language session context capacity exceeded; reset or close the session",
+                "lang", "observe"));
+        }
+        session_messages_.at(key) = std::move(candidate_messages);
+        session_contexts_.at(key) = std::move(serialized);
+        session_languages_[key] = detected;
     } catch (...) {
         return common::Status::failure(common::Error::make(
             common::ErrorCode::out_of_memory,
@@ -301,16 +320,22 @@ common::Result<LanguageGeneration> LanguageSubsystem::generate(
             return common::Result<LanguageGeneration>::failure(common::Error::make(
                 common::ErrorCode::cancelled,
                 "language request was cancelled", "lang", "generate"));
-        const std::string continuation = generated.continuation.string() + "\n";
-        if (continuation.size() >
-            language_config_.max_context_bytes -
-            std::min(context.size(), language_config_.max_context_bytes)) {
+        std::string answer = generated.continuation.string();
+        while (!answer.empty() && (answer.back() == '\n' || answer.back() == '\r'))
+            answer.pop_back();
+        auto candidate_messages = session_messages_.at(key);
+        candidate_messages.push_back(
+            ConversationMessage{ConversationRole::assistant, std::move(answer),
+                                session_languages_.at(key)});
+        auto serialized = serialize_conversation(candidate_messages);
+        if (serialized.size() > language_config_.max_context_bytes) {
             return common::Result<LanguageGeneration>::failure(common::Error::make(
                 common::ErrorCode::resource_limit,
                 "generated continuation would exceed session context capacity",
                 "lang", "generate"));
         }
-        session_contexts_.at(key).append(continuation);
+        session_messages_.at(key) = std::move(candidate_messages);
+        session_contexts_.at(key) = std::move(serialized);
         LanguageGeneration result{
             generated.continuation, generated.generated_bytes,
             generated.candidate_evaluations, generated.reached_byte_limit,
@@ -338,6 +363,7 @@ common::Status LanguageSubsystem::close_session(
     const auto closed = registry.close(session_id);
     if (!closed) return closed;
     session_languages_.erase(session_id.to_string());
+    session_messages_.erase(session_id.to_string());
     session_contexts_.erase(found);
     return common::Status::success();
 }
