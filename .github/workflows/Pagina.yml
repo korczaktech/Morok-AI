@@ -21,7 +21,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-slim
+    runs-on: windows-latest
 
     steps:
       - name: Baixar repositório
@@ -33,7 +33,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Validar página inicial
-        run: test -f Site/Front-End/index.html
+        run: node -e "if (!require('fs').existsSync('Site/Front-End/index.html')) process.exit(1)"
 
       - name: Preparar arquivos do site
         uses: actions/upload-pages-artifact@v3
