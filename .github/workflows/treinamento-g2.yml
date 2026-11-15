@@ -24,12 +24,12 @@ on:
         description: "Quantidade de questões para a IA tentar resolver (1 a 40)"
         type: number
         required: true
-        default: 40
+        default: 1
       treinamento_continuo:
         description: "Continuar até obter 10 ciclos consecutivos com todas as respostas corretas"
         type: boolean
         required: true
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -49,9 +49,9 @@ jobs:
 
       - name: Validar parâmetros
         env:
-          EPOCAS: ${{ inputs.epocas || 200 }}
-          TENTATIVAS: ${{ inputs.tentativas || 10 }}
-          QUESTOES: ${{ inputs.questoes || 40 }}
+          EPOCAS: ${{ github.event_name == 'push' && 200 || inputs.epocas || 200 }}
+          TENTATIVAS: ${{ github.event_name == 'push' && 10 || inputs.tentativas || 10 }}
+          QUESTOES: ${{ github.event_name == 'push' && 1 || inputs.questoes || 1 }}
         run: |
           python3 - <<'PY'
           import os
@@ -100,7 +100,7 @@ jobs:
           EPOCAS: ${{ inputs.epocas || 200 }}
           TENTATIVAS: ${{ inputs.tentativas || 10 }}
           QUESTOES: ${{ inputs.questoes || 40 }}
-          TREINAMENTO_CONTINUO: ${{ inputs.treinamento_continuo || false }}
+          TREINAMENTO_CONTINUO: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || inputs.treinamento_continuo || false }}
         run: |
           CONTINUO=0
           if [ "$TREINAMENTO_CONTINUO" = "true" ]; then CONTINUO=1; fi
