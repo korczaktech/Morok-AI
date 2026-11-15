@@ -59,6 +59,10 @@ int main() {
     const auto invalid_report = train(invalid_config_model, sample, invalid_config);
     assert(invalid_report.epochs_completed == 0);
     assert(invalid_config_model.parameters == model.parameters);
+    invalid_config.weight_decay = -0.01;
+    const auto negative_decay_report = train(invalid_config_model, sample, invalid_config);
+    assert(negative_decay_report.epochs_completed == 0);
+    assert(invalid_config_model.parameters == model.parameters);
 \n    const auto before = evaluate_loss(model, sample);
     assert(std::isfinite(before) && before > 0.0);
 
