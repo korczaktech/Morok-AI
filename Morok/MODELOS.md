@@ -92,7 +92,7 @@ Aplicações, scripts, dados de reforço, fixtures e testes específicos da gera
 
 G1 possui somente o alvo CMake de Tsukuyomi Max. O modelo mantém suas políticas e implementação exclusiva em `Gerações/G1/TsukuyomiMax/`; o motor e os adaptadores compartilhados permanecem em `Gerações/G1/shared/`.
 
-G2 possui os diretórios de Apollo, Tsukuyomi e Mokosh, com seus orçamentos de parâmetros e funções gerais definidos nesta especificação. A implementação, arquitetura interna, treinamento e inferência ainda devem ser desenvolvidos e documentados individualmente.
+G2 possui Apollo, Tsukuyomi e Mokosh. O Tsukuyomi G2 v0.1.0 já possui uma implementação byte-level isolada, com 10.000 parâmetros, treinamento Adam, avaliação de loss, geração greedy, checkpoint versionado, CLIs, testes e workflow próprio. Sua arquitetura e limitações estão documentadas em Gerações/G2/Tsukuyomi/ARCHITECTURE.md. Apollo e Mokosh continuam documentais e ainda não possuem implementação executável.
 
 G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de outras gerações dentro da G3.
 
