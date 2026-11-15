@@ -12,8 +12,9 @@ O Tsukuyomi prioriza capacidade e tarefas complexas. A versão 0.1 entrega um mo
 
 - include/morok/g2/tsukuyomi/model.hpp: contrato público do modelo.
 - src/model.cpp: parâmetros, inicialização, forward pass, avaliação, gradientes, Adam, geração e checkpoints.
-- apps/train.cpp: treinamento de corpus local.
+- apps/train.cpp: treinamento de corpus local, com opção de continuar a partir de checkpoint.
 - apps/generate.cpp: inferência a partir de checkpoint.
+- scripts/treinamento_ciclico.py: ciclos de treinamento e geração para todas as perguntas.
 - tests/test_model.cpp: invariantes, aprendizado, geração e persistência.
 - ARCHITECTURE.md: especificação matemática, inventário e limitações.
 
@@ -31,9 +32,25 @@ ctest --test-dir build/g2 -R g2.tsukuyomi.model --output-on-failure
 
 build/g2/morok-g2-tsukuyomi-train corpus.bin tsukuyomi-g2-v0.1.ckpt 10 42
 
+Para continuar o treinamento usando os parâmetros de um checkpoint existente:
+
+build/g2/morok-g2-tsukuyomi-train corpus.bin tsukuyomi-g2-v0.1.ckpt 10 42 --resume
+
 build/g2/morok-g2-tsukuyomi-generate tsukuyomi-g2-v0.1.ckpt "Olá" 120
 
 O corpus é um arquivo binário de 2 bytes a 512 MiB. O modelo não inclui corpus de treinamento.
+
+## Treinamento cíclico pelo GitHub Actions
+
+O workflow manual **Treinamento — G2** fica disponível na aba Actions. Ele oferece:
+
+- Checkbox para habilitar o Tsukuyomi.
+- **Épocas:** passagens completas pelo corpus em cada ciclo.
+- **Tentativas:** quantidade de ciclos. Em cada ciclo, o modelo treina pelas épocas configuradas e depois gera uma resposta para cada pergunta identificada pelo prefixo U: no corpus.
+
+O primeiro ciclo inicializa o modelo. Os ciclos seguintes carregam o checkpoint anterior, preservando os parâmetros aprendidos. Ao final, o workflow publica o checkpoint e um relatório Markdown com as respostas geradas como artefatos da execução.
+
+Limitação atual: o estado dos momentos do Adam não é salvo no checkpoint; portanto, os parâmetros do modelo continuam entre ciclos, mas os acumuladores internos do otimizador são reiniciados no início de cada ciclo. As respostas são registradas, mas ainda não são avaliadas automaticamente como corretas ou incorretas.
 
 ## Escopo e limitações
 
@@ -43,10 +60,10 @@ O orçamento é conferido estaticamente e representa parâmetros implementados, 
 
 ## Corpus conversacional inicial
 
-O diretório `data/` contém `treinamento-inicial.txt`, com 40 pares de diálogo em português e 4.439 bytes em UTF-8 (aproximadamente 4,33 KiB). Os exemplos apresentam identidade, geração, versão, capacidades, limitações e conceitos básicos do projeto Morok.
+O diretório data/ contém treinamento-inicial.txt, com 40 pares de diálogo em português e 4.439 bytes em UTF-8 (aproximadamente 4,33 KiB). Os exemplos apresentam identidade, geração, versão, capacidades, limitações e conceitos básicos do projeto Morok.
 
-Para treinar usando esse material, a partir de `Morok/`:
+Para treinar usando esse material, a partir de Morok/:
 
-`build/g2/morok-g2-tsukuyomi-train "Gerações/G2/Tsukuyomi/data/treinamento-inicial.txt" build/g2/tsukuyomi-inicial.ckpt 10 42`
+build/g2/morok-g2-tsukuyomi-train "Gerações/G2/Tsukuyomi/data/treinamento-inicial.txt" build/g2/tsukuyomi-inicial.ckpt 10 42
 
-O arquivo é um corpus de modelagem de linguagem, não um conjunto de pares supervisionados com rótulos separados. O modelo aprende a prever a sequência inteira de bytes, incluindo os prefixos `U:` e `IA:`; isso não garante que ele aprenda a seguir o formato de diálogo ou responder corretamente a cada pergunta. A qualidade deve ser medida em exemplos que não estejam no corpus.
+O arquivo é um corpus de modelagem de linguagem, não um conjunto de pares supervisionados com rótulos separados. O modelo aprende a prever a sequência inteira de bytes, incluindo os prefixos U: e IA:; isso não garante que ele aprenda a seguir o formato de diálogo ou responder corretamente a cada pergunta. A qualidade deve ser medida em exemplos que não estejam no corpus.
