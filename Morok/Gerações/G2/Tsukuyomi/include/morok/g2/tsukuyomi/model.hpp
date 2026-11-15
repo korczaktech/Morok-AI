@@ -32,6 +32,12 @@ struct TrainingConfig {
     std::uint64_t seed{42};
 };
 
+struct TrainingState {
+    std::array<double, kParameterCount> first_moment{};
+    std::array<double, kParameterCount> second_moment{};
+    std::uint64_t step{0};
+};
+
 struct TrainingReport {
     std::size_t epochs_completed{0};
     std::uint64_t target_bytes{0};
@@ -48,13 +54,13 @@ void initialize(Model& model, std::uint64_t seed);
                                    std::span<const std::uint8_t> bytes);
 [[nodiscard]] TrainingReport train(Model& model,
                                     std::span<const std::uint8_t> bytes,
-                                    const TrainingConfig& config);
+                                    const TrainingConfig& config, TrainingState* state = nullptr);
 [[nodiscard]] std::vector<std::uint8_t> generate(
     const Model& model, std::span<const std::uint8_t> prompt,
     std::size_t max_new_bytes);
 [[nodiscard]] bool save_checkpoint(const Model& model,
                                    const std::filesystem::path& path);
-[[nodiscard]] bool load_checkpoint(Model& model,
+[[nodiscard]] bool save_training_state(const TrainingState& state,\n                                       const std::filesystem::path& path);\n[[nodiscard]] bool load_training_state(TrainingState& state,\n                                       const std::filesystem::path& path);\n[[nodiscard]] bool load_checkpoint(Model& model,
                                    const std::filesystem::path& path);
 
 } // namespace morok::g2::tsukuyomi
