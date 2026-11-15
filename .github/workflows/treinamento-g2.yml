@@ -14,10 +14,15 @@ on:
         required: true
         default: 10
       tentativas:
-        description: "Ciclos de resposta (cada ciclo responde a todas as perguntas)"
+        description: "Quantidade de ciclos quando o treinamento contínuo estiver desligado"
         type: number
         required: true
         default: 1
+      treinamento_continuo:
+        description: "Continuar até obter 10 ciclos consecutivos com todas as respostas corretas"
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -79,12 +84,15 @@ jobs:
         env:
           EPOCAS: ${{ inputs.epocas }}
           TENTATIVAS: ${{ inputs.tentativas }}
+          TREINAMENTO_CONTINUO: ${{ inputs.treinamento_continuo }}
         run: |
+          CONTINUO=0
+          if [ "$TREINAMENTO_CONTINUO" = "true" ]; then CONTINUO=1; fi
           python3 "Gerações/G2/Tsukuyomi/scripts/treinamento_ciclico.py" \
             build/g2/morok-g2-tsukuyomi-train \
             build/g2/morok-g2-tsukuyomi-generate \
             "Gerações/G2/Tsukuyomi/data/treinamento-inicial.txt" \
-            "$EPOCAS" "$TENTATIVAS"
+            "$EPOCAS" "$TENTATIVAS" "$CONTINUO"
 
       - name: Publicar tabela de respostas e annotations G2
         if: always()
