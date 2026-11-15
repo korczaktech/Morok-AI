@@ -59,3 +59,16 @@ jobs:
         working-directory: Morok
         run: ctest --test-dir build/g2 -R "g2.tsukuyomi.model|architecture.generation_isolation" --output-on-failure
 
+      - name: Smoke test de treinamento e inferência
+        working-directory: Morok
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          Path("build/g2/tsukuyomi-smoke-corpus.bin").write_bytes(
+              ("Morok AI — Tsukuyomi G2 v0.1. " * 12).encode("utf-8"))
+          PY
+          build/g2/morok-g2-tsukuyomi-train build/g2/tsukuyomi-smoke-corpus.bin build/g2/tsukuyomi-smoke.ckpt 1 42
+          build/g2/morok-g2-tsukuyomi-generate build/g2/tsukuyomi-smoke.ckpt "Morok" 32 > build/g2/tsukuyomi-smoke-output.txt
+          test -s build/g2/tsukuyomi-smoke.ckpt
+          test -s build/g2/tsukuyomi-smoke-output.txt
+
