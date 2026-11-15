@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <vector>
 
 int main() {
@@ -23,7 +24,42 @@ int main() {
     const std::array<std::uint8_t, 8> sample{
         'M', 'o', 'r', 'o', 'k', ' ', 'A', 'I'
     };
-    const auto before = evaluate_loss(model, sample);
+
+    // Verificação por diferenças finitas: gradiente analítico vs. derivada numérica.
+    const std::array<std::uint8_t, 6> gradient_sample{'Q', 'u', 'e', 's', 't', 'o'};
+    std::array<float, kParameterCount> analytic{};
+    const auto check_gradient = [&](std::size_t target, std::size_t parameter) {
+        assert(compute_target_gradient(model, gradient_sample, target, analytic));
+        constexpr float epsilon = 1.0e-3F;
+        Model plus = model;
+        Model minus = model;
+        plus.parameters[parameter] += epsilon;
+        minus.parameters[parameter] -= epsilon;
+        std::array<std::uint8_t, 6> one_target_mask{};
+        one_target_mask[target] = 1;
+        const double loss_plus = evaluate_loss(plus, gradient_sample, one_target_mask);
+        const double loss_minus = evaluate_loss(minus, gradient_sample, one_target_mask);
+        const double numerical = (loss_plus - loss_minus) / (2.0 * epsilon);
+        const double error = std::abs(numerical - analytic[parameter]);
+        assert(error <= 3.0e-2 + 3.0e-2 * std::abs(numerical));
+    };
+    check_gradient(0, 9984); // vetor inicial
+    check_gradient(3, 0);    // embedding compartilhado
+    check_gradient(3, 8192); // projeção oculta
+    check_gradient(3, 9216); // projeção de contexto
+    check_gradient(3, 9632); // bias oculto
+    check_gradient(3, 9664); // bias de saída
+    check_gradient(3, 9920); // escala
+    check_gradient(3, 9952); // deslocamento
+
+    // Hiperparâmetros inválidos não podem alterar o modelo.
+    Model invalid_config_model = model;
+    TrainingConfig invalid_config;
+    invalid_config.weight_decay = std::numeric_limits<double>::quiet_NaN();
+    const auto invalid_report = train(invalid_config_model, sample, invalid_config);
+    assert(invalid_report.epochs_completed == 0);
+    assert(invalid_config_model.parameters == model.parameters);
+\n    const auto before = evaluate_loss(model, sample);
     assert(std::isfinite(before) && before > 0.0);
 
     const auto prediction = forward(model, sample);
