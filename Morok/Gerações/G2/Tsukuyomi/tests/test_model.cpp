@@ -317,7 +317,7 @@ int main() {
 
     // BPTT com janela 1 e janela completa devem propagar sinais diferentes.
     {
-        const std::string temporal_text = "U: Q\\nIA:abcdef";
+        const std::string temporal_text = "U: Q\nIA:abcdef";
         const std::vector<std::uint8_t> temporal_bytes(
             temporal_text.begin(), temporal_text.end());
         std::vector<std::uint8_t> final_byte_mask(temporal_bytes.size(), 0);
