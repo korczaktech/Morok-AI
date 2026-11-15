@@ -11,89 +11,39 @@ import treinamento_ciclico as training
 
 
 class TrainingDataTests(unittest.TestCase):
-    def test_first_validation_cycle_starts_without_a_previous_best(self):
-        best = training.initial_validation_rank()
-        self.assertEqual(best, (-1, -1.0))
-        lr, updated, plateau, reduced = training.update_learning_rate(
-            training.INITIAL_LEARNING_RATE, best, 0, (0, 0.0)
-        )
-        self.assertEqual(updated, (0, 0.0))
-        self.assertEqual(plateau, 0)
-        self.assertFalse(reduced)
-        self.assertEqual(lr, training.INITIAL_LEARNING_RATE)
-
-    def test_learning_rate_scheduler_reduces_after_three_validation_plateaus(self):
+    def test_learning_rate_scheduler_reduces_after_plateau(self):
         lr = training.INITIAL_LEARNING_RATE
-        best = (12, 0.5)
+        best = 0.5
         plateau = 0
         for _ in range(training.LR_PLATEAU_CYCLES - 1):
-            lr, best, plateau, reduced = training.update_learning_rate(
-                lr, best, plateau, (12, 0.5)
-            )
+            lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 0.5)
             self.assertFalse(reduced)
-        lr, best, plateau, reduced = training.update_learning_rate(
-            lr, best, plateau, (12, 0.5)
-        )
+        lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, 0.5)
         self.assertTrue(reduced)
         self.assertEqual(lr, training.INITIAL_LEARNING_RATE * 0.5)
         self.assertEqual(plateau, 0)
-
-    def test_scheduler_never_allows_approximate_quality_to_override_exact_accuracy(self):
-        lr, best, plateau, reduced = training.update_learning_rate(
-            0.001, (8, 0.4), 0, (7, 0.99)
-        )
-        self.assertEqual(best, (8, 0.4))
-        self.assertEqual(plateau, 1)
-        self.assertFalse(reduced)
-
-    def test_scheduler_ignores_small_validation_noise(self):
-        lr, best, plateau, reduced = training.update_learning_rate(
-            0.001, (8, 0.50), 2, (8, 0.504)
-        )
-        self.assertEqual(best, (8, 0.50))
-        self.assertEqual(plateau, 0)
-        self.assertTrue(reduced)
-        self.assertEqual(lr, 0.0005)
-
-    def test_scheduler_resets_when_exact_accuracy_improves(self):
-        lr, best, plateau, reduced = training.update_learning_rate(
-            0.001, (8, 0.9), 2, (9, 0.1)
-        )
-        self.assertEqual(lr, 0.001)
-        self.assertEqual(best, (9, 0.1))
-        self.assertEqual(plateau, 0)
-        self.assertFalse(reduced)
-
-    def test_scheduler_uses_approximate_metrics_only_as_tiebreaker(self):
-        rank = training.validation_rank(10, 40, 0.8, 0.6)
-        self.assertEqual(rank, (10, 0.7))
-        lr, best, plateau, reduced = training.update_learning_rate(
-            0.001, (10, 0.65), 2, rank
-        )
-        self.assertEqual(best, rank)
-        self.assertEqual(plateau, 0)
-        self.assertFalse(reduced)
-
-    def test_validation_rank_rejects_invalid_metrics(self):
-        with self.assertRaises(ValueError):
-            training.validation_rank(41, 40, 0.5, 0.5)
-        with self.assertRaises(ValueError):
-            training.validation_rank(10, 40, float("nan"), 0.5)
-
-    def test_learning_rate_scheduler_never_crosses_minimum(self):
-        lr = training.MIN_LEARNING_RATE * 2
-        best = (36, 0.9)
-        plateau = 0
-        for _ in range(training.LR_PLATEAU_CYCLES):
-            lr, best, plateau, _ = training.update_learning_rate(
-                lr, best, plateau, (0, 0.1)
-            )
-        self.assertEqual(lr, training.MIN_LEARNING_RATE)
 
     def test_training_budget_is_finite_and_matches_default_plan(self):
         self.assertEqual(training.MAX_CYCLES, 10)
         self.assertEqual(training.MAX_TOTAL_EPOCHS, 200)
         self.assertEqual(20 * 10, training.MAX_TOTAL_EPOCHS)
+
+    def test_learning_rate_scheduler_never_crosses_minimum(self):
+        lr = training.MIN_LEARNING_RATE * 2
+        best = 0.9
+        plateau = 0
+        for _ in range(training.LR_PLATEAU_CYCLES):
+            lr, best, plateau, _ = training.update_learning_rate(lr, best, plateau, 0.1)
+        self.assertEqual(lr, training.MIN_LEARNING_RATE)
+
+    def test_learning_rate_scheduler_resets_on_improvement(self):
+        lr, best, plateau, reduced = training.update_learning_rate(
+            0.001, 0.5, 4, 0.8
+        )
+        self.assertEqual(lr, 0.001)
+        self.assertEqual(best, 0.8)
+        self.assertEqual(plateau, 0)
+        self.assertFalse(reduced)
 
     def test_continuous_training_stops_on_first_correct_single_question(self):
         self.assertTrue(training.should_stop(True, 1, 1))
