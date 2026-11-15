@@ -99,6 +99,8 @@ int main(int argc, char** argv) {
               << morok::g2::tsukuyomi::kParameterCount << '\n'
               << "Modo: " << (resume ? "continuação" : "inicialização") << '\n'
               << "Épocas: " << report.epochs_completed << '\n'
+              << "Mini-lote: " << config.batch_size << '\n'
+              << "Atualizações Adam: " << optimizer_state.step << '\n'
               << "Bytes-alvo: " << report.target_bytes << '\n'
               << "Loss inicial: " << report.initial_loss << '\n'
               << "Loss final: " << report.final_loss << '\n'
