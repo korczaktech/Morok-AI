@@ -44,6 +44,15 @@ morok-g2-tsukuyomi-train corpus.bin tsukuyomi-g2-v0.1.ckpt 10 42
 
 Argumentos: arquivo de corpus, caminho do checkpoint, épocas opcionais e seed opcional.
 
+## Configuração padrão do ciclo de treinamento
+
+- 1 época por ciclo.
+- 10 ciclos no máximo (10 épocas totais).
+- 40 perguntas de validação por ciclo.
+- Treinamento contínuo desativado por padrão.
+- Se ativado manualmente, o modo contínuo pode encerrar antes quando todas as questões selecionadas forem respondidas exatamente, mas nunca ultrapassa o limite de ciclos.
+- O teste reservado de 12 perguntas é executado somente após o treinamento.
+
 ## Inferência
 A geração prepara uma única vez as 13 faixas da pergunta imutável e as reutiliza durante a geração autoregressiva. A cada passo, os bytes anteriores da resposta são incorporados à janela causal; assim, o contexto da pergunta é cacheado, mas o histórico da resposta é atualizado. Para prompts sem marcador U:, a preparação registra a ausência do contexto e evita repetir a busca pelo marcador.
 
