@@ -8,6 +8,8 @@ MODULE = runpy.run_path(str(ROOT / "scripts" / "run-g2-reinforcement.py"))
 grade = MODULE["grade"]
 select_questions = MODULE["select_questions"]
 is_degenerate_response = MODULE["is_degenerate_response"]
+select_training_target = MODULE["select_training_target"]
+SEED_ANSWERS = MODULE["SEED_ANSWERS"]
 
 
 class G2ReinforcementTests(unittest.TestCase):
@@ -25,6 +27,22 @@ class G2ReinforcementTests(unittest.TestCase):
         self.assertTrue(is_degenerate_response("eeeeeeeeeeaeeeeeeeeeeee"))
         self.assertFalse(is_degenerate_response("Sim, o céu é azul."))
         self.assertFalse(is_degenerate_response("altas"))
+
+    def test_wrong_generations_use_the_known_answer_as_an_oracle_target(self):
+        self.assertEqual(
+            select_training_target("sky_is_blue", "aae aae*ae", "incorrect"),
+            (SEED_ANSWERS["sky_is_blue"], "oracle_demonstration"),
+        )
+        self.assertEqual(
+            select_training_target("grass_color", "aaaaaaaaaaaaaaaa", "incorrect"),
+            (SEED_ANSWERS["grass_color"], "oracle_demonstration"),
+        )
+
+    def test_correct_generation_uses_its_own_response_as_target(self):
+        self.assertEqual(
+            select_training_target("sky_is_blue", "Sim, o ceu e azul", "correct"),
+            ("Sim, o ceu e azul", "model_response"),
+        )
 
     def test_question_selection_keeps_database_order_and_rejects_empty_or_unknown(self):
         questions = [{"id": "sky_is_blue"}, {"id": "grass_color"}, {"id": "mountains_high_or_low"}]
