@@ -58,7 +58,7 @@ std::vector<std::uint8_t> generate(const morok::model::G1Parameters& parameters,
     config.temperature = 0.8;
     config.top_k = 0;
     config.seed = input_seed(prompt_bytes);
-    config.repetition_penalty = 0.35;
+    config.repetition_penalty = 0.0;
     config.repetition_window = 48;
     config.printable_only = true;
     const auto report = morok::model::generate_g1(parameters, *prompt.value_if(), config);
