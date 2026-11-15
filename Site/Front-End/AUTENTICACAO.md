@@ -1,35 +1,15 @@
-# Autenticação do Morok Web
+# Autenticação do Morok
 
-O frontend usa Supabase Auth para autenticação real por e-mail e senha. O código do navegador chama diretamente os endpoints oficiais de autenticação do projeto Supabase.
+O site usa a API de contas hospedada no Render e o MongoDB Atlas.
 
-## Configuração
+- Serviço: `https://morok-accounts-api.onrender.com`
+- Database: `Contas`
+- Coleção: `morok_accounts`
+- Cadastro: `POST /auth/signup`
+- Login: `POST /auth/login`
+- Sessão: `GET /auth/me`
+- Logout: `POST /auth/logout`
 
-1. Crie um projeto no Supabase.
-2. Em **Project Settings → API**, copie a **Project URL** e a chave **anon/publicable**.
-3. No painel do Supabase, abra **Authentication → URL Configuration** e adicione a URL pública do Morok Web às URLs permitidas.
-4. Em **Authentication → Providers**, habilite Email. Defina se a confirmação de e-mail será obrigatória.
-5. Abra o Morok Web, entre em **Configurações → Conta e autenticação** e informe Project URL e anon/publicable key.
-6. Salve e use **Entrar ou criar conta**.
+As senhas são armazenadas com scrypt e salt individual; nunca são gravadas em texto puro. O backend usa um usuário MongoDB restrito à database `Contas`. A URI e o segredo JWT ficam somente nas variáveis privadas do Render.
 
-A chave publicável/anon foi projetada para uso no frontend. Nunca informe a chave `service_role`, uma chave secreta ou credenciais administrativas no site.
-
-## O que funciona
-
-- Cadastro de conta com e-mail e senha.
-- Login usando Supabase Auth.
-- Fluxo de confirmação por e-mail, quando habilitado no projeto.
-- Solicitação de recuperação de senha.
-- Encerramento de sessão.
-- Sessão mantida na aba/sessão atual do navegador.
-
-## Limitações atuais
-
-- O histórico de conversas continua salvo localmente no navegador. O login não sincroniza conversas entre dispositivos.
-- A sessão não é compartilhada com o servidor C++ de inferência. Não exponha o servidor local diretamente à internet.
-- Para sincronização de histórico, será necessário criar tabelas no Supabase com políticas RLS por usuário e integrar o frontend a elas.
-- A troca de geração/modelo ainda é apenas uma seleção de interface: o servidor atual carrega um checkpoint G1 único e não recebe um identificador de perfil.
-- A G3 permanece indisponível porque ainda é apenas documental no repositório.
-
-## Segurança
-
-O frontend armazena apenas a configuração pública do projeto no armazenamento local e mantém o token de sessão em `sessionStorage`. Não armazena a senha. A segurança das contas, confirmação de e-mail, recuperação e política de senha é administrada pelo Supabase.
+A sessão do navegador fica em `sessionStorage` e expira após sete dias. A recuperação de senha por e-mail ainda depende da configuração de um provedor de envio de mensagens.
