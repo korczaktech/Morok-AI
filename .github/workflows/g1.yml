@@ -67,21 +67,6 @@ on:
         type: boolean
         required: true
         default: true
-      model_tsukuyomi:
-        description: "Executar Tsukuyomi"
-        type: boolean
-        required: true
-        default: false
-      model_apollo:
-        description: "Executar Apollo"
-        type: boolean
-        required: true
-        default: false
-      model_mokosh:
-        description: "Executar Mokosh"
-        type: boolean
-        required: true
-        default: false
       model_tsukuyomi_max:
         description: "Executar Tsukuyomi Max (rede neural unificada da G1)"
         type: boolean
@@ -125,14 +110,8 @@ jobs:
         run: |
           cmake --install build/g1 --prefix build/g1/install
           test -f build/g1/install/include/morok/model/learn/g1_generation.hpp
-          test -f build/g1/install/include/morok/g1/mokosh/profile.hpp
-          test -f build/g1/install/include/morok/g1/tsukuyomi/profile.hpp
-          test -f build/g1/install/include/morok/g1/apollo/profile.hpp
           test -f build/g1/install/include/morok/g1/tsukuyomi_max/profile.hpp
           test -f build/g1/install/lib/libmorok_g1.a
-          test -f build/g1/install/lib/libmorok_g1_mokosh.a
-          test -f build/g1/install/lib/libmorok_g1_tsukuyomi.a
-          test -f build/g1/install/lib/libmorok_g1_apollo.a
           test -f build/g1/install/lib/libmorok_g1_tsukuyomimax.a
 
       - name: Test G1 and shared core
@@ -151,9 +130,6 @@ jobs:
           G1_QUESTION_ENGLISH_SKY: ${{ github.event_name != 'workflow_dispatch' || inputs.question_english }}
           G1_QUESTION_SPANISH_SKY: ${{ github.event_name != 'workflow_dispatch' || inputs.question_spanish }}
           G1_QUESTION_MULTI_TURN: ${{ github.event_name != 'workflow_dispatch' || inputs.question_multi_turn }}
-          G1_MODEL_TSUKUYOMI: ${{ github.event_name != 'workflow_dispatch' || inputs.model_tsukuyomi }}
-          G1_MODEL_APOLLO: ${{ github.event_name != 'workflow_dispatch' || inputs.model_apollo }}
-          G1_MODEL_MOKOSH: ${{ github.event_name != 'workflow_dispatch' || inputs.model_mokosh }}
           G1_MODEL_TSUKUYOMI_MAX: ${{ github.event_name != 'workflow_dispatch' || inputs.model_tsukuyomi_max }}
         run: python3 Gerações/G1/scripts/run-configured-workflow.py
 
