@@ -54,6 +54,9 @@ morok-g2-tsukuyomi-generate tsukuyomi-g2-v0.1.ckpt "Olá" 120
 
 A geração restringe transições para manter UTF-8 válido quando o prompt é UTF-8 válido e há espaço para concluir sequências multibyte. Isso garante codificação, não qualidade linguística.
 
+
+A inferência prepara uma única vez as 13 faixas da pergunta imutável e as reutiliza durante a geração autoregressiva. Isso elimina a varredura e a agregação repetidas da pergunta a cada byte gerado; não altera pesos, logits ou o orçamento de parâmetros. Para prompts sem marcador U:, a preparação registra a ausência do contexto e também evita repetir a busca pelo marcador.
+
 ## Checkpoint
 
 Formato binário MOROKG2T, versão 2, contagem explícita de 10.000 floats e checksum FNV-1a de 64 bits. O carregamento ocorre em estrutura temporária e só substitui o modelo ativo depois de validar o arquivo integral.
