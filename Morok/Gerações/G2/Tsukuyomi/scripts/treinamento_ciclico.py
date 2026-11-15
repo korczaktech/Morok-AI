@@ -363,6 +363,7 @@ def main() -> int:
                 f"**Treino: {completed_epochs:.0f} época(s), {target_bytes:.0f} bytes-alvo, "
                 f"train_bpb {initial_bpb:.4f} → {final_bpb:.4f}.**\n"
                 f"**Validação: {correct_count}/{total}; F1 médio: {mean_f1:.3f}; "
+                f"similaridade char: {mean_char_similarity:.3f}; "
                 f"pontuação: {validation_score:.3f}; LR: {learning_rate:.6f}; "
                 f"duração: {elapsed:.2f}s.**\n\n"
             )
