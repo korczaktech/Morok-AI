@@ -14,7 +14,7 @@ on:
         description: "Épocas por tentativa (passagens completas pelo corpus)"
         type: number
         required: true
-        default: 1
+        default: 20
       tentativas:
         description: "Número máximo de ciclos de treinamento"
         type: number
@@ -49,7 +49,7 @@ jobs:
 
       - name: Validar parâmetros
         env:
-          EPOCAS: ${{ github.event_name == 'push' && 1 || inputs.epocas || 1 }}
+          EPOCAS: ${{ github.event_name == 'push' && 20 || inputs.epocas || 20 }}
           TENTATIVAS: ${{ github.event_name == 'push' && 10 || inputs.tentativas || 10 }}
           QUESTOES: ${{ github.event_name == 'push' && 40 || inputs.questoes || 40 }}
         run: |
@@ -59,8 +59,10 @@ jobs:
           tentativas = int(os.environ["TENTATIVAS"])
           if not 1 <= epocas <= 100:
               raise SystemExit("EPOCAS precisa estar entre 1 e 100.")
-          if not 1 <= tentativas <= 100:
-              raise SystemExit("TENTATIVAS precisa estar entre 1 e 100.")
+          if not 1 <= tentativas <= 10:
+              raise SystemExit("TENTATIVAS precisa estar entre 1 e 10.")
+          if epocas * tentativas > 200:
+              raise SystemExit("O treinamento está limitado a 200 épocas totais por execução.")
           questoes = int(os.environ["QUESTOES"])
           if not 1 <= questoes <= 40:
               raise SystemExit("QUESTOES precisa estar entre 1 e 40.")
@@ -100,7 +102,7 @@ jobs:
         if: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi) }}
         working-directory: Morok
         env:
-          EPOCAS: ${{ inputs.epocas || 1 }}
+          EPOCAS: ${{ inputs.epocas || 20 }}
           TENTATIVAS: ${{ inputs.tentativas || 10 }}
           QUESTOES: ${{ inputs.questoes || 40 }}
           TREINAMENTO_CONTINUO: ${{ github.event_name == 'workflow_dispatch' && inputs.treinamento_continuo || false }}
