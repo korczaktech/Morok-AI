@@ -12,7 +12,6 @@ Morok-AI/
 │   ├── shared/              # motor e subsistemas exclusivos da geração G1
 │   ├── Mokosh/
 │   ├── Tsukuyomi/
-│   ├── Artemis/
 │   └── Apollo/
 ├── G2/
 │   ├── engine/              # motor de especialistas exclusivo da G2
