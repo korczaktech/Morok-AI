@@ -4,7 +4,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const STORAGE_KEY = 'morok.web.state.v2';
   const MAX_LOCAL_BYTES = 3_500_000;
-  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: '', displayName: 'Visitante', attachments: [], busy: false, controller: null, contextId: null, toastTimer: null };
+  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: '', displayName: 'Visitante', attachments: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
   const el = {
     app: $('#app'), sidebar: $('#sidebar'), backdrop: $('#backdrop'), history: $('#history-list'),
     welcome: $('#welcome'), conversation: $('#conversation'), input: $('#message-input'), composer: $('#composer'),
@@ -158,7 +158,7 @@
   function closeContextMenu() { el.context.hidden = true; state.contextId = null; }
   function renameConversation(conversationId) {
     const conversation = state.conversations.find(c => c.id === conversationId); if (!conversation) return;
-    state.contextId = conversationId; $('#rename-input').value = conversation.title; closeContextMenu(); el.rename.showModal(); $('#rename-input').focus();
+    state.renameId = conversationId; $('#rename-input').value = conversation.title; closeContextMenu(); el.rename.showModal(); $('#rename-input').focus();
   }
   function deleteConversation(conversationId) {
     const conversation = state.conversations.find(c => c.id === conversationId); if (!conversation) return;
@@ -307,7 +307,7 @@
   $('#model-select').addEventListener('click',()=>{const pop=$('#model-popover');pop.hidden=!pop.hidden;$('#model-select').setAttribute('aria-expanded',String(!pop.hidden));});
   document.addEventListener('click',event=>{if(!event.target.closest('.model-select-wrap')){$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');}if(!event.target.closest('.context-menu')&&!event.target.closest('.history-menu'))closeContextMenu();});
   el.context.addEventListener('click',event=>{const action=event.target.dataset.action;if(action==='rename')renameConversation(state.contextId);if(action==='delete')deleteConversation(state.contextId);closeContextMenu();});
-  $('#rename-save').addEventListener('click',()=>{const conversation=state.conversations.find(c=>c.id===state.contextId);if(conversation){conversation.title=$('#rename-input').value.trim()||'Nova conversa';conversation.updatedAt=now();persist();renderHistory();}});
+  $('#rename-save').addEventListener('click',()=>{const conversation=state.conversations.find(c=>c.id===state.renameId);if(conversation){conversation.title=$('#rename-input').value.trim()||'Nova conversa';conversation.updatedAt=now();persist();renderHistory();}state.renameId=null;});
   $('#save-settings').addEventListener('click',event=>{event.preventDefault();saveSettings();});
   $('#test-connection').addEventListener('click',async()=>{const url=$('#api-url').value.trim();if(url){state.apiUrl=url.replace(/\/+$/,'');}const ok=await checkHealth();$('#test-result').textContent=ok?'Servidor respondeu corretamente.':'Falha de conexão. Confira URL, HTTPS e CORS.';});
   $('#status-refresh').addEventListener('click',()=>checkHealth(true));
