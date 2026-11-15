@@ -348,8 +348,64 @@
     el.pill.classList.toggle('online',status === 'online');
     el.pill.querySelector('span').textContent = status === 'online' ? 'Conectado' : status === 'wait' ? 'Conectando' : 'Desconectado';
   }
+  function enhanceSelects(root = document) {
+    root.querySelectorAll('select').forEach(select => {
+      if (select.dataset.siteSelect === 'true') return;
+      select.dataset.siteSelect = 'true';
+      const wrapper = document.createElement('div');
+      wrapper.className = 'site-select';
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'site-select-trigger';
+      trigger.setAttribute('aria-haspopup', 'listbox');
+      trigger.setAttribute('aria-expanded', 'false');
+      const menu = document.createElement('div');
+      menu.className = 'site-select-menu';
+      menu.setAttribute('role', 'listbox');
+      menu.hidden = true;
+      const syncLabel = () => { trigger.textContent = select.selectedOptions[0]?.textContent || 'Selecione'; };
+      [...select.options].forEach(option => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'site-select-option';
+        item.textContent = option.textContent;
+        item.setAttribute('role', 'option');
+        item.setAttribute('aria-selected', String(option.selected));
+        item.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          select.value = option.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          syncLabel();
+          menu.querySelectorAll('.site-select-option').forEach(button => button.setAttribute('aria-selected', String(button.textContent === option.textContent)));
+          menu.hidden = true;
+          trigger.setAttribute('aria-expanded', 'false');
+        });
+        menu.append(item);
+      });
+      trigger.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const willOpen = menu.hidden;
+        document.querySelectorAll('.site-select-menu').forEach(other => { other.hidden = true; });
+        document.querySelectorAll('.site-select-trigger').forEach(other => other.setAttribute('aria-expanded', 'false'));
+        menu.hidden = !willOpen;
+        trigger.setAttribute('aria-expanded', String(willOpen));
+      });
+      select.addEventListener('change', syncLabel);
+      select.classList.add('site-select-native');
+      select.parentNode.insertBefore(wrapper, select);
+      wrapper.append(trigger, menu);
+      syncLabel();
+    });
+  }
+  function closeSiteSelects() {
+    document.querySelectorAll('.site-select-menu').forEach(menu => { menu.hidden = true; });
+    document.querySelectorAll('.site-select-trigger').forEach(trigger => trigger.setAttribute('aria-expanded', 'false'));
+  }
   function openSettings() {
     $('#theme-select').value = state.theme;
+    $('#theme-select').dispatchEvent(new Event('change', { bubbles: true }));
     el.settings.showModal();
   }
   function saveSettings() {
@@ -374,6 +430,7 @@
     if (page === 'locations') root.innerHTML = '<p class="field-help">Defina uma localização de referência para experiências que dependam de região. Não usamos sua localização automaticamente.</p><label class="field-label" for="location-input">Localização</label><input class="text-field" id="location-input" maxlength="120" placeholder="Cidade, estado ou país" value="'+escapeHTML(state.location)+'"><div class="dialog-footer"><button class="primary-button" id="save-location" type="button">Salvar localização</button></div>';
     if (page === 'personalization') root.innerHTML = '<p class="field-help">Preferências de personalização salvas neste navegador.</p><label class="field-label" for="about-input">O que o Morok deve saber sobre você?</label><textarea class="text-field settings-textarea" id="about-input" maxlength="1000" placeholder="Interesses, contexto e objetivos...">'+escapeHTML(state.aboutMe)+'</textarea><label class="field-label" for="style-select">Estilo de resposta</label><select id="style-select" class="text-field"><option value="conciso" '+(state.responseStyle==='conciso'?'selected':'')+'>Conciso</option><option value="equilibrado" '+(state.responseStyle==='equilibrado'?'selected':'')+'>Equilibrado</option><option value="detalhado" '+(state.responseStyle==='detalhado'?'selected':'')+'>Detalhado</option></select><label class="field-label" for="workspace-theme">Tema</label><select id="workspace-theme" class="text-field"><option value="dark" '+(state.theme==='dark'?'selected':'')+'>Escuro</option><option value="light" '+(state.theme==='light'?'selected':'')+'>Claro</option><option value="system" '+(state.theme==='system'?'selected':'')+'>Sistema</option></select><div class="dialog-footer"><button class="primary-button" id="save-personalization" type="button">Salvar personalização</button></div>';
     if (page === 'instructions') root.innerHTML = '<p class="field-help">Defina orientações que deseja aplicar ao conversar. Por enquanto, elas ficam salvas localmente e ainda não são enviadas ao motor de inferência.</p><label class="field-label" for="instructions-input">Suas instruções</label><textarea class="text-field settings-textarea tall" id="instructions-input" maxlength="4000" placeholder="Como você gostaria que o Morok respondesse?">'+escapeHTML(state.instructions)+'</textarea><div class="dialog-footer"><button class="primary-button" id="save-instructions" type="button">Salvar instruções</button></div>';
+    enhanceSelects(root);
     if (!workspaceDialog.open) workspaceDialog.showModal();
     if (page === 'tasks') $('#task-input')?.focus();
   }
@@ -559,7 +616,7 @@
     saveAuthSession(null); state.displayName='Visitante'; updateProfile(); persist(); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
   }
   // Start API health check before optional UI bindings.
-  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); checkHealth(); refreshAuthSession();
+  restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); enhanceSelects(); checkHealth(); refreshAuthSession();
 
   $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
   $('#auth-form').addEventListener('submit',event=>{if(event.submitter && event.submitter.id!=='auth-submit')return;event.preventDefault();submitAuth();});
@@ -594,6 +651,7 @@
   $('#profile-button').addEventListener('click',openProfileMenu);
   $('#profile-menu').addEventListener('click',event=>{const button=event.target.closest('[data-profile-action]');if(button)handleProfileAction(button.dataset.profileAction);});
   document.addEventListener('click',event=>{if(!event.target.closest('#profile-button')&&!event.target.closest('#profile-menu'))closeProfileMenu();});
+  document.addEventListener('click',event=>{if(!event.target.closest('.site-select'))closeSiteSelects();});
   $('#more-options-toggle').addEventListener('click',()=>{const submenu=$('#side-submenu');submenu.hidden=!submenu.hidden;$('#more-options-toggle').setAttribute('aria-expanded',String(!submenu.hidden));});
   $$('[data-workspace-page]').forEach(button=>button.addEventListener('click',()=>{ $$('.side-action').forEach(item=>item.classList.remove('active'));button.classList.add('active');openWorkspacePage(button.dataset.workspacePage);closeSidebar();}));
   $('#workspace-close').addEventListener('click',()=>workspaceDialog.close());
@@ -643,7 +701,7 @@
   el.input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();if(!state.busy)sendMessage();else state.controller?.abort();}});
   el.composer.addEventListener('submit',event=>{event.preventDefault();sendMessage();});
   document.addEventListener('keydown',event=>{
-    if(event.key==='Escape'){closeSidebar();closeContextMenu();$('#model-popover').hidden=true;if(el.search.open)el.search.close();}
+    if(event.key==='Escape'){closeSidebar();closeContextMenu();closeSiteSelects();$('#model-popover').hidden=true;if(el.search.open)el.search.close();}
     if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();closeSidebar();openSearch();}
     if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='o'){event.preventDefault();createConversation();}
   });
