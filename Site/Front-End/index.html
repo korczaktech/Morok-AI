@@ -3,152 +3,529 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080a10">
-  <meta name="description" content="Morok AI — pesquisa e desenvolvimento de uma inteligência artificial própria, experimental e treinada do zero.">
-  <title>Morok AI — Inteligência construída do zero</title>
+  <meta name="theme-color" content="#10120f">
+  <meta name="description" content="Morok — converse com uma inteligência em desenvolvimento.">
+  <title>Morok — Chat</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
-    :root{color-scheme:dark;--bg:#080a10;--panel:#10141e;--panel2:#151b28;--line:rgba(190,205,255,.12);--text:#f2f4fb;--muted:#9aa4b8;--cyan:#8ce8e0;--violet:#a99aff;--max:1160px}
-    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 78% 8%,rgba(103,87,190,.16),transparent 34%),radial-gradient(ellipse at 8% 35%,rgba(55,169,164,.09),transparent 28%),var(--bg);color:var(--text);font-family:Manrope,system-ui,sans-serif;line-height:1.6}
-    a{color:inherit;text-decoration:none}.wrap{width:min(var(--max),calc(100% - 48px));margin:auto}.mono{font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase}
-    header{height:82px;border-bottom:1px solid var(--line);display:flex;align-items:center;position:relative;z-index:5;background:rgba(8,10,16,.72);backdrop-filter:blur(18px)}
-    .nav{display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:-.04em;font-size:19px}.mark{width:34px;height:34px;border:1px solid rgba(140,232,224,.45);border-radius:11px;display:grid;place-items:center;color:var(--cyan);font-size:17px;background:linear-gradient(145deg,rgba(140,232,224,.16),rgba(169,154,255,.12));box-shadow:0 0 28px rgba(140,232,224,.1)}
-    .links{display:flex;align-items:center;gap:30px;color:var(--muted);font-size:13px}.links a:hover{color:var(--text)}.nav-cta,.button{border:1px solid rgba(140,232,224,.38);border-radius:9px;padding:11px 16px;font-size:13px;font-weight:700;transition:.2s}.nav-cta:hover,.button.primary:hover{background:var(--cyan);color:#071012;transform:translateY(-2px)}
-    .menu{display:none;background:none;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font:inherit}
-    .hero{padding:112px 0 86px;position:relative;overflow:hidden}.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;align-items:center;gap:64px}.eyebrow{display:inline-flex;align-items:center;gap:10px;color:var(--cyan);font-size:11px}.dot{width:7px;height:7px;background:var(--cyan);border-radius:50%;box-shadow:0 0 14px var(--cyan)}
-    h1{font-size:clamp(48px,6.7vw,82px);line-height:1.02;letter-spacing:-.075em;margin:22px 0 24px;font-weight:800}h1 span{background:linear-gradient(100deg,var(--cyan),#b8b1ff 75%);background-clip:text;color:transparent}.lead{font-size:17px;line-height:1.8;color:var(--muted);max-width:590px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}.button{display:inline-flex;align-items:center;gap:10px;padding:14px 19px}.button.primary{background:var(--cyan);color:#071012;border-color:var(--cyan)}.button.secondary{border-color:var(--line);color:var(--text)}.button.secondary:hover{border-color:rgba(169,154,255,.6);background:rgba(169,154,255,.08)}
-    .visual{min-height:390px;position:relative;display:grid;place-items:center}.orb{width:min(340px,78vw);aspect-ratio:1;border-radius:50%;position:relative;background:radial-gradient(circle at 38% 35%,rgba(140,232,224,.28),transparent 20%),radial-gradient(circle at 62% 60%,rgba(169,154,255,.23),transparent 28%),radial-gradient(circle,rgba(25,34,52,.9),rgba(8,10,16,.2) 67%);border:1px solid rgba(169,154,255,.2);box-shadow:inset 0 0 70px rgba(140,232,224,.07),0 0 100px rgba(117,105,210,.12)}
-    .orb:before,.orb:after{content:"";position:absolute;inset:9%;border:1px solid rgba(140,232,224,.22);border-radius:50%;transform:rotateX(68deg) rotate(-28deg)}.orb:after{inset:20%;border-color:rgba(169,154,255,.32);transform:rotateX(68deg) rotate(42deg)}.core{position:absolute;inset:37%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e0fffa,#6ac9c2 24%,#55508f 64%,#171b2b);box-shadow:0 0 55px rgba(140,232,224,.45),0 0 110px rgba(169,154,255,.25)}
-    .orbit-label{position:absolute;padding:9px 12px;border:1px solid var(--line);background:rgba(16,20,30,.8);backdrop-filter:blur(12px);border-radius:8px;font:10px 'DM Mono',monospace;color:#c6cee0}.label-a{top:14%;right:0}.label-b{bottom:17%;left:-2%}.label-c{bottom:4%;right:9%}
-    .stats{border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:25px 0}.stat{padding:4px 25px;border-right:1px solid var(--line)}.stat:first-child{padding-left:0}.stat:last-child{border:0}.stat strong{display:block;font-size:26px;letter-spacing:-.05em}.stat span{font-size:11px;color:var(--muted)}
-    section{padding:100px 0}.section-head{max-width:650px;margin-bottom:42px}.kicker{color:var(--cyan);font-size:10px}.section-head h2{font-size:clamp(32px,4vw,48px);letter-spacing:-.06em;line-height:1.1;margin:14px 0}.section-head p{color:var(--muted);font-size:15px}
-    .principles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{background:linear-gradient(145deg,rgba(21,27,40,.92),rgba(13,17,26,.88));border:1px solid var(--line);border-radius:15px;padding:26px;min-height:210px}.icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--cyan);background:rgba(140,232,224,.09);border:1px solid rgba(140,232,224,.16);font-size:17px}.card h3{margin:22px 0 8px;font-size:17px;letter-spacing:-.03em}.card p{margin:0;color:var(--muted);font-size:13px;line-height:1.8}
-    .models{background:linear-gradient(180deg,transparent,rgba(18,23,36,.62),transparent)}.model-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.model{border:1px solid var(--line);border-radius:15px;padding:25px;background:rgba(13,17,26,.7);transition:.2s}.model:hover{transform:translateY(-4px);border-color:rgba(140,232,224,.35)}.model-top{display:flex;align-items:center;justify-content:space-between}.model h3{font-size:22px;letter-spacing:-.05em;margin:20px 0 7px}.model p{color:var(--muted);font-size:13px;min-height:66px}.tag{font:9px 'DM Mono',monospace;color:var(--cyan);border:1px solid rgba(140,232,224,.2);border-radius:20px;padding:5px 8px}.model small{color:#778399;font:10px 'DM Mono',monospace}
-    .roadmap{display:grid;grid-template-columns:.8fr 1.2fr;gap:70px;align-items:start}.roadmap-copy p{color:var(--muted);font-size:14px}.steps{border-left:1px solid rgba(140,232,224,.25);padding-left:28px}.step{position:relative;padding:0 0 28px}.step:before{content:"";position:absolute;width:8px;height:8px;background:var(--cyan);border-radius:50%;left:-33px;top:7px;box-shadow:0 0 14px rgba(140,232,224,.5)}.step strong{font-size:14px}.step p{margin:5px 0 0;color:var(--muted);font-size:12px}
-    .closing{border:1px solid rgba(169,154,255,.2);border-radius:18px;padding:52px;background:radial-gradient(ellipse at 90% 10%,rgba(169,154,255,.14),transparent 45%),linear-gradient(120deg,rgba(140,232,224,.07),rgba(16,20,30,.8));display:flex;justify-content:space-between;align-items:center;gap:30px}.closing h2{font-size:clamp(28px,4vw,42px);letter-spacing:-.06em;margin:0 0 8px}.closing p{color:var(--muted);margin:0;font-size:13px}
-    footer{border-top:1px solid var(--line);padding:28px 0;color:var(--muted);font-size:11px}.footer-inner{display:flex;justify-content:space-between;gap:20px;align-items:center}.footer-links{display:flex;gap:20px}.footer-links a:hover{color:var(--text)}
-    @media(max-width:800px){.hero-grid{grid-template-columns:1fr;gap:10px}.hero{padding:80px 0 60px}.visual{min-height:320px}.principles,.model-grid{grid-template-columns:1fr 1fr}.roadmap{grid-template-columns:1fr;gap:32px}.stats{grid-template-columns:1fr 1fr;row-gap:20px}.stat:nth-child(2){border:0}.stat:nth-child(3){padding-left:0}.closing{padding:34px;align-items:flex-start;flex-direction:column}}
-    @media(max-width:560px){.wrap{width:min(var(--max),calc(100% - 32px))}.links{display:none;position:absolute;top:81px;left:0;right:0;padding:22px 24px;background:#0d111a;border-bottom:1px solid var(--line);flex-direction:column;align-items:flex-start}.links.open{display:flex}.nav-cta{display:none}.menu{display:block}.principles,.model-grid{grid-template-columns:1fr}.hero{padding-top:66px}h1{font-size:52px}.lead{font-size:15px}.visual{min-height:280px}.orb{width:250px}.stats{padding:20px 0}.stat{padding:4px 12px}.stat strong{font-size:22px}section{padding:72px 0}.footer-inner{align-items:flex-start;flex-direction:column}.closing .button{width:100%;justify-content:center}}
-    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
+    :root {
+      color-scheme: dark;
+      --bg: #10120f;
+      --sidebar: #151813;
+      --surface: #1a1e18;
+      --surface-2: #20251e;
+      --line: rgba(229,235,211,.09);
+      --line-strong: rgba(229,235,211,.16);
+      --text: #edf0e5;
+      --muted: #969e8d;
+      --dim: #687160;
+      --accent: #c7e68b;
+      --accent-ink: #1a2410;
+      --warm: #d8b98b;
+      --radius: 15px;
+      font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; overflow: hidden; color: var(--text); background: var(--bg);
+      font-size: 14px; -webkit-font-smoothing: antialiased;
+    }
+    button, input, textarea { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 3px;
+    }
+    .app { display: flex; width: 100%; height: 100dvh; min-height: 500px; }
+    .sidebar {
+      width: 264px; flex: 0 0 264px; display: flex; flex-direction: column;
+      padding: 22px 14px 15px; background: var(--sidebar);
+      border-right: 1px solid var(--line); transition: width .25s ease, flex-basis .25s ease, transform .25s ease;
+      z-index: 20;
+    }
+    .brand-row { display:flex; align-items:center; justify-content:space-between; padding: 0 7px 25px; }
+    .brand { display:flex; align-items:center; gap:11px; color:var(--text); text-decoration:none; font-weight:800; letter-spacing:-.055em; font-size:19px; }
+    .brand-symbol {
+      width:31px; height:31px; display:grid; place-items:center; border-radius:10px;
+      background:var(--accent); color:var(--accent-ink); font-size:17px; font-weight:800;
+      box-shadow: 0 0 25px rgba(199,230,139,.12);
+    }
+    .brand-word span { color:var(--accent); }
+    .icon-btn {
+      width:34px; height:34px; border:1px solid transparent; border-radius:9px;
+      display:grid; place-items:center; color:var(--muted); background:transparent; cursor:pointer;
+      transition:background .18s,border-color .18s,color .18s;
+    }
+    .icon-btn:hover { background:var(--surface-2); border-color:var(--line); color:var(--text); }
+    .icon-btn svg, .nav-icon svg, .send svg, .tool-btn svg { width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+    .new-chat {
+      width:100%; display:flex; align-items:center; gap:11px; padding:11px 12px;
+      border:1px solid var(--line-strong); border-radius:10px; background:rgba(255,255,255,.025);
+      color:var(--text); cursor:pointer; text-align:left; transition:.18s;
+    }
+    .new-chat:hover { border-color:rgba(199,230,139,.42); background:rgba(199,230,139,.055); }
+    .new-chat .plus { color:var(--accent); font-size:20px; line-height:15px; font-weight:400; }
+    .new-chat span:last-child { font-size:12px; font-weight:650; }
+    .side-label { margin:27px 10px 10px; color:var(--dim); font:10px 'DM Mono',monospace; letter-spacing:.13em; text-transform:uppercase; }
+    .side-nav { display:grid; gap:3px; }
+    .side-link {
+      display:flex; align-items:center; gap:11px; width:100%; padding:9px 10px;
+      color:var(--muted); text-decoration:none; border:0; border-radius:8px; background:transparent;
+      cursor:pointer; text-align:left; font-size:12px; transition:.18s;
+    }
+    .side-link:hover, .side-link.active { background:rgba(255,255,255,.045); color:var(--text); }
+    .nav-icon { display:grid; place-items:center; width:18px; color:inherit; }
+    .history { min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:#394033 transparent; }
+    .history-item {
+      display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      padding:9px 10px; margin:2px 0; border:0; border-radius:8px; background:transparent;
+      color:#a7ad9e; font-size:11.5px; text-align:left; cursor:pointer;
+    }
+    .history-item:hover { background:rgba(255,255,255,.04); color:var(--text); }
+    .history-item.selected { background:rgba(199,230,139,.075); color:var(--accent); }
+    .side-bottom { margin-top:auto; padding-top:14px; border-top:1px solid var(--line); }
+    .status-line { display:flex; align-items:center; gap:9px; padding:10px 9px 12px; color:var(--muted); font-size:10px; }
+    .status-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 9px rgba(199,230,139,.5); }
+    .profile-mini { display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:9px; color:var(--muted); }
+    .avatar { width:29px; height:29px; display:grid; place-items:center; border-radius:50%; background:#30382a; color:var(--accent); font-size:11px; font-weight:700; }
+    .profile-copy { min-width:0; display:grid; gap:2px; }
+    .profile-copy strong { color:var(--text); font-size:11px; font-weight:650; }
+    .profile-copy span { color:var(--dim); font-size:10px; }
+    .main { flex:1; min-width:0; display:flex; flex-direction:column; position:relative; }
+    .topbar {
+      height:70px; flex:0 0 70px; display:flex; align-items:center; justify-content:space-between;
+      padding:0 34px; border-bottom:1px solid var(--line); background:rgba(16,18,15,.72);
+      backdrop-filter:blur(18px); z-index:5;
+    }
+    .top-left, .top-right { display:flex; align-items:center; gap:12px; }
+    .mobile-brand { display:none; align-items:center; gap:9px; font-weight:800; letter-spacing:-.04em; }
+    .model-wrap { position:relative; }
+    .model-button {
+      display:flex; align-items:center; gap:9px; padding:8px 11px; border:1px solid transparent;
+      border-radius:9px; color:var(--text); background:transparent; cursor:pointer; font-size:12px;
+    }
+    .model-button:hover, .model-button[aria-expanded="true"] { border-color:var(--line); background:rgba(255,255,255,.035); }
+    .model-mark { width:7px; height:7px; border-radius:2px; background:var(--accent); transform:rotate(45deg); }
+    .chevron { color:var(--dim); font-size:11px; margin-left:3px; }
+    .model-menu {
+      position:absolute; top:calc(100% + 9px); left:0; width:245px; padding:7px;
+      background:#1b2019; border:1px solid var(--line-strong); border-radius:12px;
+      box-shadow:0 18px 55px rgba(0,0,0,.4); display:none; z-index:30;
+    }
+    .model-menu.open { display:block; animation:pop .16s ease-out; }
+    .model-option { width:100%; padding:10px; display:flex; gap:10px; border:0; border-radius:8px; background:transparent; text-align:left; cursor:pointer; }
+    .model-option:hover, .model-option.active { background:rgba(255,255,255,.05); }
+    .model-option .model-mark { margin:5px 0 0 2px; flex:0 0 7px; }
+    .model-option strong { display:block; font-size:11px; font-weight:650; }
+    .model-option small { display:block; margin-top:3px; color:var(--muted); font-size:10px; }
+    .login-btn {
+      display:flex; align-items:center; gap:8px; padding:8px 13px; border:1px solid var(--line-strong);
+      border-radius:9px; background:transparent; color:var(--text); cursor:pointer; font-size:11px; font-weight:650;
+      transition:.18s;
+    }
+    .login-btn:hover { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+    .login-btn svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:1.8; }
+    .content { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; }
+    .welcome {
+      width:min(790px, calc(100% - 48px)); margin:auto; padding:65px 0 35px;
+      display:flex; flex-direction:column; align-items:center; text-align:center;
+      animation:rise .55s cubic-bezier(.2,.7,.2,1) both;
+    }
+    .sigil {
+      width:55px; height:55px; position:relative; display:grid; place-items:center; margin-bottom:27px;
+      border:1px solid rgba(199,230,139,.23); border-radius:19px;
+      background:linear-gradient(145deg,rgba(199,230,139,.12),rgba(199,230,139,.015));
+      box-shadow:0 0 55px rgba(199,230,139,.055),inset 0 0 20px rgba(199,230,139,.035);
+    }
+    .sigil:before,.sigil:after { content:""; position:absolute; border:1px solid var(--accent); border-radius:50%; opacity:.8; }
+    .sigil:before { width:19px; height:19px; }
+    .sigil:after { width:7px; height:7px; background:var(--accent); box-shadow:0 0 13px var(--accent); }
+    .eyebrow { color:var(--accent); font:10px 'DM Mono',monospace; letter-spacing:.16em; text-transform:uppercase; }
+    h1 { margin:17px 0 12px; font-size:clamp(35px,5vw,53px); line-height:1.08; letter-spacing:-.075em; font-weight:600; }
+    h1 span { color:var(--accent); }
+    .welcome-copy { max-width:470px; margin:0; color:var(--muted); font-size:13px; line-height:1.8; }
+    .prompt-grid { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:34px; max-width:660px; }
+    .prompt-chip {
+      padding:9px 13px; border:1px solid var(--line); border-radius:99px; background:rgba(255,255,255,.018);
+      color:#b7bead; font-size:10.5px; cursor:pointer; transition:.18s;
+    }
+    .prompt-chip:hover { border-color:rgba(199,230,139,.4); color:var(--accent); background:rgba(199,230,139,.045); transform:translateY(-1px); }
+    .chat-area { width:min(790px,calc(100% - 48px)); margin:0 auto; padding:28px 0 20px; display:none; flex-direction:column; gap:23px; }
+    .chat-area.visible { display:flex; }
+    .message { display:flex; gap:13px; align-items:flex-start; animation:rise .25s ease both; }
+    .message-avatar { width:27px; height:27px; flex:0 0 27px; display:grid; place-items:center; border-radius:9px; font-size:10px; font-weight:800; }
+    .message.user .message-avatar { background:#343b2d; color:var(--accent); }
+    .message.assistant .message-avatar { background:var(--accent); color:var(--accent-ink); }
+    .message-body { min-width:0; padding-top:3px; }
+    .message-name { margin-bottom:7px; color:var(--muted); font:9px 'DM Mono',monospace; letter-spacing:.1em; text-transform:uppercase; }
+    .message-text { color:#e0e5d9; font-size:13px; line-height:1.85; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .message.assistant .message-text { color:#b9c2b1; }
+    .composer-zone { width:min(790px,calc(100% - 48px)); margin: auto auto 0; padding:18px 0 17px; }
+    .composer {
+      position:relative; padding:12px 13px 10px; border:1px solid rgba(199,230,139,.2);
+      border-radius:16px; background:linear-gradient(145deg,#1b2019,#171b15);
+      box-shadow:0 14px 50px rgba(0,0,0,.18),0 0 0 4px rgba(199,230,139,.018);
+      transition:border-color .2s,box-shadow .2s;
+    }
+    .composer:focus-within { border-color:rgba(199,230,139,.48); box-shadow:0 14px 50px rgba(0,0,0,.22),0 0 0 4px rgba(199,230,139,.045); }
+    .composer textarea {
+      display:block; width:100%; min-height:47px; max-height:180px; resize:none; border:0; outline:0;
+      background:transparent; color:var(--text); padding:4px 3px 8px; font-size:13px; line-height:1.7;
+    }
+    .composer textarea::placeholder { color:#737d6c; }
+    .composer-tools { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .tools-left,.tools-right { display:flex; align-items:center; gap:7px; }
+    .tool-btn {
+      height:31px; display:flex; align-items:center; gap:7px; padding:0 9px; border:1px solid transparent;
+      border-radius:8px; background:transparent; color:var(--muted); cursor:pointer; font-size:10px;
+    }
+    .tool-btn:hover { color:var(--text); background:rgba(255,255,255,.045); border-color:var(--line); }
+    .tool-btn svg { width:14px; height:14px; }
+    .send {
+      width:33px; height:33px; display:grid; place-items:center; border:0; border-radius:10px;
+      background:var(--accent); color:var(--accent-ink); cursor:pointer; transition:transform .18s,opacity .18s;
+    }
+    .send:hover { transform:translateY(-2px); }
+    .send:disabled { opacity:.35; cursor:not-allowed; transform:none; }
+    .composer-hint { margin:10px 0 0; text-align:center; color:var(--dim); font-size:9px; letter-spacing:.015em; }
+    .footer-note { position:absolute; right:29px; bottom:23px; color:#596151; font:9px 'DM Mono',monospace; letter-spacing:.06em; }
+    .overlay { position:fixed; inset:0; z-index:50; display:none; place-items:center; padding:20px; background:rgba(5,7,5,.72); backdrop-filter:blur(8px); }
+    .overlay.open { display:grid; animation:fade .18s ease; }
+    .modal { width:min(390px,100%); padding:27px; border:1px solid var(--line-strong); border-radius:17px; background:#1a1f18; box-shadow:0 25px 90px rgba(0,0,0,.5); animation:rise .2s ease; }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:21px; }
+    .modal h2 { margin:0; font-size:20px; letter-spacing:-.05em; }
+    .modal p { margin:9px 0 19px; color:var(--muted); font-size:11px; line-height:1.7; }
+    .modal-label { display:block; margin:13px 0 6px; color:#b4bdab; font-size:10px; }
+    .modal-input { width:100%; padding:11px 12px; border:1px solid var(--line-strong); border-radius:9px; outline:0; background:#11150f; color:var(--text); font-size:12px; }
+    .modal-input:focus { border-color:rgba(199,230,139,.5); }
+    .modal-submit { width:100%; margin-top:17px; padding:11px; border:0; border-radius:9px; background:var(--accent); color:var(--accent-ink); font-size:11px; font-weight:750; cursor:pointer; }
+    .modal-foot { margin-top:13px; color:var(--dim); font-size:9px; text-align:center; }
+    .toast { position:fixed; left:50%; bottom:25px; z-index:70; transform:translate(-50%,15px); opacity:0; pointer-events:none; padding:10px 15px; border:1px solid var(--line-strong); border-radius:9px; background:#242b20; color:var(--text); font-size:11px; transition:.22s; }
+    .toast.show { opacity:1; transform:translate(-50%,0); }
+    .backdrop { display:none; }
+    @keyframes rise { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes pop { from { opacity:0; transform:translateY(-4px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes fade { from { opacity:0; } to { opacity:1; } }
+    @media (min-width:1200px) { .welcome { padding-top:82px; } }
+    @media (max-width:760px) {
+      .sidebar { position:fixed; inset:0 auto 0 0; width:270px; transform:translateX(-102%); box-shadow:20px 0 60px rgba(0,0,0,.35); }
+      .sidebar.open { transform:translateX(0); }
+      .backdrop.show { display:block; position:fixed; inset:0; z-index:15; background:rgba(0,0,0,.5); }
+      .topbar { height:61px; flex-basis:61px; padding:0 17px; }
+      .mobile-brand { display:flex; }
+      .top-left { gap:9px; }
+      .top-right { gap:7px; }
+      .welcome { padding:50px 0 26px; }
+      .footer-note { display:none; }
+    }
+    @media (max-width:480px) {
+      .welcome,.chat-area,.composer-zone { width:calc(100% - 30px); }
+      .welcome { padding-top:42px; }
+      h1 { font-size:39px; }
+      .welcome-copy { font-size:12px; }
+      .prompt-grid { gap:7px; margin-top:26px; }
+      .prompt-chip { font-size:9.5px; padding:8px 10px; }
+      .model-button { padding:7px 5px; font-size:10px; }
+      .login-btn { padding:8px 10px; font-size:10px; }
+      .composer { padding:10px 10px 9px; }
+      .tool-btn { padding:0 7px; }
+      .tool-btn span { display:none; }
+      .composer-hint { font-size:8px; }
+    }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation:none!important; transition:none!important; } }
   </style>
 </head>
 <body>
-  <header>
-    <div class="wrap nav">
-      <a class="brand" href="#inicio" aria-label="Morok AI, início"><span class="mark">M</span><span>morok<span style="color:var(--cyan)">.</span>ai</span></a>
-      <nav class="links" id="nav-links" aria-label="Navegação principal">
-        <a href="#projeto">Projeto</a><a href="#modelos">Modelos</a><a href="#arquitetura">Arquitetura</a><a href="#estado">Estado atual</a>
-      </nav>
-      <a class="nav-cta" href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noreferrer">Ver repositório ↗</a>
-      <button class="menu" id="menu-button" aria-expanded="false" aria-controls="nav-links">Menu</button>
-    </div>
-  </header>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Barra lateral">
+      <div class="brand-row">
+        <a class="brand" href="#" id="brand-home" aria-label="Morok, início">
+          <span class="brand-symbol">m</span><span class="brand-word">morok<span>.</span></span>
+        </a>
+        <button class="icon-btn" id="collapse-sidebar" aria-label="Fechar barra lateral" title="Fechar barra lateral">
+          <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M9 4v16"/></svg>
+        </button>
+      </div>
 
-  <main>
-    <section class="hero" id="inicio">
-      <div class="wrap hero-grid">
-        <div>
-          <div class="eyebrow mono"><span class="dot"></span> Pesquisa independente em inteligência artificial</div>
-          <h1>Inteligência<br>construída <span>do zero.</span></h1>
-          <p class="lead">Morok é um projeto experimental para pesquisar e desenvolver uma IA própria: arquitetura independente, treinamento sem pesos pré-treinados e engenharia orientada por evidências.</p>
-          <div class="actions">
-            <a class="button primary" href="#projeto">Conheça o projeto <span>↓</span></a>
-            <a class="button secondary" href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noreferrer">Explorar no GitHub ↗</a>
+      <button class="new-chat" id="new-chat">
+        <span class="plus">＋</span><span>Nova conversa</span>
+      </button>
+
+      <div class="side-label">Espaço de trabalho</div>
+      <nav class="side-nav">
+        <button class="side-link active" id="nav-chats">
+          <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v9a2.5 2.5 0 0 1-2.5 2.5H9l-5 4v-15.5Z"/><path d="M8 8h8M8 12h5"/></svg></span>
+          Conversas
+        </button>
+        <button class="side-link" id="search-chats">
+          <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg></span>
+          Buscar conversas
+        </button>
+      </nav>
+
+      <div class="side-label" id="history-label">Recentes</div>
+      <div class="history" id="history">
+        <button class="history-item selected" data-chat="Ideias para um projeto novo">Ideias para um projeto novo</button>
+        <button class="history-item" data-chat="Entendendo redes neurais">Entendendo redes neurais</button>
+        <button class="history-item" data-chat="Organizar meus estudos">Organizar meus estudos</button>
+        <button class="history-item" data-chat="Rascunho de uma história">Rascunho de uma história</button>
+      </div>
+
+      <div class="side-bottom">
+        <div class="status-line"><span class="status-dot"></span><span>Ambiente experimental</span></div>
+        <div class="profile-mini">
+          <div class="avatar">?</div>
+          <div class="profile-copy"><strong>Visitante</strong><span>Entre para sincronizar conversas</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="backdrop" id="backdrop"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="top-left">
+          <button class="icon-btn" id="open-sidebar" aria-label="Abrir barra lateral" title="Abrir menu">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="mobile-brand"><span class="brand-symbol">m</span><span>morok<span style="color:var(--accent)">.</span></span></div>
+          <div class="model-wrap">
+            <button class="model-button" id="model-button" aria-haspopup="true" aria-expanded="false">
+              <span class="model-mark"></span><span id="model-name">Morok · Experimental</span><span class="chevron">⌄</span>
+            </button>
+            <div class="model-menu" id="model-menu" role="menu">
+              <button class="model-option active" data-model="Morok · Experimental" role="menuitem">
+                <span class="model-mark"></span><span><strong>Morok · Experimental</strong><small>Modelo em desenvolvimento</small></span>
+              </button>
+              <button class="model-option" data-model="Seleção automática" role="menuitem">
+                <span class="model-mark" style="background:var(--warm)"></span><span><strong>Seleção automática</strong><small>Escolha experimental padrão</small></span>
+              </button>
+            </div>
           </div>
         </div>
-        <div class="visual" aria-label="Representação abstrata do núcleo Morok">
-          <div class="orb"><div class="core"></div></div>
-          <span class="orbit-label label-a">RLAH / CORE</span>
-          <span class="orbit-label label-b">LEARN · REASON</span>
-          <span class="orbit-label label-c">C++20</span>
+        <div class="top-right">
+          <button class="login-btn" id="login-open">
+            <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5M15 12H3"/></svg>
+            Entrar
+          </button>
+        </div>
+      </header>
+
+      <div class="content" id="content">
+        <section class="welcome" id="welcome">
+          <div class="sigil" aria-hidden="true"></div>
+          <div class="eyebrow">Um espaço para pensar</div>
+          <h1>Por onde começamos<br><span>hoje?</span></h1>
+          <p class="welcome-copy">Pergunte, explore uma ideia ou comece algo do zero. O Morok está sendo construído para pensar junto com você.</p>
+          <div class="prompt-grid">
+            <button class="prompt-chip" data-prompt="Me ajude a transformar uma ideia em um plano.">↗ Desenvolver uma ideia</button>
+            <button class="prompt-chip" data-prompt="Explique um conceito complexo de forma simples, com exemplos.">⌘ Aprender algo novo</button>
+            <button class="prompt-chip" data-prompt="Revise este texto e me ajude a deixá-lo mais claro.">✎ Escrever melhor</button>
+            <button class="prompt-chip" data-prompt="Quero resolver um problema. Me ajude a dividir em etapas.">◎ Resolver um problema</button>
+          </div>
+        </section>
+
+        <section class="chat-area" id="chat-area" aria-live="polite"></section>
+
+        <div class="composer-zone">
+          <form class="composer" id="composer">
+            <textarea id="message-input" rows="1" placeholder="Envie uma mensagem ao Morok..." aria-label="Escreva sua mensagem"></textarea>
+            <div class="composer-tools">
+              <div class="tools-left">
+                <button class="tool-btn" type="button" id="attach-button" title="Anexar arquivo">
+                  <svg viewBox="0 0 24 24"><path d="m8 12.5 7.2-7.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2"/></svg><span>Anexar</span>
+                </button>
+                <input type="file" id="file-input" hidden>
+                <button class="tool-btn" type="button" id="thinking-button" title="Modo de conversa">
+                  <svg viewBox="0 0 24 24"><path d="M12 3a7 7 0 0 0-4 12.7V19h8v-3.3A7 7 0 0 0 12 3Z"/><path d="M9 22h6M9 10a3 3 0 0 1 3-3"/></svg><span>Conversa</span>
+                </button>
+              </div>
+              <div class="tools-right">
+                <button class="send" id="send-button" type="submit" aria-label="Enviar mensagem" disabled>
+                  <svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+                </button>
+              </div>
+            </div>
+          </form>
+          <p class="composer-hint">O Morok ainda está em desenvolvimento. As mensagens desta demonstração não são enviadas a um modelo.</p>
         </div>
       </div>
-    </section>
+      <div class="footer-note">MOROK / INTERFACE EXPERIMENTAL</div>
+    </main>
+  </div>
 
-    <div class="wrap">
-      <div class="stats">
-        <div class="stat"><strong>1.000</strong><span>parâmetros treináveis na G1</span></div>
-        <div class="stat"><strong>C++20</strong><span>linguagem principal</span></div>
-        <div class="stat"><strong>Do zero</strong><span>sem pesos pré-treinados</span></div>
-        <div class="stat"><strong>4 GB</strong><span>alvo inicial de memória</span></div>
+  <div class="overlay" id="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
+    <div class="modal">
+      <div class="modal-head">
+        <a class="brand" href="#"><span class="brand-symbol">m</span><span class="brand-word">morok<span>.</span></span></a>
+        <button class="icon-btn" id="login-close" aria-label="Fechar"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
       </div>
+      <h2 id="login-title">Entre no seu espaço.</h2>
+      <p>Uma conta permitirá manter suas conversas e preferências em sincronia. A autenticação ainda não foi conectada.</p>
+      <label class="modal-label" for="email">E-mail</label>
+      <input class="modal-input" id="email" type="email" placeholder="voce@exemplo.com" autocomplete="email">
+      <button class="modal-submit" id="login-submit" type="button">Continuar</button>
+      <div class="modal-foot">Acesso demonstrativo · Nenhum dado será enviado</div>
     </div>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
 
-    <section id="projeto">
-      <div class="wrap">
-        <div class="section-head">
-          <div class="kicker mono">01 / O projeto</div>
-          <h2>Menos promessas.<br>Mais experimentos.</h2>
-          <p>O Morok não parte da ideia de que uma arquitetura é melhor por definição. Cada hipótese precisa ser implementada, medida e comparada em condições reproduzíveis.</p>
-        </div>
-        <div class="principles">
-          <article class="card"><div class="icon">⌘</div><h3>Arquitetura própria</h3><p>Um sistema experimental modular, com modelo, inferência, treinamento, representação linguística e subsistemas cognitivos separados.</p></article>
-          <article class="card"><div class="icon">◈</div><h3>Eficiência mensurável</h3><p>Baixo consumo de memória e processamento são objetivos de engenharia, avaliados com benchmarks e condições documentadas.</p></article>
-          <article class="card"><div class="icon">⌁</div><h3>Pesquisa reproduzível</h3><p>Treinamentos, checkpoints, métricas e experimentos organizados para permitir análise, comparação e evolução controlada.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="models" id="modelos">
-      <div class="wrap">
-        <div class="section-head">
-          <div class="kicker mono">02 / Perfis da G1</div>
-          <h2>Três abordagens.<br>Uma base experimental.</h2>
-          <p>Os perfis compartilham o motor da geração, mas possuem objetivos e políticas próprios.</p>
-        </div>
-        <div class="model-grid">
-          <article class="model"><div class="model-top"><span class="tag">EFICIÊNCIA</span><span>◌</span></div><h3>Mokosh</h3><p>Prioriza uma execução econômica, reduzindo memória, processamento e energia quando possível.</p><small>G1 / LOW RESOURCE</small></article>
-          <article class="model"><div class="model-top"><span class="tag">AGENTE ÚNICO</span><span>⚫</span></div><h3>Tsukuyomi</h3><p>Opera com exatamente um agente, com execução individual e autocontida.</p><small>G1 / SINGLE AGENT</small></article>
-          <article class="model"><div class="model-top"><span class="tag">BAIXA LATÊNCIA</span><span>↗</span></div><h3>Apollo</h3><p>Busca reduzir o tempo até a primeira resposta e o tempo total de inferência.</p><small>G1 / SPEED</small></article>
-        </div>
-      </div>
-    </section>
-
-    <section id="arquitetura">
-      <div class="wrap roadmap">
-        <div class="roadmap-copy">
-          <div class="kicker mono">03 / Arquitetura</div>
-          <h2 style="font-size:clamp(32px,4vw,48px);letter-spacing:-.06em;line-height:1.1;margin:14px 0">Um sistema em construção, por camadas.</h2>
-          <p>A arquitetura separa responsabilidades para que cada subsistema possa evoluir e ser validado sem misturar componentes específicos dos modelos.</p>
-          <a class="button secondary" href="https://github.com/korczaktech/Morok-AI/tree/main/Morok/docs" target="_blank" rel="noreferrer">Ler documentação ↗</a>
-        </div>
-        <div class="steps">
-          <div class="step"><strong>IA-CORE</strong><p>Orquestração, ciclo de vida, sessões e contratos compartilhados.</p></div>
-          <div class="step"><strong>IA-LANG · IA-MEM</strong><p>Representação e processamento de linguagem; armazenamento e recuperação de memória.</p></div>
-          <div class="step"><strong>IA-REAS · IA-LEARN</strong><p>Execução de tarefas estruturadas e experimentos de aprendizado.</p></div>
-          <div class="step"><strong>IA-COMM · IA-TOOLS</strong><p>Comunicação, integração de ferramentas e políticas de autorização.</p></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="estado">
-      <div class="wrap">
-        <div class="closing">
-          <div><div class="kicker mono">Projeto experimental em evolução</div><h2>Acompanhe o desenvolvimento.</h2><p>Consulte o código, as decisões técnicas e os resultados documentados no repositório.</p></div>
-          <a class="button primary" href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noreferrer">Acessar Morok AI ↗</a>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="wrap footer-inner">
-      <a class="brand" href="#inicio"><span class="mark">M</span><span>morok<span style="color:var(--cyan)">.</span>ai</span></a>
-      <span>Pesquisa independente. Engenharia orientada por evidências.</span>
-      <div class="footer-links"><a href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noreferrer">GitHub ↗</a><a href="#inicio">Voltar ao topo ↑</a></div>
-    </div>
-  </footer>
   <script>
-    const menuButton = document.getElementById('menu-button');
-    const navLinks = document.getElementById('nav-links');
-    menuButton.addEventListener('click', () => {
-      const isOpen = navLinks.classList.toggle('open');
-      menuButton.setAttribute('aria-expanded', String(isOpen));
+    const $ = (selector) => document.querySelector(selector);
+    const sidebar = $('#sidebar');
+    const backdrop = $('#backdrop');
+    const welcome = $('#welcome');
+    const chatArea = $('#chat-area');
+    const input = $('#message-input');
+    const sendButton = $('#send-button');
+    const modelButton = $('#model-button');
+    const modelMenu = $('#model-menu');
+    const loginModal = $('#login-modal');
+    let toastTimer;
+
+    function toast(message) {
+      const el = $('#toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+    }
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('show');
+    }
+    function newConversation() {
+      chatArea.innerHTML = '';
+      chatArea.classList.remove('visible');
+      welcome.hidden = false;
+      welcome.style.display = 'flex';
+      input.value = '';
+      resizeInput();
+      sendButton.disabled = true;
+      document.querySelectorAll('.history-item').forEach(item => item.classList.remove('selected'));
+      input.focus();
+      closeSidebar();
+    }
+    function resizeInput() {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 180) + 'px';
+      sendButton.disabled = !input.value.trim();
+    }
+    function addMessage(text, who) {
+      welcome.style.display = 'none';
+      chatArea.classList.add('visible');
+      const message = document.createElement('article');
+      message.className = 'message ' + who;
+      const avatar = document.createElement('div');
+      avatar.className = 'message-avatar';
+      avatar.textContent = who === 'user' ? 'V' : 'm';
+      const body = document.createElement('div');
+      body.className = 'message-body';
+      const name = document.createElement('div');
+      name.className = 'message-name';
+      name.textContent = who === 'user' ? 'Você' : 'Morok';
+      const content = document.createElement('div');
+      content.className = 'message-text';
+      content.textContent = text;
+      body.append(name, content);
+      message.append(avatar, body);
+      chatArea.append(message);
+      $('#content').scrollTo({ top: $('#content').scrollHeight, behavior: 'smooth' });
+    }
+    function submitMessage(text) {
+      const value = (text || input.value).trim();
+      if (!value) return;
+      addMessage(value, 'user');
+      addMessage('A interface está pronta para receber esta conversa, mas o motor de inferência ainda não está conectado ao site. Nenhuma resposta foi simulada ou enviada para um serviço externo.', 'assistant');
+      input.value = '';
+      resizeInput();
+    }
+
+    $('#new-chat').addEventListener('click', newConversation);
+    $('#brand-home').addEventListener('click', (event) => { event.preventDefault(); newConversation(); });
+    $('#open-sidebar').addEventListener('click', () => { sidebar.classList.add('open'); backdrop.classList.add('show'); });
+    $('#collapse-sidebar').addEventListener('click', closeSidebar);
+    backdrop.addEventListener('click', closeSidebar);
+    $('#nav-chats').addEventListener('click', newConversation);
+    $('#search-chats').addEventListener('click', () => {
+      const history = $('#history');
+      let search = $('#history-search');
+      if (!search) {
+        search = document.createElement('input');
+        search.id = 'history-search';
+        search.className = 'modal-input';
+        search.placeholder = 'Buscar pelo título...';
+        search.style.margin = '0 0 8px';
+        $('#history-label').after(search);
+        search.addEventListener('input', () => {
+          document.querySelectorAll('.history-item').forEach(item => {
+            item.hidden = !item.textContent.toLowerCase().includes(search.value.toLowerCase());
+          });
+        });
+      }
+      search.hidden = false;
+      search.focus();
+      closeSidebar();
     });
-    navLinks.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
-      navLinks.classList.remove('open');
-      menuButton.setAttribute('aria-expanded', 'false');
+    document.querySelectorAll('.history-item').forEach(item => item.addEventListener('click', () => {
+      document.querySelectorAll('.history-item').forEach(entry => entry.classList.remove('selected'));
+      item.classList.add('selected');
+      chatArea.innerHTML = '';
+      welcome.style.display = 'none';
+      chatArea.classList.add('visible');
+      addMessage(item.dataset.chat, 'user');
+      addMessage('Esta conversa é apenas um exemplo visual. Quando o backend de inferência for integrado, o histórico real aparecerá aqui.', 'assistant');
+      closeSidebar();
     }));
+    modelButton.addEventListener('click', () => {
+      const open = modelMenu.classList.toggle('open');
+      modelButton.setAttribute('aria-expanded', String(open));
+    });
+    document.querySelectorAll('.model-option').forEach(option => option.addEventListener('click', () => {
+      $('#model-name').textContent = option.dataset.model;
+      document.querySelectorAll('.model-option').forEach(item => item.classList.remove('active'));
+      option.classList.add('active');
+      modelMenu.classList.remove('open');
+      modelButton.setAttribute('aria-expanded', 'false');
+      toast('Preferência visual atualizada.');
+    }));
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.model-wrap')) {
+        modelMenu.classList.remove('open');
+        modelButton.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.querySelectorAll('.prompt-chip').forEach(chip => chip.addEventListener('click', () => {
+      input.value = chip.dataset.prompt;
+      resizeInput();
+      input.focus();
+    }));
+    input.addEventListener('input', resizeInput);
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        submitMessage();
+      }
+    });
+    $('#composer').addEventListener('submit', (event) => { event.preventDefault(); submitMessage(); });
+    $('#attach-button').addEventListener('click', () => $('#file-input').click());
+    $('#file-input').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) toast('Arquivo selecionado: ' + file.name + ' · envio ainda indisponível');
+      event.target.value = '';
+    });
+    $('#thinking-button').addEventListener('click', () => toast('O modo de conversa padrão está selecionado.'));
+    $('#login-open').addEventListener('click', () => loginModal.classList.add('open'));
+    $('#login-close').addEventListener('click', () => loginModal.classList.remove('open'));
+    loginModal.addEventListener('click', (event) => { if (event.target === loginModal) loginModal.classList.remove('open'); });
+    $('#login-submit').addEventListener('click', () => toast('A autenticação será habilitada na integração com o backend.'));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeSidebar();
+        loginModal.classList.remove('open');
+        modelMenu.classList.remove('open');
+      }
+    });
   </script>
 </body>
 </html>
