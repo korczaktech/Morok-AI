@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         int index = 2;
         if (index < argc && argv[index][0] != '-')
             config.max_epochs = static_cast<std::size_t>(
-                parse_unsigned(argv[index++], "epochs", 1, 100000));
+                parse_unsigned(argv[index++], "epochs", 1, 1000000));
         if (index < argc && argv[index][0] != '-')
             config.seed = parse_unsigned(argv[index++], "seed", 0,
                                           std::numeric_limits<std::uint64_t>::max());
