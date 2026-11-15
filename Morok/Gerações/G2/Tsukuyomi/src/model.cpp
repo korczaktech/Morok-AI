@@ -62,8 +62,8 @@ LinguisticFeatures linguistic_features(std::uint8_t byte, std::uint8_t previous)
     if (byte >= 'A' && byte <= 'Z') result.category = 1;
     else if (byte >= 'a' && byte <= 'z') result.category = 2;
     else if (byte >= '0' && byte <= '9') result.category = 3;
-    else if (byte == ' ' || byte == '\\t') result.category = 4;
-    else if (byte == '\\n' || byte == '\\r') result.category = 5;
+    else if (byte == ' ' || byte == '\t') result.category = 4;
+    else if (byte == '\n' || byte == '\r') result.category = 5;
     else if (byte == '.' || byte == '?' || byte == '!') result.category = 6;
     else if (byte == ',' || byte == ';' || byte == ':') result.category = 7;
     else if (byte == '(' || byte == '[' || byte == '{' || byte == '<') result.category = 8;
@@ -81,8 +81,8 @@ LinguisticFeatures linguistic_features(std::uint8_t byte, std::uint8_t previous)
     if (current_word && !previous_word) result.boundary = 17;
     else if (current_word && previous_word) result.boundary = 18;
     else if (!current_word && previous_word) result.boundary = 19;
-    else if (byte == ' ' || byte == '\\t') result.boundary = 20;
-    else if (byte == '\\n' || byte == '\\r') result.boundary = 21;
+    else if (byte == ' ' || byte == '\t') result.boundary = 20;
+    else if (byte == '\n' || byte == '\r') result.boundary = 21;
     else if (byte == '.' || byte == '?' || byte == '!') result.boundary = 22;
     else if (result.category >= 7 && result.category <= 9) result.boundary = 23;
     else result.boundary = 24;
