@@ -1,2 +1,11 @@
 Pergunta: O que é a fotossíntese?
 Resposta: Fotossíntese é o processo pelo qual organismos como plantas usam energia luminosa para produzir matéria orgânica.
+
+U: O céu é azul?
+IA: Sim, o céu é azul.
+
+U: Qual é a cor da grama?
+IA: A grama geralmente é verde.
+
+U: As montanhas são altas?
+IA: Sim, muitas montanhas são altas.
