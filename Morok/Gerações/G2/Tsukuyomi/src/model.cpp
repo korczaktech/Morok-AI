@@ -149,14 +149,6 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
     }
 
     for (std::size_t h = 0; h < kHiddenSize; ++h) {
-                cache.context_features[j * kHiddenSize + h] = feature;
-                cache.input[h] += feature *
-                    at(model, kContextWeightOffset + j * kHiddenSize + h);
-            }
-        }
-    }
-
-    for (std::size_t h = 0; h < kHiddenSize; ++h) {
         float value = at(model, kHiddenBiasOffset + h);
         for (std::size_t k = 0; k < kHiddenSize; ++k)
             value += at(model, kHiddenWeightOffset + h * kHiddenSize + k) *
