@@ -63,17 +63,17 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
     std::size_t question_end = context.size();
     for (std::size_t line = 0; line < context.size();) {
         std::size_t end = line;
-        while (end < context.size() && context[end] != '\\n' && context[end] != '\\r')
+        while (end < context.size() && context[end] != '\n' && context[end] != '\r')
             ++end;
         std::size_t marker = line;
-        while (marker < end && (context[marker] == ' ' || context[marker] == '\\t'))
+        while (marker < end && (context[marker] == ' ' || context[marker] == '\t'))
             ++marker;
         if (end - marker >= 2 && context[marker] == 'U' && context[marker + 1] == ':') {
             question_begin = marker + 2;
             question_end = end;
         }
         line = end;
-        while (line < context.size() && (context[line] == '\\n' || context[line] == '\\r'))
+        while (line < context.size() && (context[line] == '\n' || context[line] == '\r'))
             ++line;
     }
 
@@ -449,7 +449,7 @@ std::vector<std::uint8_t> generate(const Model& model,
         if (!consume_utf8(utf8, byte)) break;
         output.push_back(byte);
         // A quebra de linha encerra a resposta; não gere bytes descartados depois dela.
-        if (byte == '\\n' || byte == '\\r' || byte == '\\0') break;
+        if (byte == '\n' || byte == '\r' || byte == '\0') break;
     }
     return output;
 }
