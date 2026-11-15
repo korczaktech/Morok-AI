@@ -114,6 +114,15 @@ int main() {
     assert(stopped.size() == generation_prompt.size() + 1);
     assert(stopped.back() == static_cast<std::uint8_t>('\n'));
 
+    // Caminho com U:/IA: usa a representação da pergunta pré-calculada.
+    const std::string cached_prompt_text =
+        "U: Uma pergunta longa para exercitar o cache contextual da inferência?\nIA:";
+    const std::vector<std::uint8_t> cached_prompt(
+        cached_prompt_text.begin(), cached_prompt_text.end());
+    const auto cached_stopped = generate(newline_model, cached_prompt, 32);
+    assert(cached_stopped.size() == cached_prompt.size() + 1);
+    assert(cached_stopped.back() == static_cast<std::uint8_t>('\n'));
+
     // Hiperparâmetros inválidos não podem alterar o modelo.
     Model invalid_config_model = model;
     TrainingConfig invalid_config;
