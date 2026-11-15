@@ -121,12 +121,19 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
         cache.has_question_context = true;
         cache.question_begin = question.begin;
         cache.question_end = question.end;
-        cache.context_features = question.values;
-        cache.context_counts = question.counts;
-        for (std::size_t j = 0; j < kContextSize; ++j)
-            for (std::size_t h = 0; h < kHiddenSize; ++h)
-                cache.input[h] += cache.context_features[j * kHiddenSize + h] *
+        if (!prepared_question) {
+            cache.context_features = question.values;
+            cache.context_counts = question.counts;
+        }
+        for (std::size_t j = 0; j < kContextSize; ++j) {
+            for (std::size_t h = 0; h < kHiddenSize; ++h) {
+                const float feature = prepared_question
+                    ? question.values[j * kHiddenSize + h]
+                    : cache.context_features[j * kHiddenSize + h];
+                cache.input[h] += feature *
                     at(model, kContextWeightOffset + j * kHiddenSize + h);
+            }
+        }
     } else {
         const std::size_t available = context.empty() ? 0 :
             std::min(kContextSize, context.size() - 1);
