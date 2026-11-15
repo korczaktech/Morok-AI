@@ -766,3 +766,24 @@ h1 span,.welcome h1 span{
 :root[data-theme="light"] .site-select-menu{background:#fff;border-color:#ded2eb;box-shadow:0 16px 42px #24143b24}
 :root[data-theme="light"] .site-select-option{color:#352443}
 :root[data-theme="light"] .site-select-option:hover,:root[data-theme="light"] .site-select-option[aria-selected="true"]{background:#f0eafa;color:#241331}
+
+/* Sidebar: allow the entire navigation column to scroll on short viewports */
+.sidebar{
+  min-height:0;
+  max-height:100dvh;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#32164b transparent;
+  -webkit-overflow-scrolling:touch;
+}
+.sidebar > *{flex-shrink:0}
+.sidebar-bottom{margin-top:auto;position:relative}
+.sidebar::-webkit-scrollbar{width:6px}
+.sidebar::-webkit-scrollbar-track{background:transparent}
+.sidebar::-webkit-scrollbar-thumb{background:#32164b;border-radius:8px}
+.sidebar::-webkit-scrollbar-thumb:hover{background:#54217c}
+@media(max-width:760px){
+  .sidebar{height:100dvh;max-height:100dvh;overflow-y:auto;padding-bottom:max(15px,env(safe-area-inset-bottom))}
+}
