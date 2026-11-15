@@ -2,9 +2,9 @@
 
 Projeto de pesquisa e desenvolvimento de uma inteligência artificial própria, com modelo de linguagem treinado do zero, arquitetura experimental e implementação principal em C++.
 
-**Organização dos modelos:** cada geração terá quatro modelos especializados: Mokosh, Tsukuyomi, Artemis e Apollo. Consulte [MODELOS.md](MODELOS.md) para a especificação, as regras de isolamento e o estado da migração.
+**Organização dos modelos:** os perfis são definidos individualmente por geração. A G1 possui Mokosh, Tsukuyomi e Apollo; a G3 permanece documental. Consulte [MODELOS.md](MODELOS.md) para a especificação, as regras de isolamento e o estado da migração.
 
-> **Estado atual:** o Core compartilhado, o motor da G1 e o motor/composição da G2 estão separados por geração. G1 e G2 possuem alvos distintos para Mokosh, Tsukuyomi, Artemis e Apollo. G3 permanece documental. A migração de caminhos e namespaces foi aplicada; compilação e testes locais ainda precisam ser executados para validar o commit final.
+> **Estado atual:** o Core compartilhado, o motor da G1 e  G3 permanece documental. A migração de caminhos e namespaces foi aplicada; compilação e testes locais ainda precisam ser executados para validar o commit final.
 
 ## Objetivo
 
@@ -138,6 +138,4 @@ Toda hipótese deve ser testável. Uma otimização só será considerada válid
 ## Aprendizado por reforço
 
 - **Reinforcement-G1** ([script](Gerações/G1/scripts/reinforcement.py), [histórico](Gerações/G1/data/reinforcement/answers.json)): atualiza os 1.000 parâmetros da G1, com checkpoint e artefatos próprios. Usa três perguntas controladas, avaliador lexical e gradiente reward-weighted baseado em BPTT; isso não demonstra compreensão semântica geral. Consulte [Experimento G1](docs/54-aprendizado-por-reforco-g1.md).
-- **Reinforcement-G2** ([script](Gerações/G2/scripts/reinforcement.py), [histórico](Gerações/G2/data/reinforcement/answers.json)): atualiza os dois especialistas independentes da G2, totalizando 2.000 parâmetros. Mantém checkpoints e dados isolados da G1. O replay consolida experiências duplicadas e dispensa atualizações quando a resposta/perda já convergiu. É treinamento supervisionado por demonstrações e replay, não REINFORCE/PPO nem avaliação semântica geral. Consulte [Geração 2](docs/55-geracao-2.md) e [Experimento G2](docs/56-aprendizado-por-reforco-g2.md).
-
 Os scripts de reforço são independentes e ficam dentro de suas respectivas gerações. Nenhum workflow de GitHub Actions está ativo no momento.

@@ -22,25 +22,7 @@ target_link_libraries(morok_test_math_primitives PRIVATE Morok::Core morok_build
 morok_enable_sanitizers(morok_test_math_primitives)
 add_test(NAME model.math_primitives COMMAND morok_test_math_primitives)
 
-if(MOROK_BUILD_G2)
-    add_executable(morok_test_g2 ../Gerações/G2/tests/unit/test_g2.cpp)
-    target_link_libraries(morok_test_g2 PRIVATE Morok::G2 morok_build_options)
-    morok_enable_sanitizers(morok_test_g2)
-    add_test(NAME model.g2 COMMAND morok_test_g2)
 
-    add_executable(morok_test_g2_reinforcement ../Gerações/G2/tests/unit/test_g2_reinforcement.cpp)
-    target_link_libraries(morok_test_g2_reinforcement PRIVATE Morok::G2 morok_build_options)
-    morok_enable_sanitizers(morok_test_g2_reinforcement)
-    add_test(NAME model.g2_reinforcement COMMAND morok_test_g2_reinforcement)
-
-    foreach(_profile IN ITEMS Mokosh Tsukuyomi Artemis Apollo)
-        string(TOLOWER "${_profile}" _profile_lower)
-        add_executable(morok_test_g2_${_profile_lower} ../Gerações/G2/${_profile}/tests/test_profile.cpp)
-        target_link_libraries(morok_test_g2_${_profile_lower} PRIVATE Morok::G2::${_profile} morok_build_options)
-        morok_enable_sanitizers(morok_test_g2_${_profile_lower})
-        add_test(NAME model.g2_${_profile_lower} COMMAND morok_test_g2_${_profile_lower})
-    endforeach()
-endif()
 
 add_executable(morok_test_g1_parameters
     ../Gerações/G1/shared/tests/unit/model/test_g1_parameters.cpp
@@ -164,15 +146,9 @@ if(MOROK_BUILD_APPS)
     add_test(NAME apps.evaluate_usage COMMAND morok_evaluate)
     add_test(NAME apps.train_usage COMMAND morok_train_cli)
     add_test(NAME apps.reinforce_usage COMMAND morok_reinforce)
-    if(MOROK_BUILD_G2)
-        add_test(NAME apps.train_g2_usage COMMAND morok_train_g2)
-        add_test(NAME apps.reinforce_g2_usage COMMAND morok_reinforce_g2)
-        add_test(NAME apps.generate_g2_usage COMMAND morok_generate_g2)
-    endif()
+)
     set(_morok_usage_tests apps.convert_usage apps.evaluate_usage apps.train_usage apps.reinforce_usage)
-    if(MOROK_BUILD_G2)
-        list(APPEND _morok_usage_tests apps.train_g2_usage apps.generate_g2_usage apps.reinforce_g2_usage)
-    endif()
+)
     set_tests_properties(${_morok_usage_tests} PROPERTIES WILL_FAIL TRUE)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_test(NAME apps.server_usage COMMAND morok_server)
@@ -244,11 +220,7 @@ set_tests_properties(architecture.generation_isolation PROPERTIES LABELS "archit
 add_test(NAME reinforcement.feedback_database
     COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/Gerações/G1/shared/tests/scripts/test_g1_reinforcement.py)
 set_tests_properties(reinforcement.feedback_database PROPERTIES LABELS "reinforcement;python" TIMEOUT 30)
-if(MOROK_BUILD_G2)
-    add_test(NAME reinforcement.g2_feedback_database
-        COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/Gerações/G2/tests/test_g2_reinforcement.py)
-    set_tests_properties(reinforcement.g2_feedback_database PROPERTIES LABELS "reinforcement;g2;python" TIMEOUT 30)
-endif()
+)
 
 get_property(_morok_tests DIRECTORY PROPERTY TESTS)
 set_tests_properties(${_morok_tests} PROPERTIES TIMEOUT 120)

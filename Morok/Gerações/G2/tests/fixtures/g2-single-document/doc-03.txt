@@ -1,2 +1,0 @@
-Usuario: Que cor e a grama?
-IA: A grama e verde.

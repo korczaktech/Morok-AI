@@ -2,7 +2,7 @@
 
 ## Organização por geração
 
-G1, G2 e G3 são gerações. Os perfis disponíveis são definidos individualmente por geração; não é obrigatório que todas tenham os mesmos perfis.
+G1 e G3 são as gerações atualmente mantidas. Os perfis disponíveis são definidos individualmente por geração; não é obrigatório que todas tenham os mesmos perfis.
 
 ```text
 Morok-AI/
@@ -12,13 +12,6 @@ Morok-AI/
 │   ├── shared/              # motor e subsistemas exclusivos da geração G1
 │   ├── Mokosh/
 │   ├── Tsukuyomi/
-│   └── Apollo/
-├── G2/
-│   ├── engine/              # motor de especialistas exclusivo da G2
-│   ├── model/               # composição do modelo G2
-│   ├── Mokosh/
-│   ├── Tsukuyomi/
-│   ├── Artemis/
 │   └── Apollo/
 ├── G3/                      # estrutura documental; sem motor implementado
 │   ├── Mokosh/
@@ -62,7 +55,7 @@ Modelo orientado à velocidade de resposta. Prioriza reduzir o tempo até a prim
 
 ## Relação entre gerações
 
-Os perfis são definidos por geração. Na G1 existem somente Tsukuyomi, Apollo e Mokosh; Artemis não faz parte dessa geração. Na G2, os perfis permanecem independentes conforme sua própria implementação. A quantidade de parâmetros, mecanismos cognitivos e capacidades será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
+Os perfis são definidos por geração. Na G1 existem somente Tsukuyomi, Apollo e Mokosh; Artemis não faz parte dessa geração. A quantidade de parâmetros, mecanismos cognitivos e capacidades será definida em especificação própria. Modelos homônimos de gerações diferentes não precisam ter a mesma arquitetura interna.
 
 ## Organização real do código
 
@@ -70,17 +63,15 @@ O diretório público `include/` e a biblioteca `Morok::Core` contêm contratos 
 
 A implementação compartilhada da geração G1 está em `Gerações/G1/shared/` e é compilada apenas em `Morok::G1`. Inclui o motor de parâmetros, forward pass, BPTT, otimizador, treinamento, inferência, checkpoints e adaptadores de linguagem/comunicação/aprendizado que ainda são específicos da G1.
 
-A implementação da G2 está dentro de `Gerações/G2/`. `Gerações/G2/engine/` contém o motor independente de cada especialista; `Gerações/G2/model/` implementa o modelo composto por dois especialistas. A G2 não importa headers nem símbolos da G1. Os alvos `Morok::G1` e `Morok::G2` dependem do Core, mas não dependem um do outro.
-
 Aplicações, scripts, dados de reforço, fixtures e testes específicos foram movidos para `Gerações/G1/` ou `Gerações/G2/`. O CMake continua na raiz como orquestrador de build e só inclui fontes da geração correspondente no alvo correspondente.
 
 ## Estado dos perfis
 
-G1 possui alvos CMake independentes para Mokosh, Tsukuyomi e Apollo. G2 mantém alvos independentes para seus perfis implementados. Cada perfil mantém suas políticas e código exclusivo dentro de seu próprio diretório, com testes próprios. Os motores e adaptadores comuns aos perfis de uma geração permanecem no diretório interno dessa geração, fora dos diretórios dos perfis. Na G1, Tsukuyomi preserva a execução atual de agente único; Apollo é o perfil de velocidade; Mokosh deriva da base de Tsukuyomi, com processamento de raciocínio mais demorado e treinamento com mais épocas. Artemis não existe na G1.
+G1 possui alvos CMake independentes para Mokosh, Tsukuyomi e Apollo. Cada perfil mantém suas políticas e código exclusivo dentro de seu próprio diretório, com testes próprios. Os motores e adaptadores comuns aos perfis de uma geração permanecem no diretório interno dessa geração, fora dos diretórios dos perfis. Na G1, Tsukuyomi preserva a execução atual de agente único; Apollo é o perfil de velocidade; Mokosh deriva da base de Tsukuyomi, com processamento de raciocínio mais demorado e treinamento com mais épocas. Artemis não existe na G1.
 
 G3 ainda não possui motor executável, treinamento ou inferência. Seus diretórios são apenas estrutura documental. Não há dependência de G1 ou G2 dentro da G3.
 
-A migração de diretórios e namespaces mantém as implementações específicas dentro de cada geração, os perfis dentro de seus diretórios, e a infraestrutura realmente comum na raiz. A validação local de compilação e testes deve ser executada antes de considerar a migração encerrada.
+A organização mantém as implementações específicas dentro de cada geração, os perfis dentro de seus diretórios, e a infraestrutura realmente comum na raiz. A validação local de compilação e testes deve ser executada antes de considerar a migração encerrada.
 
 ## Modelo removido
 Hephaestus não faz parte da arquitetura aprovada.

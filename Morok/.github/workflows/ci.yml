@@ -43,7 +43,7 @@ jobs:
           sudo apt-get install --yes clang ninja-build libsqlite3-dev
 
       - name: Configure
-        run: cmake --preset ${{ matrix.preset }} -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -DMOROK_BUILD_G2=ON
+        run: cmake --preset ${{ matrix.preset }} -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
 
       - name: Build
         run: cmake --build --preset ${{ matrix.preset }} --parallel 2

@@ -7,7 +7,6 @@ on:
       - "include/**"
       - "src/**"
       - "Gerações/G1/**"
-      - "Gerações/G2/**"
       - "tests/**"
       - "CMakeLists.txt"
       - "CMakePresets.json"
@@ -62,7 +61,6 @@ jobs:
           -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
           -DMOROK_BUILD_TESTS=ON
           -DMOROK_BUILD_APPS=ON
-          -DMOROK_BUILD_G2=ON
           -DMOROK_ENABLE_ASAN=ON
           -DMOROK_ENABLE_UBSAN=ON
 
