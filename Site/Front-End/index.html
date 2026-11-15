@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=20261115-15">
-  <script src="./app.js?v=20261115-12" defer></script>
+  <script src="./app.js?v=20261115-13" defer></script>
 </head>
 <body>
   <div class="app" id="app">
@@ -45,10 +45,13 @@
           <div class="model-select-wrap">
             <button class="model-select" id="model-select" aria-haspopup="true" aria-expanded="false"><span class="model-glyph"></span><span id="model-select-label">Morok</span><span class="chevron">⌄</span></button>
             <div class="model-popover generation-menu" id="model-popover" hidden>
-              <div class="generation-list" id="generation-list"><div class="popover-label">MODELO DISPONÍVEL</div>
-              <button class="generation-option selected" aria-current="true"><span class="generation-mark">M</span><span><strong>Morok</strong><small>Assistente padrão</small></span><span class="check">✓</span></button></div>
-              <div class="model-submenu" id="model-submenu" hidden><button class="generation-back" id="generation-back" type="button">← Voltar</button><p class="model-notice">Mais opções estarão disponíveis em breve.</p></div>
-              <p class="model-notice">Mais opções de personalização estarão disponíveis em breve.</p>
+              <div class="generation-list" id="generation-list"><div class="popover-label">ESCOLHA UMA GERAÇÃO</div>
+              <button class="generation-option selected" data-generation="G1" aria-current="true" type="button"><span class="generation-mark">G1</span><span><strong>Geração 1</strong><small>Primeira geração do Morok</small></span><span class="check">✓</span></button></div>
+              <div class="model-submenu" id="model-submenu" hidden><button class="generation-back" id="generation-back" type="button">← Voltar às gerações</button><div class="popover-label">MODELOS DA GERAÇÃO 1</div>
+                <button class="profile-option" data-model="Tsukuyomi" type="button"><span class="profile-symbol"></span><span><strong>Tsukuyomi</strong><small>Modelo da geração 1</small></span><span class="check">✓</span></button>
+                <button class="profile-option" data-model="Apollo" type="button"><span class="profile-symbol apollo"></span><span><strong>Apollo</strong><small>Modelo da geração 1</small></span><span class="check">✓</span></button>
+                <button class="profile-option" data-model="Mokosh" type="button"><span class="profile-symbol mokosh"></span><span><strong>Mokosh</strong><small>Modelo da geração 1</small></span><span class="check">✓</span></button>
+              </div>
             </div>
           </div>
         </div>
