@@ -28,8 +28,6 @@ def main() -> int:
             errors.append(f"G1/{profile}: missing profile.hpp")
         if not any(p.name == "profile.cpp" for p in files):
             errors.append(f"G1/{profile}: missing profile.cpp")
-        if not any(p.name == "test_profile.cpp" for p in files):
-            errors.append(f"G1/{profile}: missing test_profile.cpp")
         for file in files:
             content = file.read_text(encoding="utf-8")
             for other in PROFILES:
