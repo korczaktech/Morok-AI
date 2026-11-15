@@ -66,6 +66,7 @@ jobs:
           if [[ -n "$previous_run" ]]; then
             mkdir -p artifacts/reinforcement-g2
             gh run download "$previous_run" --name morok-g2-reinforcement-state-v3 --dir artifacts/reinforcement-g2
+            rm -f artifacts/reinforcement-g2/attempt-results.txt
             if [[ -f artifacts/reinforcement-g2/model.v3.expert-a && -f artifacts/reinforcement-g2/model.v3.expert-b ]]; then
               echo "Restored G2 v3 checkpoints from workflow run $previous_run."
             elif [[ -f artifacts/reinforcement-g2/model.v3.expert-a || -f artifacts/reinforcement-g2/model.v3.expert-b ]]; then
