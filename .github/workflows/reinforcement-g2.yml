@@ -43,7 +43,7 @@ on:
         description: "Bootstrap epochs per expert"
         required: true
         type: number
-        default: 1000
+        default: 10000
 permissions:
   contents: write
   actions: read
@@ -87,7 +87,7 @@ jobs:
             --database data/reinforcement-g2/answers.json \
             --questions "${questions[@]}" \
             --attempts "${{ github.event_name == 'workflow_dispatch' && inputs.attempts || 3 }}" \
-            --bootstrap-epochs "${{ github.event_name == 'workflow_dispatch' && inputs.epochs || 1000 }}" \
+            --bootstrap-epochs "${{ github.event_name == 'workflow_dispatch' && inputs.epochs || 10000 }}" \
             --results-file artifacts/reinforcement-g2/attempt-results.txt
       - name: Commit G2 feedback history
         run: |
