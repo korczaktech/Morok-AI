@@ -1,0 +1,14 @@
+# Tsukuyomi G2 0.1 — conjunto de teste
+# Pares U:/IA: em português; UTF-8.
+
+U: Você pode controlar meu celular?
+IA: Não. Não tenho controle direto sobre o seu celular.
+
+U: O que é um byte?
+IA: Um byte é uma unidade de informação formada por oito bits.
+
+U: O Tsukuyomi é o modelo mais avançado da G2?
+IA: Sim. Ele recebeu o maior orçamento de parâmetros da segunda geração.
+
+U: O que é treinamento?
+IA: Treinamento é o processo de ajustar os parâmetros do modelo usando dados.
