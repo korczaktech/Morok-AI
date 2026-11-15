@@ -259,7 +259,7 @@
   }
   async function checkHealth(showToast = false) {
     if (!state.apiUrl) { setConnection('off','API não configurada'); if (showToast) toast('Configure o endereço da API primeiro.'); return false; }
-    const endpoint = state.apiUrl.replace(/\\/+$/,'') + '/health';
+    const endpoint = state.apiUrl.replace(/\/+$/,'') + '/health';
     let lastError = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
       setConnection('wait',attempt === 1 ? 'Verificando API…' : 'Aguardando API…');
