@@ -193,18 +193,18 @@ def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
 
     total = max(1, len(results))
     mean = lambda column: sum(item[column] for item in all_metrics) / total
-    report.write(f"## {title}\\n\\n")
-    report.write(f"- Respostas corretas: {len(correct_items)}\\n")
-    report.write(f"- Respostas incorretas: {len(incorrect_items)}\\n")
-    report.write(f"- Total avaliado: {len(results)}\\n")
-    report.write(f"- F1 lexical médio: {mean(0):.1%}\\n")
-    report.write(f"- Similaridade de caracteres média: {mean(1):.1%}\\n")
-    report.write(f"- Repetição consecutiva média: {mean(2):.1%}\\n")
-    report.write(f"- Diversidade média de caracteres: {mean(3):.1%}\\n")
-    report.write("- Aprovação exige igualdade lexical normalizada; as demais métricas são diagnósticas.\\n\\n")
-    report.write("### Resultado por habilidade\\n\\n")
-    report.write("| Habilidade | Exatidão | F1 lexical | Similaridade | Repetição | Diversidade |\\n")
-    report.write("|---|---:|---:|---:|---:|---:|\\n")
+    report.write(f"## {title}\n\n")
+    report.write(f"- Respostas corretas: {len(correct_items)}\n")
+    report.write(f"- Respostas incorretas: {len(incorrect_items)}\n")
+    report.write(f"- Total avaliado: {len(results)}\n")
+    report.write(f"- F1 lexical médio: {mean(0):.1%}\n")
+    report.write(f"- Similaridade de caracteres média: {mean(1):.1%}\n")
+    report.write(f"- Repetição consecutiva média: {mean(2):.1%}\n")
+    report.write(f"- Diversidade média de caracteres: {mean(3):.1%}\n")
+    report.write("- Aprovação exige igualdade lexical normalizada; as demais métricas são diagnósticas.\n\n")
+    report.write("### Resultado por habilidade\n\n")
+    report.write("| Habilidade | Exatidão | F1 lexical | Similaridade | Repetição | Diversidade |\n")
+    report.write("|---|---:|---:|---:|---:|---:|\n")
     for category, values in sorted(category_metrics.items()):
         n = len(values)
         report.write(
@@ -212,27 +212,27 @@ def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
             f"{sum(v[1] for v in values) / n:.1%} | "
             f"{sum(v[2] for v in values) / n:.1%} | "
             f"{sum(v[3] for v in values) / n:.1%} | "
-            f"{sum(v[4] for v in values) / n:.1%} |\\n"
+            f"{sum(v[4] for v in values) / n:.1%} |\n"
         )
-    report.write("\\n")
+    report.write("\n")
 
     for heading, items, verdict in (
         ("Respostas corretas", correct_items, "CORRETA"),
         ("Respostas incorretas", incorrect_items, "INCORRETA"),
     ):
-        report.write(f"### {heading} ({len(items)})\\n\\n")
+        report.write(f"### {heading} ({len(items)})\n\n")
         if not items:
-            report.write("Nenhuma resposta nesta categoria.\\n\\n")
+            report.write("Nenhuma resposta nesta categoria.\n\n")
             continue
         for index, question, expected, answer, score, char_score, repetition, diversity in items:
-            report.write(f"#### {index}. {question}\\n\\n")
-            report.write(f"- Resposta gerada: {answer or '(vazia)'}\\n")
-            report.write(f"- Gabarito: {expected}\\n")
-            report.write(f"- F1 lexical: {score:.1%}\\n")
-            report.write(f"- Similaridade de caracteres: {char_score:.1%}\\n")
-            report.write(f"- Maior sequência repetida: {repetition:.1%} da resposta\\n")
-            report.write(f"- Diversidade de caracteres: {diversity:.1%}\\n")
-            report.write(f"- Resultado: **{verdict}**\\n\\n")
+            report.write(f"#### {index}. {question}\n\n")
+            report.write(f"- Resposta gerada: {answer or '(vazia)'}\n")
+            report.write(f"- Gabarito: {expected}\n")
+            report.write(f"- F1 lexical: {score:.1%}\n")
+            report.write(f"- Similaridade de caracteres: {char_score:.1%}\n")
+            report.write(f"- Maior sequência repetida: {repetition:.1%} da resposta\n")
+            report.write(f"- Diversidade de caracteres: {diversity:.1%}\n")
+            report.write(f"- Resultado: **{verdict}**\n\n")
     return len(correct_items), len(results)
 
 
@@ -353,7 +353,7 @@ def main() -> int:
             elapsed = time.perf_counter() - started
             report.write(
                 f"**Treino: {completed_epochs:.0f} época(s), {target_bytes:.0f} bytes-alvo, "
-                f"train_bpb {initial_bpb:.4f} → {final_bpb:.4f}.**\\n"
+                f"train_bpb {initial_bpb:.4f} → {final_bpb:.4f}.**\n"
                 f"**Validação: {correct_count}/{total}; F1 médio: {mean_f1:.3f}; "
                 f"pontuação: {validation_score:.3f}; LR: {learning_rate:.6f}; "
                 f"duração: {elapsed:.2f}s.**\n\n"
@@ -385,7 +385,7 @@ def main() -> int:
         report.write(
             f"**Melhor estado: ciclo {best_validation_cycle}; "
             f"validação {best_validation_correct}/{len(validation)}; "
-            f"pontuação {best_validation_score:.3f}.**\\n\\n"
+            f"pontuação {best_validation_score:.3f}.**\n\n"
         )
         print(
             f"Melhor checkpoint: ciclo {best_validation_cycle}; "
