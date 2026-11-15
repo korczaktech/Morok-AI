@@ -12,7 +12,7 @@ namespace morok::g2::tsukuyomi {
 inline constexpr std::size_t kVocabularySize = 256;
 inline constexpr std::size_t kHiddenSize = 32;
 inline constexpr std::size_t kContextSize = 13;
-inline constexpr std::size_t kBpttTruncation = 13;
+inline constexpr std::size_t kBpttTruncation = 64;
 inline constexpr std::size_t kParameterCount = 10000;
 // Formato interno recorrente; a versão pública do modelo permanece 0.1.
 inline constexpr std::uint32_t kCheckpointFormatVersion = 7;
