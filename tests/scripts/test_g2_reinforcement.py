@@ -167,9 +167,9 @@ class G2ReinforcementTests(unittest.TestCase):
         documents = sorted(fixture_dir.glob("*.txt"))
         self.assertEqual(len(documents), 3)
         expected = {
-            "sky_is_blue": ("Usuario: O ceu e azul?\\nIA: ", "Sim, o ceu e azul"),
-            "mountains_high_or_low": ("Usuario: As montanhas sao altas ou baixas?\\nIA: ", "As montanhas sao altas."),
-            "grass_color": ("Usuario: Que cor e a grama?\\nIA: ", "A grama e verde."),
+            "sky_is_blue": ("Usuario: O ceu e azul?\nIA: ", "Sim, o ceu e azul"),
+            "mountains_high_or_low": ("Usuario: As montanhas sao altas ou baixas?\nIA: ", "As montanhas sao altas."),
+            "grass_color": ("Usuario: Que cor e a grama?\nIA: ", "A grama e verde."),
         }
         corpus = [path.read_text(encoding="utf-8") for path in documents]
         db = json.loads((ROOT / "data" / "reinforcement-g2" / "answers.json").read_text(encoding="utf-8"))
@@ -177,7 +177,7 @@ class G2ReinforcementTests(unittest.TestCase):
             prompt, target = expected[question["id"]]
             self.assertEqual(question["prompt"], prompt)
             self.assertIn(prompt + target, corpus)
-        self.assertTrue(all(not document.endswith("\\n") for document in corpus))
+        self.assertTrue(all(not document.endswith("\n") for document in corpus))
         trainer = (ROOT / "src" / "model" / "learn" / "g2_training.cpp").read_text(encoding="utf-8")
         self.assertEqual(trainer.count("train_all_documents=true;"), 2)
         self.assertEqual(db["totals"]["episodes"], len(db["episodes"]))
