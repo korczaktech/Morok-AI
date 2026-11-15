@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
         std::ofstream output(argv[2], std::ios::app);
         if (!output) throw std::runtime_error("cannot open results file");
         if (new_file)
-            output << "profile\tquestion_id\tattempts\taccuracy\tmean_latency_ms\tverdict\n";
+            output << "profile\tquestion_id\tattempt\tverdict\tlatency_ms\tanswer\n";
 
         if (profile == "Tsukuyomi") {
             run_profile(profile.c_str(), checkpoint.parameters, output,
