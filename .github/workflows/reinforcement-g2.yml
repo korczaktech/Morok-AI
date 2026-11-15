@@ -17,8 +17,6 @@ on:
       - "docs/56-aprendizado-por-reforco-g2.md"
       - "CMakeLists.txt"
       - "tests/CMakeLists.txt"
-  schedule:
-    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
     inputs:
       question_sky:
@@ -37,10 +35,10 @@ on:
         type: boolean
         default: true
       attempts:
-        description: "Number of G2 answer attempts (1-100)"
+        description: "Number of G2 answer attempts (1-10)"
         required: true
         type: number
-        default: 10
+        default: 3
       epochs:
         description: "Bootstrap epochs per expert"
         required: true
@@ -60,15 +58,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - name: Restore G2 model
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p artifacts/reinforcement-g2
-          previous_run="$(gh run list --workflow reinforcement-g2.yml --branch main --status success --json databaseId --limit 1 --jq '.[0].databaseId // empty')"
-          if [[ -n "$previous_run" ]]; then
-            gh run download "$previous_run" --name morok-g2-reinforcement-state-v2 --dir artifacts/reinforcement-g2 || true
-          fi
       - name: Install build tools
         run: |
           sudo apt-get update
@@ -109,9 +98,10 @@ jobs:
             git fetch origin main && git rebase origin/main && git push origin HEAD:main
           fi
       - name: Publish G2 reinforcement state
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: morok-g2-reinforcement-state-v2
+          name: morok-g2-reinforcement-state-v3
           path: artifacts/reinforcement-g2/
           if-no-files-found: error
           retention-days: 90
