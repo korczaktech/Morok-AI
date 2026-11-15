@@ -76,6 +76,27 @@ int main() {
     assert(restored_optimizer.second_moment == resumed_state.second_moment);
     assert(restored_optimizer.step == resumed_state.step);
 
+    // O treinamento supervisionado atualiza somente os bytes marcados como resposta.
+    const std::array<std::uint8_t, 9> dialogue{
+        'U', ':', 'Q', '\n', 'I', 'A', ':', 'A', '\n'
+    };
+    const std::array<std::uint8_t, 9> answer_mask{
+        0, 0, 0, 0, 0, 0, 0, 1, 0
+    };
+    Model supervised;
+    initialize(supervised, 321);
+    TrainingState supervised_state;
+    TrainingConfig supervised_config;
+    supervised_config.epochs = 2;
+    supervised_config.batch_size = 1;
+    const auto supervised_report = train(
+        supervised, dialogue, supervised_config, &supervised_state, answer_mask);
+    assert(supervised_report.epochs_completed == 2);
+    assert(supervised_report.target_bytes == 2);
+    assert(std::isfinite(supervised_report.initial_loss));
+    assert(std::isfinite(supervised_report.final_loss));
+    assert(std::isfinite(evaluate_loss(supervised, dialogue, answer_mask)));
+
     const auto generated = generate(model, sample, 12);
     assert(generated.size() == sample.size() + 12);
     assert(std::equal(sample.begin(), sample.end(), generated.begin()));
