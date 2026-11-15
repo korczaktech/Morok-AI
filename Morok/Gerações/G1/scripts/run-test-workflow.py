@@ -39,7 +39,7 @@ completed = json.loads(completed_path.read_text()) if completed_path.exists() el
 epochs_path = state / "epochs.json"
 epochs = json.loads(epochs_path.read_text()) if epochs_path.exists() else {}
 results_path = state / "history.tsv"
-deadline = time.monotonic() + 340 * 60
+deadline = time.monotonic() + 300 * 60
 seed_base = 42
 
 print("Modelos selecionados: " + ", ".join(selected), flush=True)
