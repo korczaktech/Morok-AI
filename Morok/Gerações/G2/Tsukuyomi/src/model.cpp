@@ -58,6 +58,10 @@ bool word_byte(std::uint8_t byte) {
            (byte >= 0x80 && byte <= 0xBF) ||
            (byte >= 0xC2 && byte <= 0xF4);
 }
+bool reserved_feature_byte(std::uint8_t byte) {
+    return byte == 0xC0 || byte == 0xC1 || byte >= 0xF5;
+}
+
 LinguisticFeatures linguistic_features(std::uint8_t byte, std::uint8_t previous) {
     LinguisticFeatures result;
     if (byte >= 'A' && byte <= 'Z') result.category = 0xC0;
@@ -279,11 +283,16 @@ Cache calculate(const Model& model, std::span<const std::uint8_t> context,
     cache.logits = logits_for_state(model, state);
     double maximum = -std::numeric_limits<double>::infinity();
     if (calculate_probabilities)
-        for (float logit : cache.logits)
-            maximum = std::max(maximum, static_cast<double>(logit));
+        for (std::size_t token = 0; token < kVocabularySize; ++token)
+            if (!reserved_feature_byte(static_cast<std::uint8_t>(token)))
+                maximum = std::max(maximum, static_cast<double>(cache.logits[token]));
     if (calculate_probabilities) {
         double denominator = 0.0;
         for (std::size_t token = 0; token < kVocabularySize; ++token) {
+            if (reserved_feature_byte(static_cast<std::uint8_t>(token))) {
+                cache.probabilities[token] = 0.0F;
+                continue;
+            }
             const double value = std::exp(static_cast<double>(cache.logits[token]) - maximum);
             cache.probabilities[token] = static_cast<float>(value);
             denominator += value;
