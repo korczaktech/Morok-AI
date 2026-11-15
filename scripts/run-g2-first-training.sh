@@ -19,7 +19,7 @@ prefix="$output_dir/g2-model"
 prompt="$output_dir/prompt.txt"
 generated="$output_dir/generated.txt"
 mkdir -p "$output_dir"
-printf 'Usuario: O ceu e azul?\\nIA: ' > "$prompt"
+printf 'Usuario: O ceu e azul?\nIA: ' > "$prompt"
 rm -f "$prefix".* "$output_dir"/metrics* "$output_dir"/training-summary.txt "$generated"
 echo "Training both G2 experts from independent deterministic initializations."
 /usr/bin/time -v -o "$output_dir/resource-usage.txt" \
