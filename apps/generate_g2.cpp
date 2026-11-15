@@ -12,7 +12,14 @@ int main(int argc,char** argv) {
         std::ifstream in(argv[2],std::ios::binary); if(!in)throw std::runtime_error("não foi possível abrir prompt");
         std::string raw((std::istreambuf_iterator<char>(in)),{}); auto text=morok::common::Utf8Text::from_utf8(raw);
         if(!text)throw std::runtime_error("prompt UTF-8 inválido");
-        morok::model::G1GenerationConfig c; if(argc>4)c.max_new_bytes=static_cast<std::size_t>(std::stoull(argv[4]));
+        morok::model::G1GenerationConfig c;
+        c.max_new_bytes=48;
+        c.printable_only=true;
+        c.repetition_penalty=0.65;
+        c.repetition_window=16;
+        c.eos_threshold=0.85;
+        c.min_new_bytes=2;
+        if(argc>4)c.max_new_bytes=static_cast<std::size_t>(std::stoull(argv[4]));
         auto result=morok::model::generate_g2(p,*text.value_if(),c);
         std::ofstream out(argv[3],std::ios::binary|std::ios::trunc); if(!out)throw std::runtime_error("não foi possível criar saída");
         out.write(result.continuation.string().data(),static_cast<std::streamsize>(result.continuation.size_bytes()));
