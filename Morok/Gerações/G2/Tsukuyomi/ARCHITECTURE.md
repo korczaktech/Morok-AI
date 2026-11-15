@@ -46,7 +46,7 @@ Argumentos: arquivo de corpus, caminho do checkpoint, épocas opcionais e seed o
 
 ## Inferência
 
-A geração é autoregressiva e greedy. Cada byte gerado passa a integrar o contexto das previsões seguintes. A CLI oferece modo batch: carrega o checkpoint uma vez e atende várias perguntas recebidas por stdin. A saída de resposta é encerrada no primeiro LF/CR/NUL ou no limite configurado (1 a 4.096 bytes); o workflow usa 96 bytes.
+A geração é autoregressiva e greedy. Cada byte gerado passa a integrar o contexto das previsões seguintes. A CLI oferece modo batch: carrega o checkpoint uma vez e atende várias perguntas recebidas por stdin. A saída de resposta é encerrada no primeiro LF/CR/NUL ou no limite configurado (1 a 4.096 bytes); o workflow usa 160 bytes.
 
 Comando:
 
