@@ -487,7 +487,7 @@ bool save_checkpoint(const Model& model, const std::filesystem::path& path) {
     std::ofstream stream(path, std::ios::binary | std::ios::trunc);
     if (!stream) return false;
     constexpr char magic[8] = {'M','O','R','O','K','G','2','T'};
-    const std::uint32_t version = kModelVersion;
+    const std::uint32_t version = kCheckpointFormatVersion;
     const std::uint32_t count = static_cast<std::uint32_t>(kParameterCount);
     const std::uint64_t hash = checksum(model.parameters.data(),
                                         model.parameters.size());
