@@ -5,7 +5,7 @@
   const STORAGE_KEY = 'morok.web.state.v2';
   const AUTH_API_URL = 'https://morok-ai.onrender.com';
   const MAX_LOCAL_BYTES = 3_500_000;
-  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
+  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], tasks: [], instructions: '', location: '', aboutMe: '', responseStyle: 'equilibrado', notifications: true, libraryItems: [], busy: false, controller: null, contextId: null, renameId: null, toastTimer: null };
   const el = {
     app: $('#app'), sidebar: $('#sidebar'), backdrop: $('#backdrop'), history: $('#history-list'),
     welcome: $('#welcome'), conversation: $('#conversation'), input: $('#message-input'), composer: $('#composer'),
@@ -20,7 +20,7 @@
   function titleFrom(text) { const clean = text.replace(/\s+/g, ' ').trim(); return clean.length > 34 ? clean.slice(0, 34).trimEnd() + '…' : clean || 'Nova conversa'; }
   function persist() {
     try {
-      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, displayName: state.displayName, generation: state.generation, model: state.model });
+      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, displayName: state.displayName, generation: state.generation, model: state.model, tasks: state.tasks, instructions: state.instructions, location: state.location, aboutMe: state.aboutMe, responseStyle: state.responseStyle, notifications: state.notifications, libraryItems: state.libraryItems });
       if (payload.length > MAX_LOCAL_BYTES) { toast('O histórico local está cheio. Exclua conversas antigas.'); return; }
       localStorage.setItem(STORAGE_KEY, payload);
     } catch (error) { toast('Não foi possível salvar no navegador. Verifique o espaço disponível.'); }
@@ -35,6 +35,13 @@
       state.displayName = typeof saved.displayName === 'string' ? saved.displayName.slice(0,32) : 'Visitante';
       state.generation = saved.generation === 'G1' ? 'G1' : 'G1';
       state.model = ['Tsukuyomi','Apollo','Mokosh'].includes(saved.model) ? saved.model : 'Tsukuyomi';
+      state.tasks = Array.isArray(saved.tasks) ? saved.tasks.slice(0,100) : [];
+      state.instructions = typeof saved.instructions === 'string' ? saved.instructions.slice(0,4000) : '';
+      state.location = typeof saved.location === 'string' ? saved.location.slice(0,120) : '';
+      state.aboutMe = typeof saved.aboutMe === 'string' ? saved.aboutMe.slice(0,1000) : '';
+      state.responseStyle = ['conciso','equilibrado','detalhado'].includes(saved.responseStyle) ? saved.responseStyle : 'equilibrado';
+      state.notifications = saved.notifications !== false;
+      state.libraryItems = Array.isArray(saved.libraryItems) ? saved.libraryItems.slice(0,100) : [];
       try { state.authSession = JSON.parse(localStorage.getItem('morok.auth.session') || sessionStorage.getItem('morok.auth.session') || 'null'); } catch { state.authSession = null; }
     } catch { localStorage.removeItem(STORAGE_KEY); }
     if (!state.conversations.some(c => c.id === state.activeId)) state.activeId = null;
@@ -142,7 +149,9 @@
     const signedIn = !!user?.email;
     $('#profile-name').textContent = signedIn ? user.email : (state.displayName || 'Visitante');
     $('#profile-avatar').textContent = signedIn ? initials(user.email) : initials(state.displayName);
-    $('#profile-subtitle').textContent = signedIn ? 'Conta autenticada' : 'Entre para usar sua conta';
+    $('#profile-subtitle').textContent = signedIn ? 'Conta autenticada' : 'Configurar perfil';
+    $('#profile-menu-name').textContent = signedIn ? (user.name || user.email) : (state.displayName || 'Visitante');
+    $('#profile-menu-email').textContent = signedIn ? user.email : 'Conta local';
     $('#profile-button').classList.toggle('signed-in', signedIn);
   }
   function toast(message) {
@@ -298,7 +307,42 @@
     state.theme = $('#theme-select').value;
     applyTheme(); persist(); el.settings.close(); toast('Preferências salvas.'); return true;
   }
-  function addFiles(files) {
+  const workspaceDialog = $('#workspace-dialog');
+  function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
+  function openWorkspacePage(page) {
+    const titles = {images:'Imagens',tasks:'Tarefas',library:'Biblioteca',plugins:'Plugins',locations:'Localizações',personalization:'Personalização',instructions:'Instruções personalizadas'};
+    if (!titles[page]) return;
+    $('#workspace-title').textContent = titles[page];
+    const root = $('#workspace-page');
+    if (page === 'images') root.innerHTML = '<p class="field-help">Área para organizar imagens. A geração e edição de imagens ainda não estão conectadas a este espaço.</p><label class="upload-card">＋ Adicionar imagens deste dispositivo<input id="workspace-image-input" type="file" accept="image/*" multiple hidden></label><div class="workspace-empty">As imagens adicionadas aparecerão aqui durante esta sessão.</div><div class="workspace-image-grid" id="workspace-image-grid"></div>';
+    if (page === 'tasks') root.innerHTML = '<p class="field-help">Crie uma lista de tarefas local. Ela fica salva neste navegador.</p><form class="inline-create" id="task-form"><input class="text-field" id="task-input" maxlength="140" placeholder="Descreva uma tarefa..." required><button class="primary-button" type="submit">Adicionar</button></form><div class="task-list" id="task-list">'+(state.tasks.length?state.tasks.map((task,index)=>'<div class="task-row"><label><input type="checkbox" data-task-done="'+index+'" '+(task.done?'checked':'')+'><span class="'+(task.done?'task-done':'')+'">'+escapeHTML(task.text)+'</span></label><button class="icon-button" type="button" data-task-delete="'+index+'" aria-label="Excluir tarefa">×</button></div>').join(''):'<div class="workspace-empty">Nenhuma tarefa criada.</div>')+'</div>';
+    if (page === 'library') root.innerHTML = '<p class="field-help">Arquivos e referências guardados localmente neste navegador. Os arquivos não são enviados para a nuvem.</p><label class="upload-card">＋ Adicionar arquivos<input id="library-file-input" type="file" multiple hidden></label><div class="task-list">'+(state.libraryItems.length?state.libraryItems.map((item,index)=>'<div class="task-row"><span>▤ '+escapeHTML(item.name)+' <small>'+escapeHTML(item.size)+'</small></span><button class="icon-button" type="button" data-library-delete="'+index+'" aria-label="Remover arquivo">×</button></div>').join(''):'<div class="workspace-empty">Sua biblioteca está vazia.</div>')+'</div>';
+    if (page === 'plugins') root.innerHTML = '<p class="field-help">Conectores disponíveis dependem das integrações habilitadas na sua conta. Nenhum plugin externo está conectado a esta interface no momento.</p><div class="feature-card"><strong>Integrações</strong><p>Os conectores de aplicativos poderão ser gerenciados aqui quando a camada de plugins do Morok estiver implementada.</p><span class="feature-status">Ainda não conectado</span></div>';
+    if (page === 'locations') root.innerHTML = '<p class="field-help">Defina uma localização de referência para experiências que dependam de região. Não usamos sua localização automaticamente.</p><label class="field-label" for="location-input">Localização</label><input class="text-field" id="location-input" maxlength="120" placeholder="Cidade, estado ou país" value="'+escapeHTML(state.location)+'"><div class="dialog-footer"><button class="primary-button" id="save-location" type="button">Salvar localização</button></div>';
+    if (page === 'personalization') root.innerHTML = '<p class="field-help">Preferências de personalização salvas neste navegador.</p><label class="field-label" for="about-input">O que o Morok deve saber sobre você?</label><textarea class="text-field settings-textarea" id="about-input" maxlength="1000" placeholder="Interesses, contexto e objetivos...">'+escapeHTML(state.aboutMe)+'</textarea><label class="field-label" for="style-select">Estilo de resposta</label><select id="style-select" class="text-field"><option value="conciso" '+(state.responseStyle==='conciso'?'selected':'')+'>Conciso</option><option value="equilibrado" '+(state.responseStyle==='equilibrado'?'selected':'')+'>Equilibrado</option><option value="detalhado" '+(state.responseStyle==='detalhado'?'selected':'')+'>Detalhado</option></select><label class="field-label" for="workspace-theme">Tema</label><select id="workspace-theme" class="text-field"><option value="dark" '+(state.theme==='dark'?'selected':'')+'>Escuro</option><option value="light" '+(state.theme==='light'?'selected':'')+'>Claro</option><option value="system" '+(state.theme==='system'?'selected':'')+'>Sistema</option></select><div class="dialog-footer"><button class="primary-button" id="save-personalization" type="button">Salvar personalização</button></div>';
+    if (page === 'instructions') root.innerHTML = '<p class="field-help">Defina orientações que deseja aplicar ao conversar. Por enquanto, elas ficam salvas localmente e ainda não são enviadas ao motor de inferência.</p><label class="field-label" for="instructions-input">Suas instruções</label><textarea class="text-field settings-textarea tall" id="instructions-input" maxlength="4000" placeholder="Como você gostaria que o Morok respondesse?">'+escapeHTML(state.instructions)+'</textarea><div class="dialog-footer"><button class="primary-button" id="save-instructions" type="button">Salvar instruções</button></div>';
+    workspaceDialog.showModal();
+    if (page === 'tasks') $('#task-input')?.focus();
+  }
+  function openProfileMenu() {
+    const menu = $('#profile-menu');
+    menu.hidden = !menu.hidden;
+    $('#profile-menu-name').textContent = state.displayName || 'Visitante';
+    $('#profile-menu-email').textContent = state.authSession?.user?.email || 'Conta local';
+  }
+  function closeProfileMenu() { $('#profile-menu').hidden = true; }
+  function handleProfileAction(action) {
+    closeProfileMenu();
+    if (action === 'account') openAuth('login');
+    else if (action === 'settings') openSettings();
+    else if (action === 'personalization' || action === 'instructions') openWorkspacePage(action);
+    else if (action === 'notifications') { state.notifications = !state.notifications; persist(); toast(state.notifications?'Notificações ativadas.':'Notificações desativadas.'); }
+    else if (action === 'privacy') openWorkspacePage('library');
+    else if (action === 'security') openAuth('login');
+    else if (action === 'help') { $('#workspace-title').textContent='Ajuda e suporte'; $('#workspace-page').innerHTML='<p class="field-help">Consulte a documentação e os canais oficiais do projeto Morok para obter suporte.</p><a class="secondary-button" href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noopener noreferrer">Abrir repositório do projeto</a>'; workspaceDialog.showModal(); }
+    else if (action === 'logout') { if (state.authSession) $('#auth-logout').click(); else toast('Nenhuma conta está conectada.'); }
+  }
+    function addFiles(files) {
     for (const file of files) {
       if (state.attachments.length >= 4) { toast('Limite de quatro arquivos por mensagem.'); break; }
       if (file.size > 48 * 1024) { toast(file.name + ' excede o limite de 48 KB.'); continue; }
@@ -484,7 +528,26 @@
   $('#sidebar-close').addEventListener('click',closeSidebar);
   el.backdrop.addEventListener('click',closeSidebar);
   $('#settings-open').addEventListener('click',openSettings);
-  $('#profile-button').addEventListener('click',()=>openAuth('login'));
+  $('#profile-button').addEventListener('click',openProfileMenu);
+  $('#profile-menu').addEventListener('click',event=>{const button=event.target.closest('[data-profile-action]');if(button)handleProfileAction(button.dataset.profileAction);});
+  document.addEventListener('click',event=>{if(!event.target.closest('#profile-button')&&!event.target.closest('#profile-menu'))closeProfileMenu();});
+  $('#more-options-toggle').addEventListener('click',()=>{const submenu=$('#side-submenu');submenu.hidden=!submenu.hidden;$('#more-options-toggle').setAttribute('aria-expanded',String(!submenu.hidden));});
+  $('[data-workspace-page]').forEach(button=>button.addEventListener('click',()=>{ $('.side-action').forEach(item=>item.classList.remove('active'));button.classList.add('active');openWorkspacePage(button.dataset.workspacePage);closeSidebar();}));
+  $('#workspace-close').addEventListener('click',()=>workspaceDialog.close());
+  workspaceDialog.addEventListener('click',event=>{if(event.target===workspaceDialog)workspaceDialog.close();});
+  $('#workspace-page').addEventListener('submit',event=>{if(event.target.id==='task-form'){event.preventDefault();const value=$('#task-input').value.trim();if(value){state.tasks.unshift({text:value,done:false});persist();openWorkspacePage('tasks');}}});
+  $('#workspace-page').addEventListener('change',event=>{
+    if(event.target.matches('[data-task-done]')){const task=state.tasks[Number(event.target.dataset.taskDone)];if(task){task.done=event.target.checked;persist();openWorkspacePage('tasks');}}
+    if(event.target.id==='workspace-image-input'){const grid=$('#workspace-image-grid');for(const file of event.target.files){const image=document.createElement('img');image.alt=file.name;image.src=URL.createObjectURL(file);image.title=file.name;grid.append(image);}$('.workspace-empty')?.remove();}
+    if(event.target.id==='library-file-input'){for(const file of event.target.files){state.libraryItems.unshift({name:file.name,size:Math.max(1,Math.round(file.size/1024))+' KB'});}persist();openWorkspacePage('library');}
+  });
+  $('#workspace-page').addEventListener('click',event=>{
+    const taskDelete=event.target.closest('[data-task-delete]');if(taskDelete){state.tasks.splice(Number(taskDelete.dataset.taskDelete),1);persist();openWorkspacePage('tasks');}
+    const libraryDelete=event.target.closest('[data-library-delete]');if(libraryDelete){state.libraryItems.splice(Number(libraryDelete.dataset.libraryDelete),1);persist();openWorkspacePage('library');}
+    if(event.target.id==='save-location'){state.location=$('#location-input').value.trim();persist();toast('Localização salva.');}
+    if(event.target.id==='save-personalization'){state.aboutMe=$('#about-input').value.trim();state.responseStyle=$('#style-select').value;state.theme=$('#workspace-theme').value;applyTheme();persist();toast('Personalização salva.');}
+    if(event.target.id==='save-instructions'){state.instructions=$('#instructions-input').value.trim();persist();toast('Instruções salvas neste dispositivo.');}
+  });
   $('#profile-save').addEventListener('click',()=>{const name=$('#display-name').value.trim();state.displayName=name||'Visitante';updateProfile();persist();});
   $('#model-select').addEventListener('click',()=>{const pop=$('#model-popover');pop.hidden=!pop.hidden;if(!pop.hidden){$('#generation-list').hidden=false;$('#model-submenu').hidden=true;}$('#model-select').setAttribute('aria-expanded',String(!pop.hidden));});
   function updateModelMenu() {
