@@ -75,7 +75,7 @@ def main():
     # the next attempt receives an actual learning signal.
     answer_file.write_text(training_target,encoding="utf-8")
    if len(training_target.encode("utf-8"))>=2:
-    report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate)]))
+    report=json.loads(run([str(a.reinforcer),str(a.checkpoint),str(prompt),str(answer_file),"1",str(a.learning_rate),"25"]))
     episode["policy_update"]={"status":"applied","source":training_source,"algorithm":"positive_reward_weighted_bptt_on_model_response_or_oracle_demonstration","report":report}
     db["totals"]["policy_updates"]+=1
     if training_source=="oracle_demonstration":
