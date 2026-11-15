@@ -32,7 +32,7 @@ concurrency:
 jobs:
   g1-build-test-training:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 360
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,19 +71,18 @@ jobs:
         working-directory: Morok
         run: ctest --test-dir build/g1 --output-on-failure --parallel 2
 
-      - name: First-training and resume smoke test
+      - name: Configured per-model training and repeated question attempts
         working-directory: Morok
-        run: |
-          MOROK_TRAIN_BIN=./build/g1/morok-train \
-          MOROK_GENERATE_BIN=./build/g1/morok_generate \
-            bash Gerações/G1/scripts/first-training.sh artifacts/g1-first-training 2 42
-
-      - name: Evaluate every G1 profile on the same trained checkpoint
-        working-directory: Morok
-        run: |
-          ./build/g1/morok-g1-profile-evaluate \
-            artifacts/g1-first-training/g1-best.morokckp \
-            artifacts/g1-first-training/profile-evaluation.tsv
+        env:
+          G1_ATTEMPTS: ${{ inputs.attempts || 1 }}
+          G1_EPOCHS: ${{ inputs.epochs || 2 }}
+          G1_QUESTION_SKY: ${{ github.event_name != 'workflow_dispatch' || inputs.question_sky }}
+          G1_QUESTION_GRASS: ${{ github.event_name != 'workflow_dispatch' || inputs.question_grass }}
+          G1_QUESTION_MOUNTAINS: ${{ github.event_name != 'workflow_dispatch' || inputs.question_mountains }}
+          G1_MODEL_TSUKUYOMI: ${{ github.event_name != 'workflow_dispatch' || inputs.model_tsukuyomi }}
+          G1_MODEL_APOLLO: ${{ github.event_name != 'workflow_dispatch' || inputs.model_apollo }}
+          G1_MODEL_MOKOSH: ${{ github.event_name != 'workflow_dispatch' || inputs.model_mokosh }}
+        run: python3 Gerações/G1/scripts/run-configured-workflow.py
 
       - name: Publish G1 evaluation tables and annotations
         if: always()
@@ -96,67 +95,55 @@ jobs:
 
           results = Path("artifacts/g1-first-training/profile-evaluation.tsv")
           summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-          profiles = ("Tsukuyomi", "Apollo", "Mokosh")
           questions = {
               "sky_is_blue": "O céu é azul?",
-              "grass_color": "A grama é verde?",
+              "grass_color": "Qual a cor da grama?",
               "mountains_high_or_low": "As montanhas são altas?",
           }
-
           if not results.is_file():
-              message = "Avaliação individual não foi executada; arquivo de resultados ausente."
+              message = "Nenhuma avaliação foi produzida; verifique a etapa de treinamento."
               print(f"::error title=Avaliação G1::{message}")
               if summary_path:
                   with open(summary_path, "a", encoding="utf-8") as summary:
-                      summary.write("# Avaliação G1\n\n" + message + "\n")
+                      summary.write("# Avaliação G1\\n\\n" + message + "\\n")
               raise SystemExit(0)
 
           with results.open(encoding="utf-8", newline="") as stream:
-              rows = list(csv.DictReader(stream, delimiter="\t"))
-
-          expected = {(profile, qid) for profile in profiles for qid in questions}
-          actual = {(row["profile"], row["question_id"]) for row in rows}
-          if actual != expected:
-              missing = sorted(expected - actual)
-              extra = sorted(actual - expected)
-              print(f"::error title=Avaliação G1::Resultados incompletos. Ausentes: {missing}; extras: {extra}")
-              raise SystemExit(1)
+              rows = list(csv.DictReader(stream, delimiter="\\t"))
+          if not rows:
+              raise SystemExit("O arquivo de avaliação está vazio.")
+          profiles = list(dict.fromkeys(row["profile"] for row in rows))
+          question_ids = list(dict.fromkeys(row["question_id"] for row in rows))
+          for row in rows:
+              row["latency_ms"] = float(row["latency_ms"])
+              row["correct"] = row["verdict"] == "correct"
+              row["attempt"] = int(row["attempt"])
 
           def table(headers, body):
               lines = ["| " + " | ".join(headers) + " |",
                        "| " + " | ".join("---" for _ in headers) + " |"]
               for row in body:
-                  cells = [str(cell).replace("|", "\\|").replace("\r", " ").replace("\n", " ") for cell in row]
+                  cells = [str(cell).replace("|", "\\\\|").replace("\\r", " ").replace("\\n", " ") for cell in row]
                   lines.append("| " + " | ".join(cells) + " |")
-              return "\n".join(lines) + "\n"
+              return "\\n".join(lines) + "\\n"
 
           def display_answer(answer):
-              # The TSV artifact retains the exact bytes. Keep non-linguistic output
-              # from polluting the Markdown report with private-use/control glyphs.
               if not answer:
                   return "(resposta vazia)"
-              ascii_letters = sum(ch.isascii() and ch.isalpha() for ch in answer)
-              if ascii_letters < 4 or ascii_letters / len(answer) < 0.20:
+              letters = sum(ch.isascii() and ch.isalpha() for ch in answer)
+              if letters < 4 or letters / len(answer) < 0.20:
                   return f"(saída não legível; {len(answer)} caracteres)"
               escaped = answer.encode("unicode_escape").decode("ascii")
-              if len(escaped) > 100:
-                  escaped = escaped[:100] + "…"
-              return escaped
+              return escaped if len(escaped) <= 100 else escaped[:100] + "…"
 
-          for row in rows:
-              row["latency_ms"] = float(row["latency_ms"])
-              row["correct"] = row["verdict"] == "correct"
-
-          # Table 1: combined question totals across all three profiles.
           overall = []
-          for qid, label in questions.items():
+          for qid in question_ids:
               selected = [r for r in rows if r["question_id"] == qid]
               correct = sum(r["correct"] for r in selected)
               incorrect = len(selected) - correct
-              state = "Correto" if correct == len(selected) else ("Errado" if correct == 0 else "Parcial")
-              overall.append([label, incorrect, correct, state])
+              state = "Correto" if incorrect == 0 else ("Errado" if correct == 0 else "Parcial")
+              overall.append([questions[qid], incorrect, correct, state])
 
-          # Table 2: profile-level totals and mean latency.
           individual = []
           for profile in profiles:
               selected = [r for r in rows if r["profile"] == profile]
@@ -165,35 +152,28 @@ jobs:
               mean_ms = sum(r["latency_ms"] for r in selected) / len(selected)
               individual.append([profile, correct, incorrect, f"{mean_ms:.3f} ms"])
 
-          # Table 3: each profile's answer to each question.
           detailed = []
-          for profile in profiles:
-              for qid, label in questions.items():
-                  row = next(r for r in rows if r["profile"] == profile and r["question_id"] == qid)
-                  answer = display_answer(row["answer"].strip())
-                  verdict = "Correto" if row["correct"] else "Errado"
-                  detailed.append([profile, label, answer, verdict, f'{row["latency_ms"]:.3f} ms'])
-
-                  # Annotations are individual messages; Markdown tables do not render in annotations.
-                  level = "notice" if row["correct"] else "warning"
-                  safe = answer.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A").replace(":", "%3A").replace(",", "%2C")
-                  print(f"::{level} title={profile} - {label}::{verdict}; resposta: {safe}; latência: {row['latency_ms']:.3f} ms")
+          for row in rows:
+              answer = display_answer(row["answer"].strip())
+              verdict = "Correto" if row["correct"] else "Errado"
+              detailed.append([row["profile"], questions[row["question_id"]],
+                               row["attempt"], answer, verdict,
+                               f'{row["latency_ms"]:.3f} ms'])
+              level = "notice" if row["correct"] else "warning"
+              safe = answer.replace("%", "%25").replace("\\r", "%0D").replace("\\n", "%0A").replace(":", "%3A").replace(",", "%2C")
+              print(f"::{level} title={row['profile']} - tentativa {row['attempt']}::{questions[row['question_id']]}; {verdict}; resposta: {safe}; latência: {row['latency_ms']:.3f} ms")
 
           report = [
-              "# Avaliação G1 — checkpoint treinado nesta execução",
-              "",
-              "Cada perfil foi avaliado nas mesmas três perguntas usando o checkpoint produzido pelo treinamento desta execução.",
-              "",
+              "# Avaliação G1 — execução configurada", "",
+              f"Modelos: {', '.join(profiles)}. Perguntas selecionadas: {len(question_ids)}. Tentativas por pergunta/modelo: {max(int(r['attempt']) for r in rows)}.", "",
               "## G1 ao todo — todos os modelos",
-              table(["Pergunta", "Respostas Erradas", "Respostas Certas", "Estado"], overall),
-              "",
+              table(["Pergunta", "Respostas Erradas", "Respostas Certas", "Estado"], overall), "",
               "## Resultado individual por modelo",
-              table(["Modelo", "Corretas", "Incorretas", "Tempo médio"], individual),
-              "",
-              "## Avaliação individual de cada resposta",
-              table(["Modelo", "Pergunta", "Resposta gerada (escapada)", "Estado", "Tempo"], detailed),
+              table(["Modelo", "Corretas", "Incorretas", "Tempo médio"], individual), "",
+              "## Avaliação individual de cada tentativa",
+              table(["Modelo", "Pergunta", "Tentativa", "Resposta gerada", "Estado", "Tempo"], detailed)
           ]
-          rendered = "\n".join(report) + "\n"
+          rendered = "\\n".join(report) + "\\n"
           if summary_path:
               with open(summary_path, "a", encoding="utf-8") as summary:
                   summary.write(rendered)
