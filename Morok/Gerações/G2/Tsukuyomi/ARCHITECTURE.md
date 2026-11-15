@@ -45,6 +45,8 @@ morok-g2-tsukuyomi-train corpus.bin tsukuyomi-g2-v0.1.ckpt 10 42
 Argumentos: arquivo de corpus, caminho do checkpoint, épocas opcionais e seed opcional.
 
 ## Inferência
+A geração prepara uma única vez as 13 faixas da pergunta imutável e as reutiliza durante a geração autoregressiva. Isso elimina a varredura e a agregação repetidas da pergunta a cada byte gerado, sem alterar pesos, logits ou o orçamento de parâmetros. Para prompts sem marcador U:, a preparação registra a ausência do contexto e evita repetir a busca pelo marcador.
+
 
 A geração é autoregressiva e greedy. Cada byte gerado passa a integrar o contexto das previsões seguintes. A CLI oferece modo batch: carrega o checkpoint uma vez e atende várias perguntas recebidas por stdin. A saída de resposta é encerrada no primeiro LF/CR/NUL ou no limite configurado (1 a 4.096 bytes); o workflow usa 160 bytes.
 
