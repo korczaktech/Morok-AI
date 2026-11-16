@@ -199,6 +199,27 @@ void test_reinforce_and_reference_kl() {
     assert(std::isfinite(report.mean_kl));
     assert(report.mean_kl > 0.0);
     assert(trainer.baseline("factual") != 0.0);
+
+    const auto saved = trainer.capture_state(
+        policy.identity(), reference.identity(), evaluator.metadata());
+    assert(saved.has_value());
+    ReinforceTrainer resumed(config);
+    assert(resumed.restore_state(*saved.value_if(), policy.identity(),
+                                 reference.identity(), evaluator.metadata()).has_value());
+    assert(resumed.baseline("factual") == trainer.baseline("factual"));
+    const auto round_trip = resumed.capture_state(
+        policy.identity(), reference.identity(), evaluator.metadata());
+    assert(round_trip.has_value());
+    assert(round_trip.value_if()->random_engine_state ==
+           saved.value_if()->random_engine_state);
+    assert(!resumed.restore_state(*saved.value_if(), policy.identity(),
+                                  "different-reference",
+                                  evaluator.metadata()).has_value());
+    TrainerState corrupt = *saved.value_if();
+    corrupt.random_engine_state = "not-an-engine-state";
+    assert(!resumed.restore_state(corrupt, policy.identity(),
+                                  reference.identity(),
+                                  evaluator.metadata()).has_value());
 }
 
 
