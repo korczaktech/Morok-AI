@@ -429,6 +429,25 @@ def extract_training_metric(output: str, name: str) -> float:
     return value
 
 
+def evaluate_validation_loss(trainer: Path, validation_corpus: Path,
+                             checkpoint: Path) -> float:
+    """Calcula cross-entropy por byte-alvo no holdout, sem atualizar o modelo."""
+    process = subprocess.run(
+        [str(trainer), "--evaluate", str(validation_corpus), str(checkpoint)],
+        check=True, capture_output=True, text=True, encoding="utf-8",
+    )
+    return extract_training_metric(process.stdout, "validation_loss")
+
+
+def improves_validation_loss(candidate: float, best: float) -> bool:
+    """Só aceita checkpoint com redução estrita e finita da loss independente."""
+    if not math.isfinite(candidate):
+        raise ValueError("Loss candidata de validação não finita.")
+    if math.isnan(best):
+        raise ValueError("Melhor loss de validação não pode ser NaN.")
+    return candidate < best - 1e-12
+
+
 def evaluate_set(generator: Path, checkpoint: Path,
                  dialogues: list[tuple[str, str]]) -> list[tuple[str, bool, float]]:
     prompts = "".join(
@@ -574,6 +593,7 @@ def main() -> int:
     best_validation_correct = 0
     best_validation_cycle = 0
     best_validation_rank = (-1, -1.0)
+    best_validation_loss = float('inf')
     maximum_cycles = min(attempts, MAX_CYCLES)
     with output.open("w", encoding="utf-8") as report:
         report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
@@ -595,14 +615,18 @@ def main() -> int:
         report.write("- Critério contínuo: encerrar quando todas as questões selecionadas estiverem corretas\n")
         report.write("- Critério de aprovação: igualdade lexical normalizada; não mede semântica\n")
         report.write("- F1 lexical, similaridade de caracteres, repetição e diversidade são diagnósticos; não aprovam respostas.\n")
-        report.write("- Scheduler: ranking lexicográfico; exatidão primeiro, F1 e similaridade apenas em empate (delta 0,005).\n")
+        report.write("- Seleção de checkpoint: menor cross-entropy (Loss) nas respostas do holdout independente; menor é melhor.\n")
         report.write("- Scheduler global por ciclo removido; cada pergunta usa exclusivamente a curva lexical individual. O LR só diminui quando o nível lexical da pergunta aumenta.\n")
         report.write(f"- LR-base interno fixo: {INITIAL_LEARNING_RATE:.8g}; faixa individual: {MIN_LEARNING_RATE:.1e} a {1e-3:.1e}.\n")
         report.write("- Cada ciclo começa pelo melhor par checkpoint + momentos Adam; o estado persistido anterior é avaliado antes de qualquer atualização.\n")
+        report.write("- A Loss de treino é apenas diagnóstico; a decisão usa Loss calculada nos mesmos alvos das 20 perguntas independentes.\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
         best_validation_results = None
         if resume_previous_run:
+            best_validation_loss = evaluate_validation_loss(
+                trainer, validation_corpus, checkpoint
+            )
             best_validation_results = evaluate_set(generator, checkpoint, validation_pool)
             baseline_selected = best_validation_results[:question_count]
             (best_validation_correct, _, baseline_f1, baseline_char,
@@ -708,6 +732,11 @@ def main() -> int:
             print(training_process.stdout, end="", flush=True)
             initial_bpb = extract_training_metric(training_process.stdout, "train_bpb inicial")
             final_bpb = extract_training_metric(training_process.stdout, "train_bpb final")
+            initial_loss = extract_training_metric(training_process.stdout, "Loss inicial")
+            final_loss = extract_training_metric(training_process.stdout, "Loss final")
+            candidate_validation_loss = evaluate_validation_loss(
+                trainer, validation_corpus, checkpoint
+            )
             weights_after_hash = checkpoint_sha256(checkpoint)
             adam_after_hash = checkpoint_sha256(optimizer_state)
             if weights_after_hash is None or adam_after_hash is None:
@@ -773,12 +802,11 @@ def main() -> int:
              validation_score, observed_rank) = validation_metrics(
                 validation, validation_results
             )
-            if not retention_regressions and (
-                observed_rank[0] > best_validation_rank[0] or (
-                    observed_rank[0] == best_validation_rank[0]
-                    and observed_rank[1] > best_validation_rank[1] + 0.005
-                )
-            ):
+            candidate_accepted = improves_validation_loss(
+                candidate_validation_loss, best_validation_loss
+            )
+            if candidate_accepted:
+                best_validation_loss = candidate_validation_loss
                 best_validation_rank = observed_rank
                 save_best_state(checkpoint, optimizer_state,
                                 best_checkpoint, best_optimizer_state)
@@ -786,6 +814,15 @@ def main() -> int:
                 best_validation_cycle = cycle
                 best_validation_score = validation_score
                 best_validation_results = candidate_all_results
+            # Acertos e regressões continuam como diagnóstico; a seleção é pela
+            # cross-entropy independente, não pelo ranking lexical nem pela Loss de treino.
+            report.write(
+                f"- Loss de treino: {initial_loss:.6f} → {final_loss:.6f}.\n"
+                f"- Loss de validação independente: {candidate_validation_loss:.6f}.\n"
+                f"- Melhor Loss de validação até agora: {best_validation_loss:.6f}.\n"
+                f"- Checkpoint {'ACEITO' if candidate_accepted else 'REJEITADO'} pela Loss de validação.\n"
+                f"- Regressões lexicais contra o melhor estado (diagnóstico): {len(retention_regressions)}.\n"
+            )
             # O próximo ciclo sempre parte do melhor estado, nunca do último estado pior.
             restore_best_state(
                 best_checkpoint, best_optimizer_state, checkpoint, optimizer_state
@@ -814,7 +851,9 @@ def main() -> int:
             )
             report.write(
                 f"**Treino: {completed_epochs:.0f} época(s), {target_bytes:.0f} bytes-alvo, "
-                f"train_bpb {initial_bpb:.4f} → {final_bpb:.4f}.**\n"
+                f"Loss {initial_loss:.4f} → {final_loss:.4f}; train_bpb {initial_bpb:.4f} → {final_bpb:.4f}.**\n"
+                f"**Loss de validação: {candidate_validation_loss:.6f}; melhor Loss: {best_validation_loss:.6f}; "
+                f"checkpoint {'aceito' if candidate_accepted else 'rejeitado'}.**\n"
                 f"**Validação independente: {correct_count}/{total}; F1 médio: {mean_f1:.3f}; "
                 f"similaridade char: {mean_char_similarity:.3f}; regressões históricas: {regressions}; "
                 f"regressões contra melhor estado: {len(retention_regressions)}; "
@@ -865,8 +904,9 @@ def main() -> int:
         )
         print(
             f"Melhor checkpoint: ciclo {best_validation_cycle}; "
-            f"validação {best_validation_correct}/{len(validation)}; "
-            f"score={best_validation_score:.3f}.",
+            f"Loss de validação={best_validation_loss:.6f}; "
+            f"respostas exatas={best_validation_correct}/{len(validation)}; "
+            f"score diagnóstico={best_validation_score:.3f}.",
             flush=True,
         )
 
