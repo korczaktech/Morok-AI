@@ -1024,3 +1024,48 @@ kbd [data-icon]{display:inline-flex;vertical-align:middle}
 .workspace-page-view .about-principles strong{font-size:13px;color:var(--text)}
 .workspace-page-view .about-principles p{font-size:12px;line-height:1.6;color:var(--muted);margin:7px 0 0}
 @media(max-width:650px){.workspace-page-view .about-principles{grid-template-columns:1fr}.workspace-page-view .about-generation-track{gap:6px}.workspace-page-view .about-generation-track span{min-height:36px;font-size:11px}}
+
+
+/* Sidebar com área rolável independente e rodapé permanentemente visível */
+.sidebar{
+  display:flex;
+  flex-direction:column;
+  height:100dvh;
+  min-height:0;
+  max-height:100dvh;
+  overflow:hidden;
+}
+.sidebar-scroll{
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#32164b transparent;
+  -webkit-overflow-scrolling:touch;
+}
+.sidebar-scroll>*{flex-shrink:0}
+.sidebar-bottom{
+  position:relative;
+  z-index:2;
+  flex:0 0 auto;
+  margin-top:auto;
+  background:var(--sidebar);
+}
+.sidebar-scroll::-webkit-scrollbar{width:6px}
+.sidebar-scroll::-webkit-scrollbar-track{background:transparent}
+.sidebar-scroll::-webkit-scrollbar-thumb{background:#32164b;border-radius:8px}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover{background:#54217c}
+.projects-heading{margin-top:12px}
+.projects-list{padding:0 12px 8px}
+.projects-list[hidden]{display:none}
+.projects-list .history-empty{padding:9px 8px;font-size:10px}
+.projects-heading[aria-expanded="false"] .history-collapse{transform:rotate(-90deg)}
+@media(max-width:760px){
+  .sidebar{height:100dvh;max-height:100dvh;overflow:hidden;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  .sidebar-scroll{min-height:0}
+  .sidebar-bottom{padding-bottom:env(safe-area-inset-bottom)}
+}
