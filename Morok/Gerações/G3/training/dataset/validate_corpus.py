@@ -12,7 +12,7 @@ REQUIRED = {
     "source", "language", "dataset_version",
 }
 EXPECTED_LANGUAGE = "pt-BR"
-EXPECTED_VERSION = "g3-ptbr-v1.0"
+EXPECTED_VERSION = "g3-ptbr-v1.1"
 
 
 def fail(message: str) -> None:
@@ -26,9 +26,8 @@ def main() -> int:
     if not path.is_file():
         fail(f"arquivo não encontrado: {path}")
 
-    raw = path.read_bytes()
     try:
-        content = raw.decode("utf-8", errors="strict")
+        content = path.read_bytes().decode("utf-8", errors="strict")
     except UnicodeDecodeError as exc:
         fail(f"arquivo não é UTF-8 válido: {exc}")
 
@@ -52,13 +51,17 @@ def main() -> int:
             fail(f"idioma inesperado na linha {line_number}")
         if record["dataset_version"] != EXPECTED_VERSION:
             fail(f"versão inesperada na linha {line_number}")
-        if not (0.0 <= float(record.get("quality", 1.0)) <= 1.0):
+        try:
+            quality = float(record.get("quality", 1.0))
+        except (TypeError, ValueError):
+            fail(f"quality inválido na linha {line_number}")
+        if not (0.0 <= quality <= 1.0):
             fail(f"quality fora de [0,1] na linha {line_number}")
         if record.get("sensitive", False):
             fail(f"registro sensível bloqueado na linha {line_number}")
         variants = record.get("question_variants", [])
-        if not isinstance(variants, list) or not variants:
-            fail(f"question_variants ausente/vazio na linha {line_number}")
+        if not isinstance(variants, list) or len(variants) != 2:
+            fail(f"question_variants deve conter duas paráfrases na linha {line_number}")
         if any(not isinstance(value, str) or not value.strip() for value in variants):
             fail(f"variante vazia ou inválida na linha {line_number}")
         questions = [record["question"], *variants]
@@ -75,12 +78,11 @@ def main() -> int:
     groups = [record["group_id"] for record in records]
     if len(groups) != len(set(groups)):
         fail("group_id duplicado neste corpus: cada registro deve representar uma intenção")
-    all_questions = []
-    for record in records:
-        all_questions.extend(
-            unicodedata.normalize("NFC", q).casefold().strip()
-            for q in [record["question"], *record["question_variants"]]
-        )
+    all_questions = [
+        unicodedata.normalize("NFC", q).casefold().strip()
+        for record in records
+        for q in [record["question"], *record["question_variants"]]
+    ]
     if len(all_questions) != len(set(all_questions)):
         fail("pergunta idêntica repetida entre intenções diferentes")
 
@@ -91,7 +93,7 @@ def main() -> int:
     print(f"Paráfrases curadas: {variant_count}")
     print(f"Perguntas antes da perturbação: {len(records) + variant_count}")
     print(f"Categorias: {len(categories)}")
-    print(f"UTF-8: válido; IDs e grupos: únicos; campos: completos.")
+    print("UTF-8: válido; IDs e grupos: únicos; campos: completos.")
     return 0
 
 
