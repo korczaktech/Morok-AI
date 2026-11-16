@@ -150,7 +150,7 @@ jobs:
             git -C "$STATE_DIR" push origin tsukuyomi-state
           fi
 
-      - name: Publicar annotations G2
+      - name: Publicar relatório individual das 40 perguntas — vermelho/verde
         if: always()
         working-directory: Morok
         env:
@@ -161,7 +161,7 @@ jobs:
               echo "## Annotations — Tsukuyomi G2 — rodada $RODADA/10"
               echo
               echo "<details>"
-              echo "<summary>Expandir relatório completo de treinamento e avaliação</summary>"
+              echo "<summary>Expandir os 40 resultados individuais: resposta, nível lexical, Loss, BPB e demais métricas</summary>"
               echo
               cat build/g2/respostas-tsukuyomi.md
               echo
