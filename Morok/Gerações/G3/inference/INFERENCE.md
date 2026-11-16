@@ -16,7 +16,7 @@ O G3 implementa o contrato neutro `morok::model::ModelBackend`. O motor comum é
 
 ## Gerenciamento de sessões
 
-`SessionManager` mantém estado recorrente e RNG independentes por ID de sessão. Chamadas para o mesmo ID são serializadas; IDs diferentes podem gerar em paralelo. O limite padrão é 1.024 sessões e o TTL ocioso padrão é 30 minutos. Há operações para resetar, apagar, limpar e expirar sessões.
+`SessionManager` mantém estado recorrente e RNG independentes por ID de sessão. Chamadas para o mesmo ID são serializadas; IDs diferentes podem gerar em paralelo. O limite padrão é 16 sessões e o TTL ocioso padrão é 30 minutos. Há operações para resetar, apagar, limpar e expirar sessões.
 
 A primeira chamada reseta o estado. As chamadas seguintes retomam o estado anterior e incorporam o novo texto ao contexto recorrente. Se uma geração falhar ou for cancelada no meio do processamento, o estado parcial é descartado e a próxima chamada reinicia a sessão.
 
