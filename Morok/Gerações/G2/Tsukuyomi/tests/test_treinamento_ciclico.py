@@ -258,6 +258,17 @@ class TrainingDataTests(unittest.TestCase):
 
 
 
+    def test_legacy_feedback_is_removed_from_independent_validation(self):
+        memory = {
+            "feedback antiga": "correção",
+            "pergunta do holdout": "gabarito contaminante",
+        }
+        removed = training.exclude_validation_from_feedback(
+            memory, [("pergunta do holdout", "gabarito correto")]
+        )
+        self.assertEqual(removed, 1)
+        self.assertEqual(memory, {"feedback antiga": "correção"})
+
     def test_feedback_and_validation_are_disjoint(self):
         combined = training.read_dialogues(DATA_DIR / "validacao.txt")
         feedback, validation = training.split_feedback_and_validation(combined)
