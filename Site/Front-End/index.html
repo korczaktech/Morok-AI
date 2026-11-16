@@ -24,6 +24,7 @@
         <a class="brand" href="#" id="brand-home" aria-label="Morok início"><span class="brand-mark" data-icon="brand" aria-hidden="true"></span><span>morok<span class="brand-dot">.</span></span></a>
         <button class="icon-button sidebar-close" id="sidebar-close" aria-label="Fechar menu" title="Fechar menu"><span data-icon="close"></span></button>
       </div>
+      <div class="sidebar-scroll" id="sidebar-scroll">
       <label class="sidebar-search" for="sidebar-search-input"><span data-icon="search" aria-hidden="true"></span><input id="sidebar-search-input" type="search" placeholder="Buscar conversas..." autocomplete="off" aria-label="Buscar conversas"></label>
       <button class="new-chat" id="new-chat"><span class="plus" data-icon="new-chat"></span><span>Novo chat</span><kbd><span data-icon="command"></span> K</kbd></button>
       <div class="sidebar-section-title">Seu espaço</div>
@@ -41,6 +42,9 @@
       </div>
       <button class="history-heading" id="history-toggle" type="button" aria-expanded="true"><span class="history-heading-label"><span data-icon="conversations" aria-hidden="true"></span>Conversas</span><span class="history-heading-meta"><span id="history-count">0</span><span class="history-collapse" data-icon="chevron" aria-hidden="true"></span></span></button>
       <div class="history-list" id="history-list" aria-label="Histórico de conversas"></div>
+      <button class="history-heading projects-heading" id="projects-toggle" type="button" aria-expanded="true"><span class="history-heading-label"><span data-icon="library" aria-hidden="true"></span>Projetos</span><span class="history-heading-meta"><span class="history-collapse" data-icon="chevron" aria-hidden="true"></span></span></button>
+      <div class="projects-list" id="projects-list" aria-label="Projetos"><div class="history-empty">Nenhum projeto criado.</div></div>
+      </div>
       <div class="sidebar-bottom">
         <div class="service-status"><span class="status-dot" id="status-dot"></span><span id="status-label">Verificando API...</span><button class="status-refresh" id="status-refresh" title="Verificar conexão" aria-label="Verificar conexão"><span data-icon="refresh"></span></button></div>
         <button class="profile-button" id="profile-button"><span class="avatar" id="profile-avatar">V</span><span class="profile-text"><strong id="profile-name">Visitante</strong><small id="profile-subtitle">Entre para acessar sua conta</small></span><span class="more" data-icon="more"></span></button>
@@ -71,8 +75,7 @@
               <button class="generation-option selected" data-generation="G1" aria-current="true" type="button"><span class="generation-mark">G1</span><span><strong>Geração 1</strong><small>Primeira geração do Morok</small></span><span class="check" data-icon="check"></span></button></div>
               <div class="model-submenu" id="model-submenu" hidden><button class="generation-back" id="generation-back" type="button"><span data-icon="back"></span> Voltar às gerações</button><div class="popover-label">MODELOS DA GERAÇÃO 1</div>
                 <button class="profile-option" data-model="Tsukuyomi" type="button"><span class="profile-symbol" data-icon="tsukuyomi"></span><span><strong>Tsukuyomi</strong><small>Perfil de referência e execução autocontida</small></span><span class="check" data-icon="check"></span></button>
-                <button class="profile-option" data-model="Apollo" type="button"><span class="profile-symbol apollo" data-icon="apollo"></span><span><strong>Apollo</strong><small>Perfil voltado à baixa latência</small></span><span class="check" data-icon="check"></span></button>
-                <button class="profile-option" data-model="Mokosh" type="button"><span class="profile-symbol mokosh" data-icon="mokosh"></span><span><strong>Mokosh</strong><small>Perfil voltado à eficiência de recursos</small></span><span class="check" data-icon="check"></span></button>
+                
               </div>
             </div>
           </div>
