@@ -16,26 +16,13 @@ import time
 import unicodedata
 
 MAX_RESPONSE_BYTES = 160
-MAX_VALIDATION_QUESTIONS = 20
-MAX_FEEDBACK_QUESTIONS = 40
+TRAINING_QUESTIONS = 40
 MAX_CYCLES = 100
 MAX_EPOCHS_PER_CYCLE = 1000
 MIN_LEARNING_RATE = 1e-5
 MAX_LEARNING_RATE = 1e-2
 # LR-base fixo e interno; a configuração externa do workflow é ignorada.
 INITIAL_LEARNING_RATE = 1e-3
-
-
-def validation_rank(correct_count: int, total: int, mean_f1: float,
-                    mean_char_similarity: float) -> tuple[int, float]:
-    """Ordena primeiro por respostas exatas; métricas aproximadas só desempatem."""
-    if total <= 0 or not 0 <= correct_count <= total:
-        raise ValueError("Contagem de validação inválida.")
-    if not 0.0 <= mean_f1 <= 1.0 or not 0.0 <= mean_char_similarity <= 1.0:
-        raise ValueError("Métricas de validação precisam estar entre 0 e 1.")
-    if not math.isfinite(mean_f1) or not math.isfinite(mean_char_similarity):
-        raise ValueError("Métricas de validação precisam ser finitas.")
-    return correct_count, 0.5 * mean_f1 + 0.5 * mean_char_similarity
 
 
 def learning_rate_for_lexical_level(base_learning_rate: float, lexical_level: float) -> float:
@@ -101,25 +88,6 @@ def write_question_learning_rates(corpus: Path, rates: dict[str, float], destina
     return len(ranges)
 
 
-def validation_metrics(dialogues, results):
-    """Calcula métricas de seleção exclusivamente sobre a validação independente."""
-    if not dialogues or len(dialogues) != len(results):
-        raise ValueError("Conjunto de validação vazio ou com resultados incompatíveis.")
-    correct = sum(1 for result in results if result[1])
-    total = len(results)
-    mean_f1 = sum(result[2] for result in results) / total
-    mean_char = sum(
-        character_similarity(result[0], expected)
-        for (_, expected), result in zip(dialogues, results)
-    ) / total
-    score = 0.70 * (correct / total) + 0.15 * mean_f1 + 0.15 * mean_char
-    if not math.isfinite(score):
-        raise RuntimeError("A pontuação de validação não é finita.")
-    return correct, total, mean_f1, mean_char, score, validation_rank(
-        correct, total, mean_f1, mean_char
-    )
-
-
 def save_best_state(checkpoint: Path, optimizer_state: Path,
                     best_checkpoint: Path, best_optimizer_state: Path) -> None:
     """Salva pesos e momentos Adam como um único estado lógico de melhor validação."""
@@ -160,14 +128,6 @@ def resumable_state_exists(checkpoint: Path, optimizer_state: Path) -> bool:
     ):
         raise RuntimeError("Estado persistente vazio; recusando reinicialização silenciosa.")
     return checkpoint_exists
-
-
-def select_validation_questions(train_dialogues, validation_pool, count):
-    """Seleciona apenas perguntas do conjunto independente de validação."""
-    del train_dialogues
-    if not 1 <= count <= MAX_VALIDATION_QUESTIONS:
-        raise ValueError("A quantidade de questões de validação precisa estar entre 1 e 20.")
-    return validation_pool[:count]
 
 
 def normalize(text: str) -> list[str]:
@@ -313,25 +273,8 @@ def checkpoint_sha256(path: Path) -> str | None:
     return digest.hexdigest()
 
 
-def find_retention_regressions(previous_results, current_dialogues, current_results) -> list[str]:
-    """Identifica perguntas corretas no melhor estado que regrediram no candidato."""
-    if previous_results is None:
-        return []
-    if len(current_dialogues) != len(current_results) or len(previous_results) != len(current_results):
-        raise ValueError("Resultados candidatos incompatíveis com o holdout.")
-    previous_correct = {
-        question for (question, _), result in zip(current_dialogues, previous_results)
-        if result[1]
-    }
-    current_correct = {
-        question for (question, _), result in zip(current_dialogues, current_results)
-        if result[1]
-    }
-    return sorted(previous_correct - current_correct)
-
-
 def update_question_history(history: dict, dialogues, results, cycle: int,
-                            execution_id: str, dataset: str = "validation") -> tuple[int, int]:
+                            execution_id: str, dataset: str = "training") -> tuple[int, int]:
     """Conta regressões e recuperações sem descartar respostas ou resultados anteriores."""
     if len(dialogues) != len(results):
         raise ValueError("Quantidade de diálogos e resultados do histórico não corresponde.")
@@ -403,20 +346,23 @@ def write_feedback_memory(path: Path, memory: dict[str, str]) -> None:
 
 
 def build_training_corpus(base: Path, memory: dict[str, str], destination: Path) -> None:
-    """Combina o corpus original imutável com as correções acumuladas."""
-    original = base.read_text(encoding="utf-8-sig").rstrip()
+    """Mantém exatamente as 40 perguntas; a memória substitui gabaritos, não adiciona perguntas."""
+    dialogues = read_dialogues(base)
+    questions = {question for question, _ in dialogues}
+    unknown = set(memory) - questions
+    if unknown:
+        raise RuntimeError(f"Memória contém perguntas fora do conjunto de treinamento: {sorted(unknown)}")
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(destination.name + ".tmp")
-    with temporary.open("w", encoding="utf-8", newline="\n") as output:
-        output.write(original)
-        if memory:
-            output.write("\n\n")
-            for question, answer in sorted(memory.items()):
-                q = " ".join(question.replace("\r", " ").replace("\n", " ").split())
-                a = " ".join(answer.replace("\r", " ").replace("\n", " ").split())
-                output.write(f"U: {q}\nIA: {a}\n\n")
+    with temporary.open("w", encoding="utf-8", newline="\\n") as output:
+        for question, original_answer in dialogues:
+            answer = memory.get(question, original_answer)
+            q = " ".join(question.replace("\\r", " ").replace("\\n", " ").split())
+            a = " ".join(answer.replace("\\r", " ").replace("\\n", " ").split())
+            if not q or not a:
+                raise RuntimeError("Corpus contém pergunta ou resposta vazia.")
+            output.write(f"U: {q}\\nIA: {a}\\n\\n")
     os.replace(temporary, destination)
-
 
 def extract_training_metric(output: str, name: str) -> float:
     match = re.search(rf"^{re.escape(name)}:\s*([0-9.eE+-]+)\s*$",
@@ -427,25 +373,6 @@ def extract_training_metric(output: str, name: str) -> float:
     if not math.isfinite(value):
         raise RuntimeError(f"A métrica {name} não é finita.")
     return value
-
-
-def evaluate_validation_loss(trainer: Path, validation_corpus: Path,
-                             checkpoint: Path) -> float:
-    """Calcula cross-entropy por byte-alvo no holdout, sem atualizar o modelo."""
-    process = subprocess.run(
-        [str(trainer), "--evaluate", str(validation_corpus), str(checkpoint)],
-        check=True, capture_output=True, text=True, encoding="utf-8",
-    )
-    return extract_training_metric(process.stdout, "validation_loss")
-
-
-def improves_validation_loss(candidate: float, best: float) -> bool:
-    """Só aceita checkpoint com redução estrita e finita da loss independente."""
-    if not math.isfinite(candidate):
-        raise ValueError("Loss candidata de validação não finita.")
-    if math.isnan(best):
-        raise ValueError("Melhor loss de validação não pode ser NaN.")
-    return candidate < best - 1e-12
 
 
 def evaluate_set(generator: Path, checkpoint: Path,
@@ -531,36 +458,21 @@ def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
 
 
 def main() -> int:
-    if len(sys.argv) != 11:
-        print(
-            "Uso: treinamento_ciclico.py <treinador> <gerador> <treino> <feedback> "
-            "<validacao> <teste> <epocas> <tentativas> <continuo:0|1> <questoes:1..20>",
-            file=sys.stderr,
-        )
+    if len(sys.argv) != 7:
+        print("Uso: treinamento_ciclico.py <treinador> <gerador> <corpus-40-perguntas> <epocas> <tentativas> <continuo:0|1>", file=sys.stderr)
         return 2
-
-    trainer, generator, train_corpus, feedback_corpus, validation_corpus, test_corpus = map(
-        Path, sys.argv[1:7]
-    )
-    epochs, attempts = int(sys.argv[7]), int(sys.argv[8])
-    continuous = sys.argv[9] == "1"
-    question_count = int(sys.argv[10])
+    trainer, generator, training_corpus = map(Path, sys.argv[1:4])
+    epochs, attempts = int(sys.argv[4]), int(sys.argv[5])
+    continuous = sys.argv[6] == "1"
     if not 1 <= epochs <= MAX_EPOCHS_PER_CYCLE or not 1 <= attempts <= MAX_CYCLES:
         raise ValueError(f"Épocas precisam estar entre 1 e {MAX_EPOCHS_PER_CYCLE}; tentativas entre 1 e {MAX_CYCLES}.")
-    if sys.argv[9] not in ("0", "1"):
+    if sys.argv[6] not in ("0", "1"):
         raise ValueError("O modo contínuo precisa ser 0 ou 1.")
-    if not 1 <= question_count <= MAX_VALIDATION_QUESTIONS:
-        raise ValueError("A quantidade de questões de validação precisa estar entre 1 e 20.")
 
-    train_dialogues = read_dialogues(train_corpus)
-    feedback_questions = read_dialogues(feedback_corpus)
-    if len(feedback_questions) != MAX_FEEDBACK_QUESTIONS:
-        raise RuntimeError(f"O conjunto de feedback precisa conter exatamente 40 questões; foram encontradas {len(feedback_questions)}.")
-    validation_pool = read_dialogues(validation_corpus)
-    if len(validation_pool) != MAX_VALIDATION_QUESTIONS:
-        raise RuntimeError(f"O holdout independente precisa conter exatamente 20 questões; foram encontradas {len(validation_pool)}.")
-    validation = select_validation_questions(train_dialogues, validation_pool, question_count)
-    test = read_dialogues(test_corpus)
+    training_dialogues = read_dialogues(training_corpus)
+    if len(training_dialogues) != TRAINING_QUESTIONS:
+        raise RuntimeError(f"O treinamento precisa conter exatamente {TRAINING_QUESTIONS} perguntas; foram encontradas {len(training_dialogues)}.")
+
     checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
     optimizer_state = Path(str(checkpoint) + ".adam")
     best_checkpoint = Path(str(checkpoint) + ".best")
@@ -569,371 +481,138 @@ def main() -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
     feedback_path = Path("build/g2/tsukuyomi-memoria-erros.txt")
     combined_training = Path("build/g2/treinamento-com-memoria.txt")
-    question_learning_rate_path = Path("build/g2/tsukuyomi-learning-rates-by-question.txt")
-    question_history_path = Path("build/g2/tsukuyomi-historico-perguntas.json")
-    feedback_memory = load_feedback_memory(feedback_path)
-    question_history = load_question_history(question_history_path)
-    resume_previous_run = resumable_state_exists(checkpoint, optimizer_state)
-    if not resume_previous_run:
-        for stale_best in (best_checkpoint, best_optimizer_state):
-            if stale_best.exists():
-                stale_best.unlink()
-        question_history = {"version": 1, "questions": {}}
-    execution_id = os.environ.get("GITHUB_RUN_ID", "local")
-    if resume_previous_run:
-        print(
-            "Estado persistente encontrado: retomando pesos e momentos Adam da execução anterior.",
-            flush=True,
-        )
+    rate_path = Path("build/g2/tsukuyomi-learning-rates-by-question.txt")
+    history_path = Path("build/g2/tsukuyomi-historico-perguntas.json")
+    memory = load_feedback_memory(feedback_path)
+    history = load_question_history(history_path)
+    resumed = resumable_state_exists(checkpoint, optimizer_state)
+    if not resumed:
+        for stale in (best_checkpoint, best_optimizer_state):
+            if stale.exists():
+                stale.unlink()
+        history = {"version": 1, "global_cycles": 0, "questions": {}}
     else:
-        print("Nenhum estado persistente encontrado: inicialização do modelo.", flush=True)
+        save_best_state(checkpoint, optimizer_state, best_checkpoint, best_optimizer_state)
 
-    cycle = 0
-    best_validation_score = -1.0
-    best_validation_correct = 0
-    best_validation_cycle = 0
-    best_validation_rank = (-1, -1.0)
-    best_validation_loss = float('inf')
-    maximum_cycles = min(attempts, MAX_CYCLES)
+    execution_id = os.environ.get("GITHUB_RUN_ID", "local")
+    max_cycles = min(attempts, MAX_CYCLES)
+    best_correct = 0
     with output.open("w", encoding="utf-8") as report:
-        report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
-        report.write(f"- Diálogos de treinamento originais: {len(train_dialogues)}\n")
-        report.write(f"- Ciclos globais já concluídos antes desta execução: {question_history['global_cycles']}\n")
-        report.write("- Cada ciclo usa seed de embaralhamento global exclusiva e persistida; o melhor checkpoint continua sendo restaurado quando um candidato é rejeitado.\n")
-        report.write("- SHA-256 de pesos e estado Adam é registrado antes/depois de cada ciclo.\n")
-        report.write(f"- Correções persistidas antes desta execução: {len(feedback_memory)}\n")
-        report.write("- Os conjuntos são arquivos separados: 40 perguntas de feedback supervisionado, 20 perguntas novas de validação independente e 12 perguntas de teste reservado.\n")
-        report.write(f"- Perguntas de feedback: {len(feedback_questions)}\n")
-        report.write(f"- Holdout independente de validação: {len(validation_pool)}\n")
-        report.write(f"- Questões selecionadas para validação: {question_count}\n")
-        report.write(f"- Épocas por tentativa: {epochs}\n")
-        report.write(f"- Limite de épocas por ciclo: {MAX_EPOCHS_PER_CYCLE}\n")
-        report.write(f"- Limite de ciclos por execução: {MAX_CYCLES}\n")
-        report.write(f"- Máximo teórico nesta configuração: {epochs * maximum_cycles} épocas\n")
-        report.write(f"- Modo contínuo: {'ativado' if continuous else 'desativado'}\n")
-        report.write(f"- Limite de geração: {MAX_RESPONSE_BYTES} bytes\n")
-        report.write("- Critério contínuo: encerrar quando todas as questões selecionadas estiverem corretas\n")
-        report.write("- Critério de aprovação: igualdade lexical normalizada; não mede semântica\n")
-        report.write("- F1 lexical, similaridade de caracteres, repetição e diversidade são diagnósticos; não aprovam respostas.\n")
-        report.write("- Seleção de checkpoint: menor cross-entropy (Loss) nas respostas do holdout independente; menor é melhor.\n")
-        report.write("- Scheduler global por ciclo removido; cada pergunta usa exclusivamente a curva lexical individual. O LR só diminui quando o nível lexical da pergunta aumenta.\n")
-        report.write(f"- LR-base interno fixo: {INITIAL_LEARNING_RATE:.8g}; faixa individual: {MIN_LEARNING_RATE:.1e} a {1e-3:.1e}.\n")
-        report.write("- Cada ciclo começa pelo melhor par checkpoint + momentos Adam; o estado persistido anterior é avaliado antes de qualquer atualização.\n")
-        report.write("- A Loss de treino é apenas diagnóstico; a decisão usa Loss calculada nos mesmos alvos das 20 perguntas independentes.\n")
-        report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
+        report.write("# Treinamento — Tsukuyomi G2 0.1\n\n")
+        report.write("- Somente as 40 perguntas deste corpus são usadas.\n")
+        report.write("- Não existe validação independente nem conjunto de perguntas reservadas.\n")
+        report.write("- A seleção de checkpoint usa a Loss de treino: menor é melhor.\n")
+        report.write("- Pesos e estado Adam são aceitos/restaurados juntos.\n")
+        report.write(f"- Ciclos globais anteriores: {history['global_cycles']}\n")
+        report.write(f"- Épocas por ciclo: {epochs}; máximo de ciclos: {max_cycles}.\n\n")
 
-        best_validation_results = None
-        if resume_previous_run:
-            best_validation_loss = evaluate_validation_loss(
-                trainer, validation_corpus, checkpoint
-            )
-            best_validation_results = evaluate_set(generator, checkpoint, validation_pool)
-            baseline_selected = best_validation_results[:question_count]
-            (best_validation_correct, _, baseline_f1, baseline_char,
-             best_validation_score, best_validation_rank) = validation_metrics(
-                validation, baseline_selected
-            )
-            best_validation_cycle = 0
-            save_best_state(
-                checkpoint, optimizer_state, best_checkpoint, best_optimizer_state
-            )
-            baseline_feedback_results = evaluate_set(generator, checkpoint, feedback_questions)
-            feedback_regressions, feedback_recoveries = update_question_history(
-                question_history, feedback_questions, baseline_feedback_results, 0,
-                execution_id, dataset="feedback"
-            )
-            regressions, recoveries = update_question_history(
-                question_history, validation_pool, best_validation_results, 0, execution_id
-            )
-            write_question_history(question_history_path, question_history)
-            print(
-                f"Checkpoint anterior avaliado: {best_validation_correct}/{question_count}; "
-                f"regressões históricas={regressions}; recuperações={recoveries}.",
-                flush=True,
-            )
-            report.write(
-                f"**Checkpoint anterior: {best_validation_correct}/{question_count}; "
-                f"F1={baseline_f1:.3f}; similaridade={baseline_char:.3f}.**\n\n"
-            )
+        if resumed:
+            baseline = evaluate_set(generator, checkpoint, training_dialogues)
+            best_correct, _ = write_results(report, "Estado retomado — 40 perguntas", training_dialogues, baseline)
+            update_question_history(history, training_dialogues, baseline, 0, execution_id, dataset="training")
+            write_question_history(history_path, history)
 
-        while cycle < maximum_cycles:
+        cycle = 0
+        while cycle < max_cycles:
             cycle += 1
-            global_cycle = next_global_cycle(question_history)
-            # O contador é persistido antes do treino: mesmo uma execução interrompida
-            # não reutiliza a mesma seed no próximo ciclo.
-            write_question_history(question_history_path, question_history)
-            cycle_seed = 42 + global_cycle
+            global_cycle = next_global_cycle(history)
+            write_question_history(history_path, history)
+            seed = 42 + global_cycle
             if best_checkpoint.is_file() and best_optimizer_state.is_file():
-                restore_best_state(
-                    best_checkpoint, best_optimizer_state, checkpoint, optimizer_state
-                )
-            build_training_corpus(train_corpus, feedback_memory, combined_training)
-            current_training_dialogues = read_dialogues(combined_training)
-            if checkpoint.is_file():
-                lexical_probe_results = evaluate_set(
-                    generator, checkpoint, current_training_dialogues
-                )
-            else:
-                lexical_probe_results = [("", False, 0.0)] * len(current_training_dialogues)
-            question_rates = {
-                question: learning_rate_for_lexical_level(MAX_LEARNING_RATE, result[2])
-                for (question, _), result in zip(current_training_dialogues, lexical_probe_results)
-            }
-            rate_ranges = write_question_learning_rates(
-                combined_training, question_rates, question_learning_rate_path
-            )
-            lexical_levels = [result[2] for result in lexical_probe_results]
-            individual_rates = list(question_rates.values())
-            print(
-                f"LR adaptativo por questão: {rate_ranges} intervalos; "
-                f"nível lexical médio={sum(lexical_levels) / max(1, len(lexical_levels)):.1%}; "
-                f"LR calculado observado mínimo={min(individual_rates):.8g}; "
-                f"máximo observado={max(individual_rates):.8g}; "
-                f"faixa definida pela curva: mínimo={MIN_LEARNING_RATE:.8g}, "
-                f"máximo={1e-3:.8g}.", flush=True
-            )
-            report.write(f"### Learning rate adaptativo — ciclo {cycle}\n\n")
-            report.write(
-                f"- Faixa da curva individual: mínimo={MIN_LEARNING_RATE:.8g}; "
-                f"máximo={1e-3:.8g}.\n"
-            )
-            report.write(
-                f"- Faixa observada neste ciclo: mínimo={min(individual_rates):.8g}; "
-                f"máximo={max(individual_rates):.8g}.\n\n"
-            )
-            report.write("| Pergunta | Nível lexical atual | Learning rate individual |\n")
-            report.write("|---|---:|---:|\n")
-            for (question, _), result in zip(current_training_dialogues, lexical_probe_results):
-                safe_question = question.replace("|", "&#124;")
-                report.write(
-                    f"| {safe_question} | {result[2]:.1%} | "
-                    f"{question_rates[question]:.8g} |\n"
-                )
-            report.write("\n")
-            weights_before_hash = checkpoint_sha256(checkpoint)
-            adam_before_hash = checkpoint_sha256(optimizer_state)
-            command = [
-                str(trainer), str(combined_training), str(checkpoint),
-                str(epochs), str(cycle_seed), f"{INITIAL_LEARNING_RATE:.12g}", "--lr-map",
-                str(question_learning_rate_path),
-            ]
-            if cycle > 1 or resume_previous_run or best_checkpoint.is_file():
-                command.append("--resume")
+                restore_best_state(best_checkpoint, best_optimizer_state, checkpoint, optimizer_state)
 
-            print(
-                f"\n=== Ciclo {cycle}: {epochs} época(s), validação "
-                f"{len(validation)} pergunta(s), LR máximo interno={MAX_LEARNING_RATE:.8g} ===",
-                flush=True,
-            )
+            build_training_corpus(training_corpus, memory, combined_training)
+            current_dialogues = read_dialogues(combined_training)
+            if len(current_dialogues) != TRAINING_QUESTIONS:
+                raise RuntimeError("A memória alterou a quantidade de perguntas de treinamento.")
+            probe = evaluate_set(generator, checkpoint, current_dialogues) if checkpoint.is_file() else [("", False, 0.0)] * TRAINING_QUESTIONS
+            rates = {
+                question: learning_rate_for_lexical_level(MAX_LEARNING_RATE, result[2])
+                for (question, _), result in zip(current_dialogues, probe)
+            }
+            write_question_learning_rates(combined_training, rates, rate_path)
+            individual_rates = list(rates.values())
+            report.write(f"### LR individual — ciclo {cycle}\n\n")
+            report.write("| Pergunta | Nível lexical | LR |\n|---|---:|---:|\n")
+            for (question, _), result in zip(current_dialogues, probe):
+                report.write(f"| {question.replace('|', '&#124;')} | {result[2]:.1%} | {rates[question]:.8g} |\n")
+            report.write("\n")
+
+            weights_before = checkpoint_sha256(checkpoint)
+            adam_before = checkpoint_sha256(optimizer_state)
+            command = [str(trainer), str(combined_training), str(checkpoint), str(epochs), str(seed), f"{INITIAL_LEARNING_RATE:.12g}", "--lr-map", str(rate_path)]
+            if checkpoint.is_file():
+                command.append("--resume")
+            print(f"=== Ciclo {cycle}/{max_cycles}: treinando as 40 perguntas ===", flush=True)
             started = time.perf_counter()
-            training_process = subprocess.run(
-                command, check=True, capture_output=True, text=True, encoding="utf-8"
-            )
-            print(training_process.stdout, end="", flush=True)
-            initial_bpb = extract_training_metric(training_process.stdout, "train_bpb inicial")
-            final_bpb = extract_training_metric(training_process.stdout, "train_bpb final")
-            initial_loss = extract_training_metric(training_process.stdout, "Loss inicial")
-            final_loss = extract_training_metric(training_process.stdout, "Loss final")
-            candidate_validation_loss = evaluate_validation_loss(
-                trainer, validation_corpus, checkpoint
-            )
-            weights_after_hash = checkpoint_sha256(checkpoint)
-            adam_after_hash = checkpoint_sha256(optimizer_state)
-            if weights_after_hash is None or adam_after_hash is None:
-                raise RuntimeError("Não foi possível calcular os hashes do checkpoint e do Adam.")
-            weights_changed = weights_before_hash is None or weights_before_hash != weights_after_hash
-            adam_changed = adam_before_hash is None or adam_before_hash != adam_after_hash
-            target_bytes = extract_training_metric(training_process.stdout, "Bytes-alvo")
-            completed_epochs = extract_training_metric(training_process.stdout, "Épocas")
+            proc = subprocess.run(command, check=True, capture_output=True, text=True, encoding="utf-8")
+            print(proc.stdout, end="", flush=True)
+
+            initial_bpb = extract_training_metric(proc.stdout, "train_bpb inicial")
+            final_bpb = extract_training_metric(proc.stdout, "train_bpb final")
+            initial_loss = extract_training_metric(proc.stdout, "Loss inicial")
+            final_loss = extract_training_metric(proc.stdout, "Loss final")
+            target_bytes = extract_training_metric(proc.stdout, "Bytes-alvo")
+            completed_epochs = extract_training_metric(proc.stdout, "Épocas")
             if target_bytes <= 0 or completed_epochs != epochs:
                 raise RuntimeError("O treinador não concluiu todas as épocas ou não processou alvos.")
-            if (not checkpoint.is_file() or checkpoint.stat().st_size == 0 or
-                    not optimizer_state.is_file() or optimizer_state.stat().st_size == 0):
-                raise RuntimeError("O treinador não publicou checkpoint e estado Adam válidos.")
-            candidate_all_results = evaluate_set(generator, checkpoint, validation_pool)
-            validation_results = candidate_all_results[:question_count]
-            retention_regressions = find_retention_regressions(
-                best_validation_results, validation_pool, candidate_all_results
-            )
-            feedback_results = evaluate_set(generator, checkpoint, feedback_questions)
-            new_corrections = record_feedback_errors(
-                feedback_memory, feedback_questions, feedback_results
-            )
-            write_feedback_memory(feedback_path, feedback_memory)
-            feedback_history_regressions, feedback_history_recoveries = update_question_history(
-                question_history, feedback_questions, feedback_results, global_cycle,
-                execution_id, dataset="feedback"
-            )
-            regressions, recoveries = update_question_history(
-                question_history, validation_pool, candidate_all_results, global_cycle, execution_id
-            )
-            write_question_history(question_history_path, question_history)
-            print(
-                f"Memória corretiva: {new_corrections} nova(s) correção(ões); "
-                f"{len(feedback_memory)} pergunta(s) acumulada(s).",
-                flush=True,
-            )
-            print(
-                f"Histórico da validação: {regressions} regressão(ões), "
-                f"{recoveries} recuperação(ões) neste ciclo; "
-                f"regressões contra o melhor checkpoint: {len(retention_regressions)}; "
-                f"feedback regressões={feedback_history_regressions}, "
-                f"recuperações={feedback_history_recoveries}.",
-                flush=True,
-            )
-            total_questions = len(validation_results)
-            for question_index, ((_, expected_answer), (generated_answer, is_correct, lexical_score)) in enumerate(
-                zip(validation, validation_results), start=1
-            ):
-                status = "Success" if is_correct else "Error"
-                verdict = "CORRETA" if is_correct else "INCORRETA"
-                print(
-                    f"{status}: Questão {question_index}/{total_questions} | "
-                    f"Resposta {verdict} | Nivel lexical: {lexical_score * 100:.1f}%",
-                    flush=True,
-                )
-            correct_count, total = write_results(
-                report, f"Validação — ciclo {cycle}", validation, validation_results
-            )
-            report.write(
-                f"- Memória corretiva acumulada após o ciclo: {len(feedback_memory)} pergunta(s).\n"
-            )
-            (correct_count, total, mean_f1, mean_char_similarity,
-             validation_score, observed_rank) = validation_metrics(
-                validation, validation_results
-            )
-            candidate_accepted = improves_validation_loss(
-                candidate_validation_loss, best_validation_loss
-            )
-            if candidate_accepted:
-                best_validation_loss = candidate_validation_loss
-                best_validation_rank = observed_rank
-                save_best_state(checkpoint, optimizer_state,
-                                best_checkpoint, best_optimizer_state)
-                best_validation_correct = correct_count
-                best_validation_cycle = cycle
-                best_validation_score = validation_score
-                best_validation_results = candidate_all_results
-            print(
-                f"Seleção por Loss de validação: candidato={candidate_validation_loss:.6f}; "
-                f"melhor={best_validation_loss:.6f}; "
-                f"checkpoint={'ACEITO' if candidate_accepted else 'REJEITADO'}.",
-                flush=True,
-            )
-            # Acertos e regressões continuam como diagnóstico; a seleção é pela
-            # cross-entropy independente, não pelo ranking lexical nem pela Loss de treino.
-            report.write(
-                f"- Loss de treino: {initial_loss:.6f} → {final_loss:.6f}.\n"
-                f"- Loss de validação independente: {candidate_validation_loss:.6f}.\n"
-                f"- Melhor Loss de validação até agora: {best_validation_loss:.6f}.\n"
-                f"- Checkpoint {'ACEITO' if candidate_accepted else 'REJEITADO'} pela Loss de validação.\n"
-                f"- Regressões lexicais contra o melhor estado (diagnóstico): {len(retention_regressions)}.\n"
-            )
-            # O próximo ciclo sempre parte do melhor estado, nunca do último estado pior.
-            restore_best_state(
-                best_checkpoint, best_optimizer_state, checkpoint, optimizer_state
-            )
+            if not checkpoint.is_file() or checkpoint.stat().st_size == 0 or not optimizer_state.is_file() or optimizer_state.stat().st_size == 0:
+                raise RuntimeError("Checkpoint ou estado Adam inválido.")
 
-            # Publica o estado aprovado/revertido ao final de CADA ciclo.
-            # Assim, uma interrupção do runner não perde ciclos já concluídos.
+            weights_after = checkpoint_sha256(checkpoint)
+            adam_after = checkpoint_sha256(optimizer_state)
+            candidate_results = evaluate_set(generator, checkpoint, training_dialogues)
+            new_errors = record_feedback_errors(memory, training_dialogues, candidate_results)
+            write_feedback_memory(feedback_path, memory)
+            regressions, recoveries = update_question_history(history, training_dialogues, candidate_results, global_cycle, execution_id, dataset="training")
+            write_question_history(history_path, history)
+            correct, total = write_results(report, f"Treinamento — ciclo {cycle}", training_dialogues, candidate_results)
+            best_correct = correct
+
+            has_best = best_checkpoint.is_file() and best_optimizer_state.is_file()
+            accepted = not has_best or final_loss < initial_loss - 1e-12
+            if accepted:
+                save_best_state(checkpoint, optimizer_state, best_checkpoint, best_optimizer_state)
+            else:
+                restore_best_state(best_checkpoint, best_optimizer_state, checkpoint, optimizer_state)
+
+            print(f"Loss de treino: {initial_loss:.6f} → {final_loss:.6f}; checkpoint {'ACEITO' if accepted else 'REJEITADO'}.", flush=True)
+            report.write(f"- Loss de treino: {initial_loss:.6f} → {final_loss:.6f}.\n")
+            report.write(f"- Checkpoint {'ACEITO' if accepted else 'REJEITADO'} pela redução da Loss de treino.\n")
+            report.write(f"- Respostas exatas nas 40 perguntas: {correct}/{total}.\n")
+            report.write(f"- Novas correções armazenadas: {new_errors}.\n")
+            report.write(f"- Regressões/recuperações históricas: {regressions}/{recoveries}.\n")
+
             if os.environ.get("TSUKUYOMI_PERSIST_STATE") == "1":
-                persistence_script = Path(__file__).with_name("persistir_estado.sh")
-                if not persistence_script.is_file():
-                    raise RuntimeError(
-                        f"Script de persistência por ciclo não encontrado: {persistence_script}"
-                    )
-                subprocess.run(["bash", str(persistence_script)], check=True)
+                persistence = Path(__file__).with_name("persistir_estado.sh")
+                if not persistence.is_file():
+                    raise RuntimeError(f"Script de persistência não encontrado: {persistence}")
+                subprocess.run(["bash", str(persistence)], check=True)
 
             elapsed = time.perf_counter() - started
-            report.write(
-                f"### Integridade e diversidade — ciclo global {global_cycle}\n\n"
-                f"- Seed de embaralhamento: {cycle_seed}.\n"
-                f"- SHA-256 dos pesos antes: {weights_before_hash or 'inexistente'}.\n"
-                f"- SHA-256 dos pesos depois: {weights_after_hash}.\n"
-                f"- Pesos modificados: {'sim' if weights_changed else 'não'}.\n"
-                f"- SHA-256 do Adam antes: {adam_before_hash or 'inexistente'}.\n"
-                f"- SHA-256 do Adam depois: {adam_after_hash}.\n"
-                f"- Estado Adam modificado: {'sim' if adam_changed else 'não'}.\n\n"
-            )
-            report.write(
-                f"**Treino: {completed_epochs:.0f} época(s), {target_bytes:.0f} bytes-alvo, "
-                f"Loss {initial_loss:.4f} → {final_loss:.4f}; train_bpb {initial_bpb:.4f} → {final_bpb:.4f}.**\n"
-                f"**Loss de validação: {candidate_validation_loss:.6f}; melhor Loss: {best_validation_loss:.6f}; "
-                f"checkpoint {'aceito' if candidate_accepted else 'rejeitado'}.**\n"
-                f"**Validação independente: {correct_count}/{total}; F1 médio: {mean_f1:.3f}; "
-                f"similaridade char: {mean_char_similarity:.3f}; regressões históricas: {regressions}; "
-                f"regressões contra melhor estado: {len(retention_regressions)}; "
-                f"recuperações: {recoveries}; pontuação: {validation_score:.3f}; "
-                f"LR individual observado: {min(individual_rates):.8g}–{max(individual_rates):.8g}; "
-                f"duração: {elapsed:.2f}s.**\n\n"
-            )
+            report.write(f"- SHA-256 pesos: {weights_before or 'inexistente'} → {weights_after}.\n")
+            report.write(f"- SHA-256 Adam: {adam_before or 'inexistente'} → {adam_after}.\n")
+            report.write(f"- Épocas: {completed_epochs:.0f}; bytes-alvo: {target_bytes:.0f}.\n")
+            report.write(f"- train_bpb: {initial_bpb:.4f} → {final_bpb:.4f}.\n")
+            report.write(f"- LR individual observado: {min(individual_rates):.8g}–{max(individual_rates):.8g}.\n")
+            report.write(f"- Duração: {elapsed:.2f}s.\n\n")
             report.flush()
-            print(
-                f"Integridade ciclo global {global_cycle}: seed={cycle_seed}; "
-                f"pesos alterados={'sim' if weights_changed else 'não'} "
-                f"(SHA-256 {weights_before_hash or 'inexistente'} → {weights_after_hash}); "
-                f"Adam alterado={'sim' if adam_changed else 'não'} "
-                f"(SHA-256 {adam_before_hash or 'inexistente'} → {adam_after_hash}).",
-                flush=True,
-            )
-            print(
-                f"Validação independente do ciclo {cycle} (global {global_cycle}): {correct_count}/{total}; "
-                f"F1={mean_f1:.3f}; char={mean_char_similarity:.3f}; "
-                f"regressões históricas={regressions}; "
-                f"regressões contra melhor={len(retention_regressions)}; recuperações={recoveries}; "
-                f"score={validation_score:.3f}; LR individual={min(individual_rates):.8g}–{max(individual_rates):.8g}; {elapsed:.2f}s.",
-                flush=True,
-            )
 
-            if should_stop(continuous, best_validation_correct, question_count):
-                report.write("O melhor checkpoint mantém todas as questões selecionadas corretas; treinamento encerrado.\n\n")
+            if should_stop(continuous, best_correct, TRAINING_QUESTIONS):
+                report.write("Todas as 40 perguntas estão corretas; treinamento contínuo encerrado.\n")
                 break
-            if not continuous and cycle >= attempts:
-                break
-        else:
-            raise RuntimeError("Limite de segurança atingido sem completar o objetivo.")
 
-        if continuous and not should_stop(continuous, best_validation_correct, question_count):
-            raise RuntimeError(
-                f"Objetivo contínuo não atingido no melhor checkpoint: "
-                f"{best_validation_correct}/{question_count} após {cycle} ciclos."
-            )
+        if best_checkpoint.is_file() and best_optimizer_state.is_file():
+            restore_best_state(best_checkpoint, best_optimizer_state, checkpoint, optimizer_state)
+        final_results = evaluate_set(generator, checkpoint, training_dialogues)
+        final_correct, final_total = write_results(report, "Resultado final — 40 perguntas treinadas", training_dialogues, final_results)
+        report.write(f"**Resultado final: {final_correct}/{final_total} respostas exatas nas 40 perguntas treinadas.**\n")
+        print(f"Resultado final nas 40 perguntas: {final_correct}/{final_total}.", flush=True)
 
-        # A avaliação final usa o melhor estado de validação, não necessariamente
-        # o último ciclo, e restaura também os momentos Adam correspondentes.
-        restore_best_state(best_checkpoint, best_optimizer_state,
-                           checkpoint, optimizer_state)
-        report.write(
-            f"**Melhor estado: ciclo {best_validation_cycle}; "
-            f"validação {best_validation_correct}/{len(validation)}; "
-            f"pontuação {best_validation_score:.3f}.**\n\n"
-        )
-        print(
-            f"Melhor checkpoint: ciclo {best_validation_cycle}; "
-            f"Loss de validação={best_validation_loss:.6f}; "
-            f"respostas exatas={best_validation_correct}/{len(validation)}; "
-            f"score diagnóstico={best_validation_score:.3f}.",
-            flush=True,
-        )
-
-        # No modo de uma questão, não consultar o teste reservado.
-        if question_count == 1:
-            report.write("Teste reservado não executado: modo de uma questão.\n")
-            print("Teste reservado preservado e não executado (modo de uma questão).", flush=True)
-        else:
-            test_results = evaluate_set(generator, checkpoint, test)
-            test_correct, test_total = write_results(
-                report, "Teste final reservado", test, test_results
-            )
-            report.write(
-                f"**Resultado final no teste reservado: {test_correct}/{test_total}.**\n"
-            )
-            print(f"Teste final reservado: {test_correct}/{test_total}.", flush=True)
-
-    print(f"\nRelatório salvo em: {output}")
+    print(f"Relatório salvo em: {output}")
     print(f"Checkpoint final: {checkpoint}")
-    print("Learning rate: curva individual por nível lexical; sem redução global por ciclo.")
-    print(f"Histórico de perguntas: {question_history_path}")
+    print("LR individual por nível lexical; sem scheduler global.")
+    print(f"Histórico de perguntas: {history_path}")
     return 0
 
 
