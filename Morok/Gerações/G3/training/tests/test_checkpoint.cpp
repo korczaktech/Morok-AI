@@ -83,6 +83,32 @@ void test_round_trip_and_exact_resume_state() {
     assert(restored.training_history == original.training_history);
 }
 
+void test_model_weights_restore_for_resume() {
+    morok::g3::neural::G3Backend source(
+        morok::g3::neural::G3Config{71U, 1.0e-5F});
+    auto checkpoint = fixture();
+    checkpoint.model_weights = capture_g3_model_weights(source);
+    const auto encoded = serialize_training_checkpoint(checkpoint);
+    assert(encoded);
+    const auto decoded = deserialize_training_checkpoint(*encoded.value_if());
+    assert(decoded);
+
+    morok::g3::neural::G3Backend resumed(
+        morok::g3::neural::G3Config{999U, 1.0e-5F});
+    const auto restored = restore_g3_model_weights(
+        decoded.value_if()->model_weights, resumed);
+    assert(restored);
+    assert(capture_g3_model_weights(resumed) == checkpoint.model_weights);
+    assert(decoded.value_if()->optimizer_first_moment == checkpoint.optimizer_first_moment);
+    assert(decoded.value_if()->optimizer_second_moment == checkpoint.optimizer_second_moment);
+    assert(decoded.value_if()->optimizer_step == checkpoint.optimizer_step);
+    assert(decoded.value_if()->cpp_rng_state == checkpoint.cpp_rng_state);
+
+    auto expected = checkpoint.compatibility;
+    expected.dataset_fingerprint = "different-dataset";
+    assert(!validate_training_checkpoint(*decoded.value_if(), &expected));
+}
+
 void test_checksum_version_and_truncation_rejection() {
     const auto encoded = serialize_training_checkpoint(fixture());
     assert(encoded);
@@ -165,6 +191,7 @@ void test_real_g3_weight_capture_and_restore() {
 
 int main() {
     test_round_trip_and_exact_resume_state();
+    test_model_weights_restore_for_resume();
     test_checksum_version_and_truncation_rejection();
     test_strict_compatibility_validation();
     test_invalid_optimizer_and_nonfinite_weights();
