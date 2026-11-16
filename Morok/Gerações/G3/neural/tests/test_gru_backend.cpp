@@ -80,7 +80,7 @@ void test_shapes_initialization_and_seed_reproducibility() {
 
 void test_recurrent_matrices_are_orthogonal_per_gate() {
     G3Backend backend(G3Config{77U, 1.0e-5F});
-    const auto& recurrent = backend.weights().layer1_recurrent;
+    const auto verify = [](const std::vector<float>& recurrent) {
     for (std::size_t gate = 0; gate < 3U; ++gate) {
         const std::size_t base = gate * 128U * 128U;
         for (std::size_t left = 0; left < 128U; ++left) {
@@ -96,6 +96,9 @@ void test_recurrent_matrices_are_orthogonal_per_gate() {
             }
         }
     }
+    };
+    verify(backend.weights().layer1_recurrent);
+    verify(backend.weights().layer2_recurrent);
 }
 
 void test_forward_probabilities_and_independent_sessions() {
@@ -150,6 +153,8 @@ void test_invalid_dimensions_and_configuration() {
     assert(backend.reset_state(state));
     std::array<float, 260> short_output{};
     assert(!backend.next_token_log_probabilities(state, short_output));
+    assert(backend.consume_token(state, 260U));
+    assert(!backend.consume_token(state, 261U));
 
     bool rejected = false;
     try {
