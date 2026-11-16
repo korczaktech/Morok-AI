@@ -381,3 +381,27 @@ Limite explícito: esta entrega implementa a arquitetura e seu forward pass
 incremental de inferência. BPTT, gradientes dos parâmetros, otimizador e
 treinamento SFT continuam sendo responsabilidades das etapas de treinamento;
 esta entrega não declara esses itens concluídos.
+
+---
+
+## Revisão vigente — orçamento exato de 100.000 parâmetros
+
+Esta seção substitui, para a arquitetura neural executável da G3, as dimensões e a contagem de referência descritas na seção anterior. A referência inicial E=64/H=128 e o identificador 0x0301 foram substituídos pela arquitetura 0x0302, com E=60, H1=97 e H2=68. A alteração é permitida pelo princípio de configuração explícita: dimensões e limites são valores configuráveis, não constantes imutáveis.
+
+A arquitetura mantém duas camadas GRU completas, três portas por camada, RMSNorm com escala aprendível entre as camadas, projeção final e weight tying com armazenamento único.
+
+Contagem:
+- embedding 261×60: 15.660;
+- GRU 1: entrada 3×97×60 (17.460), recorrência 3×97×97 (28.227), bias 3×97 (291), total 45.978;
+- GRU 2: entrada 3×68×97 (19.788), recorrência 3×68×68 (13.872), bias 3×68 (204), total 33.864;
+- RMSNorm: 97;
+- projeção 60×68: 4.080;
+- bias da projeção: 60;
+- bias de saída: 261;
+- matriz de saída: sem tensor adicional, pois utiliza a transposta do próprio embedding.
+
+Total calculado: **100.000 parâmetros exatos**. O estado por sessão contém 97+68=165 valores FP32, totalizando 660 bytes.
+
+O backend calcula o total a partir dos tamanhos reais dos tensores e rejeita no construtor qualquer total diferente de 100.000. O descritor também informa a contagem dinâmica. O identificador 0x0302 torna os artefatos anteriores 0x0301 incompatíveis; não se deve reinterpretar checkpoints antigos com as novas dimensões.
+
+A especificação detalhada e os critérios de teste estão em [PARAMETROS-100K.md](PARAMETROS-100K.md).
