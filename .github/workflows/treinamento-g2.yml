@@ -58,7 +58,7 @@ jobs:
               raise SystemExit("TENTATIVAS precisa estar entre 1 e 100.")
           PY
 
-      - name: Validar corpus de 40 perguntas e testes
+      - name: Validar corpus de 100 perguntas e testes
         working-directory: Morok
         run: python3 -m unittest discover -s "Gerações/G2/Tsukuyomi/tests" -p "test_*.py" -v
 
@@ -109,14 +109,14 @@ jobs:
               git archive origin/tsukuyomi-state state/tsukuyomi-g2-questions | tar -x -C "$RUNNER_TEMP"
               mkdir -p Morok/build/g2/tsukuyomi-questoes
               cp -a "$RUNNER_TEMP/state/tsukuyomi-g2-questions/." Morok/build/g2/tsukuyomi-questoes/
-              echo "40 checkpoints individuais e seus estados Adam recuperados."
+              echo "100 checkpoints individuais e seus estados Adam recuperados."
             fi
             echo "Memória persistente recuperada: estados e memória."
           else
             echo "Primeira execução: ainda não existe memória persistente."
           fi
 
-      - name: Treinar as 40 perguntas
+      - name: Treinar as 100 perguntas
         if: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi) }}
         working-directory: Morok
         env:
@@ -174,7 +174,7 @@ jobs:
             git -C "$STATE_DIR" push origin tsukuyomi-state
           fi
 
-      - name: Publicar relatório individual das 40 perguntas — vermelho/verde
+      - name: Publicar relatório individual das 100 perguntas — vermelho/verde
         if: always()
         working-directory: Morok
         run: |
@@ -183,7 +183,7 @@ jobs:
               echo "## Annotations — Tsukuyomi G2"
               echo
               echo "<details>"
-              echo "<summary>Expandir os 40 resultados individuais: resposta, nível lexical, Loss, BPB e demais métricas</summary>"
+              echo "<summary>Expandir os 100 resultados individuais: resposta, nível lexical, Loss, BPB e demais métricas</summary>"
               echo
               cat build/g2/respostas-tsukuyomi.md
               echo
