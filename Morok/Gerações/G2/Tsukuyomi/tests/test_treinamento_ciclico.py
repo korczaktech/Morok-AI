@@ -183,8 +183,8 @@ class TrainingDataTests(unittest.TestCase):
         self.assertIn('BPB individual: 0.17310000', output)
         self.assertIn('Learning rate individual:', output)
         self.assertIn('Bytes-alvo da resposta: 18', output)
-        self.assertIn('\\033[32mSuccess: Pergunta 01', logs.getvalue())
-        self.assertIn('\\033[31mError: Pergunta 02', logs.getvalue())
+        self.assertIn(chr(27) + '[32mSuccess: Pergunta 01', logs.getvalue())
+        self.assertIn(chr(27) + '[31mError: Pergunta 02', logs.getvalue())
 
     def test_exact_match_normalization_and_diagnostics(self):
         correct, score = training.evaluate("O ceu e azul!", "O céu é azul.")
