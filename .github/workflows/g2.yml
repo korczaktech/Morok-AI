@@ -33,7 +33,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validar corpus e testes das 40 perguntas
+      - name: Validar corpus e testes das 100 perguntas
         working-directory: Morok
         run: python3 -m unittest discover -s "Gerações/G2/Tsukuyomi/tests" -p "test_*.py" -v
 
@@ -91,13 +91,13 @@ jobs:
           grep -F "Objetivo: somente respostas IA:" build/g2/tsukuyomi-dialogue-smoke.log
           grep -E "Bytes-alvo: [1-9][0-9]*" build/g2/tsukuyomi-dialogue-smoke.log
 
-          # Cada uma das 40 perguntas deve ter Loss, BPB e contagem de bytes próprios.
+          # Cada uma das 100 perguntas deve ter Loss, BPB e contagem de bytes próprios.
           build/g2/morok-g2-tsukuyomi-train --evaluate-each \
             "Gerações/G2/Tsukuyomi/data/feedback.txt" \
             build/g2/tsukuyomi-dialogue-smoke.ckpt \
             > build/g2/tsukuyomi-question-metrics.tsv
           test "$(wc -l < build/g2/tsukuyomi-question-metrics.tsv)" -eq 40
-          awk -F '\t' 'NF != 4 { exit 1 } END { if (NR != 40) exit 1 }' \
+          awk -F '\t' 'NF != 4 { exit 1 } END { if (NR != 100) exit 1 }' \
             build/g2/tsukuyomi-question-metrics.tsv
           build/g2/morok-g2-tsukuyomi-generate \
             build/g2/tsukuyomi-dialogue-smoke.ckpt "U: Você tem sentimentos? IA:" 32 \
