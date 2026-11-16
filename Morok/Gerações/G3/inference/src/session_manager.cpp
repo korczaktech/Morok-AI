@@ -17,10 +17,10 @@ common::Error session_error(common::ErrorCode code, const char* stage,
 
 } // namespace
 
-SessionManager::Entry::Entry(const model::ModelDescriptor& descriptor,
+SessionManager::Entry::Entry(const model::ModelDescriptor& descriptor_value,
                              std::uint64_t seed)
-    : descriptor(descriptor),
-      state(descriptor.state_size_bytes),
+    : descriptor(descriptor_value),
+      state(descriptor_value.state_size_bytes),
       random(seed),
       last_access(std::chrono::steady_clock::now()) {}
 
@@ -97,8 +97,8 @@ common::Result<GenerationResult> SessionManager::generate(
     std::lock_guard session_lock(entry->mutex);
     GenerationConfig effective = config;
     effective.reset_session_state = !entry->initialized;
-    auto result = generate(backend, entry->state, input, effective,
-                           entry->random, cancellation_requested);
+    auto result = inference::generate(backend, entry->state, input, effective,
+                                       entry->random, cancellation_requested);
     {
         std::lock_guard lock(mutex_);
         entry->last_access = std::chrono::steady_clock::now();
