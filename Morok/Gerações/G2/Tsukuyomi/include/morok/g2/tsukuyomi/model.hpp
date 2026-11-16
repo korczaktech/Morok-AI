@@ -31,7 +31,7 @@ struct TrainingConfig {
     std::size_t batch_size{16};
     std::size_t bptt_steps{kBpttTruncation};
     double learning_rate{0.001};
-    double weight_decay{0.01};
+    double weight_decay{0.0};
     double gradient_clip{1.0};
     std::uint64_t seed{42};
 };
