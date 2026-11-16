@@ -22,7 +22,7 @@ class TrainingDataTests(unittest.TestCase):
     def test_lexical_learning_rate_is_adaptive_for_each_question(self):
         base = 0.001
         self.assertEqual(training.learning_rate_for_lexical_level(base, 0.0), 1e-2)
-        self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 0.5), 1e-3)
+        self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 0.5), (1e-2 * 1e-5) ** 0.5)
         self.assertEqual(training.learning_rate_for_lexical_level(base, 1.0), 1e-5)
         self.assertLess(training.learning_rate_for_lexical_level(base, 0.9),
                         training.learning_rate_for_lexical_level(base, 0.0))
