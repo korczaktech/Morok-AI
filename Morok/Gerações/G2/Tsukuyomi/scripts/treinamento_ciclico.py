@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import subprocess
 import shutil
+import tempfile
 import sys
 import time
 import unicodedata
@@ -223,7 +224,8 @@ def record_feedback_errors(memory: dict[str, str],
     if len(dialogues) != len(results):
         raise ValueError("Quantidade de diálogos e resultados de feedback não corresponde.")
     added = 0
-    for (question, expected), (_, correct, _) in zip(dialogues, results):
+    for (question, expected), result in zip(dialogues, results):
+        _, correct, _ = result[:3]
         if correct:
             continue
         previous = memory.get(question)
@@ -281,7 +283,8 @@ def update_question_history(history: dict, dialogues, results, cycle: int,
     regressions = 0
     recoveries = 0
     questions = history.setdefault("questions", {})
-    for (question, expected), (answer, correct, lexical_score) in zip(dialogues, results):
+    for (question, expected), result in zip(dialogues, results):
+        answer, correct, lexical_score = result[:3]
         entry = questions.setdefault(question, {
             "expected": expected,
             "dataset": dataset,
@@ -375,8 +378,8 @@ def extract_training_metric(output: str, name: str) -> float:
     return value
 
 
-def evaluate_set(generator: Path, checkpoint: Path,
-                 dialogues: list[tuple[str, str]]) -> list[tuple[str, bool, float]]:
+def evaluate_set(generator: Path, trainer: Path, checkpoint: Path,
+                 dialogues: list[tuple[str, str]]) -> list[tuple[str, bool, float, float, float, int]]:
     prompts = "".join(
         question.replace("\n", " ").replace("\r", " ") + "\n"
         for question, _ in dialogues
@@ -390,10 +393,34 @@ def evaluate_set(generator: Path, checkpoint: Path,
         raise RuntimeError(
             f"Gerador retornou {len(generated)} respostas para {len(dialogues)} perguntas."
         )
+
+    with tempfile.TemporaryDirectory(prefix="tsukuyomi-pergunta-") as directory:
+        corpus = Path(directory) / "perguntas.txt"
+        corpus.write_text(
+            "".join(f"U: {question}\nIA: {expected}\n\n" for question, expected in dialogues),
+            encoding="utf-8",
+        )
+        evaluated = subprocess.run(
+            [str(trainer), "--evaluate-each", str(corpus), str(checkpoint)],
+            check=True, capture_output=True, text=True, encoding="utf-8",
+        )
+    losses = []
+    for line in evaluated.stdout.splitlines():
+        fields = line.split("\t")
+        if len(fields) != 4:
+            raise RuntimeError(f"Saída de Loss individual inválida: {line!r}")
+        index, loss, bpb, targets = int(fields[0]), float(fields[1]), float(fields[2]), int(fields[3])
+        if index != len(losses) + 1 or not all(math.isfinite(value) for value in (loss, bpb)) or targets <= 0:
+            raise RuntimeError("Métricas individuais fora de ordem ou inválidas.")
+        losses.append((loss, bpb, targets))
+    if len(losses) != len(dialogues):
+        raise RuntimeError(f"Loss individual retornou {len(losses)} itens para {len(dialogues)} perguntas.")
     return [
-        (answer.strip(), *evaluate(answer.strip(), expected))
-        for (_, expected), answer in zip(dialogues, generated)
+        (answer.strip(), *evaluate(answer.strip(), expected), *losses[index])
+        for index, ((_, expected), answer) in enumerate(zip(dialogues, generated))
     ]
+
+
 
 
 def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
@@ -403,58 +430,62 @@ def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
     all_metrics = []
     for index, (dialogue, result) in enumerate(zip(dialogues, results), start=1):
         question, expected = dialogue
-        answer, correct, score = result
+        answer, correct, score, loss, bpb, target_bytes = result
         char_score = character_similarity(answer, expected)
         repetition, diversity = generation_diagnostics(answer)
-        metrics = (score, char_score, repetition, diversity)
+        rate = learning_rate_for_lexical_level(INITIAL_LEARNING_RATE, score)
+        metrics = (score, char_score, repetition, diversity, loss, bpb)
         all_metrics.append(metrics)
         category_metrics[benchmark_category(question)].append((correct, *metrics))
-        item = (index, question, expected, answer, score, char_score, repetition, diversity)
+        item = (index, question, expected, answer, score, char_score, repetition, diversity, loss, bpb, target_bytes, rate)
         (correct_items if correct else incorrect_items).append(item)
 
     total = max(1, len(results))
     mean = lambda column: sum(item[column] for item in all_metrics) / total
-    report.write(f"## {title}\n\n")
-    report.write(f"- Respostas corretas: {len(correct_items)}\n")
-    report.write(f"- Respostas incorretas: {len(incorrect_items)}\n")
-    report.write(f"- Total avaliado: {len(results)}\n")
+    report.write(f"## {title} — resultado individual das {len(results)} perguntas\n\n")
+    report.write(f"- Success: {len(correct_items)}\n")
+    report.write(f"- Error: {len(incorrect_items)}\n")
+    report.write(f"- Total individual: {len(results)}\n")
     report.write(f"- F1 lexical médio: {mean(0):.1%}\n")
-    report.write(f"- Similaridade de caracteres média: {mean(1):.1%}\n")
-    report.write(f"- Repetição consecutiva média: {mean(2):.1%}\n")
-    report.write(f"- Diversidade média de caracteres: {mean(3):.1%}\n")
-    report.write("- Aprovação exige igualdade lexical normalizada; as demais métricas são diagnósticas.\n\n")
-    report.write("### Resultado por habilidade\n\n")
-    report.write("| Habilidade | Exatidão | F1 lexical | Similaridade | Repetição | Diversidade |\n")
+    report.write(f"- Loss média por pergunta: {mean(4):.6f}\n")
+    report.write(f"- BPB médio por pergunta: {mean(5):.6f}\n\n")
+
+    for item in sorted(correct_items + incorrect_items, key=lambda row: row[0]):
+        (index, question, expected, answer, score, char_score, repetition,
+         diversity, loss, bpb, target_bytes, rate) = item
+        correct = item in correct_items
+        status = "Success" if correct else "Error"
+        color = "green" if correct else "red"
+        ansi = "\033[32m" if correct else "\033[31m"
+        reset = "\033[0m"
+        print(f"{ansi}{status}: Pergunta {index:02d} — {question}{reset}", flush=True)
+        report.write(f'<span style="color: {color}">**{status}: Pergunta {index:02d} — {question}**</span>\n\n')
+        report.write(f"- Resposta gerada: {answer or '(vazia)'}\n")
+        report.write(f"- Gabarito: {expected}\n")
+        report.write(f"- Nível lexical (F1): {score:.2%}\n")
+        report.write(f"- Learning rate individual: {rate:.8g}\n")
+        report.write(f"- Loss individual: {loss:.8f}\n")
+        report.write(f"- BPB individual: {bpb:.8f}\n")
+        report.write(f"- Bytes-alvo da resposta: {target_bytes}\n")
+        report.write(f"- Similaridade de caracteres: {char_score:.2%}\n")
+        report.write(f"- Repetição consecutiva: {repetition:.2%}\n")
+        report.write(f"- Diversidade de caracteres: {diversity:.2%}\n\n")
+
+    report.write("### Métricas individuais por habilidade\n\n")
+    report.write("| Habilidade | Perguntas | Success | Loss média | BPB médio | Nível lexical médio |\n")
     report.write("|---|---:|---:|---:|---:|---:|\n")
     for category, values in sorted(category_metrics.items()):
         n = len(values)
         report.write(
-            f"| {category} | {sum(v[0] for v in values) / n:.1%} | "
-            f"{sum(v[1] for v in values) / n:.1%} | "
-            f"{sum(v[2] for v in values) / n:.1%} | "
-            f"{sum(v[3] for v in values) / n:.1%} | "
-            f"{sum(v[4] for v in values) / n:.1%} |\n"
+            f"| {category} | {n} | {sum(v[0] for v in values)} | "
+            f"{sum(v[5] for v in values) / n:.6f} | "
+            f"{sum(v[6] for v in values) / n:.6f} | "
+            f"{sum(v[1] for v in values) / n:.2%} |\n"
         )
     report.write("\n")
-
-    for heading, items, verdict in (
-        ("Respostas corretas", correct_items, "CORRETA"),
-        ("Respostas incorretas", incorrect_items, "INCORRETA"),
-    ):
-        report.write(f"### {heading} ({len(items)})\n\n")
-        if not items:
-            report.write("Nenhuma resposta nesta categoria.\n\n")
-            continue
-        for index, question, expected, answer, score, char_score, repetition, diversity in items:
-            report.write(f"#### {index}. {question}\n\n")
-            report.write(f"- Resposta gerada: {answer or '(vazia)'}\n")
-            report.write(f"- Gabarito: {expected}\n")
-            report.write(f"- F1 lexical: {score:.1%}\n")
-            report.write(f"- Similaridade de caracteres: {char_score:.1%}\n")
-            report.write(f"- Maior sequência repetida: {repetition:.1%} da resposta\n")
-            report.write(f"- Diversidade de caracteres: {diversity:.1%}\n")
-            report.write(f"- Resultado: **{verdict}**\n\n")
     return len(correct_items), len(results)
+
+
 
 
 def main() -> int:
@@ -516,7 +547,7 @@ def main() -> int:
         report.write(f"- Épocas por ciclo: {epochs}; máximo de ciclos: {max_cycles}.\n\n")
 
         if resumed:
-            baseline = evaluate_set(generator, checkpoint, training_dialogues)
+            baseline = evaluate_set(generator, trainer, checkpoint, training_dialogues)
             best_correct, _ = write_results(report, "Estado retomado — 40 perguntas", training_dialogues, baseline)
             update_question_history(history, training_dialogues, baseline, 0, execution_id, dataset="training")
             write_question_history(history_path, history)
@@ -534,7 +565,7 @@ def main() -> int:
             current_dialogues = read_dialogues(combined_training)
             if len(current_dialogues) != TRAINING_QUESTIONS:
                 raise RuntimeError("A memória alterou a quantidade de perguntas de treinamento.")
-            probe = evaluate_set(generator, checkpoint, current_dialogues) if checkpoint.is_file() else [("", False, 0.0)] * TRAINING_QUESTIONS
+            probe = evaluate_set(generator, trainer, checkpoint, current_dialogues) if checkpoint.is_file() else [("", False, 0.0, 0.0, 0.0, 0)] * TRAINING_QUESTIONS
             rates = {
                 question: learning_rate_for_lexical_level(MAX_LEARNING_RATE, result[2])
                 for (question, _), result in zip(current_dialogues, probe)
