@@ -6,6 +6,7 @@ on:
     paths:
       - "Morok/Gerações/G3/**"
       - "Morok/include/morok/model/**"
+      - "Morok/tests/unit/model/test_model_session.cpp"
       - "Morok/Gerações/G1/shared/include/morok/model/g1_backend.hpp"
       - "Morok/Gerações/G1/shared/src/model/g1_backend.cpp"
       - "Morok/Gerações/G1/shared/tests/unit/model/test_g1_backend.cpp"
@@ -60,6 +61,7 @@ jobs:
         run: >-
           cmake --build build/g3-contract --parallel 2
           --target morok_test_g1_backend
+          morok_test_model_session
           morok_test_g1_forward
           morok_test_g2_tsukuyomi
 
@@ -67,7 +69,7 @@ jobs:
         working-directory: Morok
         run: >-
           ctest --test-dir build/g3-contract
-          -R "model.g1_backend|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
+          -R "model.g1_backend|model.session|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
           --output-on-failure
 
       - name: Verify public contract and architecture documentation
