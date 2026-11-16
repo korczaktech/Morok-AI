@@ -612,7 +612,7 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
     TrainingReport report;
     if (bytes.size() < 2 || config.epochs == 0 || config.batch_size == 0 || config.bptt_steps == 0 ||
         config.bptt_steps > kBpttTruncation ||
-        !std::isfinite(config.learning_rate) || config.learning_rate <= 0.0 ||
+        !std::isfinite(config.learning_rate) || config.learning_rate < 1.0e-5 || config.learning_rate > 1.0e-2 ||
         !std::isfinite(config.weight_decay) || config.weight_decay < 0.0 ||
         !std::isfinite(config.gradient_clip) || config.gradient_clip <= 0.0 ||
         (!target_mask.empty() && target_mask.size() != bytes.size()) ||
@@ -623,7 +623,7 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
         return report;
     if (!target_learning_rates.empty() &&
         !std::all_of(target_learning_rates.begin(), target_learning_rates.end(),
-            [](double value) { return std::isfinite(value) && value >= 1.0e-7 && value <= 0.1; }))
+            [](double value) { return std::isfinite(value) && value >= 1.0e-5 && value <= 1.0e-2; }))
         return report;
 
     report.initial_loss = evaluate_loss(model, bytes, target_mask);
@@ -644,8 +644,8 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
     const auto apply_batch = [&](double batch_learning_rate) {
         if (accumulated_targets == 0) return true;
         if (state.step == std::numeric_limits<std::uint64_t>::max() ||
-            !std::isfinite(batch_learning_rate) || batch_learning_rate < 1.0e-7 ||
-            batch_learning_rate > 0.1 ||
+            !std::isfinite(batch_learning_rate) || batch_learning_rate < 1.0e-5 ||
+            batch_learning_rate > 1.0e-2 ||
             !std::all_of(gradient.begin(), gradient.end(),
                          [](float value) { return std::isfinite(value); }))
             return false;
