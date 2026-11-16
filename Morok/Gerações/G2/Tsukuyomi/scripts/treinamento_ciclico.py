@@ -632,12 +632,6 @@ def main() -> int:
             report.write(f"- Novas correções armazenadas: {new_errors}.\n")
             report.write(f"- Regressões/recuperações históricas: {regressions}/{recoveries}.\n")
 
-            if os.environ.get("TSUKUYOMI_PERSIST_STATE") == "1":
-                persistence = Path(__file__).with_name("persistir_estado.sh")
-                if not persistence.is_file():
-                    raise RuntimeError(f"Script de persistência não encontrado: {persistence}")
-                subprocess.run(["bash", str(persistence)], check=True)
-
             elapsed = time.perf_counter() - started
             report.write(f"- SHA-256 pesos: {weights_before or 'inexistente'} → {weights_after}.\n")
             report.write(f"- SHA-256 Adam: {adam_before or 'inexistente'} → {adam_after}.\n")
