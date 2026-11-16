@@ -250,6 +250,15 @@ set_tests_properties(g2.tsukuyomi.model PROPERTIES LABELS "g2;model" TIMEOUT 60)
 get_property(_morok_tests DIRECTORY PROPERTY TESTS)
 set_tests_properties(${_morok_tests} PROPERTIES TIMEOUT 120)
 
+# G3 neural architecture, initialization and parameter-count contracts.
+add_executable(morok_test_g3_neural
+    ../Gerações/G3/neural/tests/test_gru_backend.cpp)
+target_link_libraries(morok_test_g3_neural
+    PRIVATE Morok::G3::Neural morok_build_options)
+morok_enable_sanitizers(morok_test_g3_neural)
+add_test(NAME g3.neural COMMAND morok_test_g3_neural)
+set_tests_properties(g3.neural PROPERTIES LABELS "g3;neural;architecture" TIMEOUT 60)
+
 # G3 inference, INT8 export and artifact validation.
 add_executable(morok_test_g3_inference
     ../Gerações/G3/inference/tests/test_inference.cpp)
