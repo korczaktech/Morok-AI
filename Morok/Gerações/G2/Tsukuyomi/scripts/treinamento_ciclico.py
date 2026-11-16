@@ -378,48 +378,51 @@ def extract_training_metric(output: str, name: str) -> float:
     return value
 
 
-def evaluate_set(generator: Path, trainer: Path, checkpoint: Path,
-                 dialogues: list[tuple[str, str]]) -> list[tuple[str, bool, float, float, float, int]]:
-    prompts = "".join(
-        question.replace("\n", " ").replace("\r", " ") + "\n"
-        for question, _ in dialogues
-    )
-    process = subprocess.run(
-        [str(generator), "--batch", str(checkpoint), str(MAX_RESPONSE_BYTES)],
-        input=prompts, check=True, capture_output=True, text=True, encoding="utf-8",
-    )
-    generated = process.stdout.splitlines()
-    if len(generated) != len(dialogues):
-        raise RuntimeError(
-            f"Gerador retornou {len(generated)} respostas para {len(dialogues)} perguntas."
-        )
+def question_checkpoint_paths(directory: Path, question: str) -> tuple[Path, Path]:
+    """Retorna o checkpoint e o Adam exclusivos de uma pergunta."""
+    key = hashlib.sha256(question.encode("utf-8")).hexdigest()
+    checkpoint = directory / f"{key}.ckpt"
+    return checkpoint, Path(str(checkpoint) + ".adam")
 
-    with tempfile.TemporaryDirectory(prefix="tsukuyomi-pergunta-") as directory:
-        corpus = Path(directory) / "perguntas.txt"
-        corpus.write_text(
-            "".join(f"U: {question}\nIA: {expected}\n\n" for question, expected in dialogues),
-            encoding="utf-8",
-        )
+
+def evaluate_one(generator: Path, trainer: Path, checkpoint: Path,
+                 dialogue: tuple[str, str]) -> tuple[str, bool, float, float, float, int]:
+    question, expected = dialogue
+    process = subprocess.run(
+        [str(generator), str(checkpoint), question, str(MAX_RESPONSE_BYTES)],
+        check=True, capture_output=True, text=True, encoding="utf-8",
+    )
+    answer = process.stdout.rstrip("\\r\\n")
+    with tempfile.TemporaryDirectory(prefix="tsukuyomi-loss-") as directory:
+        corpus = Path(directory) / "pergunta.txt"
+        corpus.write_text(f"U: {question}\\nIA: {expected}\\n", encoding="utf-8")
         evaluated = subprocess.run(
             [str(trainer), "--evaluate-each", str(corpus), str(checkpoint)],
             check=True, capture_output=True, text=True, encoding="utf-8",
         )
-    losses = []
-    for line in evaluated.stdout.splitlines():
-        fields = line.split("\t")
-        if len(fields) != 4:
-            raise RuntimeError(f"Saída de Loss individual inválida: {line!r}")
-        index, loss, bpb, targets = int(fields[0]), float(fields[1]), float(fields[2]), int(fields[3])
-        if index != len(losses) + 1 or not all(math.isfinite(value) for value in (loss, bpb)) or targets <= 0:
-            raise RuntimeError("Métricas individuais fora de ordem ou inválidas.")
-        losses.append((loss, bpb, targets))
-    if len(losses) != len(dialogues):
-        raise RuntimeError(f"Loss individual retornou {len(losses)} itens para {len(dialogues)} perguntas.")
-    return [
-        (answer.strip(), *evaluate(answer.strip(), expected), *losses[index])
-        for index, ((_, expected), answer) in enumerate(zip(dialogues, generated))
-    ]
+    lines = evaluated.stdout.splitlines()
+    if len(lines) != 1:
+        raise RuntimeError(f"A pergunta individual retornou {len(lines)} métricas de Loss.")
+    fields = lines[0].split("\\t")
+    if len(fields) != 4 or int(fields[0]) != 1:
+        raise RuntimeError("Formato da Loss individual inválido.")
+    loss, bpb, targets = float(fields[1]), float(fields[2]), int(fields[3])
+    if not all(math.isfinite(value) for value in (loss, bpb)) or targets <= 0:
+        raise RuntimeError("Loss individual não finita ou sem bytes-alvo.")
+    correct, lexical = evaluate(answer, expected)
+    return answer, correct, lexical, loss, bpb, targets
 
+
+def evaluate_set(generator: Path, trainer: Path, checkpoint_directory: Path,
+                 dialogues: list[tuple[str, str]]) -> list[tuple[str, bool, float, float, float, int]]:
+    """Avalia cada pergunta exclusivamente com seu próprio checkpoint."""
+    results = []
+    for question, expected in dialogues:
+        checkpoint, _ = question_checkpoint_paths(checkpoint_directory, question)
+        if not checkpoint.is_file():
+            raise RuntimeError(f"Checkpoint individual ausente para a pergunta: {question}")
+        results.append(evaluate_one(generator, trainer, checkpoint, (question, expected)))
+    return results
 
 
 
@@ -504,51 +507,55 @@ def main() -> int:
     if len(training_dialogues) != TRAINING_QUESTIONS:
         raise RuntimeError(f"O treinamento precisa conter exatamente {TRAINING_QUESTIONS} perguntas; foram encontradas {len(training_dialogues)}.")
 
-    checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
-    optimizer_state = Path(str(checkpoint) + ".adam")
-    best_checkpoint = Path(str(checkpoint) + ".best")
-    best_optimizer_state = Path(str(optimizer_state) + ".best")
+    checkpoint_directory = Path("build/g2/tsukuyomi-questoes")
+    checkpoint_directory.mkdir(parents=True, exist_ok=True)
     output = Path("build/g2/respostas-tsukuyomi.md")
     output.parent.mkdir(parents=True, exist_ok=True)
     feedback_path = Path("build/g2/tsukuyomi-memoria-erros.txt")
-    combined_training = Path("build/g2/treinamento-com-memoria.txt")
-    rate_path = Path("build/g2/tsukuyomi-learning-rates-by-question.txt")
     history_path = Path("build/g2/tsukuyomi-historico-perguntas.json")
     memory = load_feedback_memory(feedback_path)
     history = load_question_history(history_path)
-    # Migra o histórico antigo: preserva apenas as 40 perguntas que agora são treinadas.
     active_questions = {question for question, _ in training_dialogues}
-    history_questions = history.setdefault("questions", {})
     history["questions"] = {
-        question: entry for question, entry in history_questions.items()
+        question: entry for question, entry in history.setdefault("questions", {}).items()
         if question in active_questions
     }
     for entry in history["questions"].values():
         entry["dataset"] = "training"
-    resumed = resumable_state_exists(checkpoint, optimizer_state)
-    if not resumed:
-        for stale in (best_checkpoint, best_optimizer_state):
-            if stale.exists():
-                stale.unlink()
-        history = {"version": 1, "global_cycles": 0, "questions": {}}
-    else:
-        save_best_state(checkpoint, optimizer_state, best_checkpoint, best_optimizer_state)
+
+    # Migração segura: o checkpoint compartilhado anterior vira a origem dos 40
+    # estados independentes, preservando também os momentos Adam existentes.
+    legacy_checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
+    legacy_adam = Path(str(legacy_checkpoint) + ".adam")
+    existing_individual = any(checkpoint_directory.glob("*.ckpt"))
+    if not existing_individual and legacy_checkpoint.is_file() and legacy_adam.is_file():
+        for question, _ in training_dialogues:
+            target, target_adam = question_checkpoint_paths(checkpoint_directory, question)
+            shutil.copy2(legacy_checkpoint, target)
+            shutil.copy2(legacy_adam, target_adam)
+
+    for question, _ in training_dialogues:
+        checkpoint, adam = question_checkpoint_paths(checkpoint_directory, question)
+        if checkpoint.exists() != adam.exists():
+            raise RuntimeError(f"Estado incompleto para a pergunta: {question}")
+        if checkpoint.exists() and (checkpoint.stat().st_size == 0 or adam.stat().st_size == 0):
+            raise RuntimeError(f"Estado vazio para a pergunta: {question}")
 
     execution_id = os.environ.get("GITHUB_RUN_ID", "local")
     max_cycles = min(attempts, MAX_CYCLES)
     best_correct = 0
     with output.open("w", encoding="utf-8") as report:
         report.write("# Treinamento — Tsukuyomi G2 0.1\n\n")
-        report.write("- Somente as 40 perguntas deste corpus são usadas.\n")
-        report.write("- Não existe validação independente nem conjunto de perguntas reservadas.\n")
-        report.write("- A seleção de checkpoint usa a Loss de treino: menor é melhor.\n")
-        report.write("- Pesos e estado Adam são aceitos/restaurados juntos.\n")
+        report.write("- Existem 40 checkpoints independentes, um por pergunta.\n")
+        report.write("- Cada pergunta mantém sua própria Loss mínima e seu próprio estado Adam.\n")
+        report.write("- Uma regressão rejeita somente o checkpoint da pergunta afetada.\n")
+        report.write("- Não existe validação independente nem conjunto reservado.\n")
         report.write(f"- Ciclos globais anteriores: {history['global_cycles']}\n")
-        report.write(f"- Épocas por ciclo: {epochs}; máximo de ciclos: {max_cycles}.\n\n")
+        report.write(f"- Épocas por pergunta/ciclo: {epochs}; máximo de ciclos: {max_cycles}.\n\n")
 
-        if resumed:
-            baseline = evaluate_set(generator, trainer, checkpoint, training_dialogues)
-            best_correct, _ = write_results(report, "Estado retomado — 40 perguntas", training_dialogues, baseline)
+        if existing_individual or legacy_checkpoint.is_file():
+            baseline = evaluate_set(generator, trainer, checkpoint_directory, training_dialogues)
+            best_correct, _ = write_results(report, "Estado retomado — 40 checkpoints individuais", training_dialogues, baseline)
             update_question_history(history, training_dialogues, baseline, 0, execution_id, dataset="training")
             write_question_history(history_path, history)
 
@@ -557,109 +564,105 @@ def main() -> int:
             cycle += 1
             global_cycle = next_global_cycle(history)
             write_question_history(history_path, history)
-            seed = 42 + global_cycle
-            if best_checkpoint.is_file() and best_optimizer_state.is_file():
-                restore_best_state(best_checkpoint, best_optimizer_state, checkpoint, optimizer_state)
+            cycle_results = []
+            accepted_count = 0
+            rejected_count = 0
+            report.write(f"## Ciclo {cycle}: avaliação e atualização independente\n\n")
 
-            build_training_corpus(training_corpus, memory, combined_training)
-            current_dialogues = read_dialogues(combined_training)
-            if len(current_dialogues) != TRAINING_QUESTIONS:
-                raise RuntimeError("A memória alterou a quantidade de perguntas de treinamento.")
-            probe = evaluate_set(generator, trainer, checkpoint, current_dialogues) if checkpoint.is_file() else [("", False, 0.0, 0.0, 0.0, 0)] * TRAINING_QUESTIONS
-            rates = {
-                question: learning_rate_for_lexical_level(MAX_LEARNING_RATE, result[2])
-                for (question, _), result in zip(current_dialogues, probe)
-            }
-            write_question_learning_rates(combined_training, rates, rate_path)
-            individual_rates = list(rates.values())
-            report.write(f"### LR individual — ciclo {cycle}\n\n")
-            report.write("| Pergunta | Resposta atual | Nível lexical | Loss individual | BPB individual | LR individual |\n|---|---|---:|---:|---:|---:|\n")
-            for (question, _), result in zip(current_dialogues, probe):
-                current_answer = result[0] or "sem checkpoint"
-                current_loss = f"{result[3]:.8f}" if checkpoint.is_file() else "—"
-                current_bpb = f"{result[4]:.8f}" if checkpoint.is_file() else "—"
+            for index, dialogue in enumerate(training_dialogues, start=1):
+                question, expected = dialogue
+                checkpoint, adam = question_checkpoint_paths(checkpoint_directory, question)
+                had_checkpoint = checkpoint.is_file()
+                if had_checkpoint:
+                    before = evaluate_one(generator, trainer, checkpoint, dialogue)
+                    old_loss = before[3]
+                    lexical_level = before[2]
+                else:
+                    old_loss = None
+                    lexical_level = 0.0
+                    before = ("", False, 0.0, float("inf"), float("inf"), 0)
+
+                rate = learning_rate_for_lexical_level(MAX_LEARNING_RATE, lexical_level)
+                with tempfile.TemporaryDirectory(prefix=f"tsukuyomi-q{index:02d}-") as directory:
+                    root = Path(directory)
+                    corpus = root / "pergunta.txt"
+                    rate_map = root / "lr.txt"
+                    corpus.write_text(f"U: {question}\nIA: {memory.get(question, expected)}\n", encoding="utf-8")
+                    write_question_learning_rates(corpus, {question: rate}, rate_map)
+                    backup_checkpoint = root / "best.ckpt"
+                    backup_adam = root / "best.adam"
+                    if had_checkpoint:
+                        shutil.copy2(checkpoint, backup_checkpoint)
+                        shutil.copy2(adam, backup_adam)
+
+                    seed = 42 + global_cycle * TRAINING_QUESTIONS + index
+                    command = [str(trainer), str(corpus), str(checkpoint), str(epochs),
+                               str(seed), f"{INITIAL_LEARNING_RATE:.12g}",
+                               "--lr-map", str(rate_map)]
+                    if had_checkpoint:
+                        command.append("--resume")
+                    proc = subprocess.run(command, check=True, capture_output=True,
+                                          text=True, encoding="utf-8")
+                    completed_epochs = extract_training_metric(proc.stdout, "Épocas")
+                    if completed_epochs != epochs or not checkpoint.is_file() or not adam.is_file():
+                        raise RuntimeError(f"Treinamento ou persistência inválida na pergunta {index:02d}.")
+
+                    candidate = evaluate_one(generator, trainer, checkpoint, dialogue)
+                    accepted = old_loss is None or candidate[3] < old_loss - 1e-12
+                    if accepted:
+                        accepted_count += 1
+                    else:
+                        rejected_count += 1
+                        shutil.copy2(backup_checkpoint, checkpoint)
+                        shutil.copy2(backup_adam, adam)
+                        candidate = evaluate_one(generator, trainer, checkpoint, dialogue)
+
+                cycle_results.append(candidate)
+                state = "ACEITO" if accepted else "REJEITADO — somente esta pergunta foi restaurada"
                 report.write(
-                    f"| {question.replace('|', '&#124;')} | {current_answer.replace('|', '&#124;')} | "
-                    f"{result[2]:.1%} | {current_loss} | {current_bpb} | {rates[question]:.8g} |\n"
+                    f"### Pergunta {index:02d}: {state}\n"
+                    f"- Loss anterior: {'—' if old_loss is None else f'{old_loss:.8f}'}\n"
+                    f"- Loss candidata: {candidate[3]:.8f}\n"
+                    f"- Loss individual mínima mantida: {candidate[3]:.8f}\n"
+                    f"- Learning rate: {rate:.8g}; épocas: {epochs}\n"
+                    f"- Checkpoint: {checkpoint.name}\n\n"
                 )
-            report.write("\n")
+                print(f"Pergunta {index:02d}/40: Loss "
+                      f"{'—' if old_loss is None else f'{old_loss:.6f}'} → "
+                      f"{candidate[3]:.6f}; {state}.", flush=True)
 
-            weights_before = checkpoint_sha256(checkpoint)
-            adam_before = checkpoint_sha256(optimizer_state)
-            command = [str(trainer), str(combined_training), str(checkpoint), str(epochs), str(seed), f"{INITIAL_LEARNING_RATE:.12g}", "--lr-map", str(rate_path)]
-            if checkpoint.is_file():
-                command.append("--resume")
-            print(f"=== Ciclo {cycle}/{max_cycles}: treinando as 40 perguntas ===", flush=True)
-            started = time.perf_counter()
-            proc = subprocess.run(command, check=True, capture_output=True, text=True, encoding="utf-8")
-            print(proc.stdout, end="", flush=True)
-
-            initial_bpb = extract_training_metric(proc.stdout, "train_bpb inicial")
-            final_bpb = extract_training_metric(proc.stdout, "train_bpb final")
-            initial_loss = extract_training_metric(proc.stdout, "Loss inicial")
-            final_loss = extract_training_metric(proc.stdout, "Loss final")
-            target_bytes = extract_training_metric(proc.stdout, "Bytes-alvo")
-            completed_epochs = extract_training_metric(proc.stdout, "Épocas")
-            if target_bytes <= 0 or completed_epochs != epochs:
-                raise RuntimeError("O treinador não concluiu todas as épocas ou não processou alvos.")
-            if not checkpoint.is_file() or checkpoint.stat().st_size == 0 or not optimizer_state.is_file() or optimizer_state.stat().st_size == 0:
-                raise RuntimeError("Checkpoint ou estado Adam inválido.")
-
-            weights_after = checkpoint_sha256(checkpoint)
-            adam_after = checkpoint_sha256(optimizer_state)
-            candidate_results = evaluate_set(generator, trainer, checkpoint, training_dialogues)
-            new_errors = record_feedback_errors(memory, training_dialogues, candidate_results)
+            new_errors = record_feedback_errors(memory, training_dialogues, cycle_results)
             write_feedback_memory(feedback_path, memory)
-            regressions, recoveries = update_question_history(history, training_dialogues, candidate_results, global_cycle, execution_id, dataset="training")
+            regressions, recoveries = update_question_history(
+                history, training_dialogues, cycle_results, global_cycle,
+                execution_id, dataset="training")
             write_question_history(history_path, history)
-            correct, total = write_results(report, f"Treinamento — ciclo {cycle}", training_dialogues, candidate_results)
+            correct, total = write_results(
+                report, f"Resultado do ciclo {cycle} — 40 perguntas", training_dialogues, cycle_results)
             best_correct = correct
-
-            has_best = best_checkpoint.is_file() and best_optimizer_state.is_file()
-            accepted = not has_best or final_loss < initial_loss - 1e-12
-            if accepted:
-                save_best_state(checkpoint, optimizer_state, best_checkpoint, best_optimizer_state)
-                best_correct = correct
-            else:
-                restore_best_state(best_checkpoint, best_optimizer_state, checkpoint, optimizer_state)
-                restored_results = evaluate_set(generator, trainer, checkpoint, training_dialogues)
-                best_correct = sum(1 for result in restored_results if result[1])
-
-            print(f"Loss de treino: {initial_loss:.6f} → {final_loss:.6f}; checkpoint {'ACEITO' if accepted else 'REJEITADO'}.", flush=True)
-            report.write(f"- Loss de treino: {initial_loss:.6f} → {final_loss:.6f}.\n")
-            report.write(f"- Checkpoint {'ACEITO' if accepted else 'REJEITADO'} pela redução da Loss de treino.\n")
-            report.write(f"- Respostas exatas nas 40 perguntas: {correct}/{total}.\n")
+            report.write(f"- Checkpoints individuais aceitos: {accepted_count}/40.\n")
+            report.write(f"- Checkpoints individuais rejeitados: {rejected_count}/40.\n")
             report.write(f"- Novas correções armazenadas: {new_errors}.\n")
-            report.write(f"- Regressões/recuperações históricas: {regressions}/{recoveries}.\n")
-
-            elapsed = time.perf_counter() - started
-            report.write(f"- SHA-256 pesos: {weights_before or 'inexistente'} → {weights_after}.\n")
-            report.write(f"- SHA-256 Adam: {adam_before or 'inexistente'} → {adam_after}.\n")
-            report.write(f"- Épocas: {completed_epochs:.0f}; bytes-alvo: {target_bytes:.0f}.\n")
-            report.write(f"- train_bpb: {initial_bpb:.4f} → {final_bpb:.4f}.\n")
-            report.write(f"- LR individual observado: {min(individual_rates):.8g}–{max(individual_rates):.8g}.\n")
-            report.write(f"- Duração: {elapsed:.2f}s.\n\n")
+            report.write(f"- Regressões/recuperações de respostas: {regressions}/{recoveries}.\n\n")
             report.flush()
 
             if should_stop(continuous, best_correct, TRAINING_QUESTIONS):
                 report.write("Todas as 40 perguntas estão corretas; treinamento contínuo encerrado.\n")
                 break
 
-        if best_checkpoint.is_file() and best_optimizer_state.is_file():
-            restore_best_state(best_checkpoint, best_optimizer_state, checkpoint, optimizer_state)
         if continuous and best_correct < TRAINING_QUESTIONS:
             raise RuntimeError(
                 f"Objetivo contínuo não atingido: {best_correct}/{TRAINING_QUESTIONS} "
                 f"após {cycle} ciclos."
             )
-        final_results = evaluate_set(generator, trainer, checkpoint, training_dialogues)
-        final_correct, final_total = write_results(report, "Resultado final — 40 perguntas treinadas", training_dialogues, final_results)
+        final_results = evaluate_set(generator, trainer, checkpoint_directory, training_dialogues)
+        final_correct, final_total = write_results(
+            report, "Resultado final — 40 checkpoints individuais", training_dialogues, final_results)
         report.write(f"**Resultado final: {final_correct}/{final_total} respostas exatas nas 40 perguntas treinadas.**\n")
         print(f"Resultado final nas 40 perguntas: {final_correct}/{final_total}.", flush=True)
 
-    print(f"Relatório salvo em: {output}")
-    print(f"Checkpoint final: {checkpoint}")
-    print("LR individual por nível lexical; sem scheduler global.")
+    print(f"Checkpoints individuais: {checkpoint_directory}")
+    print("Cada pergunta atualiza e restaura exclusivamente seus próprios pesos e momentos Adam.")
     print(f"Histórico de perguntas: {history_path}")
     return 0
 
