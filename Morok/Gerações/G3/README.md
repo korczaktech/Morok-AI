@@ -41,3 +41,21 @@ Os perfis compartilham o Core, o contrato de execução e a implementação-base
 O backend implementa o forward incremental e a interface `ModelBackend`. A arquitetura, a inicialização e o orçamento de parâmetros são testados em `neural/tests/test_gru_backend.cpp`.
 
 BPTT, gradientes dos pesos, otimizador e treinamento SFT ainda são entregas separadas. O módulo RL continua dependendo da integração com o backend treinável real. A arquitetura de 100.000 parâmetros não significa que o modelo já esteja treinado.
+
+
+## Dataset e treinamento supervisionado
+
+O pipeline SFT está em `training/` e reutiliza diretamente o backend neural G3:
+
+- loader JSONL com proveniência, idioma, versão, categoria, pergunta/resposta, `example_id` e `group_id`;
+- validação UTF-8 e normalização NFC via ICU;
+- split 85/10/5 por `group_id`, impedindo que paráfrases da mesma família atravessem splits;
+- expansão combinatória limitada por eixos `expansion_axes` e variantes curadas;
+- perturbação ortográfica em 45% dos exemplos de treino;
+- Cross-Entropy causal com máscara de resposta, PAD ignorado e smoothing apenas em bytes comuns;
+- BPTT truncado (128 passos por padrão), dropout variacional e AdamW com clipping/weight decay seletivo;
+- telemetria JSONL por pergunta, exemplo e época.
+
+Biblioteca: `Morok::G3::Training`. Executável: `morok-g3-train`. Detalhes do schema e dos hiperparâmetros em [training/README.md](training/README.md).
+
+A CI valida o pipeline com fixtures sintéticas. Nenhum corpus de produção foi adicionado nem treinado. O CLI ainda não implementa retomada de checkpoint com estado completo do AdamW e RNG; esse requisito geral de recuperabilidade permanece separado da lista funcional desta etapa.
