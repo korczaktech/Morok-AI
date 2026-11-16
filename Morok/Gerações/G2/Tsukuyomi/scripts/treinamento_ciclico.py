@@ -658,7 +658,7 @@ def main() -> int:
                 f"Objetivo contínuo não atingido: {best_correct}/{TRAINING_QUESTIONS} "
                 f"após {cycle} ciclos."
             )
-        final_results = evaluate_set(generator, checkpoint, training_dialogues)
+        final_results = evaluate_set(generator, trainer, checkpoint, training_dialogues)
         final_correct, final_total = write_results(report, "Resultado final — 40 perguntas treinadas", training_dialogues, final_results)
         report.write(f"**Resultado final: {final_correct}/{final_total} respostas exatas nas 40 perguntas treinadas.**\n")
         print(f"Resultado final nas 40 perguntas: {final_correct}/{final_total}.", flush=True)
