@@ -20,11 +20,6 @@ on:
         type: number
         required: true
         default: 100
-      questoes:
-        description: "Quantidade de perguntas da validação independente (1 a 20)"
-        type: number
-        required: true
-        default: 20
       treinamento_continuo:
         description: "Parar antecipadamente se todas as perguntas estiverem corretas (limite de tentativas permanece ativo)"
         type: boolean
@@ -51,7 +46,6 @@ jobs:
         env:
           EPOCAS: ${{ github.event_name == 'push' && 1000 || inputs.epocas || 1000 }}
           TENTATIVAS: ${{ github.event_name == 'push' && 100 || inputs.tentativas || 100 }}
-          QUESTOES: ${{ github.event_name == 'push' && 20 || inputs.questoes || 20 }}
         run: |
           python3 - <<'PY'
           import os
@@ -61,9 +55,6 @@ jobs:
               raise SystemExit("EPOCAS precisa estar entre 1 e 1000.")
           if not 1 <= tentativas <= 100:
               raise SystemExit("TENTATIVAS precisa estar entre 1 e 100.")
-          questoes = int(os.environ["QUESTOES"])
-          if not 1 <= questoes <= 20:
-              raise SystemExit("QUESTOES precisa estar entre 1 e 20.")
           PY
 
       - name: Validar conjuntos e avaliador
@@ -118,38 +109,23 @@ jobs:
             echo "Primeira execução: ainda não existe memória persistente."
           fi
 
-      - name: Treinar e avaliar somente as questões selecionadas
+      - name: Treinar as 40 perguntas
         if: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi) }}
         working-directory: Morok
         env:
           EPOCAS: ${{ github.event_name == 'push' && 1000 || inputs.epocas || 1000 }}
           TENTATIVAS: ${{ github.event_name == 'push' && 100 || inputs.tentativas || 100 }}
-          QUESTOES: ${{ inputs.questoes || 20 }}
           TREINAMENTO_CONTINUO: ${{ github.event_name == 'workflow_dispatch' && inputs.treinamento_continuo || false }}
           TSUKUYOMI_PERSIST_STATE: "1"
           GH_TOKEN: ${{ github.token }}
         run: |
           CONTINUO=0
           if [ "$TREINAMENTO_CONTINUO" = "true" ]; then CONTINUO=1; fi
-          python3 "Gerações/G2/Tsukuyomi/scripts/treinamento_ciclico.py" \
-            build/g2/morok-g2-tsukuyomi-train \
-            build/g2/morok-g2-tsukuyomi-generate \
-            "Gerações/G2/Tsukuyomi/data/treinamento.txt" \
-            "Gerações/G2/Tsukuyomi/data/feedback.txt" \
-            "Gerações/G2/Tsukuyomi/data/validacao.txt" \
-            "Gerações/G2/Tsukuyomi/data/teste.txt" \
-            "$EPOCAS" "$TENTATIVAS" "$CONTINUO" "$QUESTOES"
-
-      - name: Avaliação final do melhor checkpoint e do teste reservado
-        if: ${{ ((github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi)) && (github.event_name == 'push' || inputs.questoes != 1) }}
-        working-directory: Morok
-        run: |
-          python3 "Gerações/G2/Tsukuyomi/scripts/avaliacao_final.py" \
-            build/g2/morok-g2-tsukuyomi-generate \
-            build/g2/tsukuyomi-treinamento-ciclico.ckpt \
-            "Gerações/G2/Tsukuyomi/data/validacao.txt" \
-            "Gerações/G2/Tsukuyomi/data/teste.txt" \
-            build/g2/avaliacao-final-tsukuyomi.json
+          python3 "Gerações/G2/Tsukuyomi/scripts/treinamento_ciclico.py" \\
+            build/g2/morok-g2-tsukuyomi-train \\
+            build/g2/morok-g2-tsukuyomi-generate \\
+            "Gerações/G2/Tsukuyomi/data/feedback.txt" \\
+            "$EPOCAS" "$TENTATIVAS" "$CONTINUO"
 
       - name: Persistir pesos e memória de treinamento
         if: ${{ success() && ((github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi)) }}
@@ -220,8 +196,6 @@ jobs:
             Morok/build/g2/tsukuyomi-historico-perguntas.json
             Morok/build/g2/tsukuyomi-learning-rates-by-question.txt
             Morok/build/g2/respostas-tsukuyomi.md
-            Morok/build/g2/avaliacao-final-tsukuyomi.json
-            Morok/build/g2/avaliacao-final-tsukuyomi.md
           if-no-files-found: warn
           retention-days: 30
 
