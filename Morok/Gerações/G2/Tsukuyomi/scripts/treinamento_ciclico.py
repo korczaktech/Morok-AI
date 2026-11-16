@@ -16,7 +16,7 @@ import unicodedata
 
 MAX_RESPONSE_BYTES = 160
 MAX_VALIDATION_QUESTIONS = 20
-MAX_FEEDBACK_QUESTIONS = 20
+MAX_FEEDBACK_QUESTIONS = 40
 MAX_CYCLES = 100
 MAX_EPOCHS_PER_CYCLE = 1000
 try:
@@ -133,15 +133,6 @@ def resumable_state_exists(checkpoint: Path, optimizer_state: Path) -> bool:
     return checkpoint_exists
 
 
-def split_feedback_and_validation(validation_pool):
-    """Separa feedback supervisionado da validação que seleciona checkpoints."""
-    if len(validation_pool) != MAX_FEEDBACK_QUESTIONS + MAX_VALIDATION_QUESTIONS:
-        raise RuntimeError(
-            "O banco combinado precisa conter 20 perguntas de feedback e 20 de validação."
-        )
-    return validation_pool[:MAX_FEEDBACK_QUESTIONS], validation_pool[MAX_FEEDBACK_QUESTIONS:]
-
-
 def select_validation_questions(train_dialogues, validation_pool, count):
     """Seleciona apenas perguntas do conjunto independente de validação."""
     del train_dialogues
@@ -234,16 +225,6 @@ def load_feedback_memory(path: Path) -> dict[str, str]:
             raise RuntimeError(f"Memória corretiva contém gabaritos conflitantes: {question}")
         memory[question] = expected
     return memory
-
-
-def exclude_validation_from_feedback(memory: dict[str, str],
-                                     validation_dialogues: list[tuple[str, str]]) -> int:
-    """Remove feedback legado que contaminaria o novo holdout independente."""
-    held_out_questions = {question for question, _ in validation_dialogues}
-    contaminated = held_out_questions.intersection(memory)
-    for question in contaminated:
-        del memory[question]
-    return len(contaminated)
 
 
 def record_validation_errors(memory: dict[str, str],
@@ -448,20 +429,20 @@ def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
 
 
 def main() -> int:
-    if len(sys.argv) != 10:
+    if len(sys.argv) != 11:
         print(
-            "Uso: treinamento_ciclico.py <treinador> <gerador> <treino> "
+            "Uso: treinamento_ciclico.py <treinador> <gerador> <treino> <feedback> "
             "<validacao> <teste> <epocas> <tentativas> <continuo:0|1> <questoes:1..20>",
             file=sys.stderr,
         )
         return 2
 
-    trainer, generator, train_corpus, validation_corpus, test_corpus = map(
-        Path, sys.argv[1:6]
+    trainer, generator, train_corpus, feedback_corpus, validation_corpus, test_corpus = map(
+        Path, sys.argv[1:7]
     )
-    epochs, attempts = int(sys.argv[6]), int(sys.argv[7])
-    continuous = sys.argv[8] == "1"
-    question_count = int(sys.argv[9])
+    epochs, attempts = int(sys.argv[7]), int(sys.argv[8])
+    continuous = sys.argv[9] == "1"
+    question_count = int(sys.argv[10])
     if not 1 <= epochs <= MAX_EPOCHS_PER_CYCLE or not 1 <= attempts <= MAX_CYCLES:
         raise ValueError(f"Épocas precisam estar entre 1 e {MAX_EPOCHS_PER_CYCLE}; tentativas entre 1 e {MAX_CYCLES}.")
     if sys.argv[8] not in ("0", "1"):
@@ -470,16 +451,13 @@ def main() -> int:
         raise ValueError("A quantidade de questões de validação precisa estar entre 1 e 20.")
 
     train_dialogues = read_dialogues(train_corpus)
+    feedback_questions = read_dialogues(feedback_corpus)
+    if len(feedback_questions) != MAX_FEEDBACK_QUESTIONS:
+        raise RuntimeError(f"O conjunto de feedback precisa conter exatamente 40 questões; foram encontradas {len(feedback_questions)}.")
     validation_pool = read_dialogues(validation_corpus)
-    if len(validation_pool) != MAX_FEEDBACK_QUESTIONS + MAX_VALIDATION_QUESTIONS:
-        raise RuntimeError(
-            f"O banco combinado precisa conter exatamente 40 questões; "
-            f"foram encontradas {len(validation_pool)}."
-        )
-    feedback_questions, independent_validation_pool = split_feedback_and_validation(validation_pool)
-    validation = select_validation_questions(
-        train_dialogues, independent_validation_pool, question_count
-    )
+    if len(validation_pool) != MAX_VALIDATION_QUESTIONS:
+        raise RuntimeError(f"O holdout independente precisa conter exatamente 20 questões; foram encontradas {len(validation_pool)}.")
+    validation = select_validation_questions(train_dialogues, validation_pool, question_count)
     test = read_dialogues(test_corpus)
     checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
     optimizer_state = Path(str(checkpoint) + ".adam")
@@ -492,16 +470,6 @@ def main() -> int:
     learning_rate_path = Path("build/g2/tsukuyomi-learning-rate.txt")
     question_history_path = Path("build/g2/tsukuyomi-historico-perguntas.json")
     feedback_memory = load_feedback_memory(feedback_path)
-    removed_legacy_feedback = exclude_validation_from_feedback(
-        feedback_memory, independent_validation_pool
-    )
-    if removed_legacy_feedback:
-        write_feedback_memory(feedback_path, feedback_memory)
-        print(
-            f"Memória migrada: {removed_legacy_feedback} correção(ões) removida(s) "
-            "do holdout independente.",
-            flush=True,
-        )
     question_history = load_question_history(question_history_path)
     resume_previous_run = resumable_state_exists(checkpoint, optimizer_state)
     learning_rate = load_learning_rate(learning_rate_path, INITIAL_LEARNING_RATE)
@@ -524,9 +492,9 @@ def main() -> int:
         report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
         report.write(f"- Diálogos de treinamento originais: {len(train_dialogues)}\n")
         report.write(f"- Correções persistidas antes desta execução: {len(feedback_memory)}\n")
-        report.write("- O banco original de 40 perguntas é dividido em 20 perguntas de feedback e 20 perguntas independentes de validação; somente feedback entra no treinamento.\n")
+        report.write("- Os conjuntos são arquivos separados: 40 perguntas de feedback supervisionado, 20 perguntas novas de validação independente e 12 perguntas de teste reservado.\n")
         report.write(f"- Perguntas de feedback: {len(feedback_questions)}\n")
-        report.write(f"- Banco independente de validação: {len(independent_validation_pool)}\n")
+        report.write(f"- Holdout independente de validação: {len(validation_pool)}\n")
         report.write(f"- Questões selecionadas para validação: {question_count}\n")
         report.write(f"- Épocas por tentativa: {epochs}\n")
         report.write(f"- Limite de épocas por ciclo: {MAX_EPOCHS_PER_CYCLE}\n")
