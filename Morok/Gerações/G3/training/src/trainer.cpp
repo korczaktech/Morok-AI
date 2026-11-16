@@ -657,6 +657,11 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
         config.warmup_fraction < 0.0 || config.warmup_fraction >= 1.0)
         throw std::invalid_argument("invalid G3 training configuration");
     if (dataset.examples.empty()) throw std::invalid_argument("G3 dataset is empty");
+    if (!config.allow_sensitive_examples &&
+        std::any_of(dataset.examples.begin(), dataset.examples.end(),
+                    [](const DatasetExample& item) { return item.sensitive; }))
+        throw std::invalid_argument(
+            "dataset contains sensitive examples; explicit training opt-in is required");
 
     TrainingReport report;
     report.run_id = "g3-sft-" + std::to_string(config.seed) + "-" +
