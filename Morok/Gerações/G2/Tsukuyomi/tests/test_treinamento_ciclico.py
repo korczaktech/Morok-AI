@@ -340,8 +340,19 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(item["recoveries"], 1)
         self.assertTrue(item["ever_correct"])
         self.assertEqual(item["last_execution"], "run-b")
+        self.assertEqual(item["dataset"], "validation")
         self.assertEqual(len(item["history"]), 3)
         self.assertEqual([entry["correct"] for entry in item["history"]], [True, False, True])
+
+    def test_question_history_tracks_feedback_separately(self):
+        history = {"version": 1, "questions": {}}
+        training.update_question_history(
+            history, [("pergunta de feedback", "gabarito")],
+            [("resposta errada", False, 0.0)], 1, "run-1", dataset="feedback"
+        )
+        entry = history["questions"]["pergunta de feedback"]
+        self.assertEqual(entry["dataset"], "feedback")
+        self.assertEqual(entry["history"][0]["dataset"], "feedback")
 
     def test_question_history_round_trip_and_rejects_changed_answer_key(self):
         with tempfile.TemporaryDirectory() as directory:
