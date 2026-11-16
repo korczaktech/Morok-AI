@@ -326,7 +326,8 @@ void test_session_manager_preserves_context_and_isolates_ids() {
 }
 
 void test_native_int8_backend_export_and_inference() {
-    neural::G3Backend fp32(neural::G3Config{321U, 1.0e-5F});
+    morok::g3::neural::G3Backend fp32(
+        morok::g3::neural::G3Config{321U, 1.0e-5F});
     const auto artifact = export_g3_int8_artifact(fp32);
     assert(artifact);
     assert(artifact.value_if()->metadata.precision ==
