@@ -236,7 +236,7 @@ Status ByteTokenizer::append_message(
     return Status::success();
 }
 
-Result<std::string> ByteTokenizer::decode_text(
+Result<DecodedText> ByteTokenizer::decode_text(
     std::span<const TokenId> tokens, const TextCodecConfig& config) {
     std::string bytes;
     bytes.reserve(tokens.size());
@@ -245,7 +245,7 @@ Result<std::string> ByteTokenizer::decode_text(
             break;
         }
         if (!is_byte_token(token)) {
-            return fail_result<std::string>(
+            return fail_result<DecodedText>(
                 ErrorCode::invalid_argument, "byte_tokenizer.decode",
                 "Text decoding accepts byte IDs and an optional EOS only");
         }
@@ -254,9 +254,11 @@ Result<std::string> ByteTokenizer::decode_text(
 
     const auto normalized = normalize_utf8(bytes, config);
     if (!normalized) {
-        return Result<std::string>::failure(*normalized.error_if());
+        return Result<DecodedText>::failure(*normalized.error_if());
     }
-    return Result<std::string>::success(normalized.value_if()->text);
+    return Result<DecodedText>::success(DecodedText{
+        normalized.value_if()->text,
+        normalized.value_if()->replaced_invalid_utf8});
 }
 
 } // namespace morok::lang
