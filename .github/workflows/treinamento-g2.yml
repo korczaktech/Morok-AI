@@ -117,7 +117,6 @@ jobs:
           EPOCAS: ${{ github.event_name == 'push' && 50 || inputs.epocas || 50 }}
           TENTATIVAS: ${{ github.event_name == 'push' && 100 || inputs.tentativas || 100 }}
           TREINAMENTO_CONTINUO: ${{ github.event_name == 'workflow_dispatch' && inputs.treinamento_continuo || false }}
-          TSUKUYOMI_PERSIST_STATE: "1"
           GH_TOKEN: ${{ github.token }}
         run: |
           CONTINUO=0
