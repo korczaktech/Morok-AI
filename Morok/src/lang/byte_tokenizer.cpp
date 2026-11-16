@@ -77,8 +77,7 @@ template <typename T>
     status = U_ZERO_ERROR;
     std::vector<UChar> utf16(static_cast<std::size_t>(utf16_length) + 1U);
     substitutions = 0;
-    u_strFromUTF8WithSub(utf16.data(),
-                         static_cast<int32_t>(utf16.size()), &utf16_length,
+    u_strFromUTF8WithSub(utf16.data(), utf16_length, &utf16_length,
                          input_data, input_length, 0xFFFD, &substitutions,
                          &status);
     if (U_FAILURE(status)) {
@@ -112,7 +111,7 @@ template <typename T>
         normalized.resize(static_cast<std::size_t>(normalized_length) + 1U);
         output_length = unorm2_normalize(
             nfc, utf16.data(), utf16_length, normalized.data(),
-            static_cast<int32_t>(normalized.size()), &status);
+            normalized_length, &status);
         if (U_FAILURE(status)) {
             return fail_result<NormalizedText>(
                 ErrorCode::internal_error, "byte_tokenizer.nfc",
@@ -137,7 +136,7 @@ template <typename T>
     status = U_ZERO_ERROR;
     std::string output(static_cast<std::size_t>(utf8_length) + 1U, '\0');
     int32_t written = 0;
-    u_strToUTF8(output.data(), static_cast<int32_t>(output.size()), &written,
+    u_strToUTF8(output.data(), utf8_length, &written,
                 output_data, output_length, &status);
     if (U_FAILURE(status)) {
         return fail_result<NormalizedText>(
