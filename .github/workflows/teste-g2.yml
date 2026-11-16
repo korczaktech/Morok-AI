@@ -1,0 +1,219 @@
+name: teste G2
+
+run-name: teste G2 — rodada ${{ inputs.rodada || 1 }}/10
+
+on:
+  workflow_dispatch:
+    inputs:
+      rodada:
+        description: "Rodada da sequência automática (não alterar durante a sequência)"
+        type: number
+        required: true
+        default: 1
+
+permissions:
+  contents: write
+  actions: write
+
+# Compartilha o bloqueio com Treinamento — G2 para nunca disputar o mesmo checkpoint.
+concurrency:
+  group: treinamento-g2-persistent-state
+  cancel-in-progress: false
+
+jobs:
+  teste-g2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validar rodada
+        env:
+          RODADA: ${{ inputs.rodada }}
+        run: |
+          python3 - <<'PY'
+          import os
+          rodada = int(os.environ["RODADA"])
+          if not 1 <= rodada <= 10:
+              raise SystemExit("RODADA precisa estar entre 1 e 10.")
+          PY
+          {
+            echo "## teste G2"
+            echo
+            echo "- Rodada: **${RODADA}/10**"
+            echo "- Épocas: **10**"
+            echo "- Tentativas: **1**"
+            echo "- Questões de validação: **20**"
+            echo "- Estado: checkpoint, Adam e memória persistidos entre as rodadas"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validar conjuntos e avaliador
+        working-directory: Morok
+        run: python3 -m unittest discover -s "Gerações/G2/Tsukuyomi/tests" -p "test_*.py" -v
+
+      - name: Instalar dependências
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build libsqlite3-dev
+
+      - name: Configurar
+        working-directory: Morok
+        run: >-
+          cmake -S . -B build/g2 -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DMOROK_BUILD_TESTS=ON
+          -DMOROK_BUILD_APPS=ON
+
+      - name: Compilar Tsukuyomi G2
+        working-directory: Morok
+        run: >-
+          cmake --build build/g2 --parallel 2
+          --target morok_g2_tsukuyomi
+          morok_g2_tsukuyomi_train
+          morok_g2_tsukuyomi_generate
+          morok_test_g2_tsukuyomi
+
+      - name: Testar Tsukuyomi G2
+        working-directory: Morok
+        run: ctest --test-dir build/g2 -R "g2.tsukuyomi.model|architecture.generation_isolation" --output-on-failure
+
+      - name: Recuperar memória persistente do Tsukuyomi
+        run: |
+          mkdir -p Morok/build/g2
+          if git fetch origin refs/heads/tsukuyomi-state:refs/remotes/origin/tsukuyomi-state 2>/dev/null; then
+            git show origin/tsukuyomi-state:state/tsukuyomi-g2.ckpt > Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
+            git show origin/tsukuyomi-state:state/tsukuyomi-g2.ckpt.adam > Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
+            if git cat-file -e origin/tsukuyomi-state:state/tsukuyomi-g2-feedback.txt 2>/dev/null; then
+              git show origin/tsukuyomi-state:state/tsukuyomi-g2-feedback.txt > Morok/build/g2/tsukuyomi-memoria-erros.txt
+            else
+              : > Morok/build/g2/tsukuyomi-memoria-erros.txt
+            fi
+            if git cat-file -e origin/tsukuyomi-state:state/tsukuyomi-g2-question-history.json 2>/dev/null; then
+              git show origin/tsukuyomi-state:state/tsukuyomi-g2-question-history.json > Morok/build/g2/tsukuyomi-historico-perguntas.json
+            fi
+            test -s Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
+            test -s Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
+            echo "Memória persistente recuperada: pesos + estado Adam."
+          else
+            echo "Primeira execução: ainda não existe memória persistente."
+          fi
+
+      - name: Treinar Tsukuyomi — 10 épocas, 1 tentativa, 20 questões
+        working-directory: Morok
+        env:
+          RODADA: ${{ inputs.rodada }}
+        run: |
+          echo "Iniciando rodada $RODADA de 10."
+          python3 "Gerações/G2/Tsukuyomi/scripts/treinamento_ciclico.py" \
+            build/g2/morok-g2-tsukuyomi-train \
+            build/g2/morok-g2-tsukuyomi-generate \
+            "Gerações/G2/Tsukuyomi/data/treinamento.txt" \
+            "Gerações/G2/Tsukuyomi/data/feedback.txt" \
+            "Gerações/G2/Tsukuyomi/data/validacao.txt" \
+            "Gerações/G2/Tsukuyomi/data/teste.txt" \
+            10 1 0 20
+
+      - name: Avaliação final do melhor checkpoint e do teste reservado
+        working-directory: Morok
+        run: |
+          python3 "Gerações/G2/Tsukuyomi/scripts/avaliacao_final.py" \
+            build/g2/morok-g2-tsukuyomi-generate \
+            build/g2/tsukuyomi-treinamento-ciclico.ckpt \
+            "Gerações/G2/Tsukuyomi/data/validacao.txt" \
+            "Gerações/G2/Tsukuyomi/data/teste.txt" \
+            build/g2/avaliacao-final-tsukuyomi.json
+
+      - name: Persistir pesos e memória de treinamento
+        working-directory: Morok
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          STATE_DIR="$RUNNER_TEMP/tsukuyomi-state"
+          if git -C "$GITHUB_WORKSPACE" fetch origin refs/heads/tsukuyomi-state:refs/remotes/origin/tsukuyomi-state 2>/dev/null; then
+            git -C "$GITHUB_WORKSPACE" worktree add -B tsukuyomi-state "$STATE_DIR" origin/tsukuyomi-state
+          else
+            git -C "$GITHUB_WORKSPACE" worktree add -b tsukuyomi-state "$STATE_DIR" HEAD
+            git -C "$STATE_DIR" rm -rf .
+          fi
+          mkdir -p "$STATE_DIR/state"
+          install -m 0644 build/g2/tsukuyomi-treinamento-ciclico.ckpt "$STATE_DIR/state/tsukuyomi-g2.ckpt"
+          install -m 0644 build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam "$STATE_DIR/state/tsukuyomi-g2.ckpt.adam"
+          if [ -f build/g2/tsukuyomi-memoria-erros.txt ]; then
+            install -m 0644 build/g2/tsukuyomi-memoria-erros.txt "$STATE_DIR/state/tsukuyomi-g2-feedback.txt"
+          else
+            : > "$STATE_DIR/state/tsukuyomi-g2-feedback.txt"
+          fi
+          test -s build/g2/tsukuyomi-historico-perguntas.json
+          rm -f "$STATE_DIR/state/tsukuyomi-g2-learning-rate.txt"
+          install -m 0644 build/g2/tsukuyomi-historico-perguntas.json "$STATE_DIR/state/tsukuyomi-g2-question-history.json"
+          cat > "$STATE_DIR/state/README.txt" <<'EOF'
+          Tsukuyomi G2 persistent training state.
+          Keep the .ckpt and .adam files together; both are required for exact optimizer continuation.
+          This branch is machine state, not source code. Do not merge it into main.
+          EOF
+          git -C "$STATE_DIR" add state/
+          if git -C "$STATE_DIR" diff --cached --quiet; then
+            echo "O estado persistente não mudou; nenhuma gravação necessária."
+          else
+            git -C "$STATE_DIR" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Persistir estado de treinamento Tsukuyomi G2 — teste"
+            git -C "$STATE_DIR" push origin tsukuyomi-state
+          fi
+
+      - name: Publicar annotations G2
+        if: always()
+        working-directory: Morok
+        env:
+          RODADA: ${{ inputs.rodada }}
+        run: |
+          if [ -f build/g2/respostas-tsukuyomi.md ]; then
+            {
+              echo "## Annotations — Tsukuyomi G2 — rodada $RODADA/10"
+              echo
+              echo "<details>"
+              echo "<summary>Expandir relatório completo de treinamento e avaliação</summary>"
+              echo
+              cat build/g2/respostas-tsukuyomi.md
+              echo
+              echo "</details>"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Relatório de avaliação não encontrado." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Publicar checkpoint, pesos e memória
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsukuyomi-g2-teste-rodada-${{ inputs.rodada }}-${{ github.run_id }}
+          path: |
+            Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
+            Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
+            Morok/build/g2/tsukuyomi-memoria-erros.txt
+            Morok/build/g2/tsukuyomi-historico-perguntas.json
+            Morok/build/g2/tsukuyomi-learning-rates-by-question.txt
+            Morok/build/g2/respostas-tsukuyomi.md
+            Morok/build/g2/avaliacao-final-tsukuyomi.json
+            Morok/build/g2/avaliacao-final-tsukuyomi.md
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Disparar próxima rodada automaticamente
+        if: ${{ success() && inputs.rodada < 10 }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RODADA_ATUAL: ${{ inputs.rodada }}
+        run: |
+          PROXIMA_RODADA=$((RODADA_ATUAL + 1))
+          echo "Rodada $RODADA_ATUAL concluída e persistida. Disparando rodada $PROXIMA_RODADA/10."
+          gh api --method POST \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/teste-g2.yml/dispatches" \
+            -f ref=main \
+            -f "inputs[rodada]=$PROXIMA_RODADA"
+
+      - name: Encerrar sequência de 10 rodadas
+        if: ${{ success() && inputs.rodada == 10 }}
+        run: |
+          echo "As 10 rodadas foram concluídas. Checkpoint, estado Adam e memória persistente foram salvos."
+          echo "## Sequência concluída: 10/10" >> "$GITHUB_STEP_SUMMARY"
