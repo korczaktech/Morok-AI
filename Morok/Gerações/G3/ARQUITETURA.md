@@ -145,3 +145,98 @@ G3 permanecem fora do escopo desta etapa.
 - [x] Testes de vocabulário, português acentuado, NFC, dados inválidos,
       políticas de rejeição, tokens de controle e round-trip.
 - [x] CMake e workflow G3 integrados ao Core existente.
+
+
+## 9. Aprendizado por reforço — Etapa 3
+
+A implementação de RL pertence a `Gerações/G3/rl/` e reutiliza
+`Morok::Core`. Não cria Core, runtime de inferência, estado de modelo ou
+armazenamento de pesos paralelo.
+
+### 9.1 Contrato de política
+
+- Cabeçalho: `rl/include/morok/g3/rl/reinforce.hpp`.
+- Implementação: `rl/src/reinforce.cpp`.
+- Testes: `rl/tests/test_reinforce.cpp`.
+- A política fornece uma distribuição normalizada de 261 IDs para cada
+  contexto/prefixo.
+- O algoritmo bloqueia PAD, BOS, USR e BOT como tokens de resposta; bytes e
+  EOS permanecem disponíveis.
+- A política de referência é recebida como `const Policy&`: pode executar
+  inferência, mas não recebe gradientes nem atualização.
+- A política treinável recebe gradientes de logits acumulados para o lote e
+  aplica uma única atualização de otimizador. Os pesos e o otimizador continuam
+  pertencendo ao backend neural da geração.
+
+### 9.2 REINFORCE e amostragem
+
+- Até quatro candidatas por pergunta, configurável.
+- Amostragem com temperatura e Top-K configuráveis; defaults experimentais
+  temperatura 0,7 e Top-K 10.
+- Seed determinística configurável.
+- REINFORCE usa `A = recompensa - baseline_categoria`.
+- Baseline exponencial móvel por categoria, com coeficiente configurável
+  (default 0,10).
+- Gamma default 1,0; ponderação temporal aplicada por token.
+- Gradientes são acumulados para todas as candidatas antes da chamada única
+  `apply_batch_gradients`, evitando que candidatas do mesmo lote sejam
+  geradas com pesos parcialmente atualizados.
+
+### 9.3 Recompensas auditáveis
+
+A rubrica expõe quatro componentes separados: correção, aderência à intenção,
+coerência e formato. Pesos default: 0,70 / 0,15 / 0,05 / 0,10; a soma deve ser
+1 dentro da tolerância numérica. Cada componente deve estar em [-1, +1]. A
+recompensa composta é limitada a [-1, +1].
+
+Penalidades configuráveis:
+- resposta vazia;
+- repetição de bytes consecutivos;
+- cópia de bytes presentes no prompt;
+- excesso de comprimento somente quando um limite justificado for configurado.
+
+Não há penalidade automática de comprimento por padrão. A semântica não é
+inferida por distância de edição ou n-gramas. O avaliador deve ter identidade,
+versão de rubrica e origem dos rótulos distintas da política treinada. A função
+`audit_evaluator` compara resultados com intervalos aprovados em casos
+rotulados; essa auditoria não substitui revisão humana periódica.
+
+### 9.4 KL de referência
+
+A divergência KL é calculada entre a distribuição atual e a distribuição da
+referência SFT para os mesmos contextos e prefixos. Beta default 0,02,
+configurável. O gradiente da regularização é incorporado aos gradientes de
+logits do REINFORCE. Probabilidades de referência iguais a zero são limitadas
+por epsilon configurável para evitar NaN/Inf; a divergência observada continua
+registrada no relatório.
+
+### 9.5 Proteção contra reward hacking
+
+O módulo mede e penaliza resposta vazia, repetição e cópia da pergunta; o
+comprimento só é penalizado com limite explicitamente configurado. Respostas
+genéricas dependem da rubrica de correção/aderência, não de uma regra lexical.
+Os testes cobrem resposta vazia, genérica, repetida, exploração de avaliador,
+KL positiva e comparação SFT/RL no mesmo conjunto fechado. Casos de encerramento
+prematuro e respostas longas sem conteúdo devem ser incluídos nos conjuntos de
+auditoria do avaliador.
+
+### 9.6 Comparação e métricas
+
+`compare_sft_and_rl` avalia snapshots distintos no mesmo conjunto fechado,
+usando decodificação gulosa e o mesmo avaliador. Relata recompensa média,
+comprimento médio, taxa de respostas vazias e taxa de repetição, além da
+diferença de recompensa RL menos SFT.
+
+### Critérios de conclusão da Etapa 3
+
+- [x] Contrato de política treinável e referência somente de inferência.
+- [x] REINFORCE com baseline EMA por categoria.
+- [x] Amostragem configurável com até quatro candidatas, Top-K, temperatura e seed.
+- [x] Composição de recompensa por critérios independentes e penalidades explícitas.
+- [x] Auditoria de avaliador com identidade, versão, origem e casos rotulados.
+- [x] Penalidade KL em relação à referência SFT e gradiente correspondente.
+- [x] Proteções e testes iniciais contra reward hacking.
+- [x] Comparação SFT/RL no mesmo conjunto fechado.
+- [x] Biblioteca, testes CTest e workflow G3 integrados.
+- [ ] Integração com pesos reais e BPTT da GRU G3: depende da implementação
+      do backend neural treinável, ainda não entregue nas etapas anteriores.
