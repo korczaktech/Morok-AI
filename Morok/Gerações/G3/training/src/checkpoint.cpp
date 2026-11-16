@@ -69,6 +69,8 @@ public:
     }
 
     void string(std::string_view value) {
+        if (value.size() > kMaximumStringBytes)
+            throw std::length_error("checkpoint string exceeds limit");
         integer<std::uint32_t>(static_cast<std::uint32_t>(value.size()));
         for (const unsigned char c : value) data.push_back(static_cast<std::byte>(c));
     }
@@ -128,7 +130,7 @@ public:
         const auto count = integer<std::uint64_t>();
         const std::uint64_t maximum = std::is_same_v<T, float>
             ? kG3CheckpointParameterCount : kMaximumIndexCount;
-        if (count > maximum || count > remaining() / sizeof(std::uint64_t) + 1U)
+        if (count > maximum || count > remaining() / sizeof(T))
             throw std::length_error("checkpoint vector count exceeds limit");
         std::vector<T> values;
         values.reserve(static_cast<std::size_t>(count));
