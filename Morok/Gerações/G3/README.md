@@ -32,7 +32,7 @@ A Etapa 1 integrou o contrato comum e adaptou o motor G1 existente. A Etapa 2
 implementou a representação byte-level UTF-8 de 261 IDs, tokens de controle,
 normalização NFC configurável e validação de entrada/saída no Core compartilhado.
 
-A Etapa 3 implementa o algoritmo REINFORCE da G3 em
+O módulo de aprendizado por reforço da G3 está implementado em
 `Gerações/G3/rl/`, ligado ao Core existente sem criar outro runtime. O módulo
 inclui referência SFT somente para inferência, amostragem Top-K/temperatura,
 baseline móvel por categoria, recompensas com pesos e penalidades explícitos,
@@ -42,9 +42,9 @@ treinador (baseline, RNG, configuração e proveniência).
 
 O contrato de política recebe distribuições normalizadas de 261 IDs e delega
 a aplicação do gradiente ao backend treinável que possui os pesos e o
-otimizador. Como a rede GRU treinável da G3 ainda não existe, o algoritmo está
-implementado e testável com políticas de contrato, mas o treinamento de pesos
-reais da G3 só poderá ser executado depois da integração do backend neural.
+otimizador. O backend neural G3 já fornece a arquitetura e o forward incremental. Como
+BPTT e atualização dos pesos ainda não estão integrados, o algoritmo RL está
+testável com políticas de contrato, mas não treina pesos reais da GRU.
 Nenhum peso da G1 é usado como substituto.
 
 Consulte [ARQUITETURA.md](ARQUITETURA.md) e [MODELOS.md](../MODELOS.md).
@@ -60,5 +60,5 @@ A Fase 4 adiciona utilitários G3 de inferência e exportação em
 `Gerações/G3/inference/`: decodificação com Top-K/temperatura, quantização
 INT8 simétrica por linha, artefato `.morok` versionado com CRC32, e harness
 de benchmark. Os testes usam backend determinístico para validar contratos,
-formato, corrupção e isolamento concorrente. Equivalência, RAM e latência
-reais permanecem pendentes até existir backend GRU G3 e pesos SFT.
+formato, corrupção e isolamento concorrente. Equivalência FP32/INT8, RAM e latência de produção permanecem pendentes até
+existirem pesos SFT treinados e medições com o backend neural real.
