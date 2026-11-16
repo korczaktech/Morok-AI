@@ -143,13 +143,15 @@ void gru_int8_step(std::span<const float> input,
     std::array<float, neural::kLayer1HiddenDim> reset_previous{};
 
     for (std::size_t row = 0; row < hidden; ++row) {
+        // Match the FP32 backend gate convention: gate 0 is update,
+        // gate 1 is reset and gates the recurrent candidate input.
         gates[row] = sigmoid(bias[row] +
             quantized_dot(input_weights, row, input) +
             quantized_dot(recurrent_weights, row, previous));
         gates[hidden + row] = sigmoid(bias[hidden + row] +
             quantized_dot(input_weights, hidden + row, input) +
             quantized_dot(recurrent_weights, hidden + row, previous));
-        reset_previous[row] = gates[row] * previous[row];
+        reset_previous[row] = gates[hidden + row] * previous[row];
     }
 
     const std::span<const float> reset_state(reset_previous.data(), hidden);
@@ -159,7 +161,7 @@ void gru_int8_step(std::span<const float> input,
             bias[candidate_offset + row] +
             quantized_dot(input_weights, candidate_offset + row, input) +
             quantized_dot(recurrent_weights, candidate_offset + row, reset_state));
-        const float update = gates[hidden + row];
+        const float update = gates[row];
         output[row] = (1.0F - update) * candidate + update * previous[row];
     }
 }
