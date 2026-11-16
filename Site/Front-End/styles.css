@@ -1099,3 +1099,24 @@ kbd [data-icon]{display:inline-flex;vertical-align:middle}
 @media(max-width:760px){
   .welcome-note,.disclaimer{font-size:10px}
 }
+
+
+/* Local project management and explicit integration states */
+.projects-list{display:grid;gap:4px;padding:0 12px 8px}
+.project-create-link,.project-sidebar-item,.project-list-row{display:flex;align-items:center;gap:9px;width:100%;min-width:0;padding:9px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--muted);font:inherit;font-size:11px;text-align:left;cursor:pointer}
+.project-create-link{color:var(--accent);font-weight:700}
+.project-create-link:hover,.project-sidebar-item:hover,.project-list-row:hover{background:var(--panel-2);border-color:var(--line);color:var(--text)}
+.project-sidebar-item span,.project-list-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-sidebar-item .ui-icon,.project-create-link .ui-icon,.project-list-row .ui-icon{width:15px;height:15px;flex:0 0 auto}
+.project-list-row{justify-content:space-between;border-color:var(--line);background:var(--panel)}
+.project-list-row small{margin-left:auto;color:var(--dim);white-space:nowrap}
+.project-list-row>button{min-width:0;border:0;background:transparent;color:var(--text);text-align:left;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.project-list-row .icon-button{flex:0 0 30px;width:30px;min-width:30px}
+.library-actions{display:flex;align-items:center;gap:7px}
+.library-actions .secondary-button{min-height:30px;padding:5px 9px;font-size:10px}
+.workspace-subheading{margin:18px 0 8px;color:var(--text);font-size:14px}
+.integration-card{display:grid;gap:9px}
+.integration-card .feature-status{width:max-content}
+.integration-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+.integration-card button:disabled{opacity:.5;cursor:not-allowed}
+.profile-menu button[hidden]{display:none!important}
