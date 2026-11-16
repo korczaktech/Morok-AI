@@ -21,6 +21,9 @@ on:
     paths:
       - "Morok/Gerações/G3/**"
       - "Morok/include/morok/model/**"
+      - "Morok/include/morok/lang/byte_tokenizer.hpp"
+      - "Morok/src/lang/byte_tokenizer.cpp"
+      - "Morok/tests/unit/lang/test_byte_tokenizer.cpp"
       - "Morok/tests/unit/model/test_model_session.cpp"
       - "Morok/Gerações/G1/shared/include/morok/model/g1_backend.hpp"
       - "Morok/Gerações/G1/shared/src/model/g1_backend.cpp"
