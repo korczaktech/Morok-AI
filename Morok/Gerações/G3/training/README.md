@@ -82,14 +82,14 @@ Compile com CMake e execute:
 ```sh
 cmake -S Morok -B Morok/build -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
 cmake --build Morok/build --target morok-g3-train morok_test_g3_training --parallel 2
-Morok/build/morok-g3-train caminho/dataset.jsonl caminho/metrics.jsonl 10 42
+Morok/build/morok-g3-train caminho/dataset.jsonl caminho/metrics.jsonl caminho/modelo.morok 10 42
 ```
 
-O executável inicia um treino novo em memória e escreve métricas JSONL. Não foi incluído um corpus de produção no repositório. A qualidade do modelo não pode ser inferida dos testes sintéticos de CI; o treinamento real depende de um dataset com proveniência e rótulos revisados.
+O executável inicia um treino novo, escreve métricas JSONL e exporta os 100.000 pesos FP32 finais para um artefato `.morok` versionado, validado por CRC32 e gravado atomicamente. Não foi incluído um corpus de produção no repositório. A qualidade do modelo não pode ser inferida dos testes sintéticos de CI; o treinamento real depende de um dataset com proveniência e rótulos revisados.
 
 ## Limites conhecidos desta entrega
 
 - As alternativas semânticas precisam ser fornecidas e revisadas em `question_variants` ou `expansion_axes`; não existe um gerador de sinônimos baseado em léxico externo.
 - O campo `sensitive` é registrado, mas a anonimização/controle de acesso ao corpus é responsabilidade do pipeline de ingestão e armazenamento.
 - A implementação registra fingerprint FNV-1a de 64 bits para identificação/reprodutibilidade local; não é hash criptográfico de integridade.
-- O CLI atual não retoma checkpoint de treinamento; retomada completa exige persistir também momentos AdamW, RNG, cursor/sampler e versão do dataset.
+- O CLI exporta o modelo final, mas ainda não retoma uma execução interrompida; checkpoint recuperável precisa persistir também momentos AdamW, RNG, cursor/sampler e versão do dataset.
