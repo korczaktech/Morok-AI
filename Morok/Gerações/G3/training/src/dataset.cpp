@@ -10,6 +10,7 @@
 #include <cmath>
 #include <fstream>
 #include <limits>
+#include <optional>
 #include <random>
 #include <set>
 #include <sstream>
@@ -111,7 +112,7 @@ public:
             if (cursor >= text_.size() || text_[cursor] != '"')
                 throw std::runtime_error("question_variants must contain strings");
             // Reuse the string decoder against a view beginning at this quote.
-            JsonObject tail(text_.substr(cursor));
+            JsonObject tail("{\"_value\":" + text_.substr(cursor));
             const auto decoded = tail.string("_value");
             result.push_back(decoded);
             std::size_t end = cursor + 1U;
@@ -231,7 +232,7 @@ Dataset load_jsonl(const std::filesystem::path& path) {
     }
     std::ostringstream digest;
     digest << std::hex << hash;
-    dataset.sha256 = "fnv1a64:" + digest.str();
+    dataset.fingerprint = "fnv1a64:" + digest.str();
     return dataset;
 }
 
