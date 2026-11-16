@@ -8,7 +8,7 @@
   const MAX_LIBRARY_FILE_BYTES = 48 * 1024;
   const INTEGRATION_CONTRACTS = Object.freeze({chat:{status:'connected',method:'POST',path:'/v1/chat',request:['prompt','max_new_bytes'],response:['response','request_id']},imageGeneration:{status:'pending',request:['prompt','model','size'],response:['image_url','request_id']},modelContext:{status:'pending',fields:['aboutMe','responseStyle','instructions','location','libraryFiles']},externalPlugins:{status:'pending',requirements:['authorization','permissions','server-side connector']}});
   window.MorokIntegrationContracts = INTEGRATION_CONTRACTS;
-  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], images: [], tasks: [], projects: [], activeProjectId: null, instructions: '', location: '', aboutMe: '', responseStyle: 'equilibrado', notifications: false, libraryItems: [], busy: false, controller: null, contextId: null, renameId: null, confirmResolve: null, toastTimer: null };
+  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], images: [], tasks: [], projects: [], activeProjectId: null, instructions: '', location: '', aboutMe: '', responseStyle: 'equilibrado', notifications: false, libraryItems: [], pendingResourceDeletions: [], pendingConversationDeletions: [], busy: false, controller: null, contextId: null, renameId: null, confirmResolve: null, toastTimer: null };
   const el = {
     app: $('#app'), sidebar: $('#sidebar'), backdrop: $('#backdrop'), history: $('#history-list'),
     welcome: $('#welcome'), conversation: $('#conversation'), input: $('#message-input'), composer: $('#composer'),
@@ -37,7 +37,7 @@
   function titleFrom(text) { const clean = text.replace(/\s+/g, ' ').trim(); return clean.length > 34 ? clean.slice(0, 34).trimEnd() + '…' : clean || 'Nova conversa'; }
   function persist() {
     try {
-      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, displayName: state.displayName, generation: state.generation, model: state.model, tasks: state.tasks, projects: state.projects, instructions: state.instructions, location: state.location, aboutMe: state.aboutMe, responseStyle: state.responseStyle, notifications: state.notifications, libraryItems: state.libraryItems });
+      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, displayName: state.displayName, generation: state.generation, model: state.model, tasks: state.tasks, projects: state.projects, instructions: state.instructions, location: state.location, aboutMe: state.aboutMe, responseStyle: state.responseStyle, notifications: state.notifications, libraryItems: state.libraryItems, pendingResourceDeletions: state.pendingResourceDeletions, pendingConversationDeletions: state.pendingConversationDeletions });
       if (payload.length > MAX_LOCAL_BYTES) { toast('O histórico local está cheio. Exclua conversas antigas.'); return; }
       localStorage.setItem(STORAGE_KEY, payload);
     } catch (error) { toast('Não foi possível salvar no navegador. Verifique o espaço disponível.'); }
@@ -60,6 +60,8 @@
       state.responseStyle = ['conciso','equilibrado','detalhado'].includes(saved.responseStyle) ? saved.responseStyle : 'equilibrado';
       state.notifications = saved.notifications === true && typeof Notification !== 'undefined' && Notification.permission === 'granted';
       state.libraryItems = Array.isArray(saved.libraryItems) ? saved.libraryItems.slice(0,100) : [];
+      state.pendingResourceDeletions = Array.isArray(saved.pendingResourceDeletions) ? saved.pendingResourceDeletions.filter(x => x && typeof x.id === 'string' && typeof x.type === 'string' && typeof x.accountId === 'string') : [];
+      state.pendingConversationDeletions = Array.isArray(saved.pendingConversationDeletions) ? saved.pendingConversationDeletions.filter(x => x && typeof x.id === 'string' && typeof x.accountId === 'string') : [];
       try { state.authSession = JSON.parse(localStorage.getItem('morok.auth.session') || sessionStorage.getItem('morok.auth.session') || 'null'); } catch { state.authSession = null; }
     } catch { localStorage.removeItem(STORAGE_KEY); }
     if (!state.conversations.some(c => c.id === state.activeId)) state.activeId = null;
@@ -615,14 +617,32 @@
   }
   async function deleteRemoteConversation(conversationId) {
     const token = state.authSession?.access_token;
-    if (!token || !conversationId) return;
-    try { await authRequest('/v1/conversations/delete', { token, body: { ids: [conversationId] } }); }
-    catch (error) { console.warn('Não foi possível excluir a conversa na nuvem:', error.message); toast('A conversa foi removida deste dispositivo, mas a exclusão na nuvem não foi confirmada.'); }
+    if (!token || !conversationId) return true;
+    try {
+      await authRequest('/v1/conversations/delete', { token, body: { ids: [conversationId] } });
+      return true;
+    } catch (error) {
+      console.warn('Não foi possível excluir a conversa na nuvem:', error.message);
+      const accountId = state.authSession?.user?.id;
+      if (accountId && !state.pendingConversationDeletions.some(item => item.id === conversationId && item.accountId === accountId)) {
+        state.pendingConversationDeletions.push({ id: conversationId, accountId });
+        persist();
+      }
+      toast('A exclusão na nuvem ficou pendente e será repetida na próxima sincronização.');
+      return false;
+    }
   }
   async function loadRemoteConversations() {
     const token = state.authSession?.access_token;
     if (!token) return;
     try {
+      const accountId = state.authSession?.user?.id;
+      const pending = state.pendingConversationDeletions.filter(item => item.accountId === accountId);
+      if (pending.length) {
+        await authRequest('/v1/conversations/delete', { token, body: { ids: pending.map(item => item.id) } });
+        state.pendingConversationDeletions = state.pendingConversationDeletions.filter(item => item.accountId !== accountId);
+        persist();
+      }
       const data = await authRequest('/v1/conversations', { method: 'GET', token });
       if (!Array.isArray(data.conversations)) return;
       const localById = new Map(state.conversations.map(item => [item.id, item]));
@@ -695,9 +715,20 @@
 
   async function deleteRemoteResource(type, resourceId) {
     const token = state.authSession?.access_token;
-    if (!token || !resourceId) return;
-    try { await authRequest("/v1/resources/delete", { token, body: { type, ids: [resourceId] } }); }
-    catch (error) { console.warn("Não foi possível remover o recurso remoto:", error.message); }
+    if (!token || !resourceId) return true;
+    try {
+      await authRequest("/v1/resources/delete", { token, body: { type, ids: [resourceId] } });
+      return true;
+    } catch (error) {
+      console.warn("Não foi possível remover o recurso remoto:", error.message);
+      const accountId = state.authSession?.user?.id;
+      if (accountId && !state.pendingResourceDeletions.some(item => item.type === type && item.id === resourceId && item.accountId === accountId)) {
+        state.pendingResourceDeletions.push({ type, id: resourceId, accountId });
+        persist();
+      }
+      toast("A exclusão na nuvem ficou pendente e será repetida na próxima sincronização.");
+      return false;
+    }
   }
   async function syncAccountResources() {
     const token = state.authSession?.access_token;
@@ -705,6 +736,13 @@
     for (const type of ["projects", "tasks"]) {
       const localItems = type === "projects" ? state.projects : state.tasks.map((task, index) => ({ ...task, id: task.id || "task-" + index }));
       try {
+        const accountId = state.authSession?.user?.id;
+        const pending = state.pendingResourceDeletions.filter(item => item.type === type && item.accountId === accountId);
+        if (pending.length) {
+          await authRequest("/v1/resources/delete", { token, body: { type, ids: pending.map(item => item.id) } });
+          state.pendingResourceDeletions = state.pendingResourceDeletions.filter(item => !(item.type === type && item.accountId === accountId));
+          persist();
+        }
         const remote = await authRequest("/v1/resources?type=" + type, { method: "GET", token });
         const byId = new Map(localItems.map(item => [item.id, item]));
         for (const tombstone of remote.deleted || []) {
@@ -915,7 +953,7 @@
     if (event.target.id === 'change-password') { const currentPassword=$('#current-password').value, newPassword=$('#new-password').value; if(newPassword.length<10)return toast('A nova senha deve ter pelo menos 10 caracteres.'); try { await authRequest('/v1/account/password',{token:state.authSession.access_token,body:{currentPassword,newPassword}}); $('#current-password').value=''; $('#new-password').value=''; toast('Senha alterada. Outras sessões foram encerradas.'); } catch(error){toast(error.message);} }
     if (event.target.id === 'revoke-other-sessions' || event.target.id === 'security-revoke-others') { try { await authRequest('/v1/account/sessions/revoke',{token:state.authSession.access_token,body:{all:true}}); await loadAccountSessions(); toast('Outras sessões encerradas.'); } catch(error){toast(error.message);} }
     const revoke=event.target.closest('[data-revoke-session]'); if(revoke){try{await authRequest('/v1/account/sessions/revoke',{token:state.authSession.access_token,body:{sessionId:revoke.dataset.revokeSession}});await loadAccountSessions();toast('Sessão encerrada.');}catch(error){toast(error.message);}}
-    if(event.target.id==='delete-account-open'){void askConfirmation('Excluir permanentemente sua conta e os dados vinculados no servidor? Esta ação não pode ser desfeita.','Excluir conta').then(async ok=>{if(!ok)return;const password=prompt('Confirme sua senha para excluir a conta:');if(password===null)return;try{await authRequest('/v1/account/delete',{token:state.authSession.access_token,body:{password}});saveAuthSession(null);state.conversations=[];state.projects=[];state.tasks=[];persist();renderHistory();renderConversation();openWorkspacePage('account');toast('Conta e dados remotos excluídos.');}catch(error){toast(error.message);}});}
+    if(event.target.id==='delete-account-open'){void askConfirmation('Excluir permanentemente sua conta e os dados vinculados no servidor? Esta ação não pode ser desfeita.','Excluir conta').then(async ok=>{if(!ok)return;const password=prompt('Confirme sua senha para excluir a conta:');if(password===null)return;try{await authRequest('/v1/account/delete',{token:state.authSession.access_token,body:{password}});saveAuthSession(null);state.conversations=[];state.projects=[];state.tasks=[];state.pendingResourceDeletions=[];state.pendingConversationDeletions=[];persist();renderHistory();renderConversation();openWorkspacePage('account');toast('Conta e dados remotos excluídos.');}catch(error){toast(error.message);}});}
     if(event.target.id==='support-login')openAuth('login');
     if(event.target.id==='support-tickets-retry')void loadSupportTickets();
     if(event.target.id==='account-sessions-retry')void loadAccountSessions();
@@ -929,14 +967,14 @@
     if(event.target.id==='edit-local-profile'){$('#display-name').value=state.displayName;el.profile.showModal();}
     if(event.target.id==='security-auth')openAuth('login');
     if(event.target.id==='project-rename'){const p=state.projects.find(item=>item.id===state.activeProjectId);const name=$('#project-rename-input').value.trim();if(p&&name){p.name=name;p.updatedAt=now();persist();void syncAccountResources();renderProjectsSidebar();openWorkspacePage('projects');}}
-    if(event.target.id==='project-delete'){const p=state.projects.find(item=>item.id===state.activeProjectId);if(p){void askConfirmation('Excluir o projeto "'+p.name+'"? As conversas serão mantidas.','Excluir projeto').then(ok=>{if(!ok)return;state.projects=state.projects.filter(item=>item.id!==p.id);state.conversations.forEach(c=>{if(c.projectId===p.id){delete c.projectId;void syncConversation(c);}});state.activeProjectId=null;persist();void deleteRemoteResource('projects',p.id);void syncAccountResources();renderProjectsSidebar();openWorkspacePage('projects');});}}
+    if(event.target.id==='project-delete'){const p=state.projects.find(item=>item.id===state.activeProjectId);if(p){void askConfirmation('Excluir o projeto "'+p.name+'" ? As conversas serão mantidas.','Excluir projeto').then(async ok=>{if(!ok)return;state.projects=state.projects.filter(item=>item.id!==p.id);state.conversations.forEach(c=>{if(c.projectId===p.id){delete c.projectId;void syncConversation(c);}});state.activeProjectId=null;persist();await deleteRemoteResource('projects',p.id);await syncAccountResources();renderProjectsSidebar();openWorkspacePage('projects');});}}
     if(event.target.id==='project-add-current'){const c=activeConversation(),p=state.projects.find(item=>item.id===state.activeProjectId);if(!c)toast('Abra uma conversa antes de adicioná-la ao projeto.');else if(p){c.projectId=p.id;persist();void syncConversation(c);openWorkspacePage('projects');}}
     if(event.target.id==='project-back'){state.activeProjectId=null;openWorkspacePage('projects');}
     const projectOpen=event.target.closest('[data-project-open]');if(projectOpen){state.activeProjectId=projectOpen.dataset.projectOpen;openWorkspacePage('projects');return;}
     const projectConversation=event.target.closest('[data-project-conversation-open]');if(projectConversation){openConversation(projectConversation.dataset.projectConversationOpen);return;}
     const projectRemove=event.target.closest('[data-project-remove-conversation]');if(projectRemove){const c=state.conversations.find(item=>item.id===projectRemove.dataset.projectRemoveConversation);if(c){delete c.projectId;void syncConversation(c);}persist();openWorkspacePage('projects');}
     if(event.target.id==='export-local-data'){const payload={conversations:state.conversations,tasks:state.tasks,projects:state.projects,theme:state.theme,displayName:state.displayName,instructions:state.instructions,location:state.location,aboutMe:state.aboutMe,responseStyle:state.responseStyle,libraryItems:state.libraryItems};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='morok-dados-locais.json';link.click();URL.revokeObjectURL(url);toast('Exportação preparada.');}
-    if(event.target.id==='delete-local-data'){void askConfirmation('Apagar conversas, tarefas, projetos, instruções, localização, biblioteca e preferências deste navegador? Esta ação não pode ser desfeita.','Apagar dados locais').then(accepted=>{if(!accepted)return;state.conversations=[];state.activeId=null;state.tasks=[];state.projects=[];state.activeProjectId=null;state.instructions='';state.location='';state.aboutMe='';state.libraryItems=[];state.notifications=false;state.displayName='Visitante';state.images.forEach(i=>{if(i.url)URL.revokeObjectURL(i.url);});state.images=[];persist();renderProjectsSidebar();renderHistory();renderConversation();updateProfile();returnToChat();toast('Dados locais apagados.');});}
+    if(event.target.id==='delete-local-data'){void askConfirmation('Apagar conversas, tarefas, projetos, instruções, localização, biblioteca e preferências deste navegador? Esta ação não pode ser desfeita.','Apagar dados locais').then(accepted=>{if(!accepted)return;state.conversations=[];state.activeId=null;state.tasks=[];state.projects=[];state.activeProjectId=null;state.instructions='';state.location='';state.aboutMe='';state.libraryItems=[];state.pendingResourceDeletions=[];state.pendingConversationDeletions=[];state.notifications=false;state.displayName='Visitante';state.images.forEach(i=>{if(i.url)URL.revokeObjectURL(i.url);});state.images=[];persist();renderProjectsSidebar();renderHistory();renderConversation();updateProfile();returnToChat();toast('Dados locais apagados.');});}
     if(event.target.id==='save-notifications'){void (async()=>{const requested=$('#notifications-toggle').checked;try{state.notifications=await configurePush(requested);persist();openWorkspacePage('notifications');toast(state.notifications?'Notificações push ativadas.':'Notificações desativadas.');}catch(error){state.notifications=false;persist();toast(error.message);openWorkspacePage('notifications');}})();}
     if(event.target.id==='use-current-location'){if(!navigator.geolocation){toast('Geolocalização não está disponível neste navegador.');}else{const button=event.target;button.disabled=true;navigator.geolocation.getCurrentPosition(position=>{const lat=position.coords.latitude.toFixed(5),lon=position.coords.longitude.toFixed(5);$('#location-input').value='Coordenadas: '+lat+', '+lon;button.disabled=false;toast('Localização obtida. Salve para manter a referência.');},error=>{button.disabled=false;toast(error.code===1?'Permissão de localização negada.':error.code===2?'Localização indisponível.':'Tempo esgotado ao obter localização.');},{enableHighAccuracy:false,timeout:12000,maximumAge:300000});}}
     if(event.target.id==='save-location'){state.location=$('#location-input').value.trim();persist();toast('Localização salva. A integração com modelos permanece desativada.');}
