@@ -7,6 +7,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -23,17 +24,36 @@ void append_fp32_little_endian(const std::vector<float>& tensor,
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 4 || argc > 6) {
+    if (argc < 4 || argc > 9) {
         std::cerr << "Uso: morok-g3-train <dataset.jsonl> <metrics.jsonl> "
-                     "<modelo.morok> [epocas] [seed]\n";
+                     "<modelo.morok> [epocas] [seed] [--checkpoint=arquivo] "
+                     "[--resume=arquivo] [--max-epochs-this-run=N]\n";
         return 2;
     }
     try {
         auto dataset = morok::g3::training::load_jsonl(argv[1]);
         morok::g3::training::TrainingConfig config;
         config.metrics_jsonl = argv[2];
-        if (argc >= 5) config.epochs = static_cast<std::size_t>(std::stoull(argv[4]));
-        if (argc >= 6) config.seed = std::stoull(argv[5]);
+        std::size_t positional = 0U;
+        for (int i = 4; i < argc; ++i) {
+            const std::string_view argument(argv[i]);
+            if (argument.starts_with("--checkpoint=")) {
+                config.checkpoint_path = std::string(argument.substr(13U));
+            } else if (argument.starts_with("--resume=")) {
+                config.resume_from_checkpoint = std::string(argument.substr(9U));
+            } else if (argument.starts_with("--max-epochs-this-run=")) {
+                config.max_epochs_this_run = static_cast<std::size_t>(
+                    std::stoull(std::string(argument.substr(22U))));
+            } else if (positional == 0U) {
+                config.epochs = static_cast<std::size_t>(std::stoull(std::string(argument)));
+                ++positional;
+            } else if (positional == 1U) {
+                config.seed = std::stoull(std::string(argument));
+                ++positional;
+            } else {
+                throw std::invalid_argument("unexpected training argument");
+            }
+        }
         morok::g3::neural::G3Backend backend(
             morok::g3::neural::G3Config{config.seed, 1.0e-5F});
         const auto report = morok::g3::training::train(backend, dataset, config);
@@ -80,6 +100,9 @@ int main(int argc, char** argv) {
                       << ",\"validation_loss\":" << epoch.validation_loss
                       << ",\"optimizer_steps\":" << epoch.optimizer_steps << "}\n";
         }
+        std::cout << "{\"completed_epochs\":" << report.completed_epochs
+                  << ",\"resumed\":" << (report.resumed ? "true" : "false")
+                  << ",\"optimizer_steps\":" << report.optimizer_steps << "}\n";
         std::cout << "Modelo salvo: " << argv[3] << '\n';
         return 0;
     } catch (const std::exception& error) {
