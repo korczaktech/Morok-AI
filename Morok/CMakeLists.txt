@@ -138,7 +138,7 @@ target_include_directories(morok_g3_inference PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G3/inference/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
-target_link_libraries(morok_g3_inference PUBLIC Morok::Core PRIVATE morok_build_options)
+target_link_libraries(morok_g3_inference PUBLIC Morok::Core Morok::G3::Neural PRIVATE morok_build_options)
 morok_enable_sanitizers(morok_g3_inference)
 
 # G3 evaluation reads the validated FP32 artifact format from inference.
