@@ -137,8 +137,8 @@ int main(int argc, char** argv) {
             char* end = nullptr;
             const double learning_rate = std::strtod(option.c_str(), &end);
             if (end != option.c_str() + option.size() ||
-                !std::isfinite(learning_rate) || learning_rate <= 0.0 ||
-                learning_rate > 0.1) {
+                !std::isfinite(learning_rate) || learning_rate < 1.0e-5 ||
+                learning_rate > 1.0e-2) {
                 std::cerr << "Learning rate inválido (0 < valor <= 0,1).\n";
                 return 2;
             }
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
         std::size_t ranges = 0;
         while (rate_map >> begin >> end >> rate) {
             if (begin >= end || end > bytes.size() || !std::isfinite(rate) ||
-                rate < 1.0e-7 || rate > 0.1) {
+                rate < 1.0e-5 || rate > 1.0e-2) {
                 std::cerr << "Intervalo ou learning rate inválido no mapa por questão.\n";
                 return 2;
             }
