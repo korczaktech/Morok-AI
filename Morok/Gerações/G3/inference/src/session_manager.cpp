@@ -36,7 +36,8 @@ void SessionManager::prune_expired_locked(
     std::chrono::steady_clock::time_point now) {
     for (auto iterator = sessions_.begin(); iterator != sessions_.end();) {
         const auto& entry = iterator->second;
-        if (now - entry->last_access >= idle_ttl_)
+        if (entry->active_calls.load(std::memory_order_acquire) == 0U &&
+            now - entry->last_access >= idle_ttl_)
             iterator = sessions_.erase(iterator);
         else
             ++iterator;
@@ -83,6 +84,7 @@ common::Result<GenerationResult> SessionManager::generate(
                     "Session state belongs to a backend with a different state size"));
         }
         entry->last_access = now;
+        entry->active_calls.fetch_add(1U, std::memory_order_acq_rel);
     }
 
     std::lock_guard session_lock(entry->mutex);
@@ -90,7 +92,11 @@ common::Result<GenerationResult> SessionManager::generate(
     effective.reset_session_state = !entry->initialized;
     auto result = generate(backend, entry->state, input, effective,
                            entry->random, cancellation_requested);
-    entry->last_access = std::chrono::steady_clock::now();
+    {
+        std::lock_guard lock(mutex_);
+        entry->last_access = std::chrono::steady_clock::now();
+        entry->active_calls.fetch_sub(1U, std::memory_order_acq_rel);
+    }
     if (result) {
         entry->initialized = true;
     } else {
@@ -113,16 +119,23 @@ common::Status SessionManager::reset(const model::ModelBackend& backend,
                 common::ErrorCode::model_not_loaded, "session.not_found",
                 "Requested G3 session does not exist"));
         entry = found->second;
+        entry->active_calls.fetch_add(1U, std::memory_order_acq_rel);
     }
     const auto descriptor = backend.descriptor();
-    if (!descriptor.valid() || entry->state.size() != descriptor.state_size_bytes)
+    if (!descriptor.valid() || entry->state.size() != descriptor.state_size_bytes) {
+        entry->active_calls.fetch_sub(1U, std::memory_order_acq_rel);
         return common::Status::failure(session_error(
             common::ErrorCode::model_version_mismatch, "session.architecture",
             "Session state is incompatible with the supplied backend"));
+    }
     std::lock_guard session_lock(entry->mutex);
     const auto status = backend.reset_state(entry->state);
     entry->initialized = static_cast<bool>(status);
-    entry->last_access = std::chrono::steady_clock::now();
+    {
+        std::lock_guard lock(mutex_);
+        entry->last_access = std::chrono::steady_clock::now();
+        entry->active_calls.fetch_sub(1U, std::memory_order_acq_rel);
+    }
     return status;
 }
 
