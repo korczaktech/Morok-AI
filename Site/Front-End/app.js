@@ -751,6 +751,8 @@
         state.authSession.user.name = data.profile.name;
         state.authSession.user.twoFactorEnabled = data.profile.twoFactorEnabled === true;
         saveAuthSession(state.authSession);
+        const nameInput = $("#account-name-input"); if (nameInput) nameInput.value = data.profile.name;
+        const factorButton = $("#toggle-2fa"); if (factorButton) factorButton.textContent = data.profile.twoFactorEnabled ? "Desativar autenticação em dois fatores" : "Ativar autenticação em dois fatores";
       }
     } catch (error) { toast(error.message); }
   }
