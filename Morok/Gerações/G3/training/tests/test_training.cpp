@@ -1,4 +1,5 @@
 #include "morok/g3/training/trainer.hpp"
+#include "morok/g3/training/checkpoint.hpp"
 
 #include <algorithm>
 #include <cassert>
