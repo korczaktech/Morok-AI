@@ -1,5 +1,6 @@
 #include "morok/model/g1_backend.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
