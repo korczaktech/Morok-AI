@@ -2,6 +2,16 @@
 
 Este módulo implementa o pipeline SFT da G3 sobre o backend neural existente. Não cria Core, runtime de inferência ou cópia do motor. A biblioteca é `Morok::G3::Training`; o executável é `morok-g3-train`.
 
+## Corpus oficial de desenvolvimento
+
+O corpus pt-BR versionado está em `dataset/g3_ptbr_v1.jsonl` e é descrito em `dataset/README.md`. A versão atual contém 235 intenções, 470 paráfrases curadas e 705 formas de pergunta em 42 categorias. É adequado para iniciar um ciclo controlado e testar o pipeline, mas não deve ser considerado exaustivo ou suficiente para declarar competência geral.
+
+Valide o arquivo antes de treinar:
+
+```sh
+python3 Morok/Gerações/G3/training/dataset/validate_corpus.py Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl
+```
+
 ## Schema JSONL
 
 Um exemplo por linha. Campos obrigatórios:
@@ -18,110 +28,76 @@ Um exemplo por linha. Campos obrigatórios:
 Campos opcionais:
 
 - `quality`: número entre 0 e 1 (default 1);
-- `sensitive`: booleano (default false; sinalização para política externa de tratamento);
-- `question_variants`: lista de paráfrases curadas da pergunta;
-- `expansion_axes`: matriz de opções para os espaços `{0}`, `{1}` etc. no texto da pergunta. Cada eixo representa alternativas para um fragmento; os eixos podem codificar sinônimos, ordem ou formalidade.
+- `sensitive`: booleano (default false; registros sensíveis são bloqueados por padrão);
+- `question_variants`: lista de paráfrases curadas;
+- `expansion_axes`: matriz de opções para espaços `{0}`, `{1}` etc. no texto da pergunta.
 
-Exemplo:
-
-```json
-{"example_id":"pt-0001","group_id":"cumprimento-01","category":"cumprimento","question":"Olá, tudo bem?","answer":"Olá! Como posso ajudar?","source":"curadoria-interna","language":"pt-BR","dataset_version":"g3-v1","quality":1.0,"sensitive":false,"question_variants":["Oi, tudo bem?","Como você está?"]}
-```
-
-Os textos são validados como UTF-8 e normalizados em NFC via ICU. IDs duplicados, campos obrigatórios ausentes, valores inválidos e datasets vazios são rejeitados. Exemplos marcados como `sensitive=true` bloqueiam o treinamento por padrão. Para utilizá-los, a aplicação deve habilitar explicitamente `TrainingConfig::allow_sensitive_examples`; isso não substitui base legal, minimização, anonimização ou política de retenção.
+Os textos são validados como UTF-8 e normalizados em NFC via ICU. IDs duplicados, campos obrigatórios ausentes, valores inválidos e datasets vazios são rejeitados.
 
 ## Separação contra vazamento
 
-O split padrão é 85% treino, 10% validação e 5% teste, aplicado a grupos completos por `group_id`. O algoritmo exige pelo menos três grupos distintos e mantém cada grupo integralmente em um único split. A expansão e as perturbações são executadas somente nos exemplos do split de treino. Validação permanece limpa; o conjunto de teste é mantido separado e não é usado para ajuste de hiperparâmetros.
+O split padrão é 85% treino, 10% validação e 5% teste, aplicado a grupos completos por `group_id`. A expansão e as perturbações são executadas somente nos exemplos do split de treino. Validação permanece limpa; teste é mantido separado e não é usado para ajuste de hiperparâmetros.
 
 ## Expansão e robustez
 
-A expansão usa variantes curadas em `question_variants` e eixos combinatórios em `expansion_axes`. Para cada placeholder `{i}`, o eixo i fornece alternativas de fragmento. O algoritmo mantém uma combinação canônica, amostra combinações adicionais com seed determinística, deduplica e respeita o limite total por exemplo (default 4). Sinônimos, ordem e formalidade são fornecidos pelo dataset, sem inventar equivalências semânticas. Depois da expansão, cada candidato de treino pode receber perturbação.
+A expansão usa variantes curadas em `question_variants` e eixos combinatórios em `expansion_axes`. O algoritmo mantém a pergunta canônica, amostra combinações adicionais com seed determinística, deduplica e respeita o limite de quatro formas por exemplo. Sinônimos, ordem e formalidade precisam ser fornecidos no dataset; o sistema não inventa equivalências semânticas.
 
-Defaults experimentais da perturbação:
-- 45% de probabilidade por exemplo;
-- swap adjacente: 20% das operações;
-- omissão: 20%;
-- substituição por tecla próxima: 20%;
-- acento/caixa: 25%;
-- repetição/espaçamento: 15%.
+A perturbação padrão tem probabilidade de 45% por exemplo e pesos condicionais de 20% swap, 20% drop, 20% tecla próxima, 25% acentos/caixa/pontuação e 15% repetição/espaçamento. As mutações são feitas em caracteres Unicode e preservam UTF-8 válido. Não são aplicadas a validação ou teste.
 
-As mutações são feitas em caracteres Unicode e preservam UTF-8 válido. Não são aplicadas a validação ou teste. Os pesos condicionais precisam somar exatamente 100%.
+## Objetivo e otimização
 
-## Objetivo e BPTT
+A sequência supervisionada é formada por BOS, USR, bytes da pergunta, BOT, bytes da resposta e EOS. O objetivo calcula loss nos bytes da resposta e em EOS; tokens de prompt não recebem loss auxiliar e PAD é ignorado.
 
-A sequência supervisionada é formada por BOS, USR, bytes da pergunta, BOT, bytes da resposta e EOS. O objetivo padrão é causal e calcula loss somente nos bytes da resposta e em EOS; tokens de prompt não recebem loss auxiliar. PAD é ignorado. Label smoothing default 0,05 é aplicado somente quando o alvo é byte comum (0–255); tokens especiais não recebem smoothing.
-
-BPTT truncado usa segmentos de 128 passos por padrão. O estado numérico é transportado entre segmentos, mas o gradiente é interrompido na fronteira (detach), conforme TBPTT. A máscara de dropout variacional é fixa dentro de cada segmento e desativada na validação.
-
-## AdamW e regularização
-
-Defaults iniciais:
-- learning rate: 1e-3;
-- warmup: 3% dos updates planejados;
-- cosine decay até 1e-5;
-- AdamW beta1=0,9, beta2=0,999, epsilon=1e-8;
+Defaults atuais:
+- BPTT truncado de 128 passos;
+- Cross-Entropy causal com label smoothing 0,05 nos bytes comuns;
+- AdamW: beta1=0,9, beta2=0,999 e epsilon=1e-8;
+- learning rate inicial 1e-3, warmup de 3% e cosine decay até 1e-5;
 - weight decay 1e-3 apenas em matrizes de peso;
 - dropout variacional 0,10;
 - clipping global L2 em 1,0.
 
-Biases e escala RMSNorm não recebem weight decay. O gradiente é calculado por BPTT e atualizado com AdamW; o contador continua em exatamente 100.000 parâmetros.
+Biases e escala RMSNorm não recebem weight decay. Esses são os defaults implementados no pipeline G3 atual; não confundir com parâmetros de propostas arquiteturais anteriores.
 
-## Loss e telemetria
+## Checkpoints e telemetria
 
-O arquivo JSONL de métricas recebe eventos append-only:
-- `example_loss`: run_id, epoch, example_id, group_id, question_loss, example_loss, norma de gradiente antes/depois do clipping;
-- `epoch`: loss média de treino, loss média de validação, contagens, updates, seed e norma de gradiente.
+O treinamento registra loss por exemplo e por época, contagens, updates, seed e norma de gradiente. Checkpoints guardam pesos FP32, momentos AdamW, scheduler, sampler, RNG, fingerprints e configuração. A retomada é validada e ocorre no limite entre épocas.
 
-A loss por pergunta e por exemplo é mantida individualmente; não é sobrescrita por uma média global. Métricas são associadas ao run_id, fingerprint determinístico do dataset e seed.
+O fingerprint FNV-1a é usado para identificação/reprodutibilidade local, não como hash criptográfico.
 
-## Uso
+## Execução
 
-Compile com CMake e execute:
+Na raiz do repositório:
 
 ```sh
 cmake -S Morok -B Morok/build -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
-cmake --build Morok/build --target morok-g3-train morok_test_g3_training --parallel 2
-Morok/build/morok-g3-train caminho/dataset.jsonl caminho/metrics.jsonl caminho/modelo.morok 10 42 --checkpoint=caminho/treino.g3ckpt
-
-# Retomar o mesmo experimento até completar as 10 épocas:
-Morok/build/morok-g3-train caminho/dataset.jsonl caminho/metrics.jsonl caminho/modelo.morok 10 42 --resume=caminho/treino.g3ckpt
+cmake --build Morok/build --target morok-g3-train morok-g3-evaluate morok-g3-reinforce morok_test_g3_training --parallel 2
+ctest --test-dir Morok/build --output-on-failure -R g3.training
 ```
 
-O executável escreve métricas JSONL e exporta os 100.000 pesos FP32 finais para um artefato `.morok` versionado. Com `--checkpoint=arquivo`, salva um checkpoint completo ao final de cada época; com `--resume=arquivo`, valida arquitetura, versão de código, fingerprint do dataset, configuração, pesos, momentos AdamW, contador do otimizador, scheduler, ordem do sampler e RNG antes de continuar. A retomada é exata nos limites entre épocas; não retoma no meio de um lote. `--max-epochs-this-run=N` limita quantas épocas são executadas nesta invocação, mantendo o total de épocas na configuração, permitindo pausa controlada e retomada posterior.
-
-O checkpoint usa o formato G3 versionado e CRC32, com gravação atômica. O CLI pode atualizar o mesmo checkpoint de origem durante a retomada. Não foi incluído um corpus de produção no repositório. A qualidade do modelo não pode ser inferida dos testes sintéticos de CI; o treinamento real depende de um dataset com proveniência e rótulos revisados.
-
-## Limites conhecidos desta entrega
-
-- As alternativas semânticas precisam ser fornecidas e revisadas em `question_variants` ou `expansion_axes`; não existe um gerador de sinônimos baseado em léxico externo.
-- O campo `sensitive` é registrado, mas a anonimização/controle de acesso ao corpus é responsabilidade do pipeline de ingestão e armazenamento.
-- A implementação registra fingerprint FNV-1a de 64 bits para identificação/reprodutibilidade local; não é hash criptográfico de integridade.
-- A retomada atual ocorre entre épocas. Uma interrupção dentro de uma época reinicia a partir do último checkpoint íntegro, repetindo aquela época; não existe retomada em granularidade de exemplo/lote.
-- O fingerprint de dataset/configuração usa FNV-1a para identificação local, não como assinatura criptográfica contra adulteração.
-
-
-## Etapa 5 — avaliação independente
-
-Depois do SFT, execute o avaliador sobre o artefato FP32 exportado:
+SFT:
 
 ```sh
-morok-g3-evaluate dataset.jsonl modelo.morok relatorio-generalizacao.json 42
+Morok/build/morok-g3-train Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/metrics-g3-ptbr-v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-sft.morok 10 42 --checkpoint=Morok/Gerações/G3/training/dataset/g3-ptbr-v1.g3ckpt
 ```
 
-O quarto argumento é a seed usada no split por `group_id`; ela deve ser a
-mesma utilizada no treinamento. O avaliador carrega e valida o artefato
-`.morok`, exige a arquitetura G3 `0x0302` e exatamente 100.000 parâmetros,
-e calcula loss causal e acurácia byte-level em treino, validação e teste.
-O teste permanece intocado durante o treinamento.
+Avaliação independente do SFT:
 
-No split de teste, cada pergunta também é avaliada com erro tipográfico,
-remoção de acentos, alteração de pontuação, espaçamento irregular e caracteres
-Unicode/emoji. O relatório mede a diferença de loss e acurácia contra a
-pergunta limpa. O alerta de overfitting usa o gap entre treino e validação/teste.
+```sh
+Morok/build/morok-g3-evaluate Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-sft.morok Morok/Gerações/G3/training/dataset/evaluation-g3-ptbr-v1.json 42
+```
 
-Essas métricas são medidas de previsão byte-level sob teacher forcing, não
-julgamento semântico humano. A CI usa dados sintéticos para verificar o
-protocolo; conclusões de qualidade dependem de um corpus real, amplo, revisado
-e com grupos representativos. Para comparar regressão entre versões, execute
-o mesmo dataset, seed e protocolo contra cada artefato.
+RL após revisar o relatório SFT:
+
+```sh
+Morok/build/morok-g3-reinforce Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-sft.morok Morok/Gerações/G3/training/dataset/g3-ptbr-v1-rl.morok Morok/Gerações/G3/training/dataset/rl-report-g3-ptbr-v1.json 3
+```
+
+O RL usa quatro candidatas por prompt, baseline móvel por categoria, retorno descontado, penalidade KL e avaliador de referência lexical. O avaliador não garante verdade factual, segurança ou qualidade semântica; use revisão humana antes de tratar o resultado como modelo de produção.
+
+## Limitações conhecidas
+
+- As paráfrases são curadas manualmente; não há gerador semântico externo.
+- A cobertura atual não representa todos os assuntos, estilos, diálogos ou tarefas que um assistente geral pode receber.
+- A rubrica RL baseada em referências pode favorecer semelhança lexical e precisa de auditoria para evitar reward hacking.
+- A qualidade linguística e factual depende de revisão independente; testes sintéticos de CI não comprovam qualidade do modelo.
