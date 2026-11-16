@@ -969,3 +969,5 @@ kbd [data-icon]{display:inline-flex;vertical-align:middle}
   .workspace-page-view>.workspace-page{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
   .sidebar-search{margin-top:8px}
 }
+
+.workspace[hidden]{display:none!important}
