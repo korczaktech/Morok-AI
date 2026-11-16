@@ -199,12 +199,14 @@ if(MOROK_BUILD_APPS)
         morok_g1
         morok_g1_tsukuyomimax
         morok_g2_tsukuyomi
+        morok_g3_rl
         ARCHIVE DESTINATION lib)
     install(DIRECTORY
         include/
         Gerações/G1/shared/include/
         Gerações/G1/TsukuyomiMax/include/
         Gerações/G2/Tsukuyomi/include/
+        Gerações/G3/rl/include/
         DESTINATION include)
 endif()
 
