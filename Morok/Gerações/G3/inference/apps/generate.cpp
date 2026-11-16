@@ -90,6 +90,8 @@ int main(int argc, char** argv) {
 
         if (benchmark_mode) {
             if (prompt.empty()) throw std::invalid_argument("--benchmark requires a prompt");
+            config.empty_response =
+                morok::g3::inference::EmptyResponsePolicy::allow;
             std::vector<std::byte> state(backend->descriptor().state_size_bytes);
             std::mt19937_64 random(42U);
             morok::g3::inference::BenchmarkConfig benchmark;
