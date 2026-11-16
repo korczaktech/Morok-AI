@@ -141,6 +141,7 @@ G3 permanecem fora do escopo desta etapa.
 - [x] Validação estrita ou substituição configurável de UTF-8 inválido.
 - [x] NFC configurável, habilitada por padrão, via ICU.
 - [x] Validação de UTF-8 na decodificação antes de entregar texto.
+- [x] Limite de saída que recua até uma fronteira UTF-8 e sinaliza truncamento.
 - [x] Testes de vocabulário, português acentuado, NFC, dados inválidos,
       políticas de rejeição, tokens de controle e round-trip.
 - [x] CMake e workflow G3 integrados ao Core existente.
