@@ -28,7 +28,7 @@ void test_dataset_loader_and_group_split() {
                    "\"language\":\"pt-BR\",\"dataset_version\":\"test-v1\","
                    "\"quality\":1.0,\"sensitive\":false,"
                    "\"question_variants\":[\"Olá " << i << "\",\"E aí " << i << "\"],"
-                   "\"expansion_axes\":[[\"fazer\",\"realizar\"],[\"isso\",\"isto\"]]}\n"
+                   "\"expansion_axes\":[[\"fazer\",\"realizar\"],[\"isso\",\"isto\"]]}\n";
         }
     }
     const auto dataset = load_jsonl(path);
