@@ -395,11 +395,14 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
             ErrorCode::invalid_argument, "train.identity",
             "Training requires prompts, a policy and a distinct frozen SFT reference");
     }
-    const auto evaluator_status =
-        audit_evaluator(evaluator, policy.identity(), std::array<RewardAuditCase, 1>{
-            RewardAuditCase{"runtime-contract", {}, {}, -1.0, 1.0}});
-    if (!evaluator_status) {
-        return Result<TrainingReport>::failure(*evaluator_status.error_if());
+    const auto evaluator_metadata = evaluator.metadata();
+    if (evaluator_metadata.identity.empty() ||
+        evaluator_metadata.rubric_version.empty() ||
+        evaluator_metadata.label_origin.empty() ||
+        evaluator_metadata.identity == policy.identity()) {
+        return failure_result<TrainingReport>(
+            ErrorCode::invalid_argument, "train.evaluator",
+            "Training requires an identified, versioned and independent evaluator");
     }
 
     TrainingReport report;
