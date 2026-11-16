@@ -540,6 +540,13 @@ int main() {
             adaptive_model, mapped_bytes, mapped_config, nullptr, mapped_mask, mapped_rates);
         assert(uniform_report.epochs_completed == 1 && adaptive_report.epochs_completed == 1);
         assert(uniform_model.parameters != adaptive_model.parameters);
+        auto invalid_rates = mapped_rates;
+        invalid_rates[first_answer] = 0.0;
+        Model rejected_model;
+        initialize(rejected_model, 9876);
+        const auto rejected_report = train(
+            rejected_model, mapped_bytes, mapped_config, nullptr, mapped_mask, invalid_rates);
+        assert(rejected_report.epochs_completed == 0);
     }
 
     // O treinamento supervisionado atualiza somente os bytes marcados como resposta.
