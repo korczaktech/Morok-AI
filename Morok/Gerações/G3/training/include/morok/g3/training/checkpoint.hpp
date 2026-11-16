@@ -1,6 +1,7 @@
 #pragma once
 
 #include "morok/common/result.hpp"
+#include "morok/g3/neural/gru_backend.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -80,5 +81,11 @@ struct G3TrainingCheckpoint final {
 
 [[nodiscard]] std::uint32_t training_checkpoint_crc32(
     std::span<const std::byte> bytes) noexcept;
+
+[[nodiscard]] std::vector<float> capture_g3_model_weights(
+    const neural::G3Backend& backend);
+
+[[nodiscard]] common::Status restore_g3_model_weights(
+    std::span<const float> weights, neural::G3Backend& backend);
 
 } // namespace morok::g3::training
