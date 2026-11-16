@@ -18,9 +18,29 @@ class TrainingDataTests(unittest.TestCase):
         dialogues = training.read_dialogues(DATA_DIR / "feedback.txt")
         self.assertEqual(training.TRAINING_QUESTIONS, 100)
         self.assertEqual(len(dialogues), 100)
+        self.assertEqual(len({question.casefold() for question, _ in dialogues}), 100)
+        self.assertEqual(len({answer.casefold() for _, answer in dialogues}), 100)
         self.assertFalse(hasattr(training, "MAX_VALIDATION_QUESTIONS"))
         self.assertFalse(hasattr(training, "evaluate_validation_loss"))
         self.assertFalse(hasattr(training, "improves_validation_loss"))
+
+    def test_dialogue_reader_rejects_duplicate_questions_and_answers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "duplicate-questions.txt"
+            path.write_text(
+                "U: mesma pergunta?\\nIA: resposta um\\n\\n"
+                "U: MESMA pergunta!\\nIA: resposta dois\\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(RuntimeError):
+                training.read_dialogues(path)
+            path.write_text(
+                "U: pergunta um?\\nIA: mesma resposta\\n\\n"
+                "U: pergunta dois?\\nIA: MESMA resposta!\\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(RuntimeError):
+                training.read_dialogues(path)
 
     def test_learning_rate_is_adaptive_per_question(self):
         expected = {
