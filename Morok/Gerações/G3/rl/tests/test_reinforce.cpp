@@ -184,6 +184,17 @@ void test_reinforce_and_reference_kl() {
     assert(policy.updates == 1U);
     assert(policy.last_batch_size == 6U);
     assert(policy.last_gradients_finite);
+    assert(reference.updates == 0U);
+    assert(report.evaluator.identity == "independent-rubric");
+    assert(report.config_snapshot.temperature == config.temperature);
+    for (const auto& candidate : report.candidates_metrics) {
+        assert(candidate.response_tokens_data.size() ==
+               candidate.sampled_token_log_probabilities.size());
+        for (const double log_probability :
+             candidate.sampled_token_log_probabilities) {
+            assert(std::isfinite(log_probability));
+        }
+    }
     assert(std::isfinite(report.mean_reward));
     assert(std::isfinite(report.mean_kl));
     assert(report.mean_kl > 0.0);
