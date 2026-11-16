@@ -4,17 +4,28 @@ A G3 é a geração base para a linhagem futura de modelos Morok.
 
 ## Regra arquitetural obrigatória
 
-A G3 utiliza o motor Morok existente. Não criar outro Core, outro runtime de
-inferência ou uma cópia do motor em `Gerações/G3/shared/`.
+A G3 utiliza o motor Morok existente. Não criar outro Core, outro runtime de inferência ou uma cópia do motor em `Gerações/G3/shared/`.
 
-A infraestrutura neutra permanece em `Morok::Core`. O contrato público de
-backend neural é `morok::model::ModelBackend`, em
-`Morok/include/morok/model/model_backend.hpp`. A G1 já possui um adaptador que
-expõe seu motor existente por esse contrato.
+A infraestrutura neutra permanece em `Morok::Core`. O contrato público de backend neural é `morok::model::ModelBackend`, em `Morok/include/morok/model/model_backend.hpp`.
 
-A implementação específica da arquitetura neural G3 (GRU, RMSNorm, projeção,
-weight tying e kernels) será adicionada dentro de `Gerações/G3/` e conectada ao
-contrato comum. Isso é um backend arquitetural, não um segundo motor/runtime.
+## Arquitetura neural atual
+
+O backend neural da G3 está em `neural/` como `Morok::G3::Neural`. A configuração normativa atual é a revisão **exatamente 100.000 parâmetros**:
+
+- vocabulário: 261 IDs;
+- embedding: 60 dimensões;
+- GRU 1: hidden 97;
+- GRU 2: hidden 68;
+- duas camadas recorrentes com três portas cada;
+- RMSNorm entre camadas, com escala aprendível e epsilon configurável;
+- projeção 68 → 60;
+- weight tying real: a cabeça de saída lê a transposta do próprio embedding;
+- estado recorrente: 660 bytes por sessão FP32;
+- identificador de arquitetura: `0x0302`.
+
+A contagem é calculada a partir dos tensores efetivamente alocados. O construtor rejeita qualquer configuração que não totalize exatamente 100.000 parâmetros. A tabela de cálculo, os formatos e a regra de compatibilidade estão em [PARAMETROS-100K.md](PARAMETROS-100K.md).
+
+A dimensão de embedding e os tamanhos ocultos anteriores (64/128) eram valores de referência da arquitetura inicial e foram substituídos nesta revisão para atingir o orçamento solicitado sem criar parâmetros artificiais. Artefatos `0x0301` são incompatíveis com a configuração atual `0x0302`.
 
 ## Perfis reservados
 
@@ -23,42 +34,10 @@ contrato comum. Isso é um backend arquitetural, não um segundo motor/runtime.
 - **Artemis:** sistema multiagente, com no mínimo três agentes.
 - **Apollo:** baixa latência e rapidez de resposta, medidas por benchmark.
 
-Os perfis compartilham o Core, o contrato de execução e a implementação-base da
-arquitetura G3. Suas políticas e configurações podem variar sem duplicar o motor.
+Os perfis compartilham o Core, o contrato de execução e a implementação-base da arquitetura G3.
 
-## Estado
+## Treinamento e validação
 
-A Etapa 1 integrou o contrato comum e adaptou o motor G1 existente. A Etapa 2
-implementou a representação byte-level UTF-8 de 261 IDs, tokens de controle,
-normalização NFC configurável e validação de entrada/saída no Core compartilhado.
+O backend implementa o forward incremental e a interface `ModelBackend`. A arquitetura, a inicialização e o orçamento de parâmetros são testados em `neural/tests/test_gru_backend.cpp`.
 
-O módulo de aprendizado por reforço da G3 está implementado em
-`Gerações/G3/rl/`, ligado ao Core existente sem criar outro runtime. O módulo
-inclui referência SFT somente para inferência, amostragem Top-K/temperatura,
-baseline móvel por categoria, recompensas com pesos e penalidades explícitos,
-KL por distribuição, gradientes de logits em lote, auditoria independente do
-avaliador, comparação SFT/RL no mesmo conjunto fechado e estado recuperável do
-treinador (baseline, RNG, configuração e proveniência).
-
-O contrato de política recebe distribuições normalizadas de 261 IDs e delega
-a aplicação do gradiente ao backend treinável que possui os pesos e o
-otimizador. O backend neural G3 já fornece a arquitetura e o forward incremental. Como
-BPTT e atualização dos pesos ainda não estão integrados, o algoritmo RL está
-testável com políticas de contrato, mas não treina pesos reais da GRU.
-Nenhum peso da G1 é usado como substituto.
-
-Consulte [ARQUITETURA.md](ARQUITETURA.md) e [MODELOS.md](../MODELOS.md).
-A arquitetura neural da G3 também está implementada em neural/ como
-Morok::G3::Neural: embedding 261x64, GRU de duas camadas com hidden 128,
-RMSNorm entre camadas, projeção 128→64, weight tying por matriz compartilhada,
-inicialização determinística configurável e contagem calculada dos tensores.
-O forward incremental implementa ModelBackend e mantém estados independentes
-por sessão. BPTT, otimizador e treinamento SFT não fazem parte desta entrega.
-
-
-A Fase 4 adiciona utilitários G3 de inferência e exportação em
-`Gerações/G3/inference/`: decodificação com Top-K/temperatura, quantização
-INT8 simétrica por linha, artefato `.morok` versionado com CRC32, e harness
-de benchmark. Os testes usam backend determinístico para validar contratos,
-formato, corrupção e isolamento concorrente. Equivalência FP32/INT8, RAM e latência de produção permanecem pendentes até
-existirem pesos SFT treinados e medições com o backend neural real.
+BPTT, gradientes dos pesos, otimizador e treinamento SFT ainda são entregas separadas. O módulo RL continua dependendo da integração com o backend treinável real. A arquitetura de 100.000 parâmetros não significa que o modelo já esteja treinado.
