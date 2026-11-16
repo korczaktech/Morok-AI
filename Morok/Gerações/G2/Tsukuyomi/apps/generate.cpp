@@ -14,6 +14,17 @@
 #include <vector>
 
 namespace {
+std::string question_checkpoint_name(const std::string& question) {
+    std::uint64_t hash = 14695981039346656037ULL;
+    for (const unsigned char byte : question) {
+        hash ^= byte;
+        hash *= 1099511628211ULL;
+    }
+    std::ostringstream name;
+    name << "q_" << std::hex << std::setw(16) << std::setfill('0') << hash << ".ckpt";
+    return name.str();
+}
+
 bool parse_limit(const char* text, std::size_t& value) {
     const std::string count(text ? text : "");
     const auto parsed = std::from_chars(count.data(),
