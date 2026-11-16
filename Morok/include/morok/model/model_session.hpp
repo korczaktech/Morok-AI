@@ -49,6 +49,27 @@ public:
         return result;
     }
 
+    // Marks caller-owned state as restored from a prior turn without resetting it.
+    // The caller is responsible for supplying a previously initialized state buffer.
+    [[nodiscard]] common::Status resume_existing_state() {
+        initialized_ = false;
+        if (!descriptor_.valid() ||
+            state_storage_.size() != descriptor_.state_size_bytes) {
+            return failure(common::ErrorCode::invalid_argument,
+                           "model.session.resume",
+                           "backend descriptor or restored state size is invalid");
+        }
+        const auto address =
+            reinterpret_cast<std::uintptr_t>(state_storage_.data());
+        if (address % descriptor_.state_alignment_bytes != 0) {
+            return failure(common::ErrorCode::invalid_argument,
+                           "model.session.resume",
+                           "restored state buffer does not satisfy backend alignment");
+        }
+        initialized_ = true;
+        return common::Status::success();
+    }
+
     [[nodiscard]] common::Status consume_byte(std::uint8_t byte) {
         if (!initialized_) {
             return failure(common::ErrorCode::model_not_loaded,
