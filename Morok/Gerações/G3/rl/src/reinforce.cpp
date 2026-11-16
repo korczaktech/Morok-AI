@@ -351,7 +351,6 @@ struct ScoredReward final {
     }
     score -= penalties.repeated_token_ratio * repeated_ratio(response);
     const double copied = prompt_copy_ratio(prompt, response);
-    const double repeated = repeated_ratio(response);
     score -= penalties.prompt_copy_ratio * copied;
     const std::size_t expected = evaluator.expected_response_tokens(prompt);
     if (expected > 0U) {
