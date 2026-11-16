@@ -196,7 +196,16 @@ jobs:
         working-directory: Morok
         run: |
           if [ -f build/g2/respostas-tsukuyomi.md ]; then
-            cat build/g2/respostas-tsukuyomi.md | tee -a "$GITHUB_STEP_SUMMARY"
+            {
+              echo "## Annotations — Tsukuyomi G2"
+              echo
+              echo "<details>"
+              echo "<summary>Expandir relatório completo de treinamento e avaliação</summary>"
+              echo
+              cat build/g2/respostas-tsukuyomi.md
+              echo
+              echo "</details>"
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "Relatório de avaliação não encontrado." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
