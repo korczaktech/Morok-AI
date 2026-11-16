@@ -55,6 +55,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes ninja-build libsqlite3-dev libicu-dev
 
+      - name: Validate G3 Portuguese training corpus
+        run: |
+          python3 "Morok/Gerações/G3/training/dataset/validate_corpus.py" "Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl"
+
       - name: Configure existing Morok motor
         working-directory: Morok
         run: >-
@@ -73,12 +77,14 @@ jobs:
           morok_test_g1_forward
           morok_test_g2_tsukuyomi
           morok_test_g3_reinforcement
+          morok-g3-train
+          morok_test_g3_training
 
       - name: Test REINFORCE, existing G1 motor, G2 and isolation
         working-directory: Morok
         run: >-
           ctest --test-dir build/g3-contract
-          -R "g3.reinforcement|model.g1_backend|model.session|lang.byte_tokenizer|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
+          -R "g3.reinforcement|g3.training|model.g1_backend|model.session|lang.byte_tokenizer|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
           --output-on-failure
 
       - name: Verify public contract and architecture documentation
