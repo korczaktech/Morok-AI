@@ -28,7 +28,7 @@ Exemplo:
 {"example_id":"pt-0001","group_id":"cumprimento-01","category":"cumprimento","question":"Olá, tudo bem?","answer":"Olá! Como posso ajudar?","source":"curadoria-interna","language":"pt-BR","dataset_version":"g3-v1","quality":1.0,"sensitive":false,"question_variants":["Oi, tudo bem?","Como você está?"]}
 ```
 
-Os textos são validados como UTF-8 e normalizados em NFC via ICU. IDs duplicados, campos obrigatórios ausentes, valores inválidos e datasets vazios são rejeitados. Não inclua dados pessoais/sensíveis sem base legal e política de retenção apropriadas.
+Os textos são validados como UTF-8 e normalizados em NFC via ICU. IDs duplicados, campos obrigatórios ausentes, valores inválidos e datasets vazios são rejeitados. Exemplos marcados como `sensitive=true` bloqueiam o treinamento por padrão. Para utilizá-los, a aplicação deve habilitar explicitamente `TrainingConfig::allow_sensitive_examples`; isso não substitui base legal, minimização, anonimização ou política de retenção.
 
 ## Separação contra vazamento
 
