@@ -1,6 +1,7 @@
 #include "morok/g3/neural/gru_backend.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -115,46 +116,54 @@ void gru_step(std::span<const float> input,
               const std::vector<float>& input_weights,
               const std::vector<float>& recurrent_weights,
               const std::vector<float>& bias,
-              std::vector<float>& output) {
+              std::span<float> output) noexcept {
     const std::size_t hidden = output.size();
     const std::size_t input_dim = input.size();
-    std::vector<float> gates(kGateCount * hidden, 0.0F);
+    std::array<float, kGateCount * kLayer1HiddenDim> gates{};
+    const std::size_t gate_values = kGateCount * hidden;
+    std::fill_n(gates.begin(), gate_values, 0.0F);
 
     for (std::size_t gate = 0; gate < 2U; ++gate) {
+        const std::size_t gate_offset = gate * hidden;
         for (std::size_t row = 0; row < hidden; ++row) {
-            float sum = bias[gate * hidden + row];
-            const std::size_t input_offset = (gate * hidden + row) * input_dim;
+            const float* input_row =
+                input_weights.data() + (gate_offset + row) * input_dim;
+            const float* recurrent_row =
+                recurrent_weights.data() + (gate_offset + row) * hidden;
+            float sum = bias[gate_offset + row];
             for (std::size_t column = 0; column < input_dim; ++column)
-                sum += input_weights[input_offset + column] * input[column];
-            const std::size_t recurrent_offset = (gate * hidden + row) * hidden;
+                sum += input_row[column] * input[column];
             for (std::size_t column = 0; column < hidden; ++column)
-                sum += recurrent_weights[recurrent_offset + column] * previous[column];
-            gates[gate * hidden + row] = sigmoid(sum);
+                sum += recurrent_row[column] * previous[column];
+            gates[gate_offset + row] = sigmoid(sum);
         }
     }
 
+    const std::size_t candidate_offset = 2U * hidden;
     for (std::size_t row = 0; row < hidden; ++row) {
-        float sum = bias[2U * hidden + row];
-        const std::size_t input_offset = (2U * hidden + row) * input_dim;
+        const float* input_row =
+            input_weights.data() + (candidate_offset + row) * input_dim;
+        const float* recurrent_row =
+            recurrent_weights.data() + (candidate_offset + row) * hidden;
+        float sum = bias[candidate_offset + row];
         for (std::size_t column = 0; column < input_dim; ++column)
-            sum += input_weights[input_offset + column] * input[column];
-        const std::size_t recurrent_offset = (2U * hidden + row) * hidden;
+            sum += input_row[column] * input[column];
         for (std::size_t column = 0; column < hidden; ++column)
-            sum += recurrent_weights[recurrent_offset + column] *
-                   gates[hidden + column] * previous[column];
-        gates[2U * hidden + row] = std::tanh(sum);
+            sum += recurrent_row[column] * gates[hidden + column] *
+                   previous[column];
+        gates[candidate_offset + row] = std::tanh(sum);
     }
 
     for (std::size_t i = 0; i < hidden; ++i) {
         const float update = gates[i];
-        const float candidate = gates[2U * hidden + i];
+        const float candidate = gates[candidate_offset + i];
         output[i] = (1.0F - update) * candidate + update * previous[i];
     }
 }
 
 void rms_normalize(std::span<const float> input,
                    const std::vector<float>& scale, float epsilon,
-                   std::vector<float>& output) {
+                   std::span<float> output) noexcept {
     double sum_squares = 0.0;
     for (float value : input) sum_squares += static_cast<double>(value) * value;
     const float inverse_rms = static_cast<float>(
@@ -233,7 +242,7 @@ common::Status G3Backend::consume_token(std::span<std::byte> state,
         return fail(common::ErrorCode::invalid_argument, "consume_token",
                     "G3 weight tensor dimensions are invalid");
 
-    std::vector<float> previous(kStateFloats);
+    std::array<float, kStateFloats> previous{};
     std::memcpy(previous.data(), state.data(), kStateBytes);
     const std::span<const float> embedding(
         weights_.embedding.data() + static_cast<std::size_t>(token_id) * kEmbeddingDim,
@@ -241,9 +250,9 @@ common::Status G3Backend::consume_token(std::span<std::byte> state,
     const std::span<const float> previous1(previous.data(), kLayer1HiddenDim);
     const std::span<const float> previous2(previous.data() + kLayer1HiddenDim,
                                            kLayer2HiddenDim);
-    std::vector<float> layer1(kLayer1HiddenDim);
-    std::vector<float> normalized(kLayer1HiddenDim);
-    std::vector<float> layer2(kLayer2HiddenDim);
+    std::array<float, kLayer1HiddenDim> layer1{};
+    std::array<float, kLayer1HiddenDim> normalized{};
+    std::array<float, kLayer2HiddenDim> layer2{};
 
     gru_step(embedding, previous1, weights_.layer1_input,
              weights_.layer1_recurrent, weights_.layer1_bias, layer1);
@@ -260,11 +269,9 @@ common::Status G3Backend::consume_token(std::span<std::byte> state,
             return fail(common::ErrorCode::internal_error, "consume_token",
                         "G3 second recurrent layer produced a non-finite state");
 
-    std::vector<float> next;
-    next.reserve(kStateFloats);
-    next.insert(next.end(), layer1.begin(), layer1.end());
-    next.insert(next.end(), layer2.begin(), layer2.end());
-    std::memcpy(state.data(), next.data(), kStateBytes);
+    std::memcpy(state.data(), layer1.data(), layer1.size() * sizeof(float));
+    std::memcpy(state.data() + layer1.size() * sizeof(float),
+                layer2.data(), layer2.size() * sizeof(float));
     return common::Status::success();
 }
 
@@ -278,24 +285,26 @@ common::Status G3Backend::next_token_log_probabilities(
         return fail(common::ErrorCode::invalid_argument, "next_token",
                     "G3 output weight tensor dimensions are invalid");
 
-    std::vector<float> hidden(kStateFloats);
+    std::array<float, kStateFloats> hidden{};
     std::memcpy(hidden.data(), state.data(), kStateBytes);
     const float* final_hidden = hidden.data() + kLayer1HiddenDim;
-    std::vector<float> projected(kEmbeddingDim);
+    std::array<float, kEmbeddingDim> projected{};
     for (std::size_t row = 0; row < kEmbeddingDim; ++row) {
         float value = weights_.projection_bias[row];
-        const std::size_t offset = row * kLayer2HiddenDim;
+        const float* projection_row =
+            weights_.projection.data() + row * kLayer2HiddenDim;
         for (std::size_t column = 0; column < kLayer2HiddenDim; ++column)
-            value += weights_.projection[offset + column] * final_hidden[column];
+            value += projection_row[column] * final_hidden[column];
         projected[row] = value;
     }
 
     float maximum = -std::numeric_limits<float>::infinity();
     for (std::size_t token = 0; token < kVocabularySize; ++token) {
         float logit = weights_.output_bias[token];
-        const std::size_t offset = token * kEmbeddingDim;
+        const float* embedding_row =
+            weights_.embedding.data() + token * kEmbeddingDim;
         for (std::size_t dimension = 0; dimension < kEmbeddingDim; ++dimension)
-            logit += weights_.embedding[offset + dimension] * projected[dimension];
+            logit += embedding_row[dimension] * projected[dimension];
         if (!std::isfinite(logit))
             return fail(common::ErrorCode::internal_error, "next_token",
                         "G3 produced a non-finite output logit");
@@ -313,5 +322,4 @@ common::Status G3Backend::next_token_log_probabilities(
     for (float& value : log_probabilities) value -= log_normalizer;
     return common::Status::success();
 }
-
 } // namespace morok::g3::neural
