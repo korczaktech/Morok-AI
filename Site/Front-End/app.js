@@ -813,6 +813,14 @@
   });
   $('#auth-logout').addEventListener('click',logout);
 
+  $('#auth-recover').addEventListener('click',()=>{void (async()=>{const email=($('#auth-email').value||'').trim()||prompt('Informe o e-mail da sua conta:');if(!email)return;try{const result=await authRequest('/auth/recover',{body:{email}});$('#auth-message').className='auth-message success';$('#auth-message').textContent=result.message||'Se o endereço estiver cadastrado, enviaremos instruções.';}catch(error){$('#auth-message').className='auth-message error';$('#auth-message').textContent=error.message;}})();});
+  const resetToken = new URLSearchParams(location.search).get('reset');
+  if (resetToken) {
+    history.replaceState({}, '', location.pathname + location.hash);
+    setTimeout(()=>{void (async()=>{const password=prompt('Defina sua nova senha (mínimo de 10 caracteres):');if(!password)return;try{await authRequest('/auth/reset',{body:{token:resetToken,password}});alert('Senha redefinida. Entre com a nova senha.');openAuth('login');}catch(error){alert(error.message);}})();},300);
+  }
+
+
   $('#new-chat').addEventListener('click',createConversation);
   $('#brand-home').addEventListener('click',event=>{event.preventDefault();state.activeId=null;persist();renderHistory($('#sidebar-search-input').value);renderConversation();returnToChat();el.input.focus();});
   $('#sidebar-search-input').addEventListener('input',event=>renderHistory(event.target.value));
