@@ -66,6 +66,7 @@ double evaluate_dialogue_corpus_loss(
     std::uint64_t total_targets = 0;
     std::vector<std::uint8_t> dialogue;
     std::size_t line_start = 0;
+    bool has_dialogue = false;
 
     const auto evaluate_dialogue = [&]() -> bool {
         if (dialogue.empty()) return true;
@@ -91,8 +92,17 @@ double evaluate_dialogue_corpus_loss(
             ++marker;
         const bool starts_question =
             line_end - marker >= 2 && bytes[marker] == 'U' && bytes[marker + 1] == ':';
-        if (starts_question && !dialogue.empty() && !evaluate_dialogue())
-            return std::numeric_limits<double>::infinity();
+        if (starts_question) {
+            if (!dialogue.empty()) {
+                // Ignora cabeçalhos/comentários antes da primeira pergunta.
+                // Só segmentos iniciados por U: representam diálogos avaliáveis.
+                if (has_dialogue && !evaluate_dialogue())
+                    return std::numeric_limits<double>::infinity();
+                if (!has_dialogue)
+                    dialogue.clear();
+            }
+            has_dialogue = true;
+        }
 
         std::size_t line_after = line_end;
         if (line_after < bytes.size() && bytes[line_after] == '\r') ++line_after;
