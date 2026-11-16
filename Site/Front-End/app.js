@@ -53,7 +53,7 @@
       state.generation = saved.generation === 'G1' ? 'G1' : 'G1';
       state.model = 'Tsukuyomi';
       state.tasks = Array.isArray(saved.tasks) ? saved.tasks.slice(0,100).map(task => ({...task,id:task.id || id()})) : [];
-      state.projects = Array.isArray(saved.projects) ? saved.projects.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string').slice(0,100) : [];
+      state.projects = Array.isArray(saved.projects) ? saved.projects.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string').map(p => ({...p,updatedAt:p.updatedAt || p.createdAt || new Date(0).toISOString()})).slice(0,100) : [];
       state.instructions = typeof saved.instructions === 'string' ? saved.instructions.slice(0,4000) : '';
       state.location = typeof saved.location === 'string' ? saved.location.slice(0,120) : '';
       state.aboutMe = typeof saved.aboutMe === 'string' ? saved.aboutMe.slice(0,1000) : '';
@@ -693,6 +693,11 @@
       try {
         const remote = await authRequest("/v1/resources?type=" + type, { method: "GET", token });
         const byId = new Map(localItems.map(item => [item.id, item]));
+        for (const tombstone of remote.deleted || []) {
+          const local = byId.get(tombstone.id);
+          const localTime = Date.parse(local?.updatedAt || local?.createdAt || 0) || 0;
+          if (local && localTime <= Date.parse(tombstone.deletedAt)) byId.delete(tombstone.id);
+        }
         const merged = [];
         for (const item of remote.items || []) {
           const local = byId.get(item.id);
@@ -701,7 +706,7 @@
           byId.delete(item.id);
         }
         for (const local of byId.values()) merged.push(local);
-        const payload = merged.map(item => ({ id: item.id, data: item }));
+        const payload = merged.map(item => ({ id: item.id, updatedAt: item.updatedAt || item.createdAt || new Date(0).toISOString(), data: item }));
         if (payload.length) await authRequest("/v1/resources/sync", { token, body: { type, items: payload } });
         if (type === "projects") state.projects = merged.slice(0, 100);
         else state.tasks = merged.slice(0, 100).map(({ id, updatedAt, ...task }) => task);
@@ -835,7 +840,7 @@
   $('#sidebar-search-input').addEventListener('input',event=>renderHistory(event.target.value));
   $('#history-toggle').addEventListener('click',()=>{const heading=$('#history-toggle');const expanded=heading.getAttribute('aria-expanded')==='true';heading.setAttribute('aria-expanded',String(!expanded));el.history.hidden=expanded;});
   $('#projects-toggle').addEventListener('click',()=>{const heading=$('#projects-toggle');const expanded=heading.getAttribute('aria-expanded')==='true';heading.setAttribute('aria-expanded',String(!expanded));$('#projects-list').hidden=expanded;});
-  $('#workspace-page').addEventListener('submit',event=>{if(event.target.id==='support-ticket-form'){event.preventDefault();void (async()=>{try{await authRequest('/v1/support/tickets',{token:state.authSession.access_token,body:{subject:$('#support-subject').value,description:$('#support-description').value}});toast('Chamado enviado.');openWorkspacePage('help');}catch(error){toast(error.message);}})();}if(event.target.id==='project-form'){event.preventDefault();const name=$('#project-name-input').value.trim();if(!name)return;const p={id:id(),name,createdAt:now()};state.projects.unshift(p);state.activeProjectId=p.id;persist();void syncAccountResources();renderProjectsSidebar();openWorkspacePage('projects');}});
+  $('#workspace-page').addEventListener('submit',event=>{if(event.target.id==='support-ticket-form'){event.preventDefault();void (async()=>{try{await authRequest('/v1/support/tickets',{token:state.authSession.access_token,body:{subject:$('#support-subject').value,description:$('#support-description').value}});toast('Chamado enviado.');openWorkspacePage('help');}catch(error){toast(error.message);}})();}if(event.target.id==='project-form'){event.preventDefault();const name=$('#project-name-input').value.trim();if(!name)return;const p={id:id(),name,createdAt:now(),updatedAt:now()};state.projects.unshift(p);state.activeProjectId=p.id;persist();void syncAccountResources();renderProjectsSidebar();openWorkspacePage('projects');}});
   $('#conversation-search-input').addEventListener('input',event=>renderSearchResults(event.target.value));
   $('#confirm-accept').addEventListener('click',()=>finishConfirmation(true));
   $('#confirm-cancel').addEventListener('click',()=>finishConfirmation(false));
