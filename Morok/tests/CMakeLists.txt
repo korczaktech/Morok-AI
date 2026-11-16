@@ -321,6 +321,19 @@ if(TARGET morok_g3_generate)
         LABELS "g3;inference;cli" TIMEOUT 30)
 endif()
 
+if(TARGET morok_g3_generate AND TARGET morok_g3_quantize AND TARGET morok_g3_train)
+    add_test(NAME g3.int8_deployment
+        COMMAND ${CMAKE_COMMAND}
+            -DTRAIN=$<TARGET_FILE:morok_g3_train>
+            -DQUANTIZE=$<TARGET_FILE:morok_g3_quantize>
+            -DGENERATE=$<TARGET_FILE:morok_g3_generate>
+            -DDATASET=${CMAKE_CURRENT_SOURCE_DIR}/../Gerações/G3/training/tests/fixtures/smoke.jsonl
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/g3-int8-deployment
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_g3_int8_deployment.cmake)
+    set_tests_properties(g3.int8_deployment PROPERTIES
+        LABELS "g3;inference;int8;integration" TIMEOUT 180)
+endif()
+
 if(TARGET morok_g3_reinforce AND TARGET morok_g3_train)
     add_test(NAME g3.rl_pipeline
         COMMAND ${CMAKE_COMMAND}
