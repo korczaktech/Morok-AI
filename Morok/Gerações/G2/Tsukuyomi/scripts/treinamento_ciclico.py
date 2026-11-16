@@ -15,9 +15,8 @@ import unicodedata
 
 MAX_RESPONSE_BYTES = 160
 MAX_VALIDATION_QUESTIONS = 40
-MAX_CYCLES = 10
-MAX_EPOCHS_PER_CYCLE = 100
-MAX_TOTAL_EPOCHS = 200
+MAX_CYCLES = 100
+MAX_EPOCHS_PER_CYCLE = 1000
 try:
     INITIAL_LEARNING_RATE = float(os.environ.get("TSUKUYOMI_LEARNING_RATE", "0.001"))
 except ValueError as error:
@@ -352,8 +351,6 @@ def main() -> int:
     question_count = int(sys.argv[9])
     if not 1 <= epochs <= MAX_EPOCHS_PER_CYCLE or not 1 <= attempts <= MAX_CYCLES:
         raise ValueError(f"Épocas precisam estar entre 1 e {MAX_EPOCHS_PER_CYCLE}; tentativas entre 1 e {MAX_CYCLES}.")
-    if epochs * attempts > MAX_TOTAL_EPOCHS:
-        raise ValueError(f"O treinamento está limitado a {MAX_TOTAL_EPOCHS} épocas totais por execução.")
     if sys.argv[8] not in ("0", "1"):
         raise ValueError("O modo contínuo precisa ser 0 ou 1.")
     if not 1 <= question_count <= MAX_VALIDATION_QUESTIONS:
@@ -403,7 +400,9 @@ def main() -> int:
         report.write(f"- Questões selecionadas: {question_count}\n")
         report.write(f"- Perguntas de teste reservado: {len(test)}\n")
         report.write(f"- Épocas por tentativa: {epochs}\n")
-        report.write(f"- Épocas totais máximas: {epochs * maximum_cycles}\n")
+        report.write(f"- Limite de épocas por ciclo: {MAX_EPOCHS_PER_CYCLE}\n")
+        report.write(f"- Limite de ciclos por execução: {MAX_CYCLES}\n")
+        report.write(f"- Máximo teórico nesta configuração: {epochs * maximum_cycles} épocas\n")
         report.write(f"- Modo contínuo: {'ativado' if continuous else 'desativado'}\n")
         report.write(f"- Limite de geração: {MAX_RESPONSE_BYTES} bytes\n")
         report.write("- Critério contínuo: encerrar quando todas as questões selecionadas estiverem corretas\n")
