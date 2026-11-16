@@ -280,6 +280,16 @@ morok_enable_sanitizers(morok_test_g3_training)
 add_test(NAME g3.training COMMAND morok_test_g3_training)
 set_tests_properties(g3.training PROPERTIES LABELS "g3;training;dataset" TIMEOUT 180)
 
+# G3 versioned, checksummed and atomically persisted training checkpoints.
+add_executable(morok_test_g3_checkpoint
+    ../Gerações/G3/training/tests/test_checkpoint.cpp)
+target_link_libraries(morok_test_g3_checkpoint
+    PRIVATE Morok::G3::Training morok_build_options)
+morok_enable_sanitizers(morok_test_g3_checkpoint)
+add_test(NAME g3.checkpoint COMMAND morok_test_g3_checkpoint)
+set_tests_properties(g3.checkpoint PROPERTIES
+    LABELS "g3;checkpoint;recovery" TIMEOUT 60)
+
 add_executable(morok_test_g3_evaluation
     ../Gerações/G3/training/tests/test_evaluation.cpp)
 target_link_libraries(morok_test_g3_evaluation
