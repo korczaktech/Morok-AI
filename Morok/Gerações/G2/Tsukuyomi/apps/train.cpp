@@ -68,6 +68,49 @@ bool parse_size(const char* text, std::size_t& value) {
 }
 
 int main(int argc, char** argv) {
+    // Modo de avaliação: calcula entropia cruzada no holdout sem atualizar pesos.
+    if (argc == 4 && std::string(argv[1]) == "--evaluate") {
+        std::error_code eval_error;
+        const auto eval_size = std::filesystem::file_size(argv[2], eval_error);
+        constexpr std::uintmax_t kMaximumEvaluationBytes = 512ULL * 1024ULL * 1024ULL;
+        if (eval_error || eval_size < 2 || eval_size > kMaximumEvaluationBytes) {
+            std::cerr << "Corpus de avaliação inválido.\\n";
+            return 2;
+        }
+        std::ifstream eval_input(argv[2], std::ios::binary);
+        if (!eval_input) {
+            std::cerr << "Não foi possível abrir o corpus de avaliação.\\n";
+            return 2;
+        }
+        std::vector<std::uint8_t> eval_bytes;
+        eval_bytes.reserve(static_cast<std::size_t>(eval_size));
+        char eval_value = 0;
+        while (eval_input.get(eval_value))
+            eval_bytes.push_back(static_cast<std::uint8_t>(
+                static_cast<unsigned char>(eval_value)));
+        if (eval_bytes.size() != eval_size) {
+            std::cerr << "Falha ao ler o corpus de avaliação integralmente.\\n";
+            return 2;
+        }
+        const auto eval_mask = make_dialogue_target_mask(eval_bytes);
+        if (eval_mask.empty()) {
+            std::cerr << "Corpus de avaliação não contém alvos IA: válidos.\\n";
+            return 2;
+        }
+        morok::g2::tsukuyomi::Model eval_model;
+        if (!morok::g2::tsukuyomi::load_checkpoint(eval_model, argv[3])) {
+            std::cerr << "Checkpoint ausente ou inválido para avaliação.\\n";
+            return 1;
+        }
+        const double loss = morok::g2::tsukuyomi::evaluate_loss(
+            eval_model, eval_bytes, eval_mask);
+        if (!std::isfinite(loss)) {
+            std::cerr << "Loss de validação não finito.\\n";
+            return 1;
+        }
+        std::cout << "validation_loss: " << loss << '\\n';
+        return 0;
+    }
     if (argc < 3 || argc > 9) {
         std::cerr << "Uso: morok-g2-tsukuyomi-train <corpus.bin> <checkpoint> [epocas] [seed] [learning_rate] [--resume] [--lr-map arquivo]\n";
         return 2;
