@@ -380,8 +380,10 @@ def extract_training_metric(output: str, name: str) -> float:
 
 def question_checkpoint_paths(directory: Path, question: str) -> tuple[Path, Path]:
     """Retorna o checkpoint e o Adam exclusivos de uma pergunta."""
-    key = hashlib.sha256(question.encode("utf-8")).hexdigest()
-    checkpoint = directory / f"{key}.ckpt"
+    key = 14695981039346656037
+    for byte in question.encode("utf-8"):
+        key = ((key ^ byte) * 1099511628211) & 0xFFFFFFFFFFFFFFFF
+    checkpoint = directory / f"q_{key:016x}.ckpt"
     return checkpoint, Path(str(checkpoint) + ".adam")
 
 
