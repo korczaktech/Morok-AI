@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <span>
 #include <string>
 #include <string_view>
@@ -56,6 +57,7 @@ struct EncodedText final {
 struct DecodedText final {
     std::string text;
     bool replaced_invalid_utf8{false};
+    bool truncated_at_utf8_boundary{false};
 };
 
 class ByteTokenizer final {
@@ -101,7 +103,8 @@ public:
     // Decodes byte IDs and stops at EOS. PAD/BOS/USR/BOT are rejected.
     [[nodiscard]] static common::Result<DecodedText> decode_text(
         std::span<const TokenId> tokens,
-        const TextCodecConfig& config = {});
+        const TextCodecConfig& config = {},
+        std::size_t max_output_bytes = std::numeric_limits<std::size_t>::max());
 };
 
 } // namespace morok::lang
