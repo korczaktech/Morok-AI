@@ -72,9 +72,10 @@ class TrainingDataTests(unittest.TestCase):
             corpus = Path(directory) / "single-question.txt"
             training.write_evaluation_corpus(corpus, "pergunta?", "resposta esperada")
             self.assertEqual(
-                corpus.read_text(encoding="utf-8"),
-                "U: pergunta?\nIA: resposta esperada\n",
+                corpus.read_bytes(),
+                b"U: pergunta?\nIA: resposta esperada\n",
             )
+            self.assertNotIn(b"\\n", corpus.read_bytes())
             self.assertEqual(
                 training.read_dialogues(corpus),
                 [("pergunta?", "resposta esperada")],
