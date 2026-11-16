@@ -47,7 +47,7 @@ O treinador atualiza os parâmetros com gradientes da entropia cruzada, Adam, cl
 
 O LR é calculado individualmente para cada pergunta a partir do nível lexical medido contra seu gabarito. A curva fixa interpola linearmente os pontos: 0% = 1e-3; 25% = 7,5e-4; 50% = 5e-4; 75% = 2,5e-4; 85% = 1e-4; 90% ou mais = 1e-5. O LR-base técnico é 1e-3. O formulário externo de LR é ignorado e não há scheduler global por ciclo.
 
-A Loss inicial e final de cada ciclo é calculada no mesmo corpus de 40 perguntas. O candidato é aceito quando a Loss final é estritamente menor que a inicial. Se não melhorar, pesos e momentos Adam do melhor checkpoint são restaurados juntos. Menor Loss é melhor. A exatidão lexical, F1 e similaridade são métricas de diagnóstico, não substituem a Loss.
+O pipeline mantém 40 pares independentes de estado: um checkpoint de pesos e um arquivo Adam por pergunta. Cada candidato é treinado somente com o diálogo daquela pergunta e avaliado contra sua própria resposta-alvo. A decisão de aceitação é estritamente local: se a Loss individual diminuir, somente aquele par checkpoint/Adam é atualizado; se aumentar ou empatar, somente aquele par é restaurado. Exemplo: se a pergunta 1 passa de Loss 10 para 11, a pergunta 1 é revertida, sem alterar os estados das perguntas 2 a 40. Cada pergunta conserva sua própria menor Loss histórica. Não há seleção ou rollback global de checkpoint. A exatidão lexical, F1 e similaridade são métricas de diagnóstico, não substituem a Loss.
 
 O limite é de até 1.000 épocas por ciclo e 100 ciclos por execução. O modo contínuo é opcional e encerra quando todas as 40 respostas correspondem exatamente aos gabaritos após normalização lexical. O estado persistente guarda checkpoint, Adam, memória corretiva e histórico das mesmas 40 perguntas na branch `tsukuyomi-state`.
 
@@ -63,10 +63,10 @@ O limite é de até 1.000 épocas por ciclo e 100 ciclos por execução. O modo 
 
 ## Inferência
 
-A geração é autoregressiva e greedy. A pergunta é agregada nas 13 regiões posicionais e inicializa o estado recorrente. Cada byte gerado atualiza o estado oculto, reutilizado na previsão seguinte. O modo batch carrega o checkpoint uma vez para atender várias perguntas recebidas por stdin.
+A geração é autoregressiva e greedy. A CLI roteia a pergunta para seu checkpoint individual, identificado por hash FNV-1a de 64 bits do texto UTF-8 exato. `--question-checkpoints <diretório> <pergunta> <limite>` seleciona um checkpoint; `--batch-question-checkpoints <diretório> <limite>` seleciona um checkpoint por linha de stdin. Cada checkpoint contém os mesmos 10.000 parâmetros de arquitetura, mas seus valores e momentos Adam evoluem independentemente.
 
 ## Checkpoint e persistência
 
 O checkpoint MOROKG2T guarda os parâmetros treináveis e valida versão, tamanho e checksum. O arquivo `.adam` guarda os momentos de primeira e segunda ordem e o contador global de atualizações; ambos são necessários para retomada exata.
 
-O workflow persiste os dois arquivos, a memória corretiva e o histórico na branch técnica `tsukuyomi-state`, fora da branch de código `main`. Cada ciclo persiste o checkpoint aceito ou o estado anterior restaurado. As execuções são serializadas para impedir concorrência sobre o mesmo estado.
+O workflow persiste os 40 arquivos `.ckpt` e seus 40 arquivos `.ckpt.adam`, além da memória corretiva e do histórico, na branch técnica `tsukuyomi-state`, fora da branch de código `main`. Os pares são mantidos juntos e restaurados por pergunta. As execuções são serializadas para impedir concorrência sobre os estados.
