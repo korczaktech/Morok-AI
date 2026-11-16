@@ -260,8 +260,13 @@ Dataset load_jsonl(const std::filesystem::path& path) {
                 throw std::runtime_error("duplicate example_id: " + item.example_id);
             for (auto& variant : item.question_variants)
                 variant = normalize_nfc(variant);
-            for (auto& axis : item.expansion_axes)
-                for (auto& option : axis) option = normalize_nfc(option);
+            for (auto& axis : item.expansion_axes) {
+                for (auto& option : axis) {
+                    option = normalize_nfc(option);
+                    if (option.empty())
+                        throw std::runtime_error("expansion axis options cannot be empty");
+                }
+            }
             dataset.examples.push_back(std::move(item));
         } catch (const std::exception& error) {
             throw std::runtime_error("dataset line " + std::to_string(line_number) +
