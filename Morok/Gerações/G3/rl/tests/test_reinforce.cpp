@@ -190,6 +190,52 @@ void test_reinforce_and_reference_kl() {
     assert(trainer.baseline("factual") != 0.0);
 }
 
+
+void test_copy_and_justified_length_penalties() {
+    MockEvaluator evaluator;
+    MockPolicy answer("answer", {static_cast<TokenId>('A')});
+    const std::array<Prompt, 1> clean_prompt{{
+        Prompt{"clean", "general", {morok::lang::kUsrToken}}}};
+    const std::array<Prompt, 1> copied_prompt{{
+        Prompt{"copied", "general", {morok::lang::kUsrToken,
+                                      static_cast<TokenId>('A')}}}};
+    const auto clean = evaluate_policy(answer, evaluator, clean_prompt, 4);
+    const auto copied = evaluate_policy(answer, evaluator, copied_prompt, 4);
+    assert(clean.has_value() && copied.has_value());
+    assert(copied.value_if()->mean_reward < clean.value_if()->mean_reward);
+
+    Config no_length_penalty;
+    no_length_penalty.candidates_per_prompt = 1;
+    no_length_penalty.max_response_tokens = 8;
+    no_length_penalty.top_k = 2;
+    MockPolicy long_answer("long-answer", {
+        static_cast<TokenId>('A'), static_cast<TokenId>('B'),
+        static_cast<TokenId>('C')}, 1.0F);
+    MockPolicy frozen("long-answer-sft", {
+        static_cast<TokenId>('X'), static_cast<TokenId>('Y'),
+        static_cast<TokenId>('Z')}, 1.0F);
+    ReinforceTrainer unrestricted(no_length_penalty);
+    const auto no_penalty = unrestricted.train_batch(
+        clean_prompt, long_answer, frozen, evaluator);
+    assert(no_penalty.has_value());
+
+    Config bounded = no_length_penalty;
+    bounded.penalties.max_response_tokens = 1;
+    bounded.penalties.over_length = 0.25;
+    MockPolicy bounded_policy("bounded-policy", {
+        static_cast<TokenId>('A'), static_cast<TokenId>('B'),
+        static_cast<TokenId>('C')}, 1.0F);
+    MockPolicy bounded_reference("bounded-sft", {
+        static_cast<TokenId>('X'), static_cast<TokenId>('Y'),
+        static_cast<TokenId>('Z')}, 1.0F);
+    ReinforceTrainer bounded_trainer(bounded);
+    const auto with_penalty = bounded_trainer.train_batch(
+        clean_prompt, bounded_policy, bounded_reference, evaluator);
+    assert(with_penalty.has_value());
+    assert(with_penalty.value_if()->mean_reward <
+           no_penalty.value_if()->mean_reward);
+}
+
 void test_closed_set_comparison() {
     MockPolicy sft("sft-snapshot", {static_cast<TokenId>('B')});
     MockPolicy rl("rl-policy", {static_cast<TokenId>('A')});
@@ -210,7 +256,8 @@ int main() {
     test_config_validation();
     test_evaluator_audit_and_reward_hacking();
     test_reinforce_and_reference_kl();
-    test_copy_and_justified_length_penalties();\n    test_closed_set_comparison();
+    test_copy_and_justified_length_penalties();
+    test_closed_set_comparison();
     std::cout << "G3 REINFORCE tests passed.\n";
     return 0;
 }
