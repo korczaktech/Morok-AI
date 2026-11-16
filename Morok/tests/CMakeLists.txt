@@ -304,3 +304,15 @@ if(TARGET morok_g3_reinforce)
     set_tests_properties(g3.reinforcement_cli PROPERTIES WILL_FAIL TRUE
         LABELS "g3;reinforcement;cli" TIMEOUT 30)
 endif()
+
+if(TARGET morok_g3_reinforce AND TARGET morok_g3_train)
+    add_test(NAME g3.rl_pipeline
+        COMMAND ${CMAKE_COMMAND}
+            -DTRAIN=$<TARGET_FILE:morok_g3_train>
+            -DRL=$<TARGET_FILE:morok_g3_reinforce>
+            -DDATASET=${CMAKE_CURRENT_SOURCE_DIR}/../Gerações/G3/training/tests/fixtures/smoke.jsonl
+            -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_g3_rl_pipeline.cmake)
+    set_tests_properties(g3.rl_pipeline PROPERTIES
+        LABELS "g3;reinforcement;integration" TIMEOUT 180)
+endif()

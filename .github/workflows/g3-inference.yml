@@ -52,4 +52,4 @@ jobs:
 
       - name: Test G3 inference and export
         working-directory: Morok
-        run: ctest --test-dir build/g3-inference -R "^g3.(reinforcement|neural|inference|training|evaluation|training_cli|reinforcement_cli)$" --output-on-failure
+        run: ctest --test-dir build/g3-inference -R "^g3.(reinforcement|neural|inference|training|evaluation|training_cli|reinforcement_cli|rl_pipeline)$" --output-on-failure
