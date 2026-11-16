@@ -48,3 +48,11 @@ reais da G3 só poderá ser executado depois da integração do backend neural.
 Nenhum peso da G1 é usado como substituto.
 
 Consulte [ARQUITETURA.md](ARQUITETURA.md) e [MODELOS.md](../MODELOS.md).
+
+
+A Fase 4 adiciona utilitários G3 de inferência e exportação em
+`Gerações/G3/inference/`: decodificação com Top-K/temperatura, quantização
+INT8 simétrica por linha, artefato `.morok` versionado com CRC32, e harness
+de benchmark. Os testes usam backend determinístico para validar contratos,
+formato, corrupção e isolamento concorrente. Equivalência, RAM e latência
+reais permanecem pendentes até existir backend GRU G3 e pesos SFT.

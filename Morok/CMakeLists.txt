@@ -14,6 +14,7 @@ include(MorokSanitizers)
 
 find_package(SQLite3 REQUIRED)
 find_package(ICU REQUIRED COMPONENTS uc)
+find_package(Threads REQUIRED)
 
 add_library(morok_build_options INTERFACE)
 morok_configure_compiler_options(morok_build_options)
@@ -87,6 +88,22 @@ target_include_directories(morok_g3_rl PUBLIC
     $<INSTALL_INTERFACE:include>)
 target_link_libraries(morok_g3_rl PUBLIC Morok::Core PRIVATE morok_build_options)
 morok_enable_sanitizers(morok_g3_rl)
+
+# G3 inference/export utilities reuse the public Morok Core contracts.
+add_library(morok_g3_inference STATIC
+    Gerações/G3/inference/src/quantization.cpp
+    Gerações/G3/inference/src/model_artifact.cpp
+    Gerações/G3/inference/src/generator.cpp
+    Gerações/G3/inference/src/benchmark.cpp
+)
+add_library(Morok::G3::Inference ALIAS morok_g3_inference)
+target_compile_features(morok_g3_inference PUBLIC cxx_std_20)
+target_include_directories(morok_g3_inference PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G3/inference/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+target_link_libraries(morok_g3_inference PUBLIC Morok::Core PRIVATE morok_build_options)
+morok_enable_sanitizers(morok_g3_inference)
 
 # G2 Tsukuyomi v0.1 is isolated from all G1 implementation sources.
 add_library(morok_g2_tsukuyomi STATIC
@@ -200,6 +217,7 @@ if(MOROK_BUILD_APPS)
         morok_g1_tsukuyomimax
         morok_g2_tsukuyomi
         morok_g3_rl
+        morok_g3_inference
         ARCHIVE DESTINATION lib)
     install(DIRECTORY
         include/
@@ -207,6 +225,7 @@ if(MOROK_BUILD_APPS)
         Gerações/G1/TsukuyomiMax/include/
         Gerações/G2/Tsukuyomi/include/
         Gerações/G3/rl/include/
+        Gerações/G3/inference/include/
         DESTINATION include)
 endif()
 

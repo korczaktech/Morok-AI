@@ -1,0 +1,52 @@
+name: G3 — inference and export
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Morok/Gerações/G3/inference/**"
+      - "Morok/CMakeLists.txt"
+      - "Morok/tests/CMakeLists.txt"
+      - "Morok/include/morok/model/model_backend.hpp"
+      - "Morok/include/morok/model/model_session.hpp"
+      - "Morok/include/morok/lang/byte_tokenizer.hpp"
+      - "Morok/src/lang/byte_tokenizer.cpp"
+      - ".github/workflows/g3-inference.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g3-inference-export-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  g3-inference-export:
+    name: G3 inference and export contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build libsqlite3-dev libicu-dev
+
+      - name: Configure
+        working-directory: Morok
+        run: >-
+          cmake -S . -B build/g3-inference -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DMOROK_BUILD_TESTS=ON
+          -DMOROK_BUILD_APPS=OFF
+
+      - name: Build only G3 inference target
+        working-directory: Morok
+        run: cmake --build build/g3-inference --parallel 2 --target morok_test_g3_inference
+
+      - name: Test G3 inference and export
+        working-directory: Morok
+        run: ctest --test-dir build/g3-inference -R "^g3.inference$" --output-on-failure

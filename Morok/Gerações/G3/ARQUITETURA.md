@@ -246,3 +246,73 @@ diferença de recompensa RL menos SFT. O relatório retém configuração, ident
 - [x] Biblioteca, testes CTest e workflow G3 integrados.
 - [ ] Integração com pesos reais e BPTT da GRU G3: depende da implementação
       do backend neural treinável, ainda não entregue nas etapas anteriores.
+
+
+## 10. Inferência e exportação — Fase 4
+
+A Fase 4 adiciona utilitários G3 específicos em `Gerações/G3/inference/`,
+reutilizando `Morok::Core` e o contrato público `ModelBackend`. Não cria
+outro runtime nem altera os fontes das gerações anteriores.
+
+### 10.1 Decodificação
+
+- `generator.hpp/.cpp` executa a geração incremental por uma sessão fornecida
+  pelo chamador.
+- Temperatura configurável, Top-K configurável (zero desativa), softmax estável,
+  EOS como parada e bloqueio de PAD/BOS/USR/BOT como conteúdo.
+- Limites de entrada e saída, timeout, cancelamento e política para resposta
+  vazia são explícitos.
+- A saída passa pelo `ByteTokenizer`, com validação UTF-8 e política de
+  substituição/rejeição configurável.
+- O estado da sessão continua pertencendo ao chamador; cada chamada exige seu
+  próprio buffer de estado.
+
+### 10.2 Quantização INT8
+
+- `quantization.hpp/.cpp` implementa quantização simétrica por linha para
+  valores INT8 no intervalo [-127, 127], com uma escala FP32 por linha.
+- Linhas zeradas usam escala 1.0; NaN, infinito, dimensões inconsistentes e
+  escalas inválidas são rejeitados.
+- A estrutura quantizada é armazenada uma vez. A futura GRU deverá referenciar
+  a mesma estrutura para lookup de embedding e projeção de saída (weight tying),
+  sem criar cópias sincronizadas.
+
+### 10.3 Artefato .morok
+
+- `model_artifact.hpp/.cpp` define cabeçalho versionado de 64 bytes, campos
+  little-endian explícitos, identidade G3/arquitetura, precisão, dimensões,
+  estado, contagem real de parâmetros, tamanho do payload, escalas e CRC32.
+- O carregador rejeita magic/versão/arquitetura incompatíveis, dimensões fora
+  dos limites, payload truncado/excessivo, layout de precisão incorreto,
+  bytes reservados não nulos e checksum inválido.
+- FP32 exige exatamente quatro bytes por parâmetro. INT8 exige um byte por
+  parâmetro mais quatro bytes por escala.
+- A contagem é informada pela estrutura real; 198.149 é referência da
+  especificação, não valor forçado pelo serializador.
+
+### 10.4 Medição e isolamento
+
+- `benchmark.hpp/.cpp` mede latências por execução, mediana, p95,
+  throughput de bytes, tamanho do estado por sessão, RSS antes/depois e pico
+  de RSS quando o sistema operacional expõe esses dados.
+- O benchmark recebe um backend real como argumento; os testes atuais usam
+  backend determinístico de fixture apenas para validar o instrumento.
+- Testes executam oito sessões em paralelo com backend compartilhado e estados
+  independentes.
+
+### 10.5 Estado de validação
+
+- [x] Decodificação Top-K/temperatura, EOS e filtros de tokens de controle.
+- [x] Limites, timeout/cancelamento e política de resposta vazia.
+- [x] Quantização/dequantização INT8 simétrica por linha.
+- [x] Serialização/leitura do artefato e validação CRC32/compatibilidade.
+- [x] Testes de corrupção, layout FP32/INT8 e isolamento de sessões.
+- [x] Harness de benchmark com mediana, p95, throughput e memória residente.
+- [ ] Equivalência FP32/INT8 medida com pesos reais da GRU G3.
+- [ ] RAM e latência de produção medidas em hardware de referência.
+- [ ] Weight tying integrado ao armazenamento real da GRU G3.
+- [ ] Teste de concorrência com o backend neural G3 real.
+
+Os itens pendentes dependem da implementação do backend neural e dos pesos SFT
+G3. Fixtures sintéticas validam os contratos e a infraestrutura, não a
+qualidade nem o desempenho do modelo final.
