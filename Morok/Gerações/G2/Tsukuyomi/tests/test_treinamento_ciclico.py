@@ -50,12 +50,15 @@ class TrainingDataTests(unittest.TestCase):
             self.assertEqual(raw[int(ranges[0][0]):int(ranges[0][1])], b" resposta A\n")
             self.assertEqual(raw[int(ranges[1][0]):int(ranges[1][1])], b" resposta B\n")
 
-    def test_learning_rate_floor_is_one_e_minus_seven(self):
-        self.assertEqual(training.MIN_LEARNING_RATE, 1e-7)
-        self.assertEqual(training.decay_learning_rate(1.01e-7), 1e-7)
+    def test_learning_rate_bounds_are_one_e_minus_five_and_one_e_minus_two(self):
+        self.assertEqual(training.MIN_LEARNING_RATE, 1e-5)
+        self.assertEqual(training.MAX_LEARNING_RATE, 1e-2)
+        self.assertEqual(training.decay_learning_rate(1.01e-5), 1e-5)
+        self.assertEqual(training.learning_rate_for_lexical_level(1e-5, 1.0), 1e-5)
+        self.assertEqual(training.learning_rate_for_lexical_level(1e-2, 0.0), 1e-2)
 
     def test_learning_rate_rejects_values_below_floor_or_non_finite(self):
-        for value in (0.0, 0.5e-7, float("nan"), float("inf")):
+        for value in (0.0, 0.5e-5, 1.01e-2, float("nan"), float("inf")):
             with self.assertRaises(ValueError):
                 training.decay_learning_rate(value)
 
