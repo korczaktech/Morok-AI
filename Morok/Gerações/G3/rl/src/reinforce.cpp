@@ -84,19 +84,24 @@ template <typename T>
     if (prompt.empty() || response.empty()) {
         return 0.0;
     }
-    std::vector<bool> seen(morok::lang::kByteVocabularySize, false);
-    for (const TokenId token : prompt) {
-        if (token < morok::lang::kByteVocabularySize) {
-            seen[token] = true;
+    std::vector<std::size_t> previous(response.size() + 1U, 0U);
+    std::vector<std::size_t> current(response.size() + 1U, 0U);
+    std::size_t longest_copy = 0U;
+    for (const TokenId prompt_token : prompt) {
+        std::fill(current.begin(), current.end(), 0U);
+        if (prompt_token >= morok::lang::kByteVocabularySize) {
+            previous.swap(current);
+            continue;
         }
-    }
-    std::size_t copied = 0;
-    for (const TokenId token : response) {
-        if (token < morok::lang::kByteVocabularySize && seen[token]) {
-            ++copied;
+        for (std::size_t index = 1U; index <= response.size(); ++index) {
+            if (response[index - 1U] == prompt_token) {
+                current[index] = previous[index - 1U] + 1U;
+                longest_copy = std::max(longest_copy, current[index]);
+            }
         }
+        previous.swap(current);
     }
-    return static_cast<double>(copied) /
+    return static_cast<double>(longest_copy) /
            static_cast<double>(response.size());
 }
 
@@ -404,7 +409,8 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
     if (evaluator_metadata.identity.empty() ||
         evaluator_metadata.rubric_version.empty() ||
         evaluator_metadata.label_origin.empty() ||
-        evaluator_metadata.identity == policy.identity()) {
+        evaluator_metadata.identity == policy.identity() ||
+        evaluator_metadata.identity == frozen_sft_reference.identity()) {
         return failure_result<TrainingReport>(
             ErrorCode::invalid_argument, "train.evaluator",
             "Training requires an identified, versioned and independent evaluator");
@@ -423,7 +429,9 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
     std::size_t repeated_count = 0;
 
     for (const auto& prompt : prompts) {
-        if (prompt.id.empty() || prompt.category.empty() || prompt.tokens.empty()) {
+        if (prompt.id.empty() || prompt.category.empty() || prompt.tokens.empty() ||
+            std::any_of(prompt.tokens.begin(), prompt.tokens.end(),
+                [](TokenId token) { return !morok::lang::ByteTokenizer::is_valid_token(token); })) {
             return failure_result<TrainingReport>(
                 ErrorCode::invalid_argument, "train.prompt",
                 "Every prompt needs an ID, category and encoded context");
