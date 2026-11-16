@@ -394,8 +394,8 @@ void test_real_g3_policy_adapter_and_independent_evaluator() {
     assert(backend.weights().output_bias[static_cast<std::size_t>('A')]!=original_bias);
 
     ReferenceRewardEvaluator evaluator({
-        ReferenceAnswer{{prompt.begin(),prompt.end()},
-                        {static_cast<TokenId>('O'),static_cast<TokenId>('K')}}});
+        ReferenceAnswer{std::vector<TokenId>(prompt.begin(),prompt.end()),
+                        std::vector<TokenId>{static_cast<TokenId>('O'),static_cast<TokenId>('K')}}});
     const std::array<TokenId,2> answer{{static_cast<TokenId>('O'),static_cast<TokenId>('K')}};
     const auto reward=evaluator.evaluate(prompt,answer);
     assert(reward.has_value());
