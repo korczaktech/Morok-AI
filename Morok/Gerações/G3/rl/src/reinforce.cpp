@@ -497,8 +497,16 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
             if (repeated_ratio(visible) > 0.0) {
                 ++repeated_count;
             }
+            std::vector<double> sampled_log_probabilities;
+            sampled_log_probabilities.reserve(generated.response.size());
+            for (std::size_t step = 0; step < generated.response.size(); ++step) {
+                const TokenId selected = generated.response[step];
+                sampled_log_probabilities.push_back(std::log(std::max(
+                    generated.sampling[step][selected], config_.kl_epsilon)));
+            }
             report.candidates_metrics.push_back(CandidateMetrics{
                 prompt.id, prompt.category, reward_result.value_if()->components,
+                generated.response, std::move(sampled_log_probabilities),
                 reward, advantage,
                 generated.kl / static_cast<double>(
                     std::max<std::size_t>(generated.response.size(), 1U)),
