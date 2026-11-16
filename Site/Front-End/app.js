@@ -58,7 +58,7 @@
       state.location = typeof saved.location === 'string' ? saved.location.slice(0,120) : '';
       state.aboutMe = typeof saved.aboutMe === 'string' ? saved.aboutMe.slice(0,1000) : '';
       state.responseStyle = ['conciso','equilibrado','detalhado'].includes(saved.responseStyle) ? saved.responseStyle : 'equilibrado';
-      state.notifications = saved.notifications !== false;
+      state.notifications = saved.notifications === true && typeof Notification !== 'undefined' && Notification.permission === 'granted';
       state.libraryItems = Array.isArray(saved.libraryItems) ? saved.libraryItems.slice(0,100) : [];
       try { state.authSession = JSON.parse(localStorage.getItem('morok.auth.session') || sessionStorage.getItem('morok.auth.session') || 'null'); } catch { state.authSession = null; }
     } catch { localStorage.removeItem(STORAGE_KEY); }
@@ -765,6 +765,7 @@
     if(event.target.id==='project-delete'){const p=state.projects.find(item=>item.id===state.activeProjectId);if(p){void askConfirmation('Excluir o projeto "'+p.name+'"? As conversas serão mantidas.','Excluir projeto').then(ok=>{if(!ok)return;state.projects=state.projects.filter(item=>item.id!==p.id);state.conversations.forEach(c=>{if(c.projectId===p.id)delete c.projectId;});state.activeProjectId=null;persist();renderProjectsSidebar();openWorkspacePage('projects');});}}
     if(event.target.id==='project-add-current'){const c=activeConversation(),p=state.projects.find(item=>item.id===state.activeProjectId);if(!c)toast('Abra uma conversa antes de adicioná-la ao projeto.');else if(p){c.projectId=p.id;persist();openWorkspacePage('projects');}}
     if(event.target.id==='project-back'){state.activeProjectId=null;openWorkspacePage('projects');}
+    const projectOpen=event.target.closest('[data-project-open]');if(projectOpen){state.activeProjectId=projectOpen.dataset.projectOpen;openWorkspacePage('projects');return;}
     const projectConversation=event.target.closest('[data-project-conversation-open]');if(projectConversation){openConversation(projectConversation.dataset.projectConversationOpen);return;}
     const projectRemove=event.target.closest('[data-project-remove-conversation]');if(projectRemove){const c=state.conversations.find(item=>item.id===projectRemove.dataset.projectRemoveConversation);if(c)delete c.projectId;persist();openWorkspacePage('projects');}
     if(event.target.id==='export-local-data'){const payload={conversations:state.conversations,tasks:state.tasks,projects:state.projects,theme:state.theme,displayName:state.displayName,instructions:state.instructions,location:state.location,aboutMe:state.aboutMe,responseStyle:state.responseStyle,libraryItems:state.libraryItems};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='morok-dados-locais.json';link.click();URL.revokeObjectURL(url);toast('Exportação preparada.');}
