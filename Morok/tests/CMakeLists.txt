@@ -271,6 +271,15 @@ add_test(NAME g3.inference COMMAND morok_test_g3_inference)
 set_tests_properties(g3.inference PROPERTIES LABELS "g3;inference;export" TIMEOUT 60)
 
 
+# G3 profiles share one backend/runtime while enforcing agent and resource policies.
+add_executable(morok_test_g3_profiles
+    ../Gerações/G3/profiles/tests/test_profiles.cpp)
+target_link_libraries(morok_test_g3_profiles
+    PRIVATE Morok::G3::Profiles Morok::G3::Inference Threads::Threads morok_build_options)
+morok_enable_sanitizers(morok_test_g3_profiles)
+add_test(NAME g3.profiles COMMAND morok_test_g3_profiles)
+set_tests_properties(g3.profiles PROPERTIES LABELS "g3;profiles;isolation" TIMEOUT 60)
+
 # G3 supervised dataset pipeline, causal loss, truncated BPTT and AdamW.
 add_executable(morok_test_g3_training
     ../Gerações/G3/training/tests/test_training.cpp)
