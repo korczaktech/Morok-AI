@@ -660,10 +660,20 @@ def main() -> int:
             print(
                 f"LR adaptativo por questão: {rate_ranges} intervalos; "
                 f"nível lexical médio={sum(lexical_levels) / max(1, len(lexical_levels)):.1%}; "
-                f"LR individual mínimo={min(individual_rates):.8g}; "
-                f"máximo={max(individual_rates):.8g}.", flush=True
+                f"LR calculado observado mínimo={min(individual_rates):.8g}; "
+                f"máximo observado={max(individual_rates):.8g}; "
+                f"limites configurados: mínimo={MIN_LEARNING_RATE:.8g}, "
+                f"máximo={MAX_LEARNING_RATE:.8g}.", flush=True
             )
             report.write(f"### Learning rate adaptativo — ciclo {cycle}\n\n")
+            report.write(
+                f"- Limites individuais configurados: mínimo={MIN_LEARNING_RATE:.8g}; "
+                f"máximo={MAX_LEARNING_RATE:.8g}.\n"
+            )
+            report.write(
+                f"- Faixa observada neste ciclo: mínimo={min(individual_rates):.8g}; "
+                f"máximo={max(individual_rates):.8g}.\n\n"
+            )
             report.write("| Pergunta | Nível lexical atual | Learning rate individual |\n")
             report.write("|---|---:|---:|\n")
             for (question, _), result in zip(current_training_dialogues, lexical_probe_results):
