@@ -71,7 +71,7 @@ Na raiz do repositório:
 
 ```sh
 cmake -S Morok -B Morok/build -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
-cmake --build Morok/build --target morok-g3-train morok-g3-evaluate morok-g3-reinforce morok_test_g3_training --parallel 2
+cmake --build Morok/build --target morok_g3_train morok_g3_evaluate morok_g3_reinforce morok_test_g3_training --parallel 2
 ctest --test-dir Morok/build --output-on-failure -R g3.training
 ```
 
