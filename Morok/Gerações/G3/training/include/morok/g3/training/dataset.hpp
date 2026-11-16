@@ -20,6 +20,8 @@ struct DatasetExample final {
     double quality{1.0};
     bool sensitive{false};
     std::vector<std::string> question_variants;
+    // Each axis supplies alternatives for the matching {index} template slot.
+    std::vector<std::vector<std::string>> expansion_axes;
 };
 
 struct Dataset final {
