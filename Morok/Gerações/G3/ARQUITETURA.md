@@ -122,7 +122,9 @@ sem criar um subsistema de tokenização paralelo dentro da G3:
 - Normalização: Unicode NFC por padrão, configurável para desativação. Não há
   remoção automática de acentos, pontuação, caixa ou espaços.
 - Saída: IDs de byte são reconstruídos e validados como UTF-8 antes da entrega;
-  EOS encerra a decodificação e outros tokens de controle são rejeitados.
+  EOS encerra a decodificação e outros tokens de controle são rejeitados. O limite
+  máximo de bytes recua até uma fronteira UTF-8 válida e informa se houve corte.
+  Substituições de bytes inválidos na saída também são sinalizadas no resultado.
 - NFC é implementada pela biblioteca ICU (componente uc), não por uma tabela
   Unicode parcial ou uma normalização artesanal.
 
