@@ -146,6 +146,17 @@ target_include_directories(morok_g3_training PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G3/inference/include>)
 target_link_libraries(morok_g3_training PRIVATE Morok::G3::Inference)
 
+# G3 profiles are policies over the same inference engine and backend.
+add_library(morok_g3_profiles STATIC Gerações/G3/profiles/src/profile.cpp)
+add_library(Morok::G3::Profiles ALIAS morok_g3_profiles)
+target_compile_features(morok_g3_profiles PUBLIC cxx_std_20)
+target_include_directories(morok_g3_profiles PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G3/profiles/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+target_link_libraries(morok_g3_profiles PUBLIC Morok::G3::Inference PRIVATE morok_build_options)
+morok_enable_sanitizers(morok_g3_profiles)
+
 # G2 Tsukuyomi v0.1 is isolated from all G1 implementation sources.
 add_library(morok_g2_tsukuyomi STATIC
     Gerações/G2/Tsukuyomi/src/model.cpp
