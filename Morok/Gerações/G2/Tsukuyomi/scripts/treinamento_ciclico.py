@@ -354,14 +354,14 @@ def build_training_corpus(base: Path, memory: dict[str, str], destination: Path)
         raise RuntimeError(f"Memória contém perguntas fora do conjunto de treinamento: {sorted(unknown)}")
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(destination.name + ".tmp")
-    with temporary.open("w", encoding="utf-8", newline="\\n") as output:
+    with temporary.open("w", encoding="utf-8", newline="\n") as output:
         for question, original_answer in dialogues:
             answer = memory.get(question, original_answer)
-            q = " ".join(question.replace("\\r", " ").replace("\\n", " ").split())
-            a = " ".join(answer.replace("\\r", " ").replace("\\n", " ").split())
+            q = " ".join(question.replace("\r", " ").replace("\n", " ").split())
+            a = " ".join(answer.replace("\r", " ").replace("\n", " ").split())
             if not q or not a:
                 raise RuntimeError("Corpus contém pergunta ou resposta vazia.")
-            output.write(f"U: {q}\\nIA: {a}\\n\\n")
+            output.write(f"U: {q}\nIA: {a}\n\n")
     os.replace(temporary, destination)
 
 def extract_training_metric(output: str, name: str) -> float:
