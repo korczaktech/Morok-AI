@@ -24,7 +24,7 @@ struct DatasetExample final {
 
 struct Dataset final {
     std::vector<DatasetExample> examples;
-    std::string sha256;
+    std::string fingerprint;
 };
 
 struct DatasetSplits final {
