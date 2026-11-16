@@ -1,0 +1,3 @@
+{"example_id":"smoke-1","group_id":"intent-1","category":"greeting","question":"Oi","answer":"Olá","source":"ci-fixture","language":"pt-BR","dataset_version":"g3-smoke-v1"}
+{"example_id":"smoke-2","group_id":"intent-2","category":"thanks","question":"Obrigado","answer":"Por nada","source":"ci-fixture","language":"pt-BR","dataset_version":"g3-smoke-v1"}
+{"example_id":"smoke-3","group_id":"intent-3","category":"farewell","question":"Tchau","answer":"Até logo","source":"ci-fixture","language":"pt-BR","dataset_version":"g3-smoke-v1"}
