@@ -81,6 +81,47 @@ public:
         throw std::runtime_error("unterminated JSON string");
     }
 
+    std::vector<std::vector<std::string>> string_matrix(const std::string& key) const {
+        const auto value = find_value(key);
+        if (!value) return {};
+        std::size_t cursor = *value;
+        if (cursor >= text_.size() || text_[cursor++] != '[')
+            throw std::runtime_error("dataset field must be a matrix of strings: " + key);
+        std::vector<std::vector<std::string>> result;
+        const auto skip = [this](std::size_t& position) {
+            while (position < text_.size() &&
+                   (text_[position] == ' ' || text_[position] == '\n' ||
+                    text_[position] == '\r' || text_[position] == '\t' ||
+                    text_[position] == ',')) ++position;
+        };
+        while (cursor < text_.size()) {
+            skip(cursor);
+            if (cursor < text_.size() && text_[cursor] == ']') return result;
+            if (cursor >= text_.size() || text_[cursor++] != '[')
+                throw std::runtime_error("each expansion axis must be an array");
+            std::vector<std::string> axis;
+            while (cursor < text_.size()) {
+                skip(cursor);
+                if (cursor < text_.size() && text_[cursor] == ']') { ++cursor; break; }
+                if (cursor >= text_.size() || text_[cursor] != '"')
+                    throw std::runtime_error("expansion axis values must be strings");
+                JsonObject tail("{\"_value\":" + text_.substr(cursor));
+                axis.push_back(tail.string("_value"));
+                std::size_t end = cursor + 1U;
+                bool escaped = false;
+                for (; end < text_.size(); ++end) {
+                    if (!escaped && text_[end] == '"') { ++end; break; }
+                    if (!escaped && text_[end] == '\\') escaped = true;
+                    else escaped = false;
+                }
+                cursor = end;
+            }
+            if (axis.empty()) throw std::runtime_error("expansion axes cannot be empty");
+            result.push_back(std::move(axis));
+        }
+        throw std::runtime_error("unterminated expansion_axes array");
+    }
+
     bool boolean(const std::string& key, bool fallback = false) const {
         const auto value = find_value(key);
         if (!value) return fallback;
@@ -208,6 +249,7 @@ Dataset load_jsonl(const std::filesystem::path& path) {
             item.quality = object.number("quality", 1.0);
             item.sensitive = object.boolean("sensitive", false);
             item.question_variants = object.string_array("question_variants");
+            item.expansion_axes = object.string_matrix("expansion_axes");
             if (item.example_id.empty() || item.group_id.empty() ||
                 item.question.empty() || item.answer.empty() || item.source.empty() ||
                 item.language.empty() || item.dataset_version.empty())
@@ -218,6 +260,8 @@ Dataset load_jsonl(const std::filesystem::path& path) {
                 throw std::runtime_error("duplicate example_id: " + item.example_id);
             for (auto& variant : item.question_variants)
                 variant = normalize_nfc(variant);
+            for (auto& axis : item.expansion_axes)
+                for (auto& option : axis) option = normalize_nfc(option);
             dataset.examples.push_back(std::move(item));
         } catch (const std::exception& error) {
             throw std::runtime_error("dataset line " + std::to_string(line_number) +
@@ -240,6 +284,11 @@ Dataset load_jsonl(const std::filesystem::path& path) {
         append_field(std::to_string(item.quality));
         append_field(item.sensitive ? "true" : "false");
         for (const auto& variant : item.question_variants) append_field(variant);
+        for (const auto& axis : item.expansion_axes) {
+            append_field("[");
+            for (const auto& option : axis) append_field(option);
+            append_field("]");
+        }
         material.push_back(static_cast<char>(10));
         for (unsigned char byte : material) { hash ^= byte; hash *= 1099511628211ULL; }
     }
@@ -293,28 +342,65 @@ DatasetSplits split_by_group_id(const Dataset& dataset, SplitConfig config) {
 std::vector<DatasetExample> expand_controlled(const DatasetExample& example,
                                                std::size_t maximum_variants,
                                                std::uint64_t seed) {
-    if (maximum_variants == 0U) throw std::invalid_argument("maximum_variants must be positive");
-    std::vector<DatasetExample> candidates;
-    candidates.push_back(example);
-    std::unordered_set<std::string> seen{example.question};
-    for (const auto& variant : example.question_variants) {
-        if (variant.empty() || !seen.insert(variant).second) continue;
-        auto copy = example;
-        copy.question = variant;
-        copy.example_id = example.example_id + "#variant-" +
-                          std::to_string(candidates.size());
-        candidates.push_back(std::move(copy));
+    if (maximum_variants == 0U)
+        throw std::invalid_argument("maximum_variants must be positive");
+    std::vector<std::string> questions;
+    std::unordered_set<std::string> seen;
+    auto add = [&](std::string question) {
+        if (!question.empty() && seen.insert(question).second &&
+            questions.size() < maximum_variants)
+            questions.push_back(std::move(question));
+    };
+
+    if (!example.expansion_axes.empty()) {
+        std::string canonical = example.question;
+        for (std::size_t axis = 0; axis < example.expansion_axes.size(); ++axis) {
+            const std::string slot = "{" + std::to_string(axis) + "}";
+            if (canonical.find(slot) == std::string::npos)
+                throw std::invalid_argument("question template is missing expansion slot " + slot);
+            std::size_t position = canonical.find(slot);
+            while (position != std::string::npos) {
+                const auto& replacement = example.expansion_axes[axis].front();
+                canonical.replace(position, slot.size(), replacement);
+                position = canonical.find(slot, position + replacement.size());
+            }
+        }
+        add(canonical);
+        std::mt19937_64 random(seed);
+        for (std::size_t attempt = 0;
+             questions.size() < maximum_variants &&
+             attempt < maximum_variants * 32U; ++attempt) {
+            std::string combination = example.question;
+            for (std::size_t axis = 0; axis < example.expansion_axes.size(); ++axis) {
+                const auto& options = example.expansion_axes[axis];
+                std::uniform_int_distribution<std::size_t> pick(0U, options.size() - 1U);
+                const auto& replacement = options[pick(random)];
+                const std::string slot = "{" + std::to_string(axis) + "}";
+                std::size_t position = combination.find(slot);
+                while (position != std::string::npos) {
+                    combination.replace(position, slot.size(), replacement);
+                    position = combination.find(slot, position + replacement.size());
+                }
+            }
+            add(std::move(combination));
+        }
+    } else {
+        add(example.question);
     }
-    if (candidates.size() <= maximum_variants) return candidates;
-    std::vector<DatasetExample> selected;
-    selected.push_back(candidates.front());
-    std::vector<std::size_t> indices;
-    for (std::size_t i = 1; i < candidates.size(); ++i) indices.push_back(i);
-    std::mt19937_64 random(seed);
-    std::shuffle(indices.begin(), indices.end(), random);
-    for (std::size_t i = 0; selected.size() < maximum_variants; ++i)
-        selected.push_back(candidates[indices[i]]);
-    return selected;
+
+    for (const auto& variant : example.question_variants) add(variant);
+    if (questions.empty())
+        throw std::runtime_error("controlled expansion produced no candidates");
+    std::vector<DatasetExample> result;
+    result.reserve(questions.size());
+    for (std::size_t i = 0; i < questions.size(); ++i) {
+        auto copy = example;
+        copy.question = std::move(questions[i]);
+        if (i != 0U)
+            copy.example_id = example.example_id + "#variant-" + std::to_string(i);
+        result.push_back(std::move(copy));
+    }
+    return result;
 }
 
 } // namespace morok::g3::training
