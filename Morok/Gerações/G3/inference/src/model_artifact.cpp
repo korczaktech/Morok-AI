@@ -67,16 +67,29 @@ std::uint64_t get_u64(std::span<const std::byte> in, std::size_t offset) {
     return value;
 }
 
+std::uint32_t artifact_crc32(std::span<const std::byte> bytes) noexcept {
+    std::uint32_t crc = 0xffffffffU;
+    for (std::size_t index = 0; index < bytes.size(); ++index) {
+        const std::uint8_t value =
+            index >= 52U && index < 56U ? 0U :
+            std::to_integer<std::uint8_t>(bytes[index]);
+        crc ^= value;
+        for (unsigned bit = 0; bit < 8U; ++bit) {
+            const std::uint32_t mask = 0U - (crc & 1U);
+            crc = (crc >> 1U) ^ (0xedb88320U & mask);
+        }
+    }
+    return ~crc;
+}
+
 bool valid_metadata(const ModelArtifactMetadata& metadata,
                     std::size_t payload_size) noexcept {
     if (metadata.generation_id != 3U ||
         metadata.architecture_id != kG3ArchitectureGruRmsNormTied ||
         metadata.vocabulary_size != 261U ||
-        metadata.embedding_dim == 0U || metadata.embedding_dim > 4096U ||
-        metadata.hidden_dim == 0U || metadata.hidden_dim > 4096U ||
-        metadata.recurrent_layers == 0U || metadata.recurrent_layers > 16U ||
-        metadata.state_size_bytes == 0U ||
-        metadata.state_size_bytes > 1024U * 1024U ||
+        metadata.embedding_dim != 64U || metadata.hidden_dim != 128U ||
+        metadata.recurrent_layers != 2U ||
+        metadata.state_size_bytes != 1024U ||
         metadata.parameter_count == 0U ||
         metadata.parameter_count > 100'000'000ULL ||
         payload_size > kMaximumModelPayloadBytes) {
@@ -149,9 +162,10 @@ common::Result<std::vector<std::byte>> serialize_model_artifact(
     put_u64(header, 32U, artifact.metadata.parameter_count);
     put_u64(header, 40U, static_cast<std::uint64_t>(artifact.payload.size()));
     put_u32(header, 48U, artifact.metadata.scale_count);
-    put_u32(header, 52U, crc32(artifact.payload));
+    put_u32(header, 52U, 0U);
     std::copy(artifact.payload.begin(), artifact.payload.end(),
               output.begin() + static_cast<std::ptrdiff_t>(kModelHeaderBytes));
+    put_u32(header, 52U, artifact_crc32(output));
     return common::Result<std::vector<std::byte>>::success(std::move(output));
 }
 
@@ -207,7 +221,7 @@ common::Result<ModelArtifact> deserialize_model_artifact(
             common::ErrorCode::model_version_mismatch, "load.compatibility",
             "Model architecture, dimensions, precision or payload layout is incompatible");
     }
-    if (crc32(payload) != expected_crc) {
+    if (artifact_crc32(bytes) != expected_crc) {
         return failure<ModelArtifact>(
             common::ErrorCode::checkpoint_corrupt, "load.checksum",
             "Model payload checksum validation failed");

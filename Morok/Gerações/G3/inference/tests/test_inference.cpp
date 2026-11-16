@@ -9,6 +9,7 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -26,8 +27,9 @@ namespace {
 
 class FixtureBackend final : public model::ModelBackend {
 public:
-    explicit FixtureBackend(bool immediate_eos = false)
-        : immediate_eos_(immediate_eos) {}
+    explicit FixtureBackend(bool immediate_eos = false,
+                            std::chrono::milliseconds delay = std::chrono::milliseconds{0})
+        : immediate_eos_(immediate_eos), delay_(delay) {}
 
     model::ModelDescriptor descriptor() const noexcept override {
         return {3U, kG3ArchitectureGruRmsNormTied, 261U, 198149U,
@@ -56,6 +58,7 @@ public:
     common::Status next_token_log_probabilities(
         std::span<const std::byte> state,
         std::span<float> output) const override {
+        if (delay_.count() > 0) std::this_thread::sleep_for(delay_);
         if (state.size() != sizeof(std::uint32_t) ||
             output.size() != lang::kVocabularySize) {
             return common::Status::failure(common::Error::make(
@@ -73,6 +76,7 @@ public:
 
 private:
     bool immediate_eos_{false};
+    std::chrono::milliseconds delay_{0};
 };
 
 ModelArtifact valid_fp32_artifact() {
@@ -124,6 +128,13 @@ void test_artifact_round_trip_and_corruption() {
     auto invalid_metadata = artifact;
     invalid_metadata.metadata.architecture_id = 0x0401U;
     assert(!serialize_model_artifact(invalid_metadata).has_value());
+    invalid_metadata = artifact;
+    invalid_metadata.metadata.embedding_dim = 65U;
+    assert(!serialize_model_artifact(invalid_metadata).has_value());
+
+    auto corrupted_header = *serialized.value_if();
+    corrupted_header[20] ^= std::byte{0x01};
+    assert(!deserialize_model_artifact(corrupted_header).has_value());
 
     std::array<std::byte, 12> truncated{};
     assert(!deserialize_model_artifact(truncated).has_value());
@@ -183,6 +194,18 @@ void test_cancellation() {
     assert(cancelled.error_if()->code == common::ErrorCode::cancelled);
 }
 
+void test_timeout() {
+    FixtureBackend backend(false, std::chrono::milliseconds{3});
+    alignas(8) std::array<std::byte, sizeof(std::uint32_t)> state{};
+    GenerationConfig config;
+    config.timeout = std::chrono::milliseconds{1};
+    config.text_codec.normalization = lang::UnicodeNormalization::none;
+    std::mt19937_64 random(10U);
+    const auto result = generate(backend, state, "x", config, random);
+    assert(!result.has_value());
+    assert(result.error_if()->code == common::ErrorCode::tool_timeout);
+}
+
 void test_concurrent_session_isolation() {
     FixtureBackend backend;
     constexpr std::size_t workers = 8U;
@@ -236,6 +259,7 @@ int main() {
     test_int8_artifact_layout();
     test_generation_and_control_tokens();
     test_cancellation();
+    test_timeout();
     test_concurrent_session_isolation();
     test_benchmark_harness();
     return 0;
