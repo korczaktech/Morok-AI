@@ -709,7 +709,7 @@
         const payload = merged.map(item => ({ id: item.id, updatedAt: item.updatedAt || item.createdAt || new Date(0).toISOString(), data: item }));
         if (payload.length) await authRequest("/v1/resources/sync", { token, body: { type, items: payload } });
         if (type === "projects") state.projects = merged.slice(0, 100);
-        else state.tasks = merged.slice(0, 100).map(({ id, updatedAt, ...task }) => task);
+        else state.tasks = merged.slice(0, 100);
       } catch (error) { console.warn("Falha ao sincronizar " + type + ":", error.message); }
     }
     persist(); renderProjectsSidebar();
@@ -744,19 +744,36 @@
   }
   async function loadSupportTickets() {
     const target = $("#support-ticket-list"); if (!target || !state.authSession) return;
-    try { const data = await authRequest("/v1/support/tickets", { method: "GET", token: state.authSession.access_token }); target.innerHTML = (data.tickets || []).map(ticket => '<div class="task-row"><span><strong>' + escapeHtml(ticket.subject) + '</strong><small>' + escapeHtml(ticket.status) + ' · ' + new Date(ticket.createdAt).toLocaleString("pt-BR") + '</small></span></div>').join("") || '<div class="workspace-empty">Nenhum chamado enviado.</div>'; }
-    catch(error) { target.textContent = error.message; }
+    try {
+      const data = await authRequest("/v1/support/tickets", { method: "GET", token: state.authSession.access_token });
+      const tickets = Array.isArray(data.tickets) ? data.tickets : [];
+      target.innerHTML = tickets.map(ticket => {
+        const created = new Date(ticket.createdAt);
+        const createdLabel = Number.isNaN(created.getTime()) ? "Data indisponível" : created.toLocaleString("pt-BR");
+        return '<div class="task-row"><span><strong>' + escapeHtml(ticket.subject) + '</strong><small>' + escapeHtml(ticket.status || "open") + ' · ' + escapeHtml(createdLabel) + '</small></span></div>';
+      }).join("") || '<div class="workspace-empty">Nenhum chamado enviado.</div>';
+    } catch(error) {
+      target.innerHTML = '<div class="workspace-empty">' + escapeHtml(error.message) + '</div><button class="secondary-button" id="support-tickets-retry" type="button">Tentar novamente</button>';
+    }
   }
   async function loadAccountProfile() {
     const token = state.authSession?.access_token;
     if (!token) return;
     try {
       const data = await authRequest("/v1/account/profile", { method: "GET", token });
-      if (data.profile?.name) {
-        state.authSession.user.name = data.profile.name;
+      if (data.profile) {
+        if (data.profile.name) {
+          state.authSession.user.name = data.profile.name;
+          const nameInput = $("#account-name-input"); if (nameInput) nameInput.value = data.profile.name;
+        }
         state.authSession.user.twoFactorEnabled = data.profile.twoFactorEnabled === true;
+        const remoteTheme = data.profile.preferences?.Tema;
+        if (["dark", "light", "system"].includes(remoteTheme)) {
+          state.theme = remoteTheme;
+          applyTheme();
+          const themeSelect = $("#theme-select"); if (themeSelect) themeSelect.value = remoteTheme;
+        }
         saveAuthSession(state.authSession);
-        const nameInput = $("#account-name-input"); if (nameInput) nameInput.value = data.profile.name;
         const factorButton = $("#toggle-2fa"); if (factorButton) factorButton.textContent = data.profile.twoFactorEnabled ? "Desativar autenticação em dois fatores" : "Ativar autenticação em dois fatores";
       }
     } catch (error) { toast(error.message); }
@@ -768,7 +785,12 @@
     target.textContent = "Carregando sessões…";
     try {
       const data = await authRequest("/v1/account/sessions", { method: "GET", token });
-      target.innerHTML = (data.sessions || []).map(item => '<div class="task-row"><span><strong>' + (item.current ? "Este dispositivo" : "Sessão ativa") + '</strong><small> Criada em ' + escapeHTML(new Date(item.createdAt).toLocaleString("pt-BR")) + '</small></span>' + (item.current ? '<span class="feature-status">Atual</span>' : '<button class="secondary-button" type="button" data-revoke-session="' + escapeHTML(item.id) + '">Encerrar</button>') + '</div>').join("") || '<div class="workspace-empty">Nenhuma sessão ativa.</div>';
+      target.innerHTML = (data.sessions || []).map(item => {
+        const created = new Date(item.createdAt);
+        const createdLabel = Number.isNaN(created.getTime()) ? "Data indisponível" : created.toLocaleString("pt-BR");
+        const device = String(item.userAgent || "Dispositivo não identificado").slice(0, 250);
+        return '<div class="task-row"><span><strong>' + (item.current ? "Este dispositivo" : "Sessão ativa") + '</strong><small>' + escapeHTML(device) + ' · Criada em ' + escapeHTML(createdLabel) + '</small></span>' + (item.current ? '<span class="feature-status">Atual</span>' : '<button class="secondary-button" type="button" data-revoke-session="' + escapeHTML(item.id) + '">Encerrar</button>') + '</div>';
+      }).join("") || '<div class="workspace-empty">Nenhuma sessão ativa.</div>';
     } catch (error) { target.textContent = error.message; }
   }
   async function refreshAuthSession() {
@@ -878,7 +900,7 @@
     const revoke=event.target.closest('[data-revoke-session]'); if(revoke){try{await authRequest('/v1/account/sessions/revoke',{token:state.authSession.access_token,body:{sessionId:revoke.dataset.revokeSession}});await loadAccountSessions();toast('Sessão encerrada.');}catch(error){toast(error.message);}}
     if(event.target.id==='delete-account-open'){void askConfirmation('Excluir permanentemente sua conta e os dados vinculados no servidor? Esta ação não pode ser desfeita.','Excluir conta').then(async ok=>{if(!ok)return;const password=prompt('Confirme sua senha para excluir a conta:');if(password===null)return;try{await authRequest('/v1/account/delete',{token:state.authSession.access_token,body:{password}});saveAuthSession(null);state.conversations=[];state.projects=[];state.tasks=[];persist();renderHistory();renderConversation();openWorkspacePage('account');toast('Conta e dados remotos excluídos.');}catch(error){toast(error.message);}});}
     if(event.target.id==='support-login')openAuth('login');
-    if(event.target.id==='support-ticket-form'){} 
+    if(event.target.id==='support-tickets-retry')void loadSupportTickets();
 
     const taskDelete=event.target.closest('[data-task-delete]');if(taskDelete){const removed=state.tasks.splice(Number(taskDelete.dataset.taskDelete),1)[0];persist();if(removed?.id)await deleteRemoteResource('tasks',removed.id);await syncAccountResources();openWorkspacePage('tasks');}
     const libraryDelete=event.target.closest('[data-library-delete]');if(libraryDelete){state.libraryItems.splice(Number(libraryDelete.dataset.libraryDelete),1);persist();openWorkspacePage('library');}
