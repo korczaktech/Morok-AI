@@ -708,17 +708,18 @@ def main() -> int:
                 flush=True,
             )
 
-            if should_stop(continuous, correct_count, total):
-                report.write("Todas as questões selecionadas foram respondidas corretamente; treinamento encerrado.\n\n")
+            if should_stop(continuous, best_validation_correct, question_count):
+                report.write("O melhor checkpoint mantém todas as questões selecionadas corretas; treinamento encerrado.\n\n")
                 break
             if not continuous and cycle >= attempts:
                 break
         else:
             raise RuntimeError("Limite de segurança atingido sem completar o objetivo.")
 
-        if continuous and not should_stop(continuous, correct_count, total):
+        if continuous and not should_stop(continuous, best_validation_correct, question_count):
             raise RuntimeError(
-                f"Objetivo contínuo não atingido: {correct_count}/{total} após {cycle} ciclos."
+                f"Objetivo contínuo não atingido no melhor checkpoint: "
+                f"{best_validation_correct}/{question_count} após {cycle} ciclos."
             )
 
         # A avaliação final usa o melhor estado de validação, não necessariamente
