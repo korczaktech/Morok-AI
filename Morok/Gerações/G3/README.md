@@ -1,61 +1,65 @@
-# G3
+# Morok G3
 
-A G3 é a geração base para a linhagem futura de modelos Morok.
+A G3 é a geração-base da linhagem Morok. Ela estende o motor Morok existente,
+sem criar outro Core ou runtime. A infraestrutura neutra continua em
+`Morok::Core`; o contrato de execução continua em
+`morok::model::ModelBackend`.
 
-## Regra arquitetural obrigatória
+## Arquitetura fixa
 
-A G3 utiliza o motor Morok existente. Não criar outro Core, outro runtime de inferência ou uma cópia do motor em `Gerações/G3/shared/`.
+- 261 IDs byte-level.
+- Embedding 60, GRU 97 e GRU 68, duas camadas.
+- RMSNorm entre as camadas.
+- Projeção 68 → 60 e weight tying real.
+- Exatamente 100.000 parâmetros.
+- Estado recorrente FP32 de 660 bytes por sessão.
+- ID de arquitetura `0x0302`.
 
-A infraestrutura neutra permanece em `Morok::Core`. O contrato público de backend neural é `morok::model::ModelBackend`, em `Morok/include/morok/model/model_backend.hpp`.
+A contagem é verificada a partir dos tensores reais. Consulte
+[PARAMETROS-100K.md](PARAMETROS-100K.md).
 
-## Arquitetura neural atual
+## Componentes
 
-O backend neural da G3 está em `neural/` como `Morok::G3::Neural`. A configuração normativa atual é a revisão **exatamente 100.000 parâmetros**:
+| Módulo | Biblioteca/CLI | Responsabilidade |
+|---|---|---|
+| `neural/` | `Morok::G3::Neural` | Backend GRU e kernels |
+| `training/` | `Morok::G3::Training`, `morok-g3-train` | Dataset, SFT, BPTT, AdamW, checkpoint e retomada |
+| `rl/` | `Morok::G3::RL`, `morok-g3-reinforce` | REINFORCE, baseline, KL e avaliador independente |
+| `inference/` | `Morok::G3::Inference`, `morok-g3-generate` | Geração, sessões, artefatos, INT8 e benchmark |
+| `profiles/` | `Morok::G3::Profiles` | Políticas dos quatro perfis sobre a mesma execução |
 
-- vocabulário: 261 IDs;
-- embedding: 60 dimensões;
-- GRU 1: hidden 97;
-- GRU 2: hidden 68;
-- duas camadas recorrentes com três portas cada;
-- RMSNorm entre camadas, com escala aprendível e epsilon configurável;
-- projeção 68 → 60;
-- weight tying real: a cabeça de saída lê a transposta do próprio embedding;
-- estado recorrente: 660 bytes por sessão FP32;
-- identificador de arquitetura: `0x0302`.
+A quantização INT8 mantém as matrizes quantizadas no caminho de inferência.
+Biases, escalas, RMSNorm, ativações e estado recorrente permanecem FP32.
 
-A contagem é calculada a partir dos tensores efetivamente alocados. O construtor rejeita qualquer configuração que não totalize exatamente 100.000 parâmetros. A tabela de cálculo, os formatos e a regra de compatibilidade estão em [PARAMETROS-100K.md](PARAMETROS-100K.md).
+## Perfis
 
-A dimensão de embedding e os tamanhos ocultos anteriores (64/128) eram valores de referência da arquitetura inicial e foram substituídos nesta revisão para atingir o orçamento solicitado sem criar parâmetros artificiais. Artefatos `0x0301` são incompatíveis com a configuração atual `0x0302`.
+Mokosh, Tsukuyomi, Artemis e Apollo usam o mesmo backend G3 e o mesmo runtime.
+As diferenças são políticas de geração, limites e quantidade de agentes. Os
+perfis não possuem pesos próprios. Consulte [profiles/README.md](profiles/README.md).
 
-## Perfis reservados
+## Treinamento e retomada
 
-- **Mokosh:** eficiência e baixo consumo de memória, processamento e energia.
-- **Tsukuyomi:** identidade escura/preta, com exatamente um agente.
-- **Artemis:** sistema multiagente, com no mínimo três agentes.
-- **Apollo:** baixa latência e rapidez de resposta, medidas por benchmark.
+O SFT divide grupos 85/10/5, aplica expansão/perturbação apenas no treino e
+usa Cross-Entropy causal, TBPTT e AdamW. Checkpoints de época persistem pesos,
+momentos AdamW, contador, scheduler, sampler, RNG, fingerprints e metadados.
+A retomada valida compatibilidade e continua no limite entre épocas. Consulte
+[training/README.md](training/README.md).
 
-Os perfis compartilham o Core, o contrato de execução e a implementação-base da arquitetura G3.
+## Inferência e benchmarks
 
-## Treinamento e validação
+O CLI carrega artefatos FP32 ou INT8, aceita Top-K/temperatura, protege contra
+repetição e mantém estado e RNG isolados por sessão. Benchmark mede mediana,
+P95, throughput, RSS e pico de RSS no Linux. Consulte
+[inference/INFERENCE.md](inference/INFERENCE.md).
 
-O backend implementa o forward incremental e a interface `ModelBackend`. A arquitetura, a inicialização e o orçamento de parâmetros são testados em `neural/tests/test_gru_backend.cpp`.
+## Aprovação
 
-BPTT, gradientes dos pesos, otimizador e treinamento SFT ainda são entregas separadas. O módulo RL continua dependendo da integração com o backend treinável real. A arquitetura de 100.000 parâmetros não significa que o modelo já esteja treinado.
+A validação de arquitetura, treinamento, retomada, RL, checkpoints, inferência,
+quantização, isolamento de sessões e perfis está automatizada em CTest e GitHub
+Actions. O relatório consolidado é
+[RELATORIO-ETAPA-9-APROVACAO-PERFIS.md](RELATORIO-ETAPA-9-APROVACAO-PERFIS.md).
 
-
-## Dataset e treinamento supervisionado
-
-O pipeline SFT está em `training/` e reutiliza diretamente o backend neural G3:
-
-- loader JSONL com proveniência, idioma, versão, categoria, pergunta/resposta, `example_id` e `group_id`;
-- validação UTF-8 e normalização NFC via ICU;
-- split 85/10/5 por `group_id`, impedindo que paráfrases da mesma família atravessem splits;
-- expansão combinatória limitada por eixos `expansion_axes` e variantes curadas;
-- perturbação ortográfica em 45% dos exemplos de treino;
-- Cross-Entropy causal com máscara de resposta, PAD ignorado e smoothing apenas em bytes comuns;
-- BPTT truncado (128 passos por padrão), dropout variacional e AdamW com clipping/weight decay seletivo;
-- telemetria JSONL por pergunta, exemplo e época.
-
-Biblioteca: `Morok::G3::Training`. Executável: `morok-g3-train`. O CLI exporta os pesos FP32 finais para `.morok` usando o formato versionado 2, arquitetura `0x0302`, E=60, H1=97, H2=68 e estado de 660 bytes. Detalhes do schema e dos hiperparâmetros em [training/README.md](training/README.md).
-
-A CI valida o pipeline com fixtures sintéticas. Nenhum corpus de produção foi adicionado nem treinado. O CLI ainda não implementa retomada de checkpoint com estado completo do AdamW e RNG; esse requisito geral de recuperabilidade permanece separado da lista funcional desta etapa.
+Os testes de CI usam fixtures sintéticas. Eles verificam implementação e
+reprodutibilidade do pipeline, mas não demonstram qualidade linguística,
+raciocínio geral ou superioridade semântica. A aprovação de qualidade exige
+dataset de produção revisado e avaliação humana/independente.
