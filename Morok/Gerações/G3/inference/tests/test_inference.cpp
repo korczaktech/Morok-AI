@@ -132,6 +132,9 @@ void test_artifact_round_trip_and_corruption() {
     invalid_metadata = artifact;
     invalid_metadata.metadata.embedding_dim = 61U;
     assert(!serialize_model_artifact(invalid_metadata).has_value());
+    invalid_metadata = artifact;
+    invalid_metadata.metadata.hidden_dim_second = 69U;
+    assert(!serialize_model_artifact(invalid_metadata).has_value());
 
     auto corrupted_header = *serialized.value_if();
     corrupted_header[20] ^= std::byte{0x01};
