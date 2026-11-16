@@ -19,7 +19,7 @@ namespace morok::g3::inference {
 // Calls for one ID are serialized; different IDs may run concurrently.
 class SessionManager final {
 public:
-    explicit SessionManager(std::size_t maximum_sessions = 1024U,
+    explicit SessionManager(std::size_t maximum_sessions = 16U,
                             std::chrono::seconds idle_ttl = std::chrono::minutes{30},
                             std::uint64_t seed = 0x4D4F524F4B4733ULL);
 
