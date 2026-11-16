@@ -435,7 +435,8 @@ async function handle(req, res) {
         return Number.isNaN(date.getTime()) ? new Date() : date;
       };
       const createdAt = toDate(item.createdAt);
-      const updatedAt = toDate(item.updatedAt);
+      const updatedAt = item.updatedAt ? new Date(item.updatedAt) : null;
+      if (!updatedAt || Number.isNaN(updatedAt.getTime())) return send(res, 400, { error: "Data de atualização da conversa inválida." }, req.allowedOrigin);
       const deletion = await conversationDeletions.findOne({ accountId: token.sub, conversationId: item.id });
       if (deletion && updatedAt <= new Date(deletion.deletedAt)) return send(res, 200, { success: true, skipped: "conversation_deleted" }, req.allowedOrigin);
       if (deletion) await conversationDeletions.deleteOne({ _id: deletion._id });
