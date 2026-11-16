@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <span>
 #include <string>
 #include <vector>
@@ -67,8 +68,8 @@ bool parse_size(const char* text, std::size_t& value) {
 }
 
 int main(int argc, char** argv) {
-    if (argc < 3 || argc > 7) {
-        std::cerr << "Uso: morok-g2-tsukuyomi-train <corpus.bin> <checkpoint> [epocas] [seed] [learning_rate] [--resume]\n";
+    if (argc < 3 || argc > 9) {
+        std::cerr << "Uso: morok-g2-tsukuyomi-train <corpus.bin> <checkpoint> [epocas] [seed] [learning_rate] [--resume] [--lr-map arquivo]\n";
         return 2;
     }
 
@@ -114,11 +115,25 @@ int main(int argc, char** argv) {
     }
 
     bool resume = false;
-    if (argc >= 6) {
-        const std::string option(argv[5]);
+    std::filesystem::path learning_rate_map_path;
+    bool learning_rate_seen = false;
+    for (int index = 5; index < argc;) {
+        const std::string option(argv[index]);
         if (option == "--resume") {
+            if (resume) {
+                std::cerr << "Opção --resume repetida.\n";
+                return 2;
+            }
             resume = true;
-        } else {
+            ++index;
+        } else if (option == "--lr-map") {
+            if (!learning_rate_map_path.empty() || index + 1 >= argc) {
+                std::cerr << "Uso inválido de --lr-map.\n";
+                return 2;
+            }
+            learning_rate_map_path = argv[index + 1];
+            index += 2;
+        } else if (!learning_rate_seen) {
             char* end = nullptr;
             const double learning_rate = std::strtod(option.c_str(), &end);
             if (end != option.c_str() + option.size() ||
@@ -128,13 +143,11 @@ int main(int argc, char** argv) {
                 return 2;
             }
             config.learning_rate = learning_rate;
-            if (argc == 7) {
-                resume = std::string(argv[6]) == "--resume";
-                if (!resume) {
-                    std::cerr << "Opção inválida: use --resume.\n";
-                    return 2;
-                }
-            }
+            learning_rate_seen = true;
+            ++index;
+        } else {
+            std::cerr << "Argumento desconhecido: " << option << '\n';
+            return 2;
         }
     }
 
@@ -155,8 +168,42 @@ int main(int argc, char** argv) {
     }
 
     const auto target_mask = make_dialogue_target_mask(bytes);
+    std::vector<double> target_learning_rates;
+    if (!learning_rate_map_path.empty()) {
+        target_learning_rates.assign(bytes.size(), config.learning_rate);
+        std::vector<std::uint8_t> assigned(bytes.size(), 0);
+        std::ifstream rate_map(learning_rate_map_path);
+        if (!rate_map) {
+            std::cerr << "Não foi possível abrir o mapa de learning rate por questão.\n";
+            return 2;
+        }
+        std::size_t begin = 0, end = 0;
+        double rate = 0.0;
+        std::size_t ranges = 0;
+        while (rate_map >> begin >> end >> rate) {
+            if (begin >= end || end > bytes.size() || !std::isfinite(rate) ||
+                rate <= 0.0 || rate > 0.1) {
+                std::cerr << "Intervalo ou learning rate inválido no mapa por questão.\n";
+                return 2;
+            }
+            for (std::size_t position = begin; position < end; ++position) {
+                if (assigned[position]) {
+                    std::cerr << "Intervalos sobrepostos no mapa de learning rate.\n";
+                    return 2;
+                }
+                assigned[position] = 1;
+                target_learning_rates[position] = rate;
+            }
+            ++ranges;
+        }
+        if (!rate_map.eof() || ranges == 0) {
+            std::cerr << "Mapa de learning rate vazio ou malformado.\n";
+            return 2;
+        }
+        std::cout << "Faixas de learning rate por questão: " << ranges << '\n';
+    }
     const auto report = morok::g2::tsukuyomi::train(
-        model, bytes, config, &optimizer_state, target_mask);
+        model, bytes, config, &optimizer_state, target_mask, target_learning_rates);
     if (report.epochs_completed != config.epochs ||
         !morok::g2::tsukuyomi::save_checkpoint(model, argv[2]) ||
         !morok::g2::tsukuyomi::save_training_state(optimizer_state, optimizer_path)) {
