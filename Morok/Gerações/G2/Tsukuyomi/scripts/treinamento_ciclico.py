@@ -628,7 +628,8 @@ def main() -> int:
                         raise RuntimeError(f"Treinamento ou persistência inválida na pergunta {index:02d}.")
 
                     candidate = evaluate_one(generator, trainer, checkpoint, dialogue)
-                    accepted = accept_question_checkpoint(old_loss, candidate[3])
+                    candidate_loss = candidate[3]
+                    accepted = accept_question_checkpoint(old_loss, candidate_loss)
                     if accepted:
                         accepted_count += 1
                     else:
@@ -649,7 +650,7 @@ def main() -> int:
                 )
                 print(f"Pergunta {index:02d}/40: Loss "
                       f"{'—' if old_loss is None else f'{old_loss:.6f}'} → "
-                      f"{candidate[3]:.6f}; {state}.", flush=True)
+                      f"{candidate_loss:.6f}; {state}.", flush=True)
 
             new_errors = record_feedback_errors(memory, training_dialogues, cycle_results)
             write_feedback_memory(feedback_path, memory)
