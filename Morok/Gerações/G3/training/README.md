@@ -19,7 +19,8 @@ Campos opcionais:
 
 - `quality`: número entre 0 e 1 (default 1);
 - `sensitive`: booleano (default false; sinalização para política externa de tratamento);
-- `question_variants`: lista de paráfrases curadas da pergunta. São candidatos de expansão, não rótulos gerados automaticamente.
+- `question_variants`: lista de paráfrases curadas da pergunta;
+- `expansion_axes`: matriz de opções para os espaços `{0}`, `{1}` etc. no texto da pergunta. Cada eixo representa alternativas para um fragmento; os eixos podem codificar sinônimos, ordem ou formalidade.
 
 Exemplo:
 
@@ -35,7 +36,7 @@ O split padrão é 85% treino, 10% validação e 5% teste, aplicado a grupos com
 
 ## Expansão e robustez
 
-A expansão usa somente variantes explícitas e curadas em `question_variants`, deduplica textos e limita o número total por exemplo (default 4, incluindo o original). Assim, sinônimos, mudanças de ordem e formalidade entram como variantes revisadas, sem inventar equivalências semânticas. Depois da expansão, cada candidato de treino pode receber perturbação.
+A expansão usa variantes curadas em `question_variants` e eixos combinatórios em `expansion_axes`. Para cada placeholder `{i}`, o eixo i fornece alternativas de fragmento. O algoritmo mantém uma combinação canônica, amostra combinações adicionais com seed determinística, deduplica e respeita o limite total por exemplo (default 4). Sinônimos, ordem e formalidade são fornecidos pelo dataset, sem inventar equivalências semânticas. Depois da expansão, cada candidato de treino pode receber perturbação.
 
 Defaults experimentais da perturbação:
 - 45% de probabilidade por exemplo;
@@ -88,7 +89,7 @@ O executável inicia um treino novo em memória e escreve métricas JSONL. Não 
 
 ## Limites conhecidos desta entrega
 
-- As variantes semânticas precisam ser fornecidas e revisadas em `question_variants`; não existe um gerador automático de sinônimos baseado em um léxico externo.
+- As alternativas semânticas precisam ser fornecidas e revisadas em `question_variants` ou `expansion_axes`; não existe um gerador de sinônimos baseado em léxico externo.
 - O campo `sensitive` é registrado, mas a anonimização/controle de acesso ao corpus é responsabilidade do pipeline de ingestão e armazenamento.
 - A implementação registra fingerprint FNV-1a de 64 bits para identificação/reprodutibilidade local; não é hash criptográfico de integridade.
 - O CLI atual não retoma checkpoint de treinamento; retomada completa exige persistir também momentos AdamW, RNG, cursor/sampler e versão do dataset.
