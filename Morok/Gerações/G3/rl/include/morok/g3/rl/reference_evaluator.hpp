@@ -6,6 +6,7 @@
 #include <vector>
 
 namespace morok::g3::rl {
+using morok::lang::TokenId;
 struct ReferenceAnswer final {
     std::vector<TokenId> prompt;
     std::vector<TokenId> answer;
