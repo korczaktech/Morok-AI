@@ -147,6 +147,7 @@ jobs:
             build/g2/morok-g2-tsukuyomi-train \
             build/g2/morok-g2-tsukuyomi-generate \
             "Gerações/G2/Tsukuyomi/data/treinamento.txt" \
+            "Gerações/G2/Tsukuyomi/data/feedback.txt" \
             "Gerações/G2/Tsukuyomi/data/validacao.txt" \
             "Gerações/G2/Tsukuyomi/data/teste.txt" \
             "$EPOCAS" "$TENTATIVAS" "$CONTINUO" "$QUESTOES"
