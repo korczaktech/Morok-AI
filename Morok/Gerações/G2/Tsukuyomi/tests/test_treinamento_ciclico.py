@@ -21,11 +21,11 @@ class TrainingDataTests(unittest.TestCase):
 
     def test_lexical_learning_rate_is_adaptive_for_each_question(self):
         base = 0.001
-        self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 0.0), base)
-        self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 0.9), base * (0.1 ** 0.9))
+        self.assertEqual(training.learning_rate_for_lexical_level(base, 0.0), 1e-2)
+        self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 0.5), 1e-3)
+        self.assertEqual(training.learning_rate_for_lexical_level(base, 1.0), 1e-5)
         self.assertLess(training.learning_rate_for_lexical_level(base, 0.9),
                         training.learning_rate_for_lexical_level(base, 0.0))
-        self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 1.0), base * 0.1)
         self.assertEqual(training.learning_rate_for_lexical_level(1e-5, 1.0), 1e-5)
         for level in (-0.1, 1.1, float("nan")):
             with self.assertRaises(ValueError):
@@ -56,6 +56,8 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(training.decay_learning_rate(1.01e-5), 1e-5)
         self.assertEqual(training.learning_rate_for_lexical_level(1e-5, 1.0), 1e-5)
         self.assertEqual(training.learning_rate_for_lexical_level(1e-2, 0.0), 1e-2)
+        self.assertEqual(training.learning_rate_for_lexical_level(1e-2, 1.0), 1e-5)
+        self.assertEqual(training.INITIAL_LEARNING_RATE, 1e-2)
 
     def test_learning_rate_rejects_values_below_floor_or_non_finite(self):
         for value in (0.0, 0.5e-5, 1.01e-2, float("nan"), float("inf")):
