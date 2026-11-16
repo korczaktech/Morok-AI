@@ -186,7 +186,7 @@ if(MOROK_BUILD_APPS)
     morok_enable_sanitizers(morok_g2_tsukuyomi_generate)
 
     add_executable(morok_g3_train Gerações/G3/training/apps/train.cpp)
-    target_link_libraries(morok_g3_train PRIVATE Morok::G3::Training morok_build_options)
+    target_link_libraries(morok_g3_train PRIVATE Morok::G3::Training Morok::G3::Inference morok_build_options)
     set_target_properties(morok_g3_train PROPERTIES OUTPUT_NAME "morok-g3-train")
     morok_enable_sanitizers(morok_g3_train)
 
