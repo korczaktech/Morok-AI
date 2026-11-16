@@ -11,7 +11,7 @@
 namespace morok::g3::inference {
 
 inline constexpr std::uint16_t kG3ArchitectureGruRmsNormTied = 0x0302;
-inline constexpr std::uint16_t kModelFormatVersion = 1;
+inline constexpr std::uint16_t kModelFormatVersion = 2;
 inline constexpr std::size_t kModelHeaderBytes = 64;
 inline constexpr std::size_t kMaximumModelPayloadBytes = 512U * 1024U * 1024U;
 
