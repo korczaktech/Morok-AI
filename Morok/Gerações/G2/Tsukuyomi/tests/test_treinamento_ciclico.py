@@ -257,5 +257,91 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(score, 0.0)
 
 
+
+    def test_feedback_and_validation_are_disjoint(self):
+        combined = training.read_dialogues(DATA_DIR / "validacao.txt")
+        feedback, validation = training.split_feedback_and_validation(combined)
+        self.assertEqual(len(feedback), 20)
+        self.assertEqual(len(validation), 20)
+        self.assertTrue({q for q, _ in feedback}.isdisjoint({q for q, _ in validation}))
+        selected = training.select_validation_questions([], validation, 7)
+        self.assertEqual(selected, validation[:7])
+
+    def test_validation_count_is_limited_to_independent_holdout(self):
+        self.assertEqual(training.MAX_VALIDATION_QUESTIONS, 20)
+        self.assertEqual(training.MAX_FEEDBACK_QUESTIONS, 20)
+        with self.assertRaises(ValueError):
+            training.select_validation_questions([], [("q", "a")], 21)
+
+    def test_learning_rate_is_persisted_and_invalid_state_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "learning-rate.txt"
+            self.assertEqual(training.load_learning_rate(path, 0.001), 0.001)
+            training.write_learning_rate(path, 0.00081)
+            self.assertAlmostEqual(training.load_learning_rate(path, 0.001), 0.00081)
+            path.write_text("nan", encoding="utf-8")
+            with self.assertRaises(RuntimeError):
+                training.load_learning_rate(path, 0.001)
+
+    def test_question_history_detects_regressions_and_recoveries(self):
+        history = {"version": 1, "questions": {}}
+        dialogue = [("Qual é a resposta?", "Resposta correta")]
+        self.assertEqual(
+            training.update_question_history(
+                history, dialogue, [("Resposta correta", True, 1.0)], 0, "run-a"
+            ),
+            (0, 0),
+        )
+        self.assertEqual(
+            training.update_question_history(
+                history, dialogue, [("Resposta errada", False, 0.2)], 1, "run-a"
+            ),
+            (1, 0),
+        )
+        self.assertEqual(
+            training.update_question_history(
+                history, dialogue, [("Resposta correta", True, 1.0)], 2, "run-b"
+            ),
+            (0, 1),
+        )
+        item = history["questions"]["Qual é a resposta?"]
+        self.assertEqual(item["regressions"], 1)
+        self.assertEqual(item["recoveries"], 1)
+        self.assertTrue(item["ever_correct"])
+        self.assertEqual(item["last_execution"], "run-b")
+
+    def test_question_history_round_trip_and_rejects_changed_answer_key(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "history.json"
+            history = {"version": 1, "questions": {}}
+            training.update_question_history(
+                history, [("pergunta", "gabarito")],
+                [("resposta", False, 0.0)], 1, "run-1"
+            )
+            training.write_question_history(path, history)
+            loaded = training.load_question_history(path)
+            self.assertEqual(loaded, history)
+            with self.assertRaises(RuntimeError):
+                training.update_question_history(
+                    loaded, [("pergunta", "outro gabarito")],
+                    [("resposta", False, 0.0)], 2, "run-2"
+                )
+
+    def test_validation_metrics_prioritize_exact_answers(self):
+        dialogues = [("q1", "resposta certa"), ("q2", "outra resposta")]
+        results = [
+            ("resposta certa", True, 1.0),
+            ("quase outra resposta", False, 0.8),
+        ]
+        correct, total, f1, char_score, score, rank = training.validation_metrics(
+            dialogues, results
+        )
+        self.assertEqual((correct, total), (1, 2))
+        self.assertEqual(rank[0], 1)
+        self.assertTrue(0.0 <= score <= 1.0)
+        self.assertTrue(0.0 <= f1 <= 1.0)
+        self.assertTrue(0.0 <= char_score <= 1.0)
+
+
 if __name__ == "__main__":
     unittest.main()
