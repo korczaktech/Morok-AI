@@ -6,6 +6,7 @@
 #include <cstring>
 #include <limits>
 #include <random>
+#include <string>
 #include <stdexcept>
 #include <string_view>
 #include <vector>
@@ -33,6 +34,15 @@ void initialize_xavier(std::vector<float>& values, std::size_t rows,
 
 // Initializes each HxH recurrent gate matrix independently with an
 // orthogonal basis. Modified Gram-Schmidt is performed in double precision.
+void initialize_xavier_gates(std::vector<float>& values,
+                              std::size_t input_dim,
+                              std::mt19937_64& random) {
+    const float bound = std::sqrt(6.0F /
+        static_cast<float>(kHiddenDim + input_dim));
+    std::uniform_real_distribution<float> distribution(-bound, bound);
+    for (float& value : values) value = distribution(random);
+}
+
 void initialize_orthogonal_gates(std::vector<float>& values,
                                  std::mt19937_64& random) {
     std::normal_distribution<double> normal(0.0, 1.0);
@@ -91,11 +101,9 @@ void initialize_orthogonal_gates(std::vector<float>& values,
 
     std::mt19937_64 random(seed);
     initialize_xavier(weights.embedding, kVocabularySize, kEmbeddingDim, random);
-    initialize_xavier(weights.layer1_input, kGateCount * kHiddenDim,
-                      kEmbeddingDim, random);
+    initialize_xavier_gates(weights.layer1_input, kEmbeddingDim, random);
     initialize_orthogonal_gates(weights.layer1_recurrent, random);
-    initialize_xavier(weights.layer2_input, kGateCount * kHiddenDim,
-                      kHiddenDim, random);
+    initialize_xavier_gates(weights.layer2_input, kHiddenDim, random);
     initialize_orthogonal_gates(weights.layer2_recurrent, random);
     initialize_xavier(weights.projection, kEmbeddingDim, kHiddenDim, random);
 
@@ -228,8 +236,10 @@ common::Status G3Backend::consume_byte(std::span<std::byte> state,
     if (weights_.embedding.size() != kVocabularySize * kEmbeddingDim ||
         weights_.layer1_input.size() != kGateCount * kHiddenDim * kEmbeddingDim ||
         weights_.layer1_recurrent.size() != kGateCount * kHiddenDim * kHiddenDim ||
+        weights_.layer1_bias.size() != kGateCount * kHiddenDim ||
         weights_.layer2_input.size() != kGateCount * kHiddenDim * kHiddenDim ||
         weights_.layer2_recurrent.size() != kGateCount * kHiddenDim * kHiddenDim ||
+        weights_.layer2_bias.size() != kGateCount * kHiddenDim ||
         weights_.rms_scale.size() != kHiddenDim) {
         return fail(common::ErrorCode::invalid_argument, "consume_byte",
                     "G3 weight tensor dimensions are invalid");
@@ -253,6 +263,18 @@ common::Status G3Backend::consume_byte(std::span<std::byte> state,
              weights_.layer2_input, weights_.layer2_recurrent,
              weights_.layer2_bias, layer2);
 
+    for (float value : layer1) {
+        if (!std::isfinite(value)) {
+            return fail(common::ErrorCode::internal_error, "consume_byte",
+                        "G3 first recurrent layer produced a non-finite state");
+        }
+    }
+    for (float value : layer2) {
+        if (!std::isfinite(value)) {
+            return fail(common::ErrorCode::internal_error, "consume_byte",
+                        "G3 second recurrent layer produced a non-finite state");
+        }
+    }
     std::array<float, kStateFloats> next{};
     std::copy(layer1.begin(), layer1.end(), next.begin());
     std::copy(layer2.begin(), layer2.end(), next.begin() + kHiddenDim);
