@@ -21,12 +21,11 @@ try:
     INITIAL_LEARNING_RATE = float(os.environ.get("TSUKUYOMI_LEARNING_RATE", "0.001"))
 except ValueError as error:
     raise SystemExit("TSUKUYOMI_LEARNING_RATE precisa ser um número válido.") from error
-if not math.isfinite(INITIAL_LEARNING_RATE) or not 0.0 < INITIAL_LEARNING_RATE <= 0.1:
-    raise SystemExit("TSUKUYOMI_LEARNING_RATE precisa estar entre 0 e 0.1.")
-MIN_LEARNING_RATE = 0.00005
-LR_REDUCE_FACTOR = 0.5
-LR_PLATEAU_CYCLES = 3
-LR_MIN_DELTA = 0.005
+MIN_LEARNING_RATE = 1e-7
+LR_REDUCE_FACTOR = 0.9
+if (not math.isfinite(INITIAL_LEARNING_RATE)
+        or not MIN_LEARNING_RATE <= INITIAL_LEARNING_RATE <= 0.1):
+    raise SystemExit("TSUKUYOMI_LEARNING_RATE precisa estar entre 1e-7 e 0.1.")
 
 
 def validation_rank(correct_count: int, total: int, mean_f1: float,
@@ -41,21 +40,11 @@ def validation_rank(correct_count: int, total: int, mean_f1: float,
     return correct_count, 0.5 * mean_f1 + 0.5 * mean_char_similarity
 
 
-def update_learning_rate(current: float, best_rank: tuple[int, float], plateau: int,
-                         observed_rank: tuple[int, float]) -> tuple[float, tuple[int, float], int, bool]:
-    """Reduz LR após três ciclos sem melhora real; exatidão sempre domina o desempate."""
-    correct, quality = observed_rank
-    if correct < 0 or not 0.0 <= quality <= 1.0 or not math.isfinite(quality):
-        raise ValueError("Ranking de validação inválido.")
-    if correct > best_rank[0] or (
-        correct == best_rank[0] and quality > best_rank[1] + LR_MIN_DELTA
-    ):
-        return current, observed_rank, 0, False
-    plateau += 1
-    if plateau >= LR_PLATEAU_CYCLES and current > MIN_LEARNING_RATE:
-        reduced = max(MIN_LEARNING_RATE, current * LR_REDUCE_FACTOR)
-        return reduced, best_rank, 0, reduced < current
-    return current, best_rank, plateau, False
+def decay_learning_rate(current: float) -> float:
+    """Reduz 10% a cada ciclo, respeitando o piso absoluto de 1e-7."""
+    if not math.isfinite(current) or current < MIN_LEARNING_RATE:
+        raise ValueError("Learning rate atual inválido.")
+    return max(MIN_LEARNING_RATE, current * LR_REDUCE_FACTOR)
 
 
 def save_best_state(checkpoint: Path, optimizer_state: Path,
@@ -389,7 +378,6 @@ def main() -> int:
     best_validation_correct = 0
     best_validation_cycle = 0
     best_validation_rank = (0, -1.0)
-    plateau_cycles = 0
     maximum_cycles = min(attempts, MAX_CYCLES)
     with output.open("w", encoding="utf-8") as report:
         report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
@@ -417,14 +405,14 @@ def main() -> int:
             build_training_corpus(train_corpus, feedback_memory, combined_training)
             command = [
                 str(trainer), str(combined_training), str(checkpoint),
-                str(epochs), "42", f"{learning_rate:.8f}",
+                str(epochs), "42", f"{learning_rate:.12g}",
             ]
             if cycle > 1 or resume_previous_run:
                 command.append("--resume")
 
             print(
                 f"\n=== Ciclo {cycle}: {epochs} época(s), validação "
-                f"{len(validation)} pergunta(s), LR={learning_rate:.6f} ===",
+                f"{len(validation)} pergunta(s), LR={learning_rate:.8g} ===",
                 flush=True,
             )
             started = time.perf_counter()
@@ -484,33 +472,37 @@ def main() -> int:
                 correct_count, total, mean_f1, mean_char_similarity
             )
             previous_best_rank = best_validation_rank
-            learning_rate, best_validation_rank, plateau_cycles, reduced = update_learning_rate(
-                learning_rate, best_validation_rank, plateau_cycles, observed_rank
-            )
+            if (observed_rank[0] > best_validation_rank[0] or (
+                observed_rank[0] == best_validation_rank[0]
+                and observed_rank[1] > best_validation_rank[1] + 0.005
+            )):
+                best_validation_rank = observed_rank
             if best_validation_rank != previous_best_rank:
                 save_best_state(checkpoint, optimizer_state,
                                 best_checkpoint, best_optimizer_state)
                 best_validation_correct = correct_count
                 best_validation_cycle = cycle
                 best_validation_score = validation_score
-            if reduced:
-                print(
-                    f"Scheduler: validação estagnada; learning rate reduzido para {learning_rate:.6f}.",
-                    flush=True,
-                )
+            previous_learning_rate = learning_rate
+            learning_rate = decay_learning_rate(learning_rate)
+            print(
+                f"Scheduler: LR {previous_learning_rate:.8g} -> {learning_rate:.8g} "
+                "(redução de 10% após este ciclo; piso 1e-7).",
+                flush=True,
+            )
             elapsed = time.perf_counter() - started
             report.write(
                 f"**Treino: {completed_epochs:.0f} época(s), {target_bytes:.0f} bytes-alvo, "
                 f"train_bpb {initial_bpb:.4f} → {final_bpb:.4f}.**\n"
                 f"**Validação: {correct_count}/{total}; F1 médio: {mean_f1:.3f}; "
                 f"similaridade char: {mean_char_similarity:.3f}; "
-                f"pontuação: {validation_score:.3f}; LR: {learning_rate:.6f}; "
+                f"pontuação: {validation_score:.3f}; próximo LR: {learning_rate:.8g}; "
                 f"duração: {elapsed:.2f}s.**\n\n"
             )
             report.flush()
             print(
                 f"Validação do ciclo {cycle}: {correct_count}/{total}; F1={mean_f1:.3f}; "
-                f"char={mean_char_similarity:.3f}; score={validation_score:.3f}; LR={learning_rate:.6f}; {elapsed:.2f}s.",
+                f"char={mean_char_similarity:.3f}; score={validation_score:.3f}; próximo LR={learning_rate:.8g}; {elapsed:.2f}s.",
                 flush=True,
             )
 
