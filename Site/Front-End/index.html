@@ -16,7 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=20261116-02">
   <script src="./wasm/tsukuyomi.js?v=20261116-19" defer></script>
-  <script src="./app.js?v=20261116-19" defer></script>
+  <script src="./app.js?v=20261116-20" defer></script>
 </head>
 <body>
   <div class="app" id="app">
@@ -122,6 +122,7 @@
     <form method="dialog" class="dialog-card" id="settings-form">
       <div class="dialog-heading"><div><div class="dialog-eyebrow">PREFERÊNCIAS</div><h2>Configurações</h2><p class="menu-insight">Controles gerais da interface. Opções específicas de comportamento ficam nas páginas de personalização e instruções.</p></div><button class="icon-button dialog-close" value="cancel" aria-label="Fechar"><span data-icon="close"></span></button></div>
       <section class="settings-section"><h3>Aparência</h3><label class="setting-row"><span><strong>Tema</strong><small>Escolha como o Morok aparece.</small></span><select id="theme-select"><option value="dark">Escuro</option><option value="light">Claro</option><option value="system">Sistema</option></select></label></section>
+      <section class="settings-section"><h3>Respostas</h3><label class="setting-row"><span><strong>Exibição progressiva</strong><small>Mostra o texto gradualmente depois que o Tsukuyomi termina de gerar a resposta.</small></span><select id="stream-display-select"><option value="enabled">Ativada</option><option value="disabled">Desativada</option></select></label></section>
       <section class="settings-section"><h3>Conta</h3><p class="field-help">Gerencie seu acesso e suas preferências de conta.</p><button class="secondary-button" id="auth-open" type="button">Entrar ou criar conta</button></section>
       <section class="settings-section"><h3>Conexão</h3><p class="field-help">A conexão com o Morok é configurada automaticamente.</p></section>
       <section class="settings-section"><h3>Dados locais</h3><p class="field-help">Conversas, preferências e anexos de texto são armazenados apenas neste navegador.</p><button class="danger-button" id="clear-data" type="button">Apagar todas as conversas deste dispositivo</button></section>
