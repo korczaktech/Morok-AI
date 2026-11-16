@@ -19,6 +19,7 @@ enum class ProfileId {
 struct ProfileConfig final {
     ProfileId id{ProfileId::tsukuyomi};
     std::string_view name{"Tsukuyomi"};
+    std::string_view presentation_theme{"system"};
     std::size_t agent_count{1U};
     std::size_t recommended_session_capacity{16U};
     inference::GenerationConfig generation{};
