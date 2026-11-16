@@ -1,4 +1,5 @@
 name: Treinamento — G2
+# [train-g2] Execução solicitada: 50 épocas, 100 tentativas, modo contínuo desativado
 
 on:
   push:
