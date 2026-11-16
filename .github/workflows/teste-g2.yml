@@ -44,11 +44,11 @@ jobs:
             echo "- Rodada: **${RODADA}/10**"
             echo "- Épocas: **10**"
             echo "- Tentativas: **1**"
-            echo "- Perguntas treinadas: **40**"
+            echo "- Perguntas treinadas: **100**"
             echo "- Estado: checkpoint, Adam e memória persistidos entre as rodadas"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Validar corpus de 40 perguntas e testes
+      - name: Validar corpus de 100 perguntas e testes
         working-directory: Morok
         run: python3 -m unittest discover -s "Gerações/G2/Tsukuyomi/tests" -p "test_*.py" -v
 
@@ -98,14 +98,14 @@ jobs:
               git archive origin/tsukuyomi-state state/tsukuyomi-g2-questions | tar -x -C "$RUNNER_TEMP"
               mkdir -p Morok/build/g2/tsukuyomi-questoes
               cp -a "$RUNNER_TEMP/state/tsukuyomi-g2-questions/." Morok/build/g2/tsukuyomi-questoes/
-              echo "40 checkpoints individuais e seus estados Adam recuperados."
+              echo "100 checkpoints individuais e seus estados Adam recuperados."
             fi
             echo "Memória persistente recuperada: estados e memória."
           else
             echo "Primeira execução: ainda não existe memória persistente."
           fi
 
-      - name: Treinar Tsukuyomi — 10 épocas, 1 tentativa, 40 perguntas
+      - name: Treinar Tsukuyomi — 10 épocas, 1 tentativa, 100 perguntas
         working-directory: Morok
         env:
           RODADA: ${{ inputs.rodada }}
@@ -158,7 +158,7 @@ jobs:
             git -C "$STATE_DIR" push origin tsukuyomi-state
           fi
 
-      - name: Publicar relatório individual das 40 perguntas — vermelho/verde
+      - name: Publicar relatório individual das 100 perguntas — vermelho/verde
         if: always()
         working-directory: Morok
         env:
@@ -169,7 +169,7 @@ jobs:
               echo "## Annotations — Tsukuyomi G2 — rodada $RODADA/10"
               echo
               echo "<details>"
-              echo "<summary>Expandir os 40 resultados individuais: resposta, nível lexical, Loss, BPB e demais métricas</summary>"
+              echo "<summary>Expandir os 100 resultados individuais: resposta, nível lexical, Loss, BPB e demais métricas</summary>"
               echo
               cat build/g2/respostas-tsukuyomi.md
               echo
