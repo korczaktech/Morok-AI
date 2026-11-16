@@ -6,9 +6,9 @@
   const AUTH_API_URL = 'https://morok-ai.onrender.com';
   const MAX_LOCAL_BYTES = 3_500_000;
   const MAX_LIBRARY_FILE_BYTES = 48 * 1024;
-  const INTEGRATION_CONTRACTS = Object.freeze({chat:{status:'connected',method:'POST',path:'/v1/chat',request:['prompt','max_new_bytes'],response:['response','request_id']},imageGeneration:{status:'pending',request:['prompt','model','size'],response:['image_url','request_id']},modelContext:{status:'pending',fields:['aboutMe','responseStyle','instructions','location','libraryFiles']},externalPlugins:{status:'pending',requirements:['authorization','permissions','server-side connector']}});
+  const INTEGRATION_CONTRACTS = Object.freeze({chat:{status:'local-wasm',method:'WebAssembly',path:'/v1/conversations/sync',request:['prompt'],response:['response'],persistence:'MongoDB via Render API'},imageGeneration:{status:'pending',request:['prompt','model','size'],response:['image_url','request_id']},modelContext:{status:'pending',fields:['aboutMe','responseStyle','instructions','location','libraryFiles']},externalPlugins:{status:'pending',requirements:['authorization','permissions','server-side connector']}});
   window.MorokIntegrationContracts = INTEGRATION_CONTRACTS;
-  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G1', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], images: [], tasks: [], projects: [], activeProjectId: null, instructions: '', location: '', aboutMe: '', responseStyle: 'equilibrado', notifications: false, libraryItems: [], pendingResourceDeletions: [], pendingConversationDeletions: [], busy: false, controller: null, contextId: null, renameId: null, confirmResolve: null, toastTimer: null };
+  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G2', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], images: [], tasks: [], projects: [], activeProjectId: null, instructions: '', location: '', aboutMe: '', responseStyle: 'equilibrado', notifications: false, libraryItems: [], pendingResourceDeletions: [], pendingConversationDeletions: [], busy: false, controller: null, contextId: null, renameId: null, confirmResolve: null, toastTimer: null };
   const el = {
     app: $('#app'), sidebar: $('#sidebar'), backdrop: $('#backdrop'), history: $('#history-list'),
     welcome: $('#welcome'), conversation: $('#conversation'), input: $('#message-input'), composer: $('#composer'),
@@ -50,7 +50,7 @@
       state.theme = ['dark','light','system'].includes(saved.theme) ? saved.theme : 'dark';
       state.apiUrl = AUTH_API_URL;
       state.displayName = typeof saved.displayName === 'string' ? saved.displayName.slice(0,32) : 'Visitante';
-      state.generation = saved.generation === 'G1' ? 'G1' : 'G1';
+      state.generation = 'G2';
       state.model = 'Tsukuyomi';
       state.tasks = Array.isArray(saved.tasks) ? saved.tasks.slice(0,100).map(task => ({...task,id:task.id || id()})) : [];
       state.projects = Array.isArray(saved.projects) ? saved.projects.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string').map(p => ({...p,updatedAt:p.updatedAt || p.createdAt || new Date(0).toISOString()})).slice(0,100) : [];
@@ -300,28 +300,50 @@
     persist(); renderHistory(); renderConversation();
     await requestAnswer(conversation, prompt);
   }
-  async function requestAnswer(conversation, prompt) {
-    if (!state.apiUrl) {
-      const message = { id:id(), role:'assistant', error:true, content:'A API do Morok ainda não foi configurada. Abra Configurações e informe o endereço público do servidor. O servidor local do repositório não está acessível pelo GitHub Pages.', createdAt:now() };
-      conversation.messages.push(message); conversation.updatedAt = now(); persist(); renderConversation(); return;
+  let tsukuyomiRuntimePromise = null;
+  async function getTsukuyomiRuntime() {
+    if (!tsukuyomiRuntimePromise) {
+      tsukuyomiRuntimePromise = (async () => {
+        if (typeof window.createTsukuyomiModule !== 'function') {
+          throw new Error('O WebAssembly do Tsukuyomi G2 não foi carregado. Recarregue a página e tente novamente.');
+        }
+        const module = await window.createTsukuyomiModule({
+          locateFile: file => new URL('./wasm/' + file, document.baseURI).href
+        });
+        return new module.TsukuyomiRuntime();
+      })().catch(error => {
+        tsukuyomiRuntimePromise = null;
+        throw error;
+      });
     }
+    return tsukuyomiRuntimePromise;
+  }
+
+  async function requestAnswer(conversation, prompt) {
     state.busy = true; state.controller = new AbortController(); setBusy(true);
-    const pending = { id:'pending', role:'assistant', content:'Conectando ao Morok…', createdAt:now() };
+    const pending = { id:'pending', role:'assistant', content:'Iniciando Tsukuyomi G2 localmente…', createdAt:now() };
     addMessage(pending); el.conversation.scrollTop = el.conversation.scrollHeight;
     try {
-      const base = state.apiUrl.replace(/\/+$/,'');
-      const response = await fetch(base + '/v1/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({prompt, max_new_bytes:256}), signal:state.controller.signal, mode:'cors' });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'O servidor respondeu com HTTP ' + response.status + '.');
-      if (typeof data.response !== 'string') throw new Error('A resposta da API não contém o campo response.');
-      conversation.messages.push({ id:id(), role:'assistant', content:data.response, requestId:data.request_id || null, createdAt:now() });
+      const runtime = await getTsukuyomiRuntime();
+      if (state.controller?.signal.aborted) {
+        const aborted = new Error('Geração interrompida pelo usuário.');
+        aborted.name = 'AbortError';
+        throw aborted;
+      }
+      if (!runtime.hasCheckpoint(prompt)) {
+        throw new Error('O Tsukuyomi G2 ainda não possui um checkpoint para esta pergunta. Esta versão contém 40 perguntas treinadas e não generaliza para perguntas inéditas. Tente uma das perguntas previstas no modelo.');
+      }
+      const answer = runtime.generate(prompt, 256);
+      if (typeof answer !== 'string' || !answer.trim()) {
+        throw new Error('O Tsukuyomi G2 não produziu uma resposta válida para esta pergunta.');
+      }
+      conversation.messages.push({ id:id(), role:'assistant', content:answer, model:'Tsukuyomi G2', createdAt:now() });
       if(state.notifications && document.hidden && typeof Notification!=='undefined' && Notification.permission==='granted') new Notification('Morok',{body:'Sua resposta está pronta.'});
     } catch (error) {
       if (error.name === 'AbortError') {
         conversation.messages.push({ id:id(), role:'assistant', error:true, content:'Geração interrompida pelo usuário.', createdAt:now() });
       } else {
-        const reason = error instanceof TypeError ? 'Não foi possível acessar a API. Verifique o endereço, HTTPS e a configuração de CORS do servidor.' : error.message;
-        conversation.messages.push({ id:id(), role:'assistant', error:true, content:reason, createdAt:now() });
+        conversation.messages.push({ id:id(), role:'assistant', error:true, content:error.message || 'Não foi possível executar o Tsukuyomi G2.', createdAt:now() });
       }
     } finally {
       state.busy = false; state.controller = null; setBusy(false); conversation.updatedAt = now(); persist(); void syncConversation(conversation); renderHistory(); renderConversation();
@@ -505,7 +527,7 @@
     if (page === 'images') root.innerHTML = '<p class="field-help">Imagens adicionadas ficam nesta sessão. A geração por IA está preparada por contrato, mas ainda não há adaptador conectado ao serviço de modelos.</p><label class="upload-card">'+svgIcon('images')+' Adicionar imagens deste dispositivo<input id="workspace-image-input" type="file" accept="image/*" multiple hidden></label><div class="feature-card integration-card"><strong>Geração de imagens</strong><span class="feature-status">Integração pendente</span><p>Contrato reservado: prompt, modelo e tamanho na entrada; URL da imagem e identificador da solicitação na resposta.</p><label class="field-label" for="image-generation-prompt">Descrição da imagem</label><textarea class="text-field settings-textarea" id="image-generation-prompt" maxlength="4000" placeholder="Descreva a imagem que deseja gerar..."></textarea><button class="primary-button" type="button" disabled>Gerar imagem · indisponível</button></div><div class="workspace-empty" '+(state.images.length?'hidden':'')+'>Nenhuma imagem adicionada nesta sessão.</div><div class="workspace-image-grid" id="workspace-image-grid">'+state.images.map((image,index)=>'<div class="workspace-image-item"><img src="'+image.url+'" alt="'+escapeHTML(image.name)+'"><button class="image-remove" type="button" data-image-delete="'+index+'"> '+svgIcon('trash')+'<span>Remover</span></button><small>'+escapeHTML(image.name)+'</small></div>').join('')+'</div>';
     if (page === 'tasks') root.innerHTML = '<p class="field-help">Tarefas vinculadas à conta são sincronizadas entre dispositivos. Sem sessão, permanecem neste navegador.</p><form class="inline-create" id="task-form"><input class="text-field" id="task-input" maxlength="140" placeholder="Descreva uma tarefa..." required><button class="primary-button" type="submit"> '+svgIcon('new-task')+'<span>Adicionar</span></button></form><div class="task-list" id="task-list">'+(state.tasks.length?state.tasks.map((task,index)=>'<div class="task-row"><label><input type="checkbox" data-task-done="'+index+'" '+(task.done?'checked':'')+'><span class="'+(task.done?'task-done':'')+'">'+escapeHTML(task.text)+'</span></label><button class="icon-button" type="button" data-task-delete="'+index+'" aria-label="Excluir tarefa">'+svgIcon('trash')+'</button></div>').join(''):'<div class="workspace-empty">Nenhuma tarefa criada.</div>')+'</div>';
     if (page === 'library') root.innerHTML = '<p class="field-help">Arquivos de texto são armazenados neste navegador (até 48 KB por arquivo) e podem ser baixados novamente. O envio do conteúdo ao modelo permanece desligado até a integração de contexto.</p><label class="upload-card">'+svgIcon('library')+' Adicionar arquivos de texto<input id="library-file-input" type="file" accept=".txt,.md,.csv,.json,.log,text/plain,text/csv,application/json" multiple hidden></label><div class="task-list">'+(state.libraryItems.length?state.libraryItems.map((item,index)=>'<div class="task-row"><span>'+svgIcon('file')+' '+escapeHTML(item.name)+' <small>'+escapeHTML(item.size)+'</small></span><span class="library-actions">'+(typeof item.content==='string'?'<button class="secondary-button" type="button" data-library-download="'+index+'">Baixar</button>':'<small>Metadados antigos</small>')+'<button class="icon-button" type="button" data-library-delete="'+index+'" aria-label="Remover arquivo">'+svgIcon('trash')+'</button></span></div>').join(''):'<div class="workspace-empty">Sua biblioteca está vazia.</div>')+'</div>';
-    if (page === 'plugins') root.innerHTML = '<p class="field-help">Os pontos de extensão estão definidos, mas nenhum conector externo ou serviço de geração está sendo chamado por esta página.</p><div class="feature-card integration-card"><strong>Chat · Tsukuyomi G1</strong><span class="feature-status">Conectado</span><p>Endpoint atual: POST /v1/chat. Contrato de entrada: prompt e max_new_bytes.</p></div><div class="feature-card integration-card"><strong>Contexto do modelo</strong><span class="feature-status">Preparado · não conectado</span><p>Campos reservados: perfil, estilo, instruções, localização e arquivos da biblioteca. Nenhum desses dados é enviado ao modelo.</p></div><div class="feature-card integration-card"><strong>Geração de imagens</strong><span class="feature-status">Preparado · não conectado</span><p>Contrato reservado para prompt, modelo, tamanho e URL de imagem.</p></div><div class="feature-card integration-card"><strong>Plugins externos</strong><span class="feature-status">Preparado · não conectado</span><p>Faltam autorização, permissões, credenciais seguras e chamadas no backend.</p></div>';
+    if (page === 'plugins') root.innerHTML = '<p class="field-help">Os pontos de extensão estão definidos, mas nenhum conector externo ou serviço de geração está sendo chamado por esta página.</p><div class="feature-card integration-card"><strong>Chat · Tsukuyomi G2</strong><span class="feature-status">WebAssembly local</span><p>Inferência executada no navegador. Conversas autenticadas são sincronizadas pelo backend e armazenadas no MongoDB.</p></div><div class="feature-card integration-card"><strong>Contexto do modelo</strong><span class="feature-status">Preparado · não conectado</span><p>Campos reservados: perfil, estilo, instruções, localização e arquivos da biblioteca. Nenhum desses dados é enviado ao modelo.</p></div><div class="feature-card integration-card"><strong>Geração de imagens</strong><span class="feature-status">Preparado · não conectado</span><p>Contrato reservado para prompt, modelo, tamanho e URL de imagem.</p></div><div class="feature-card integration-card"><strong>Plugins externos</strong><span class="feature-status">Preparado · não conectado</span><p>Faltam autorização, permissões, credenciais seguras e chamadas no backend.</p></div>';
     if (page === 'locations') root.innerHTML = '<p class="field-help">Defina uma localização de referência. Ela é salva localmente e não será enviada ao modelo até a conexão do contrato de contexto.</p><label class="field-label" for="location-input">Localização</label><input class="text-field" id="location-input" maxlength="120" placeholder="Cidade, estado ou país" value="'+escapeHTML(state.location)+'"><div class="dialog-footer"><button class="secondary-button" id="use-current-location" type="button">Usar minha localização atual</button><button class="primary-button" id="save-location" type="button">Salvar localização</button></div>';
     if (page === 'personalization') root.innerHTML = '<p class="field-help">Preferências salvas neste navegador. A aplicação automática ao modelo está preparada no contrato de contexto, mas permanece desligada até a integração.</p><label class="field-label" for="about-input">O que o Morok deve saber sobre você?</label><textarea class="text-field settings-textarea" id="about-input" maxlength="1000" placeholder="Interesses, contexto e objetivos...">'+escapeHTML(state.aboutMe)+'</textarea><label class="field-label" for="style-select">Estilo de resposta</label><select id="style-select" class="text-field"><option value="conciso" '+(state.responseStyle==='conciso'?'selected':'')+'>Conciso</option><option value="equilibrado" '+(state.responseStyle==='equilibrado'?'selected':'')+'>Equilibrado</option><option value="detalhado" '+(state.responseStyle==='detalhado'?'selected':'')+'>Detalhado</option></select><label class="field-label" for="workspace-theme">Tema</label><select id="workspace-theme" class="text-field"><option value="dark" '+(state.theme==='dark'?'selected':'')+'>Escuro</option><option value="light" '+(state.theme==='light'?'selected':'')+'>Claro</option><option value="system" '+(state.theme==='system'?'selected':'')+'>Sistema</option></select><div class="dialog-footer"><button class="primary-button" id="save-personalization" type="button">Salvar personalização</button></div>';
     if (page === 'instructions') root.innerHTML = '<p class="field-help">Defina orientações para suas conversas. Elas são salvas localmente; o envio ao motor de inferência permanece desligado até a integração do contrato de contexto.</p><label class="field-label" for="instructions-input">Suas instruções</label><textarea class="text-field settings-textarea tall" id="instructions-input" maxlength="4000" placeholder="Como você gostaria que o Morok respondesse?">'+escapeHTML(state.instructions)+'</textarea><div class="dialog-footer"><button class="primary-button" id="save-instructions" type="button">Salvar instruções</button></div>';

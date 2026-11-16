@@ -15,7 +15,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=20261116-02">
-  <script src="./app.js?v=20261116-18" defer></script>
+  <script src="./wasm/tsukuyomi.js?v=20261116-19" defer></script>
+  <script src="./app.js?v=20261116-19" defer></script>
 </head>
 <body>
   <div class="app" id="app">
@@ -73,8 +74,8 @@
             <button class="model-select" id="model-select" aria-haspopup="true" aria-expanded="false"><span class="model-glyph" data-icon="model"></span><span id="model-select-label">Morok</span><span class="chevron" data-icon="chevron"></span></button>
             <div class="model-popover generation-menu" id="model-popover" hidden>
               <div class="generation-list" id="generation-list"><div class="popover-label">ESCOLHA UMA GERAÇÃO</div><p class="menu-insight generation-insight">As gerações representam etapas distintas do desenvolvimento do Morok. A disponibilidade exibida depende de implementações públicas ativas.</p>
-              <button class="generation-option selected" data-generation="G1" aria-current="true" type="button"><span class="generation-mark">G1</span><span><strong>Geração 1</strong><small>Primeira geração do Morok</small></span><span class="check" data-icon="check"></span></button></div>
-              <div class="model-submenu" id="model-submenu" hidden><button class="generation-back" id="generation-back" type="button"><span data-icon="back"></span> Voltar às gerações</button><div class="popover-label">MODELOS DA GERAÇÃO 1</div>
+              <button class="generation-option selected" data-generation="G2" aria-current="true" type="button"><span class="generation-mark">G2</span><span><strong>Geração 2</strong><small>Tsukuyomi G2 · execução local</small></span><span class="check" data-icon="check"></span></button></div>
+              <div class="model-submenu" id="model-submenu" hidden><button class="generation-back" id="generation-back" type="button"><span data-icon="back"></span> Voltar às gerações</button><div class="popover-label">MODELOS DA GERAÇÃO 2</div>
                 <button class="profile-option" data-model="Tsukuyomi" type="button"><span class="profile-symbol" data-icon="tsukuyomi"></span><span><strong>Tsukuyomi</strong><small>Perfil de referência e execução autocontida</small></span><span class="check" data-icon="check"></span></button>
                 
               </div>

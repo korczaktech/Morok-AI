@@ -10,6 +10,10 @@ API de autenticação do site Morok. Os registros são armazenados no MongoDB At
 - `JWT_SECRET`: segredo aleatório com pelo menos 32 caracteres.
 - `CORS_ORIGINS`: origens permitidas separadas por vírgula.
 
+## Inferência e persistência do chat
+
+O Tsukuyomi G2 é executado no navegador por WebAssembly. O backend não recebe prompts para inferência. Depois da geração local, o frontend sincroniza a conversa autenticada por `POST /v1/conversations/sync`; o backend valida a sessão e persiste os documentos nas coleções `conversations` e `messages` da database `Morok-AI`. A rota legada `POST /v1/chat` responde HTTP 410 para impedir o uso acidental do antigo fluxo de inferência no servidor.
+
 ## Rotas
 
 - `GET /health`: verifica a conexão com o MongoDB.

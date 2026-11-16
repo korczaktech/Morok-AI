@@ -5,6 +5,7 @@ const html = read("./index.html");
 const app = read("./app.js");
 const styles = read("./styles.css");
 const worker = read("./sw.js");
+const wasmApi = read("./wasm/wasm_api.cpp");
 const backend = read("../Back-End/server.js");
 const packageJson = JSON.parse(read("../Back-End/package.json"));
 
@@ -38,7 +39,14 @@ const requiredContracts = [
   [backend, "/v1/support/tickets", "backend deve oferecer chamados"],
   [backend, 'path === "/v1/support/tickets/close"', "backend deve permitir encerrar chamados"],
   [app, "data-close-ticket", "frontend deve expor encerramento de chamados"],
-  [worker, 'addEventListener("push"', "service worker deve tratar push"]
+  [worker, 'addEventListener("push"', "service worker deve tratar push"],
+  [html, "wasm/tsukuyomi.js", "frontend deve carregar o módulo WebAssembly"],
+  [app, "getTsukuyomiRuntime", "frontend deve inicializar o motor G2 local"],
+  [app, "runtime.hasCheckpoint(prompt)", "frontend deve selecionar checkpoint por pergunta"],
+  [app, "runtime.generate(prompt, 256)", "frontend deve executar inferência no navegador"],
+  [app, "/v1/conversations/sync", "respostas devem continuar sincronizadas com o backend"],
+  [wasmApi, "question_checkpoint_name", "WASM deve usar o hash de checkpoint compatível com o treinador"],
+  [wasmApi, "load_checkpoint", "WASM deve validar e carregar os pesos do G2"]
 ];
 for (const [source, expected, description] of requiredContracts) {
   if (!source.includes(expected)) throw new Error("Contrato ausente: " + description);

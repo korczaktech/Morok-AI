@@ -715,7 +715,7 @@ async function handle(req, res) {
   }
 
   if (req.method === "POST" && path === "/v1/chat") {
-    return send(res, 503, { error: "O motor de inferência ainda não está conectado a esta API." }, req.allowedOrigin);
+    return send(res, 410, { error: "A inferência do Tsukuyomi G2 é executada localmente no navegador por WebAssembly. Use /v1/conversations/sync para persistir a conversa." }, req.allowedOrigin);
   }
 
   return send(res, 404, { error: "Rota não encontrada." }, req.allowedOrigin);
