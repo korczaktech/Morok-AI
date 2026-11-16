@@ -743,7 +743,7 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
               << ",\"validation_examples\":" << validation_seen
               << ",\"optimizer_steps\":" << seen
               << ",\"learning_rate_last\":" << last_lr
-              << ",\"code_version\":\"g3-sft-1\",\"config_version\":\"g3-sft-config-1\"
+              << ",\"code_version\":\"g3-sft-1\",\"config_version\":\"g3-sft-config-1\""
               << ",\"gradient_norm_last\":" << last_norm
               << ",\"gradient_norm_max\":" << max_norm
               << ",\"seed\":" << config.seed << "}";
