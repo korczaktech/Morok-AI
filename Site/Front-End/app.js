@@ -873,7 +873,7 @@
     if(event.target.id==='support-login')openAuth('login');
     if(event.target.id==='support-ticket-form'){} 
 
-    const taskDelete=event.target.closest('[data-task-delete]');if(taskDelete){const removed=state.tasks.splice(Number(taskDelete.dataset.taskDelete),1)[0];persist();if(removed?.id)void deleteRemoteResource('tasks',removed.id);void syncAccountResources();openWorkspacePage('tasks');}
+    const taskDelete=event.target.closest('[data-task-delete]');if(taskDelete){const removed=state.tasks.splice(Number(taskDelete.dataset.taskDelete),1)[0];persist();if(removed?.id)await deleteRemoteResource('tasks',removed.id);await syncAccountResources();openWorkspacePage('tasks');}
     const libraryDelete=event.target.closest('[data-library-delete]');if(libraryDelete){state.libraryItems.splice(Number(libraryDelete.dataset.libraryDelete),1);persist();openWorkspacePage('library');}
     const libraryDownload=event.target.closest('[data-library-download]');if(libraryDownload){const item=state.libraryItems[Number(libraryDownload.dataset.libraryDownload)];if(item&&typeof item.content==='string'){const url=URL.createObjectURL(new Blob([item.content],{type:item.type||'text/plain'}));const link=document.createElement('a');link.href=url;link.download=item.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}
     const imageDelete=event.target.closest('[data-image-delete]');if(imageDelete){const image=state.images.splice(Number(imageDelete.dataset.imageDelete),1)[0];if(image?.url)URL.revokeObjectURL(image.url);openWorkspacePage('images');}
