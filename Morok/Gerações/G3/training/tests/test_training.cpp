@@ -117,6 +117,12 @@ void test_training_updates_model_and_logs_per_example() {
     config.label_smoothing = 0.0;
     config.perturbation.probability = 0.0;
     config.metrics_jsonl = metrics;
+    auto sensitive_dataset = dataset;
+    sensitive_dataset.examples.front().sensitive = true;
+    bool sensitive_rejected = false;
+    try { (void)train(backend, sensitive_dataset, config); }
+    catch (const std::invalid_argument&) { sensitive_rejected = true; }
+    assert(sensitive_rejected);
     const auto report = train(backend, dataset, config);
     assert(report.epochs.size() == 1U);
     assert(report.optimizer_steps == report.epochs.front().training_examples);
