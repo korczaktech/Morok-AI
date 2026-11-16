@@ -1,13 +1,5 @@
 # Artemis — G3
 
-Sistema multiagente com no mínimo três agentes.
+Perfil multiagente com três agentes independentes por requisição. Cada agente usa o mesmo backend G3 de 100.000 parâmetros, com sessão recorrente e RNG isolados. A API retorna as três respostas separadamente; não há consolidação automática.
 
-Este perfil utiliza a infraestrutura compartilhada de Morok e o backend comum
-definido em [ARQUITETURA.md](../ARQUITETURA.md). Não cria Core, runtime ou motor
-neural independente. A implementação específica do perfil fica limitada às
-suas políticas, configurações e integrações próprias.
-
-**Estado:** perfil reservado; implementação posterior à integração do contrato
-comum e à construção da arquitetura neural G3.
-
-Especificação: [MODELOS.md](../../MODELOS.md).
+Implementação executável: `morok::g3::profiles::ProfileId::artemis`. Detalhes: [Perfis G3](../profiles/README.md).
