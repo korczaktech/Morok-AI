@@ -21,6 +21,8 @@ int main() {
 
     static_assert(kParameterCount == 10000);
     static_assert(kCheckpointFormatVersion == 8);
+    const TrainingConfig default_training_config{};
+    assert(default_training_config.weight_decay == 0.0);
     Model model;
     initialize(model, 1234);
     Model same_seed;
