@@ -592,7 +592,7 @@
     }
     if (!response) throw lastError || new Error('Falha de comunicação com a API.');
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) { const error = new Error(data.error || 'Falha na autenticação (' + response.status + ').'); error.status = response.status; throw error; }
+    if (!response.ok) { const error = new Error(data.error || 'Falha na autenticação (' + response.status + ').'); error.status = response.status; error.two_factor_required = data.two_factor_required === true; throw error; }
     return data;
   }
   async function syncConversation(conversation) {
@@ -757,7 +757,19 @@
       message.classList.add('success');
       message.textContent=state.authMode==='signup'?'Conta criada com sucesso.':'Login realizado.';
       setTimeout(()=>el.auth.close(),500);
-    } catch(error) { message.classList.add('error'); message.textContent=error.message; }
+    } catch(error) {
+      if (error.two_factor_required) {
+        const code = prompt('Digite o código de 6 dígitos do aplicativo autenticador:');
+        if (code) {
+          try {
+            const data = await authRequest('/auth/login', { body: { email, password, totp: code.trim() } });
+            saveAuthSession(data); await loadRemoteConversations(); await syncAccountResources();
+            message.classList.add('success'); message.textContent='Login realizado com autenticação em dois fatores.';
+            setTimeout(()=>el.auth.close(),500); return;
+          } catch(secondError) { message.classList.add('error'); message.textContent=secondError.message; }
+        } else { message.classList.add('error'); message.textContent='Código de autenticação necessário.'; }
+      } else { message.classList.add('error'); message.textContent=error.message; }
+    }
     finally { $('#auth-submit').disabled=false; }
   }
   async function logout() {
@@ -810,6 +822,7 @@
   });
   $('#workspace-page').addEventListener('click',event=>{
     if (event.target.id === 'account-profile-save') { const name=$('#account-name-input').value.trim(); if(!name)return toast('Informe seu nome.'); try { const data=await authRequest('/v1/account/profile',{token:state.authSession.access_token,body:{name,preferences:{theme:state.theme}}}); state.authSession.user.name=data.profile.name; saveAuthSession(state.authSession); toast('Perfil atualizado.'); updateProfile(); } catch(error){toast(error.message);} }
+    if (event.target.id === 'enable-2fa') { void (async()=>{try{const setup=await authRequest('/v1/account/2fa/setup',{token:state.authSession.access_token,body:{}});alert('Adicione esta chave ao seu aplicativo autenticador:\n\n'+setup.secret+'\n\nURI: '+setup.otpauth);const code=prompt('Digite o código de 6 dígitos gerado pelo aplicativo:');if(!code)return;await authRequest('/v1/account/2fa/enable',{token:state.authSession.access_token,body:{code:code.trim()}});toast('Autenticação em dois fatores ativada.');}catch(error){toast(error.message);}})();}
     if (event.target.id === 'change-password') { const currentPassword=$('#current-password').value, newPassword=$('#new-password').value; if(newPassword.length<10)return toast('A nova senha deve ter pelo menos 10 caracteres.'); try { await authRequest('/v1/account/password',{token:state.authSession.access_token,body:{currentPassword,newPassword}}); $('#current-password').value=''; $('#new-password').value=''; toast('Senha alterada. Outras sessões foram encerradas.'); } catch(error){toast(error.message);} }
     if (event.target.id === 'revoke-other-sessions' || event.target.id === 'security-revoke-others') { try { await authRequest('/v1/account/sessions/revoke',{token:state.authSession.access_token,body:{all:true}}); await loadAccountSessions(); toast('Outras sessões encerradas.'); } catch(error){toast(error.message);} }
     const revoke=event.target.closest('[data-revoke-session]'); if(revoke){try{await authRequest('/v1/account/sessions/revoke',{token:state.authSession.access_token,body:{sessionId:revoke.dataset.revokeSession}});await loadAccountSessions();toast('Sessão encerrada.');}catch(error){toast(error.message);}}
