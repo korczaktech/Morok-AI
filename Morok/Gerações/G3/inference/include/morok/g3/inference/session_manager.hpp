@@ -29,7 +29,8 @@ public:
         const GenerationConfig& config = {},
         const std::function<bool()>& cancellation_requested = {});
 
-    [[nodiscard]] common::Status reset(std::string_view session_id);
+    [[nodiscard]] common::Status reset(const model::ModelBackend& backend,
+                                     std::string_view session_id);
     [[nodiscard]] bool erase(std::string_view session_id);
     void clear();
     [[nodiscard]] std::size_t size() const;
