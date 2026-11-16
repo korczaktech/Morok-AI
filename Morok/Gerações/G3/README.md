@@ -56,6 +56,6 @@ O pipeline SFT está em `training/` e reutiliza diretamente o backend neural G3:
 - BPTT truncado (128 passos por padrão), dropout variacional e AdamW com clipping/weight decay seletivo;
 - telemetria JSONL por pergunta, exemplo e época.
 
-Biblioteca: `Morok::G3::Training`. Executável: `morok-g3-train`. Detalhes do schema e dos hiperparâmetros em [training/README.md](training/README.md).
+Biblioteca: `Morok::G3::Training`. Executável: `morok-g3-train`. O CLI exporta os pesos FP32 finais para `.morok` usando o formato versionado 2, arquitetura `0x0302`, E=60, H1=97, H2=68 e estado de 660 bytes. Detalhes do schema e dos hiperparâmetros em [training/README.md](training/README.md).
 
 A CI valida o pipeline com fixtures sintéticas. Nenhum corpus de produção foi adicionado nem treinado. O CLI ainda não implementa retomada de checkpoint com estado completo do AdamW e RNG; esse requisito geral de recuperabilidade permanece separado da lista funcional desta etapa.
