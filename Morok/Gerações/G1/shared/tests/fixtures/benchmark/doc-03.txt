@@ -1,1 +1,0 @@
-Um experimento reproduzivel registra semente, corpus, configuracao e resultados. Repetir com outras sementes permite medir variacao.\n
