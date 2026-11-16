@@ -76,7 +76,8 @@ common::Result<TokenId> sample_next(
                          config.repetition_ngram_max)) {
             continue;
         }
-        candidates[candidate_count++] = {value / config.temperature, token};
+        candidates[candidate_count++] = {
+            config.temperature == 0.0 ? value : value / config.temperature, token};
     }
     if (candidate_count == 0U) {
         return common::Result<TokenId>::success(kNoCandidate);
@@ -90,6 +91,9 @@ common::Result<TokenId> sample_next(
         [](const auto& left, const auto& right) {
             return left.first > right.first;
         });
+
+    if (config.temperature == 0.0)
+        return common::Result<TokenId>::success(candidates[0].second);
 
     const double maximum = candidates[0].first;
     std::array<double, lang::kVocabularySize> weights{};
@@ -125,7 +129,7 @@ common::Result<GenerationResult> generate(
     const GenerationConfig& config,
     std::mt19937_64& random,
     const std::function<bool()>& cancellation_requested) {
-    if (!std::isfinite(config.temperature) || config.temperature <= 0.0 ||
+    if (!std::isfinite(config.temperature) || config.temperature < 0.0 ||
         config.max_input_bytes == 0U || config.max_output_bytes == 0U ||
         config.timeout.count() < 0 ||
         config.top_k > lang::kVocabularySize ||
