@@ -22,6 +22,14 @@ target_link_libraries(morok_test_byte_tokenizer PRIVATE Morok::Core morok_build_
 morok_enable_sanitizers(morok_test_byte_tokenizer)
 add_test(NAME lang.byte_tokenizer COMMAND morok_test_byte_tokenizer)
 
+add_executable(morok_test_g3_reinforcement
+    ../Gerações/G3/rl/tests/test_reinforce.cpp
+)
+target_link_libraries(morok_test_g3_reinforcement PRIVATE Morok::G3::RL morok_build_options)
+morok_enable_sanitizers(morok_test_g3_reinforcement)
+add_test(NAME g3.reinforcement COMMAND morok_test_g3_reinforcement)
+set_tests_properties(g3.reinforcement PROPERTIES LABELS "g3;reinforcement" TIMEOUT 60)
+
 add_executable(morok_test_math_primitives
     unit/model/test_math_primitives.cpp
 )
