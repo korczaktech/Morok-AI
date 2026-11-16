@@ -8,7 +8,10 @@
 #include <filesystem>
 #include <string>
 #include <random>
+#include <span>
 #include <vector>
+
+namespace morok::g3::rl { struct SequenceGradient; }
 
 namespace morok::g3::training {
 
@@ -52,6 +55,12 @@ struct EpochMetrics final {
     double maximum_gradient_norm{0.0};
 };
 
+struct ReinforceOptimizerState final {
+    std::vector<float> first_moment;
+    std::vector<float> second_moment;
+    std::uint64_t step{0};
+};
+
 struct TrainingReport final {
     std::string run_id;
     std::string dataset_fingerprint;
@@ -72,6 +81,14 @@ struct TrainingReport final {
 
 [[nodiscard]] TrainingReport train(
     neural::G3Backend& backend, const Dataset& dataset,
+    const TrainingConfig& config = {});
+
+// Full truncated-BPTT policy-gradient update for sampled REINFORCE sequences.
+// Uses the same FP32 tensors and AdamW implementation as the SFT trainer.
+[[nodiscard]] double apply_reinforce_gradients(
+    neural::G3Backend& backend,
+    std::span<const rl::SequenceGradient> sequences,
+    ReinforceOptimizerState& optimizer_state,
     const TrainingConfig& config = {});
 
 } // namespace morok::g3::training
