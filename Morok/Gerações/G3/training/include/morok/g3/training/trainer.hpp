@@ -36,6 +36,7 @@ struct TrainingConfig final {
     double variational_dropout{0.10};
     double maximum_gradient_norm{1.0};
     std::uint64_t seed{42U};
+    bool allow_sensitive_examples{false};
     PerturbationConfig perturbation{};
     std::filesystem::path metrics_jsonl;
 };
