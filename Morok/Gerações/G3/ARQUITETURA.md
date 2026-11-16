@@ -445,8 +445,8 @@ O pipeline supervisionado da G3 está em `Gerações/G3/training/` e atualiza di
 ### Telemetria e execução
 
 - JSONL append-only com loss por pergunta e por exemplo, loss agregada de treino/validação, normas de gradiente, learning rate, run_id, seed, versão de código/configuração, versão do dataset, example_id e group_id.
-- CLI: `morok-g3-train <dataset.jsonl> <metrics.jsonl> [epocas] [seed]`.
+- CLI: `morok-g3-train <dataset.jsonl> <metrics.jsonl> <modelo.morok> [epocas] [seed]`; ao terminar, exporta os 100.000 pesos FP32 para o artefato versionado `.morok` (formato 2, arquitetura `0x0302`) por gravação atômica e validação CRC32.
 - Biblioteca: `Morok::G3::Training`.
 - Testes: `g3.training`, incluindo loader, matriz de expansão, isolamento de grupos, Cross-Entropy, PAD, perturbação, update de pesos e telemetria.
 
-A implementação do pipeline não equivale a um treino de produção. Nenhum corpus real foi incluído ou treinado nesta entrega; a qualidade do modelo depende de dataset com origem, licença e rótulos revisados. O CLI atual ainda não retoma checkpoints com estado AdamW/RNG, requisito de recuperação de treinamento descrito nos critérios gerais do documento.
+A implementação do pipeline não equivale a um treino de produção. Nenhum corpus real foi incluído ou treinado nesta entrega; a qualidade do modelo depende de dataset com origem, licença e rótulos revisados. O CLI exporta o modelo final, mas ainda não retoma checkpoints com estado AdamW/RNG; a retomada de execução interrompida continua como requisito de recuperação separado.
