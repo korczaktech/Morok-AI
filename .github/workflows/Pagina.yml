@@ -39,7 +39,17 @@ jobs:
           test -s Site/Front-End/app.js
 
       - name: Validar sintaxe JavaScript
-        run: node --check Site/Front-End/app.js
+        run: |
+          node --check Site/Front-End/app.js
+          node --check Site/Front-End/sw.js
+          node --check Site/Back-End/server.js
+          node -e "JSON.parse(require('node:fs').readFileSync('Site/Back-End/package.json', 'utf8'))"
+      - name: Validar contratos de sincronização
+        run: |
+          grep -q 'path === "/v1/conversations/delete"' Site/Back-End/server.js
+          grep -q "'/v1/conversations/delete'" Site/Front-End/app.js
+          grep -q 'conversationDeletions.deleteMany' Site/Back-End/server.js
+          grep -q 'state.tasks = merged.slice(0, 100);' Site/Front-End/app.js
 
       - name: Testar API e preflight CORS
         env:
