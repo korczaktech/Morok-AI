@@ -179,6 +179,67 @@ def read_dialogues(corpus: Path) -> list[tuple[str, str]]:
     return dialogues
 
 
+def load_feedback_memory(path: Path) -> dict[str, str]:
+    """Carrega correções acumuladas; perguntas repetidas precisam ter o mesmo gabarito."""
+    if not path.exists() or path.stat().st_size == 0:
+        return {}
+    entries = read_dialogues(path)
+    memory: dict[str, str] = {}
+    for question, expected in entries:
+        previous = memory.get(question)
+        if previous is not None and previous != expected:
+            raise RuntimeError(f"Memória corretiva contém gabaritos conflitantes: {question}")
+        memory[question] = expected
+    return memory
+
+
+def record_validation_errors(memory: dict[str, str],
+                             dialogues: list[tuple[str, str]],
+                             results: list[tuple[str, bool, float]]) -> int:
+    """Guarda respostas incorretas como exemplos supervisionados sem duplicar perguntas."""
+    added = 0
+    for (question, expected), (_, correct, _) in zip(dialogues, results):
+        if correct:
+            continue
+        previous = memory.get(question)
+        if previous is not None and previous != expected:
+            raise RuntimeError(f"Correção conflitante para a pergunta: {question}")
+        if previous is None:
+            memory[question] = expected
+            added += 1
+    return added
+
+
+def write_feedback_memory(path: Path, memory: dict[str, str]) -> None:
+    """Grava a memória corretiva atomicamente no formato U:/IA:."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    with temporary.open("w", encoding="utf-8", newline="\\n") as output:
+        for question, answer in sorted(memory.items()):
+            q = " ".join(question.replace("\\r", " ").replace("\\n", " ").split())
+            a = " ".join(answer.replace("\\r", " ").replace("\\n", " ").split())
+            if not q or not a:
+                raise RuntimeError("Memória corretiva contém pergunta ou resposta vazia.")
+            output.write(f"U: {q}\\nIA: {a}\\n\\n")
+    os.replace(temporary, path)
+
+
+def build_training_corpus(base: Path, memory: dict[str, str], destination: Path) -> None:
+    """Combina o corpus original imutável com as correções acumuladas."""
+    original = base.read_text(encoding="utf-8-sig").rstrip()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(destination.name + ".tmp")
+    with temporary.open("w", encoding="utf-8", newline="\\n") as output:
+        output.write(original)
+        if memory:
+            output.write("\\n\\n")
+            for question, answer in sorted(memory.items()):
+                q = " ".join(question.replace("\\r", " ").replace("\\n", " ").split())
+                a = " ".join(answer.replace("\\r", " ").replace("\\n", " ").split())
+                output.write(f"U: {q}\\nIA: {a}\\n\\n")
+    os.replace(temporary, destination)
+
+
 def extract_training_metric(output: str, name: str) -> float:
     match = re.search(rf"^{re.escape(name)}:\s*([0-9.eE+-]+)\s*$",
                       output, flags=re.MULTILINE)
@@ -311,6 +372,9 @@ def main() -> int:
     best_optimizer_state = Path(str(optimizer_state) + ".best")
     output = Path("build/g2/respostas-tsukuyomi.md")
     output.parent.mkdir(parents=True, exist_ok=True)
+    feedback_path = Path("build/g2/tsukuyomi-memoria-erros.txt")
+    combined_training = Path("build/g2/treinamento-com-memoria.txt")
+    feedback_memory = load_feedback_memory(feedback_path)
     resume_previous_run = resumable_state_exists(checkpoint, optimizer_state)
     if resume_previous_run:
         print(
@@ -330,7 +394,9 @@ def main() -> int:
     maximum_cycles = min(attempts, MAX_CYCLES)
     with output.open("w", encoding="utf-8") as report:
         report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
-        report.write(f"- Diálogos de treinamento: {len(train_dialogues)}\n")
+        report.write(f"- Diálogos de treinamento originais: {len(train_dialogues)}\n")
+        report.write(f"- Correções persistidas antes desta execução: {len(feedback_memory)}\n")
+        report.write("- Respostas incorretas da validação são guardadas como exemplos supervisionados para ciclos e execuções futuras; após o primeiro erro, a validação também funciona como feedback adaptativo. O teste reservado permanece separado.\\n")
         report.write(f"- Banco de validação disponível: {len(validation_pool)}\n")
         report.write(f"- Questões selecionadas: {question_count}\n")
         report.write(f"- Perguntas de teste reservado: {len(test)}\n")
@@ -347,8 +413,9 @@ def main() -> int:
 
         while cycle < maximum_cycles:
             cycle += 1
+            build_training_corpus(train_corpus, feedback_memory, combined_training)
             command = [
-                str(trainer), str(train_corpus), str(checkpoint),
+                str(trainer), str(combined_training), str(checkpoint),
                 str(epochs), "42", f"{learning_rate:.8f}",
             ]
             if cycle > 1 or resume_previous_run:
@@ -374,6 +441,15 @@ def main() -> int:
                     not optimizer_state.is_file() or optimizer_state.stat().st_size == 0):
                 raise RuntimeError("O treinador não publicou checkpoint e estado Adam válidos.")
             validation_results = evaluate_set(generator, checkpoint, validation)
+            new_corrections = record_validation_errors(
+                feedback_memory, validation, validation_results
+            )
+            write_feedback_memory(feedback_path, feedback_memory)
+            print(
+                f"Memória corretiva: {new_corrections} nova(s) correção(ões); "
+                f"{len(feedback_memory)} pergunta(s) acumulada(s).",
+                flush=True,
+            )
             total_questions = len(validation_results)
             for question_index, ((_, expected_answer), (generated_answer, is_correct, lexical_score)) in enumerate(
                 zip(validation, validation_results), start=1
