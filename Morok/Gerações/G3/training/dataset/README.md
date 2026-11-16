@@ -11,8 +11,9 @@ Formato: JSONL UTF-8, um registro canônico por intenção.
 - 705 formas de pergunta antes da perturbação dinâmica.
 - 42 categorias semânticas.
 - Idioma: português brasileiro (`pt-BR`).
-- Todos os registros têm resposta de referência, proveniência interna e `sensitive=false`.
-- Nenhum dado pessoal real foi intencionalmente incluído.
+- Todos os registros têm resposta de referência e `sensitive=false`.
+- Os 131 registros originais vieram da curadoria interna anterior. Outros 104 foram adicionados por expansão assistida, com `quality=0.80` e `review_status=pending-human-review`.
+- Nenhum dado pessoal real foi intencionalmente incluído. Os 104 registros novos precisam de revisão factual e linguística humana antes de serem tratados como rótulos finais.
 
 As categorias abrangem conversação, português, matemática, ciências, biologia, química, física, geografia, história, ambiente, economia básica, computação, programação, sistemas, redes, Git, engenharia de software, testes, dados, IA, segurança, privacidade, raciocínio, estudo, escrita, saúde geral, ética e tarefas cotidianas.
 
