@@ -703,13 +703,17 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
             std::ostringstream event;
             event << std::setprecision(12)
                   << "{\"event\":\"example_loss\",\"run_id\":\"" << report.run_id
-                  << "\",\"epoch\":" << epoch
+                  << "\",\"code_version\":\"g3-sft-1\",\"config_version\":\"g3-sft-config-1\""
+                  << ",\"dataset_version\":\"" << json_escape(example.dataset_version)
+                  << "\",\"seed\":" << config.seed
+                  << ",\"epoch\":" << epoch
                   << ",\"example_id\":\"" << json_escape(example.example_id)
                   << "\",\"group_id\":\"" << json_escape(example.group_id)
                   << "\",\"question_loss\":" << loss
                   << ",\"example_loss\":" << loss
                   << ",\"gradient_norm\":" << raw_norm
-                  << ",\"clipped_gradient_norm\":" << clipped_norm << "}";
+                  << ",\"clipped_gradient_norm\":" << clipped_norm
+                  << ",\"learning_rate\":" << last_lr << "}";
             append_jsonl(config.metrics_jsonl, event.str());
         }
         train_loss /= static_cast<double>(std::max<std::size_t>(1U, seen));
@@ -738,7 +742,8 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
               << ",\"training_examples\":" << seen
               << ",\"validation_examples\":" << validation_seen
               << ",\"optimizer_steps\":" << seen
-              << ",\"learning_rate_last\":" << config.learning_rate
+              << ",\"learning_rate_last\":" << last_lr
+              << ",\"code_version\":\"g3-sft-1\",\"config_version\":\"g3-sft-config-1\"
               << ",\"gradient_norm_last\":" << last_norm
               << ",\"gradient_norm_max\":" << max_norm
               << ",\"seed\":" << config.seed << "}";
