@@ -582,8 +582,11 @@ def main() -> int:
             accepted = not has_best or final_loss < initial_loss - 1e-12
             if accepted:
                 save_best_state(checkpoint, optimizer_state, best_checkpoint, best_optimizer_state)
+                best_correct = correct
             else:
                 restore_best_state(best_checkpoint, best_optimizer_state, checkpoint, optimizer_state)
+                restored_results = evaluate_set(generator, checkpoint, training_dialogues)
+                best_correct = sum(1 for result in restored_results if result[1])
 
             print(f"Loss de treino: {initial_loss:.6f} → {final_loss:.6f}; checkpoint {'ACEITO' if accepted else 'REJEITADO'}.", flush=True)
             report.write(f"- Loss de treino: {initial_loss:.6f} → {final_loss:.6f}.\n")
