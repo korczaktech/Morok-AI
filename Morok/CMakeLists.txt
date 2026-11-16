@@ -104,6 +104,7 @@ morok_enable_sanitizers(morok_g3_neural)
 add_library(morok_g3_training STATIC
     Gerações/G3/training/src/dataset.cpp
     Gerações/G3/training/src/trainer.cpp
+    Gerações/G3/training/src/evaluation.cpp
 )
 add_library(Morok::G3::Training ALIAS morok_g3_training)
 target_compile_features(morok_g3_training PUBLIC cxx_std_20)
@@ -190,6 +191,11 @@ if(MOROK_BUILD_APPS)
     set_target_properties(morok_g3_train PROPERTIES OUTPUT_NAME "morok-g3-train")
     morok_enable_sanitizers(morok_g3_train)
 
+    add_executable(morok_g3_evaluate Gerações/G3/training/apps/evaluate.cpp)
+    target_link_libraries(morok_g3_evaluate PRIVATE Morok::G3::Training Morok::G3::Inference morok_build_options)
+    set_target_properties(morok_g3_evaluate PROPERTIES OUTPUT_NAME "morok-g3-evaluate")
+    morok_enable_sanitizers(morok_g3_evaluate)
+
 endif()
 
 if(MOROK_BUILD_TESTS)
@@ -239,7 +245,7 @@ endif()
 if(MOROK_BUILD_APPS)
     install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
         morok_train morok_benchmark morok_generate morok_reinforce morok_complete morok_g1_profile_evaluate
-        morok_g2_tsukuyomi_train morok_g2_tsukuyomi_generate morok_g3_train RUNTIME DESTINATION bin)
+        morok_g2_tsukuyomi_train morok_g2_tsukuyomi_generate morok_g3_train morok_g3_evaluate RUNTIME DESTINATION bin)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
     endif()

@@ -280,6 +280,14 @@ morok_enable_sanitizers(morok_test_g3_training)
 add_test(NAME g3.training COMMAND morok_test_g3_training)
 set_tests_properties(g3.training PROPERTIES LABELS "g3;training;dataset" TIMEOUT 180)
 
+add_executable(morok_test_g3_evaluation
+    ../Gerações/G3/training/tests/test_evaluation.cpp)
+target_link_libraries(morok_test_g3_evaluation
+    PRIVATE Morok::G3::Training Morok::G3::Inference morok_build_options)
+morok_enable_sanitizers(morok_test_g3_evaluation)
+add_test(NAME g3.evaluation COMMAND morok_test_g3_evaluation)
+set_tests_properties(g3.evaluation PROPERTIES LABELS "g3;evaluation;generalization" TIMEOUT 180)
+
 if(TARGET morok_g3_train)
     add_test(NAME g3.training_cli
         COMMAND morok_g3_train

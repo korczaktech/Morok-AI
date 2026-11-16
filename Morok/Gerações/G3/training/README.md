@@ -93,3 +93,29 @@ O executável inicia um treino novo, escreve métricas JSONL e exporta os 100.00
 - O campo `sensitive` é registrado, mas a anonimização/controle de acesso ao corpus é responsabilidade do pipeline de ingestão e armazenamento.
 - A implementação registra fingerprint FNV-1a de 64 bits para identificação/reprodutibilidade local; não é hash criptográfico de integridade.
 - O CLI exporta o modelo final, mas ainda não retoma uma execução interrompida; checkpoint recuperável precisa persistir também momentos AdamW, RNG, cursor/sampler e versão do dataset.
+
+
+## Etapa 5 — avaliação independente
+
+Depois do SFT, execute o avaliador sobre o artefato FP32 exportado:
+
+```sh
+morok-g3-evaluate dataset.jsonl modelo.morok relatorio-generalizacao.json 42
+```
+
+O quarto argumento é a seed usada no split por `group_id`; ela deve ser a
+mesma utilizada no treinamento. O avaliador carrega e valida o artefato
+`.morok`, exige a arquitetura G3 `0x0302` e exatamente 100.000 parâmetros,
+e calcula loss causal e acurácia byte-level em treino, validação e teste.
+O teste permanece intocado durante o treinamento.
+
+No split de teste, cada pergunta também é avaliada com erro tipográfico,
+remoção de acentos, alteração de pontuação, espaçamento irregular e caracteres
+Unicode/emoji. O relatório mede a diferença de loss e acurácia contra a
+pergunta limpa. O alerta de overfitting usa o gap entre treino e validação/teste.
+
+Essas métricas são medidas de previsão byte-level sob teacher forcing, não
+julgamento semântico humano. A CI usa dados sintéticos para verificar o
+protocolo; conclusões de qualidade dependem de um corpus real, amplo, revisado
+e com grupos representativos. Para comparar regressão entre versões, execute
+o mesmo dataset, seed e protocolo contra cada artefato.
