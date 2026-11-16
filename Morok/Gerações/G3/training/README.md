@@ -82,17 +82,23 @@ Compile com CMake e execute:
 ```sh
 cmake -S Morok -B Morok/build -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
 cmake --build Morok/build --target morok-g3-train morok_test_g3_training --parallel 2
-Morok/build/morok-g3-train caminho/dataset.jsonl caminho/metrics.jsonl caminho/modelo.morok 10 42
+Morok/build/morok-g3-train caminho/dataset.jsonl caminho/metrics.jsonl caminho/modelo.morok 10 42 --checkpoint=caminho/treino.g3ckpt
+
+# Retomar o mesmo experimento até completar as 10 épocas:
+Morok/build/morok-g3-train caminho/dataset.jsonl caminho/metrics.jsonl caminho/modelo.morok 10 42 --resume=caminho/treino.g3ckpt
 ```
 
-O executável inicia um treino novo, escreve métricas JSONL e exporta os 100.000 pesos FP32 finais para um artefato `.morok` versionado, validado por CRC32 e gravado atomicamente. Não foi incluído um corpus de produção no repositório. A qualidade do modelo não pode ser inferida dos testes sintéticos de CI; o treinamento real depende de um dataset com proveniência e rótulos revisados.
+O executável escreve métricas JSONL e exporta os 100.000 pesos FP32 finais para um artefato `.morok` versionado. Com `--checkpoint=arquivo`, salva um checkpoint completo ao final de cada época; com `--resume=arquivo`, valida arquitetura, versão de código, fingerprint do dataset, configuração, pesos, momentos AdamW, contador do otimizador, scheduler, ordem do sampler e RNG antes de continuar. A retomada é exata nos limites entre épocas; não retoma no meio de um lote. `--max-epochs-this-run=N` limita quantas épocas são executadas nesta invocação, mantendo o total de épocas na configuração, permitindo pausa controlada e retomada posterior.
+
+O checkpoint usa o formato G3 versionado e CRC32, com gravação atômica. O CLI pode atualizar o mesmo checkpoint de origem durante a retomada. Não foi incluído um corpus de produção no repositório. A qualidade do modelo não pode ser inferida dos testes sintéticos de CI; o treinamento real depende de um dataset com proveniência e rótulos revisados.
 
 ## Limites conhecidos desta entrega
 
 - As alternativas semânticas precisam ser fornecidas e revisadas em `question_variants` ou `expansion_axes`; não existe um gerador de sinônimos baseado em léxico externo.
 - O campo `sensitive` é registrado, mas a anonimização/controle de acesso ao corpus é responsabilidade do pipeline de ingestão e armazenamento.
 - A implementação registra fingerprint FNV-1a de 64 bits para identificação/reprodutibilidade local; não é hash criptográfico de integridade.
-- O CLI exporta o modelo final, mas ainda não retoma uma execução interrompida; checkpoint recuperável precisa persistir também momentos AdamW, RNG, cursor/sampler e versão do dataset.
+- A retomada atual ocorre entre épocas. Uma interrupção dentro de uma época reinicia a partir do último checkpoint íntegro, repetindo aquela época; não existe retomada em granularidade de exemplo/lote.
+- O fingerprint de dataset/configuração usa FNV-1a para identificação local, não como assinatura criptográfica contra adulteração.
 
 
 ## Etapa 5 — avaliação independente
