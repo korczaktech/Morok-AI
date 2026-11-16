@@ -790,6 +790,17 @@ def main() -> int:
             restore_best_state(
                 best_checkpoint, best_optimizer_state, checkpoint, optimizer_state
             )
+
+            # Publica o estado aprovado/revertido ao final de CADA ciclo.
+            # Assim, uma interrupção do runner não perde ciclos já concluídos.
+            if os.environ.get("TSUKUYOMI_PERSIST_STATE") == "1":
+                persistence_script = Path(__file__).with_name("persistir_estado.sh")
+                if not persistence_script.is_file():
+                    raise RuntimeError(
+                        f"Script de persistência por ciclo não encontrado: {persistence_script}"
+                    )
+                subprocess.run(["bash", str(persistence_script)], check=True)
+
             elapsed = time.perf_counter() - started
             report.write(
                 f"### Integridade e diversidade — ciclo global {global_cycle}\n\n"
