@@ -162,8 +162,8 @@ armazenamento de pesos paralelo.
   contexto/prefixo.
 - O algoritmo bloqueia PAD, BOS, USR e BOT como tokens de resposta; bytes e
   EOS permanecem disponíveis.
-- A política de referência é recebida como `const Policy&`: pode executar
-  inferência, mas não recebe gradientes nem atualização.
+- A referência SFT é recebida como `const InferencePolicy&`, uma interface sem
+  método de atualização: pode executar inferência, mas não recebe gradientes.
 - A política treinável recebe gradientes de logits acumulados para o lote e
   aplica uma única atualização de otimizador. Os pesos e o otimizador continuam
   pertencendo ao backend neural da geração.
@@ -225,7 +225,9 @@ auditoria do avaliador.
 `compare_sft_and_rl` avalia snapshots distintos no mesmo conjunto fechado,
 usando decodificação gulosa e o mesmo avaliador. Relata recompensa média,
 comprimento médio, taxa de respostas vazias e taxa de repetição, além da
-diferença de recompensa RL menos SFT.
+diferença de recompensa RL menos SFT. O relatório retém configuração, identidade
+ e versão da rubrica, origem dos rótulos, componentes da recompensa, tokens
+ amostrados e log-probabilidades sob a distribuição de amostragem.
 
 ### Critérios de conclusão da Etapa 3
 
