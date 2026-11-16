@@ -49,6 +49,7 @@ add_library(morok_g1 STATIC
     Gerações/G1/shared/src/learn/learning_subsystem.cpp
     Gerações/G1/shared/src/model/parameters/g1_parameters.cpp
     Gerações/G1/shared/src/model/g1_forward.cpp
+    Gerações/G1/shared/src/model/g1_backend.cpp
     Gerações/G1/shared/src/model/learn/g1_bptt.cpp
     Gerações/G1/shared/src/model/learn/optimizer.cpp
     Gerações/G1/shared/src/model/learn/g1_training.cpp
