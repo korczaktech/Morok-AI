@@ -48,7 +48,7 @@
       state.apiUrl = AUTH_API_URL;
       state.displayName = typeof saved.displayName === 'string' ? saved.displayName.slice(0,32) : 'Visitante';
       state.generation = saved.generation === 'G1' ? 'G1' : 'G1';
-      state.model = ['Tsukuyomi','Apollo','Mokosh'].includes(saved.model) ? saved.model : 'Tsukuyomi';
+      state.model = 'Tsukuyomi';
       state.tasks = Array.isArray(saved.tasks) ? saved.tasks.slice(0,100) : [];
       state.instructions = typeof saved.instructions === 'string' ? saved.instructions.slice(0,4000) : '';
       state.location = typeof saved.location === 'string' ? saved.location.slice(0,120) : '';
@@ -697,7 +697,8 @@
   $('#new-chat').addEventListener('click',createConversation);
   $('#brand-home').addEventListener('click',event=>{event.preventDefault();state.activeId=null;persist();renderHistory($('#sidebar-search-input').value);renderConversation();returnToChat();el.input.focus();});
   $('#sidebar-search-input').addEventListener('input',event=>renderHistory(event.target.value));
-  $('#history-toggle').addEventListener('click',()=>{const heading=$('#history-toggle');const collapsed=heading.getAttribute('aria-expanded')==='false';heading.setAttribute('aria-expanded',String(!collapsed));el.history.hidden=collapsed;});
+  $('#history-toggle').addEventListener('click',()=>{const heading=$('#history-toggle');const expanded=heading.getAttribute('aria-expanded')==='true';heading.setAttribute('aria-expanded',String(!expanded));el.history.hidden=expanded;});
+  $('#projects-toggle').addEventListener('click',()=>{const heading=$('#projects-toggle');const expanded=heading.getAttribute('aria-expanded')==='true';heading.setAttribute('aria-expanded',String(!expanded));$('#projects-list').hidden=expanded;});
   $('#conversation-search-input').addEventListener('input',event=>renderSearchResults(event.target.value));
   $('#confirm-accept').addEventListener('click',()=>finishConfirmation(true));
   $('#confirm-cancel').addEventListener('click',()=>finishConfirmation(false));
@@ -745,13 +746,14 @@
   $('#profile-save').addEventListener('click',()=>{const name=$('#display-name').value.trim();state.displayName=name||'Visitante';updateProfile();persist();});
   $('#model-select').addEventListener('click',()=>{const pop=$('#model-popover');pop.hidden=!pop.hidden;if(!pop.hidden){$('#generation-list').hidden=false;$('#model-submenu').hidden=true;}$('#model-select').setAttribute('aria-expanded',String(!pop.hidden));});
   function updateModelMenu() {
-    $('#model-select-label').textContent = state.generation + ' · ' + state.model;
+    state.model = 'Tsukuyomi';
+    $('#model-select-label').textContent = state.generation + ' · Tsukuyomi';
     $$('[data-generation]').forEach(button=>button.classList.toggle('selected',button.dataset.generation===state.generation));
     $$('[data-model]').forEach(button=>button.classList.toggle('selected',button.dataset.model===state.model));
   }
   $$('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;updateModelMenu();$('#generation-list').hidden=true;$('#model-submenu').hidden=false;persist();}));
   $('#generation-back').addEventListener('click',()=>{$('#model-submenu').hidden=true;$('#generation-list').hidden=false;});
-  $$('[data-model]').forEach(button=>button.addEventListener('click',()=>{state.model=button.dataset.model;updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Perfil de exibição atualizado.');}));
+  $('[data-model]').forEach(button=>button.addEventListener('click',()=>{if(button.dataset.model!=='Tsukuyomi')return;state.model='Tsukuyomi';updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Tsukuyomi selecionado.');}));
   document.addEventListener('click',event=>{if(!event.target.closest('.model-select-wrap')){$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');}if(!event.target.closest('.context-menu')&&!event.target.closest('.history-menu'))closeContextMenu();});
   el.context.addEventListener('click',event=>{const action=event.target.dataset.action;if(action==='rename')renameConversation(state.contextId);if(action==='delete')deleteConversation(state.contextId);closeContextMenu();});
   $('#rename-save').addEventListener('click',()=>{const conversation=state.conversations.find(c=>c.id===state.renameId);if(conversation){conversation.title=$('#rename-input').value.trim()||'Nova conversa';conversation.updatedAt=now();persist();renderHistory();}state.renameId=null;});
