@@ -425,7 +425,6 @@
     state.theme = $('#theme-select').value;
     applyTheme(); persist(); el.settings.close(); toast('Preferências salvas.'); return true;
   }
-  const workspaceDialog = $('#workspace-dialog');
   function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
   function openWorkspacePage(page) {
     const titles = {images:'Imagens',tasks:'Tarefas',library:'Biblioteca',plugins:'Plugins',locations:'Localizações',personalization:'Personalização',instructions:'Instruções personalizadas',account:'Minha conta',privacy:'Dados e privacidade',security:'Segurança',notifications:'Notificações',help:'Ajuda e suporte'};
