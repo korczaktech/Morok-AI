@@ -442,9 +442,9 @@ async function handle(req, res) {
   if (req.method === "GET" && path === "/v1/account/profile") {
     const token = await verifyToken(bearer(req));
     if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
-    const account = await accounts.findOne({ id: token.sub }, { projection: { id: 1, Email: 1, Nome: 1, Preferencias: 1 } });
+    const account = await accounts.findOne({ id: token.sub }, { projection: { id: 1, Email: 1, Nome: 1, Preferencias: 1, Seguranca: 1 } });
     if (!account) return send(res, 404, { error: "Conta não encontrada." }, req.allowedOrigin);
-    return send(res, 200, { profile: { id: account.id, name: account.Nome || "", email: account.Email, preferences: account.Preferencias || {} } }, req.allowedOrigin);
+    return send(res, 200, { profile: { id: account.id, name: account.Nome || "", email: account.Email, preferences: account.Preferencias || {}, twoFactorEnabled: account.Seguranca?.TwoFactorEnabled === true } }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && path === "/v1/account/profile") {
