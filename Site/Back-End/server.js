@@ -128,15 +128,22 @@ async function readBody(req, maxBytes = 16_384) {
 }
 
 function rateLimit(req) {
-  const key = (req.socket.remoteAddress || "unknown") + ":" + req.url;
+  const pathname = new URL(req.url, "http://localhost").pathname;
+  const key = (req.socket.remoteAddress || "unknown") + ":" + pathname;
   const now = Date.now();
   const current = attempts.get(key);
   if (!current || now - current.startedAt > WINDOW_MS) {
     attempts.set(key, { startedAt: now, count: 1 });
-    return true;
+  } else {
+    current.count += 1;
+    if (current.count > MAX_ATTEMPTS) return false;
   }
-  current.count += 1;
-  return current.count <= MAX_ATTEMPTS;
+  if (attempts.size > 10_000) {
+    for (const [entryKey, entry] of attempts) {
+      if (now - entry.startedAt > WINDOW_MS) attempts.delete(entryKey);
+    }
+  }
+  return true;
 }
 
 
@@ -234,7 +241,12 @@ async function handle(req, res) {
     return send(res, 200, { status: "ok" }, req.allowedOrigin);
   }
 
-  if (req.method === "POST" && ["/auth/signup", "/auth/login", "/auth/recover", "/auth/reset"].includes(path)) {
+  if (req.method === "POST" && [
+    "/auth/signup", "/auth/login", "/auth/recover", "/auth/reset",
+    "/v1/account/2fa/setup", "/v1/account/2fa/enable", "/v1/account/2fa/disable",
+    "/v1/account/password", "/v1/account/delete", "/v1/account/sessions/revoke",
+    "/v1/support/tickets"
+  ].includes(path)) {
     if (!rateLimit(req)) return send(res, 429, { error: "Muitas tentativas. Aguarde 15 minutos." }, req.allowedOrigin);
   }
 
@@ -293,7 +305,7 @@ async function handle(req, res) {
       const loginAt = new Date();
       await accounts.updateOne({ _id: account._id }, { $set: { "Conta.UltimoLogin": loginAt, "Conta.AtualizadaEm": loginAt } });
       return send(res, 200, {
-        access_token: await createToken(account),
+        access_token: await createToken(account, req),
         token_type: "Bearer",
         expires_in: TOKEN_TTL_SECONDS,
         user: publicAccount(account)
@@ -460,7 +472,12 @@ async function handle(req, res) {
       Idioma: typeof preferences.language === "string" ? preferences.language.slice(0, 12) : "pt-BR",
       Tema: ["dark", "light", "system"].includes(preferences.theme) ? preferences.theme : "system"
     };
-    await accounts.updateOne({ id: token.sub }, { $set: { Nome: name, Preferencias: safePreferences, "Conta.AtualizadaEm": new Date() } });
+    await accounts.updateOne({ id: token.sub }, { $set: {
+      Nome: name,
+      "Preferencias.Idioma": safePreferences.Idioma,
+      "Preferencias.Tema": safePreferences.Tema,
+      "Conta.AtualizadaEm": new Date()
+    } });
     return send(res, 200, { success: true, profile: { name, preferences: safePreferences } }, req.allowedOrigin);
   }
 
@@ -561,19 +578,27 @@ async function handle(req, res) {
     const type = body.type;
     const items = body.items;
     if (!["projects", "tasks"].includes(type) || !Array.isArray(items) || items.length > 500) return send(res, 400, { error: "Lote de sincronização inválido." }, req.allowedOrigin);
-    const ops = [];
+    let saved = 0;
     for (const item of items) {
-      if (!item || typeof item.id !== "string" || !item.id || item.id.length > 128 || !item.data || typeof item.data !== "object") continue;
+      if (!item || typeof item.id !== "string" || !item.id || item.id.length > 128 || !item.data || typeof item.data !== "object" || Array.isArray(item.data)) continue;
       const data = JSON.parse(JSON.stringify(item.data));
       if (JSON.stringify(data).length > 20_000) continue;
       const itemUpdatedAt = item.updatedAt ? new Date(item.updatedAt) : new Date();
-      const tombstone = await accountResourceDeletions.findOne({ accountId: token.sub, type, resourceId: item.id });
-      if (tombstone && itemUpdatedAt <= tombstone.deletedAt) continue;
+      if (Number.isNaN(itemUpdatedAt.getTime())) continue;
+      const filter = { accountId: token.sub, type, resourceId: item.id };
+      const tombstone = await accountResourceDeletions.findOne(filter);
+      if (tombstone && itemUpdatedAt <= new Date(tombstone.deletedAt)) continue;
+      const existing = await accountResources.findOne(filter, { projection: { updatedAt: 1 } });
+      if (existing?.updatedAt && new Date(existing.updatedAt) > itemUpdatedAt) continue;
       if (tombstone) await accountResourceDeletions.deleteOne({ _id: tombstone._id });
-      ops.push({ updateOne: { filter: { accountId: token.sub, type, resourceId: item.id }, update: { $set: { data, updatedAt: itemUpdatedAt }, $setOnInsert: { accountId: token.sub, type, resourceId: item.id, createdAt: new Date() } }, upsert: true } });
+      await accountResources.updateOne(
+        filter,
+        { $set: { data, updatedAt: itemUpdatedAt }, $setOnInsert: { accountId: token.sub, type, resourceId: item.id, createdAt: new Date() } },
+        { upsert: true }
+      );
+      saved += 1;
     }
-    if (ops.length) await accountResources.bulkWrite(ops, { ordered: false });
-    return send(res, 200, { success: true, saved: ops.length }, req.allowedOrigin);
+    return send(res, 200, { success: true, saved }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && path === "/v1/support/tickets") {
