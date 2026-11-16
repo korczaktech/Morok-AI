@@ -28,15 +28,15 @@ class TrainingDataTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "duplicate-questions.txt"
             path.write_text(
-                "U: mesma pergunta?\\nIA: resposta um\\n\\n"
-                "U: MESMA pergunta!\\nIA: resposta dois\\n",
+                "U: mesma pergunta?\nIA: resposta um\n\n"
+                "U: MESMA pergunta!\nIA: resposta dois\n",
                 encoding="utf-8",
             )
             with self.assertRaises(RuntimeError):
                 training.read_dialogues(path)
             path.write_text(
-                "U: pergunta um?\\nIA: mesma resposta\\n\\n"
-                "U: pergunta dois?\\nIA: MESMA resposta!\\n",
+                "U: pergunta um?\nIA: mesma resposta\n\n"
+                "U: pergunta dois?\nIA: MESMA resposta!\n",
                 encoding="utf-8",
             )
             with self.assertRaises(RuntimeError):
@@ -95,7 +95,7 @@ class TrainingDataTests(unittest.TestCase):
                 corpus.read_bytes(),
                 b"U: pergunta?\nIA: resposta esperada\n",
             )
-            self.assertNotIn(b"\\n", corpus.read_bytes())
+            self.assertNotIn(b"\n", corpus.read_bytes())
             self.assertEqual(
                 training.read_dialogues(corpus),
                 [("pergunta?", "resposta esperada")],
