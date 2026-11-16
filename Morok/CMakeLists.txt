@@ -118,6 +118,9 @@ target_link_libraries(morok_g3_training
     PUBLIC Morok::G3::Neural Morok::Core
     PRIVATE ICU::uc morok_build_options)
 morok_enable_sanitizers(morok_g3_training)
+target_include_directories(morok_g3_training PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G3/rl/include>)
+target_link_libraries(morok_g3_rl PUBLIC Morok::G3::Training)
 
 # G3 inference/export utilities reuse the public Morok Core contracts.
 add_library(morok_g3_inference STATIC
