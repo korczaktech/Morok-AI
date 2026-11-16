@@ -133,6 +133,11 @@ target_include_directories(morok_g3_inference PUBLIC
 target_link_libraries(morok_g3_inference PUBLIC Morok::Core PRIVATE morok_build_options)
 morok_enable_sanitizers(morok_g3_inference)
 
+# G3 evaluation reads the validated FP32 artifact format from inference.
+target_include_directories(morok_g3_training PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G3/inference/include>)
+target_link_libraries(morok_g3_training PRIVATE Morok::G3::Inference)
+
 # G2 Tsukuyomi v0.1 is isolated from all G1 implementation sources.
 add_library(morok_g2_tsukuyomi STATIC
     Gerações/G2/Tsukuyomi/src/model.cpp
