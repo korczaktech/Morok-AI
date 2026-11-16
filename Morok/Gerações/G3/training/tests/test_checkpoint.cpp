@@ -147,6 +147,20 @@ void test_atomic_file_save_and_existing_checkpoint_preservation() {
     std::filesystem::remove(path, ec);
 }
 
+void test_real_g3_weight_capture_and_restore() {
+    morok::g3::neural::G3Backend source(
+        morok::g3::neural::G3Config{17U, 1.0e-5F});
+    morok::g3::neural::G3Backend destination(
+        morok::g3::neural::G3Config{99U, 1.0e-5F});
+    const auto snapshot = capture_g3_model_weights(source);
+    assert(snapshot.size() == kG3CheckpointParameterCount);
+    assert(snapshot != capture_g3_model_weights(destination));
+    assert(restore_g3_model_weights(snapshot, destination));
+    assert(snapshot == capture_g3_model_weights(destination));
+    const std::vector<float> invalid(10U, 0.0F);
+    assert(!restore_g3_model_weights(invalid, destination));
+}
+
 } // namespace
 
 int main() {
@@ -155,5 +169,6 @@ int main() {
     test_strict_compatibility_validation();
     test_invalid_optimizer_and_nonfinite_weights();
     test_atomic_file_save_and_existing_checkpoint_preservation();
+    test_real_g3_weight_capture_and_restore();
     return 0;
 }
