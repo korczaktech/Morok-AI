@@ -67,6 +67,19 @@ class TrainingDataTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 training.build_training_corpus(base, {"outra": "correção"}, root / "out.txt")
 
+    def test_individual_loss_corpus_uses_real_line_breaks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            corpus = Path(directory) / "single-question.txt"
+            training.write_evaluation_corpus(corpus, "pergunta?", "resposta esperada")
+            self.assertEqual(
+                corpus.read_text(encoding="utf-8"),
+                "U: pergunta?\nIA: resposta esperada\n",
+            )
+            self.assertEqual(
+                training.read_dialogues(corpus),
+                [("pergunta?", "resposta esperada")],
+            )
+
     def test_learning_rate_map_assigns_each_answer_byte(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
