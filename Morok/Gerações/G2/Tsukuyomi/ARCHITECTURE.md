@@ -54,13 +54,13 @@ A disposição dos 10.000 parâmetros é protegida por asserções estáticas en
 
 Esses testes verificam a derivada da função atual em pontos representativos; não significam uma prova formal de todos os 10.000 valores para qualquer estado possível. O teste de diferenças finitas da matriz recorrente verifica a cadeia temporal em uma sequência curta. Um teste adicional compara atualizações com janela TBPTT de 1 e de 64 etapas. Outro teste verifica que uma perda após 32 bytes de resposta ainda alcança os pesos do contexto da pergunta, enquanto uma sequência com mais de 64 etapas respeita o truncamento. A janela TBPTT é limitada a 64 para permitir crédito de atribuição sobre respostas mais longas, com maior custo de memória e treinamento; dependências mais antigas influenciam o forward, mas não recebem gradiente direto além desse limite.
 
-## Configuração padrão do ciclo de treinamento
+## Limites do ciclo de treinamento
 
-- 20 épocas por tentativa.
-- 10 tentativas no máximo (200 épocas totais por execução).
+- Até 1.000 épocas por tentativa.
+- Até 100 tentativas/ciclos por execução (máximo teórico de 100.000 épocas).
 - 40 perguntas de validação por ciclo.
 - Treinamento contínuo desativado por padrão.
-- Limite total validado tanto no workflow quanto no executor: `épocas × tentativas <= 200`.
+- Limites independentes validados tanto no workflow quanto no executor: `épocas <= 1000` e `tentativas <= 100`.
 - O workflow de push só executa treinamento quando a mensagem do commit contém `[train-g2]`; os demais pushes apenas validam e compilam.
 - O checkpoint final é restaurado do ciclo com melhor pontuação de validação, junto com os momentos Adam correspondentes.
 
