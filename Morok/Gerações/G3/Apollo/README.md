@@ -1,13 +1,5 @@
 # Apollo — G3
 
-Baixa latência e rapidez de resposta, medidas por benchmark.
+Perfil de baixa latência. Usa temperatura zero, Top-K 1 (greedy), entrada máxima de 2.048 bytes, saída máxima de 256 bytes e timeout de dois segundos, sobre o backend compartilhado G3 de 100.000 parâmetros.
 
-Este perfil utiliza a infraestrutura compartilhada de Morok e o backend comum
-definido em [ARQUITETURA.md](../ARQUITETURA.md). Não cria Core, runtime ou motor
-neural independente. A implementação específica do perfil fica limitada às
-suas políticas, configurações e integrações próprias.
-
-**Estado:** perfil reservado; implementação posterior à integração do contrato
-comum e à construção da arquitetura neural G3.
-
-Especificação: [MODELOS.md](../../MODELOS.md).
+Implementação executável: `morok::g3::profiles::ProfileId::apollo`. Detalhes: [Perfis G3](../profiles/README.md).
