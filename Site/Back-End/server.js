@@ -247,7 +247,7 @@ async function handle(req, res) {
     "/auth/signup", "/auth/login", "/auth/recover", "/auth/reset",
     "/v1/account/2fa/setup", "/v1/account/2fa/enable", "/v1/account/2fa/disable",
     "/v1/account/password", "/v1/account/delete", "/v1/account/sessions/revoke",
-    "/v1/conversations/delete", "/v1/support/tickets"
+    "/v1/conversations/delete", "/v1/support/tickets", "/v1/support/tickets/close"
   ].includes(path)) {
     if (!rateLimit(req)) return send(res, 429, { error: "Muitas tentativas. Aguarde 15 minutos." }, req.allowedOrigin);
   }
@@ -648,6 +648,20 @@ async function handle(req, res) {
     const ticket = { ticketId: crypto.randomUUID(), accountId: token.sub, subject, description, status: "open", createdAt: new Date(), updatedAt: new Date() };
     await supportTickets.insertOne(ticket);
     return send(res, 201, { success: true, ticket: { id: ticket.ticketId, subject, status: ticket.status, createdAt: ticket.createdAt } }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/support/tickets/close") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req, 8_192);
+    const ticketId = typeof body.id === "string" ? body.id : "";
+    if (!ticketId || ticketId.length > 128) return send(res, 400, { error: "Chamado inválido." }, req.allowedOrigin);
+    const result = await supportTickets.updateOne(
+      { accountId: token.sub, ticketId, status: "open" },
+      { $set: { status: "closed", closedAt: new Date(), updatedAt: new Date() } }
+    );
+    if (!result.matchedCount) return send(res, 404, { error: "Chamado não encontrado ou já encerrado." }, req.allowedOrigin);
+    return send(res, 200, { success: true, status: "closed" }, req.allowedOrigin);
   }
 
   if (req.method === "GET" && path === "/v1/support/tickets") {
