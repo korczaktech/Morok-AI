@@ -232,7 +232,7 @@ def record_feedback_errors(memory: dict[str, str],
                              results: list[tuple[str, bool, float]]) -> int:
     """Guarda respostas incorretas como exemplos supervisionados sem duplicar perguntas."""
     if len(dialogues) != len(results):
-        raise ValueError("Quantidade de diálogos e resultados de validação não corresponde.")
+        raise ValueError("Quantidade de diálogos e resultados de feedback não corresponde.")
     added = 0
     for (question, expected), (_, correct, _) in zip(dialogues, results):
         if correct:
@@ -309,7 +309,7 @@ def write_question_history(path: Path, history: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
     temporary.write_text(
-        json.dumps(history, ensure_ascii=False, indent=2, sort_keys=True) + "\\n",
+        json.dumps(history, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     os.replace(temporary, path)
