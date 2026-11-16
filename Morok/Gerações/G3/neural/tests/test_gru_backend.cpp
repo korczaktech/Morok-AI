@@ -55,6 +55,8 @@ void test_shapes_initialization_and_seed_reproducibility() {
     assert(a.projection_bias.size() == 64U);
     assert(a.output_bias.size() == 261U);
 
+    assert(first.initialization_seed() == 123456U);
+    assert(first.initialization_method() == "xavier_glorot+orthogonal_per_gate_gram_schmidt");
     assert(a.embedding == b.embedding);
     assert(a.layer1_recurrent == b.layer1_recurrent);
     assert(a.embedding != c.embedding);
