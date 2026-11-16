@@ -347,7 +347,7 @@ struct ScoredReward final {
 }
 
 [[nodiscard]] Result<std::vector<TokenId>> greedy_response(
-    const Policy& policy, std::span<const TokenId> prompt,
+    const InferencePolicy& policy, std::span<const TokenId> prompt,
     std::size_t max_tokens) {
     std::vector<TokenId> response;
     response.reserve(max_tokens);
