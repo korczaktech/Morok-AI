@@ -168,7 +168,8 @@ struct ComparisonReport final {
 [[nodiscard]] morok::common::Status audit_evaluator(
     const RewardEvaluator& evaluator,
     std::string_view policy_identity,
-    std::span<const RewardAuditCase> audit_cases);
+    std::span<const RewardAuditCase> audit_cases,
+    const Config& config = Config{});
 
 class ReinforceTrainer final {
 public:
@@ -178,7 +179,8 @@ public:
         std::span<const Prompt> prompts,
         Policy& policy,
         const InferencePolicy& frozen_sft_reference,
-        const RewardEvaluator& evaluator);
+        const RewardEvaluator& evaluator,
+        std::span<const RewardAuditCase> evaluator_audit_cases);
 
     [[nodiscard]] double baseline(std::string_view category) const;
     [[nodiscard]] morok::common::Result<TrainerState> capture_state(
