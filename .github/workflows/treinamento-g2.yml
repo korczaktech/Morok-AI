@@ -223,6 +223,7 @@ jobs:
             Morok/build/g2/tsukuyomi-memoria-erros.txt
             Morok/build/g2/tsukuyomi-learning-rate.txt
             Morok/build/g2/tsukuyomi-historico-perguntas.json
+            Morok/build/g2/tsukuyomi-learning-rates-by-question.txt
             Morok/build/g2/respostas-tsukuyomi.md
             Morok/build/g2/avaliacao-final-tsukuyomi.json
             Morok/build/g2/avaliacao-final-tsukuyomi.md
