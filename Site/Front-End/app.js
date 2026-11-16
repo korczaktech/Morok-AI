@@ -817,16 +817,20 @@
   async function configurePush(enabled) {
     if (!state.authSession?.access_token) throw new Error("Entre na conta para ativar notificações entre dispositivos.");
     if (!("serviceWorker" in navigator) || !("PushManager" in window) || typeof Notification === "undefined") throw new Error("Este navegador não oferece suporte a notificações push.");
-    const config = await authRequest("/v1/push/config", { method: "GET", token: state.authSession.access_token });
     const registration = await navigator.serviceWorker.register("./sw.js");
     let subscription = await registration.pushManager.getSubscription();
     if (!enabled) {
       if (subscription) {
-        await authRequest("/v1/push/unsubscribe", { token: state.authSession.access_token, body: { endpoint: subscription.endpoint } });
+        try {
+          await authRequest("/v1/push/unsubscribe", { token: state.authSession.access_token, body: { endpoint: subscription.endpoint } });
+        } catch (error) {
+          console.warn("Não foi possível remover a inscrição push do servidor:", error.message);
+        }
         await subscription.unsubscribe();
       }
       return false;
     }
+    const config = await authRequest("/v1/push/config", { method: "GET", token: state.authSession.access_token });
     if (!config.enabled || !config.publicKey) throw new Error("O serviço push ainda não foi configurado no servidor (chaves VAPID ausentes).");
     const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
     if (permission !== "granted") throw new Error("Permissão de notificações não concedida.");
