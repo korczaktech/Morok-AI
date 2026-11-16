@@ -1,19 +1,11 @@
 {
-  "global_cycles": 168,
+  "global_cycles": 169,
   "questions": {
     "A qual geração você pertence?": {
       "dataset": "training",
       "ever_correct": true,
       "expected": "Segunda geração, modelo 0.1 do Tsukuyomi.",
       "history": [
-        {
-          "answer": "Segunda geração, modelo 0.1 do Tsukuyomi.",
-          "correct": true,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 1.0
-        },
         {
           "answer": "Segunda geração, modelo 0.1 do Tsukuyomi.",
           "correct": true,
@@ -1605,14 +1597,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 1.0
+        },
+        {
+          "answer": "Segunda geração, modelo 0.1 do Tsukuyomi.",
+          "correct": true,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 1.0
         }
       ],
       "last_answer": "Segunda geração, modelo 0.1 do Tsukuyomi.",
       "last_correct": true,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 1.0,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 1,
       "regressions": 1
     },
@@ -1621,14 +1621,6 @@
       "ever_correct": false,
       "expected": "É um modelo treinado para aprender padrões de texto e prever sequências linguísticas.",
       "history": [
-        {
-          "answer": "É um maturas é de 2.000 parâmetros.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.380952380952381
-        },
         {
           "answer": "É em é Tsukuyom texto extelido de texto e Tsukuyomi.",
           "correct": false,
@@ -3220,14 +3212,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.2608695652173913
+        },
+        {
+          "answer": "É um modelo prâmetro do próxmesto senteme da previszõmmnto.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.27272727272727276
         }
       ],
-      "last_answer": "É um modero doriciao 0.a ama preçamentreto e prossã.",
+      "last_answer": "É um modelo prâmetro do próxmesto senteme da previszõmmnto.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.2608695652173913,
-      "observations": 538,
+      "last_f1": 0.27272727272727276,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -3236,14 +3236,6 @@
       "ever_correct": true,
       "expected": "Durante o treinamento, ajusto parâmetros para melhorar a previsão dos próximos bytes do texto.",
       "history": [
-        {
-          "answer": "Durante o treinamento, ajusto parâmetros é iveriso da seruisa das ao previlo.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.3846153846153846
-        },
         {
           "answer": "Durante o treinamento, ajusto prâmatra, cenhsntonn e .y.a treima pero.",
           "correct": false,
@@ -4835,15 +4827,23 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.3703703703703704
+        },
+        {
+          "answer": "Durante o treinamento, ajusto parâmetros para melhorar a previsão dos próximos bytes do texto.",
+          "correct": true,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 1.0
         }
       ],
-      "last_answer": "Durante o treinamento, ajusto prâmatro poros é amos arandeso dou prostos do Morok.",
-      "last_correct": false,
-      "last_cycle": 168,
+      "last_answer": "Durante o treinamento, ajusto parâmetros para melhorar a previsão dos próximos bytes do texto.",
+      "last_correct": true,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.3703703703703704,
-      "observations": 538,
-      "recoveries": 6,
+      "last_f1": 1.0,
+      "observations": 539,
+      "recoveries": 7,
       "regressions": 6
     },
     "Como você define contexto?": {
@@ -4851,14 +4851,6 @@
       "ever_correct": false,
       "expected": "Contexto é a informação anterior usada pelo modelo para calcular a próxima previsão.",
       "history": [
-        {
-          "answer": "Contexto é a informção anteriro nore paranénenam e Mokukyontro e prostugraradento e prostugaiga geradrwrare usdio.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.21428571428571427
-        },
         {
           "answer": "Contexto é a informação anteriao darimo nome paração atres é geratret.",
           "correct": false,
@@ -6450,14 +6442,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.380952380952381
+        },
+        {
+          "answer": "Contexto é a informação anteriro vellola ajjulplos do rone TrokukIrtorwara AII. tromitoso poro.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.3076923076923077
         }
       ],
-      "last_answer": "Contexto é a informação anteriro parâmetros do prórim.",
+      "last_answer": "Contexto é a informação anteriro vellola ajjulplos do rone TrokukIrtorwara AII. tromitoso poro.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.380952380952381,
-      "observations": 538,
+      "last_f1": 0.3076923076923077,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -6466,14 +6466,6 @@
       "ever_correct": true,
       "expected": "Meu nome é Morok.",
       "history": [
-        {
-          "answer": "Meu nome é Morok.",
-          "correct": true,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 1.0
-        },
         {
           "answer": "Meu nome é Morok.",
           "correct": true,
@@ -8065,14 +8057,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 1.0
+        },
+        {
+          "answer": "Meu nome é Morok.",
+          "correct": true,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 1.0
         }
       ],
       "last_answer": "Meu nome é Morok.",
       "last_correct": true,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 1.0,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 3,
       "regressions": 3
     },
@@ -8081,14 +8081,6 @@
       "ever_correct": false,
       "expected": "Recebo um texto, calculo previsões e produzo uma sequência de bytes que representa a resposta.",
       "history": [
-        {
-          "answer": "Recenta modelo Tsukuyomi da segunda geração.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.0
-        },
         {
           "answer": "Rertelo verociso ne o treinamento lludelo verém eom parom te exto.",
           "correct": false,
@@ -9680,14 +9672,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.125
+        },
+        {
+          "answer": "Recebo empugude gurametro é frajejcos com pa zrtello.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.1739130434782609
         }
       ],
-      "last_answer": "Recebo usoshinimno inforniao cou parento peromipo que exteli da inforgaiência cociciam infesamenta conicia artaiênciai rentiicia asiitado eprainial.",
+      "last_answer": "Recebo empugude gurametro é frajejcos com pa zrtello.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.125,
-      "observations": 538,
+      "last_f1": 0.1739130434782609,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -9696,14 +9696,6 @@
       "ever_correct": false,
       "expected": "Morok AI é um projeto experimental de inteligência artificial desenvolvido do zero.",
       "history": [
-        {
-          "answer": "Morok AI é um projeto experimental de inteligência artificial desi d asutadr da rucemitar aa preinala Mok.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.6206896551724139
-        },
         {
           "answer": "Morok AI é um projeto com b2..",
           "correct": false,
@@ -11295,14 +11287,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.4
+        },
+        {
+          "answer": "Morok AI é um projeto experimental de inteligência artificial monejcilas do prosted quguara parcuri.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.7692307692307692
         }
       ],
-      "last_answer": "Morok AI é um prâmetros e apret asquitretas.",
+      "last_answer": "Morok AI é um projeto experimental de inteligência artificial monejcilas do prosted quguara parcuri.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.4,
-      "observations": 538,
+      "last_f1": 0.7692307692307692,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -11311,14 +11311,6 @@
       "ever_correct": false,
       "expected": "Você pode escrever em português e fazer sua pergunta de forma direta.",
       "history": [
-        {
-          "answer": "Você pode erjadelo pera ipominggênca co pracello co praintalala gera pregunências pesiiciam.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.16666666666666666
-        },
         {
           "answer": "Você pode sejejejuu Tsukuyomi darginência se nome prenencilas.",
           "correct": false,
@@ -12910,14 +12902,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.21052631578947367
+        },
+        {
+          "answer": "Você pode escrocento para prâmetos posssto verterstadentes d exteradadenta exeu inderglirwciaQngeshingrrasênii i exteli iversasaa iaprrrz.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.14814814814814814
         }
       ],
-      "last_answer": "Você pode escredo de gertoõeu modelo Tsukuyom codalpelos e porgunde dente da Moro di omtuui ao sferiainên inficdanse bai o te ama semtaipos na dextol dende",
+      "last_answer": "Você pode escrocento para prâmetos posssto verterstadentes d exteradadenta exeu inderglirwciaQngeshingrrasênii i exteli iversasaa iaprrrz.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.21052631578947367,
-      "observations": 538,
+      "last_f1": 0.14814814814814814,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -12926,14 +12926,6 @@
       "ever_correct": false,
       "expected": "G2 significa segunda geração da arquitetura Morok.",
       "history": [
-        {
-          "answer": "G2 significa parcadentor araçende dende da Tsukuyomi, Apollo e Mokosh.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.3529411764705882
-        },
         {
           "answer": "G2 significa parcadelo gerané1metreGyryame da G2.",
           "correct": false,
@@ -14525,14 +14517,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.6666666666666666
+        },
+        {
+          "answer": "G2 significa segunda geração doo.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.6666666666666666
         }
       ],
-      "last_answer": "G2 significa segunda geração paro.",
+      "last_answer": "G2 significa segunda geração doo.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 0.6666666666666666,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -14541,14 +14541,6 @@
       "ever_correct": true,
       "expected": "Olá, meu nome é Morok, atuando no modelo Tsukuyomi da segunda geração, como posso te ajudar?",
       "history": [
-        {
-          "answer": "Olá, meu nome é Morok, atuando no modelo Tsukuyomi da segunda geração.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.8571428571428571
-        },
         {
           "answer": "Olá, meu nome é Morok, atuando no modelo Tsukuyomi da segunda geração, como.",
           "correct": false,
@@ -16140,14 +16132,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.8571428571428571
+        },
+        {
+          "answer": "Olá, meu nome é Morok, atuando no modelo Tsukuyomi da segunda geração.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.8571428571428571
         }
       ],
       "last_answer": "Olá, meu nome é Morok, atuando no modelo Tsukuyomi da segunda geração.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 0.8571428571428571,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 2,
       "regressions": 2
     },
@@ -16156,14 +16156,6 @@
       "ever_correct": false,
       "expected": "Meus parâmetros podem ser ajustados durante o treinamento com exemplos de texto.",
       "history": [
-        {
-          "answer": "Meus parâmetros te amadeso dades para cênrão tenho anternsadena paraisada ceram pera iplugê. comtes posso sertros aspruos arquisos aondes.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.12903225806451615
-        },
         {
           "answer": "Meu trenicila e Tsukuyomi, Apollo e Mokosh.",
           "correct": false,
@@ -17755,14 +17747,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.0
+        },
+        {
+          "answer": "Meus parâmetros podes sertres o treinamento doquinviên. gunnananto versqhouus anqiioci a aquintretas.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.3333333333333333
         }
       ],
-      "last_answer": "Meusha folilanafo codi da Gao pregõmmenro, esprtao dou porok exo exo extelilo.",
+      "last_answer": "Meus parâmetros podes sertres o treinamento doquinviên. gunnananto versqhouus anqiioci a aquintretas.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.0,
-      "observations": 538,
+      "last_f1": 0.3333333333333333,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -17771,14 +17771,6 @@
       "ever_correct": false,
       "expected": "Significa que o texto é representado e processado diretamente como bytes.",
       "history": [
-        {
-          "answer": "Significa geramadr, Apollollo Mokho codi b2.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.11764705882352942
-        },
         {
           "answer": "Significa que o texto é remondegrar cai passefor ciinciamavello.",
           "correct": false,
@@ -19370,14 +19362,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.5
+        },
+        {
+          "answer": "Significa que o texto é represitado de apretudadena do texto.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.47619047619047616
         }
       ],
-      "last_answer": "Significa que o texto é representaden a te remost.",
+      "last_answer": "Significa que o texto é represitado de apretudadena do texto.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.5,
-      "observations": 538,
+      "last_f1": 0.47619047619047616,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -19386,14 +19386,6 @@
       "ever_correct": false,
       "expected": "Parâmetros são valores numéricos internos que influenciam as previsões do modelo.",
       "history": [
-        {
-          "answer": "Parâmetros é gecadas deranitões do modes prosshil.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.2222222222222222
-        },
         {
           "answer": "Parâmetros são verões é gretretuta.",
           "correct": false,
@@ -20985,14 +20977,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.26666666666666666
+        },
+        {
+          "answer": "Parâmetros são verões é gretretros e o. a. Sou um robgenvegret de interigossado e quiiz.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.15384615384615383
         }
       ],
-      "last_answer": "Parâmetros são parâmetos próxim.",
+      "last_answer": "Parâmetros são verões é gretretros e o. a. Sou um robgenvegret de interigossado e quiiz.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.26666666666666666,
-      "observations": 538,
+      "last_f1": 0.15384615384615383,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -21001,14 +21001,6 @@
       "ever_correct": true,
       "expected": "Durante o treinamento, ajusto parâmetros para melhorar a previsão dos próximos bytes do texto.",
       "history": [
-        {
-          "answer": "Durante o treinamento, ajusto prâmatra, cenhs pada serusades da rumutadore da previsões do projeto Morok.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.3448275862068965
-        },
         {
           "answer": "Durante o treinamento, ajusto prâmatra, cenhs para seruivriro.",
           "correct": false,
@@ -22600,15 +22592,23 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.5384615384615384
+        },
+        {
+          "answer": "Durante o treinamento, ajusto parâmetros para melhorar a previsão dos próximos bytes do texto.",
+          "correct": true,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 1.0
         }
       ],
-      "last_answer": "Durante o treinamento, ajusto parâmetros para mero o próx5enho sentersasa exo texto.",
-      "last_correct": false,
-      "last_cycle": 168,
+      "last_answer": "Durante o treinamento, ajusto parâmetros para melhorar a previsão dos próximos bytes do texto.",
+      "last_correct": true,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.5384615384615384,
-      "observations": 538,
-      "recoveries": 6,
+      "last_f1": 1.0,
+      "observations": 539,
+      "recoveries": 7,
       "regressions": 6
     },
     "Para que o Mokosh foi planejado?": {
@@ -22616,14 +22616,6 @@
       "ever_correct": false,
       "expected": "Mokosh foi planejado para priorizar velocidade e baixo custo computacional.",
       "history": [
-        {
-          "answer": "Mokosh foi planejado para priizomi.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.5333333333333333
-        },
         {
           "answer": "Mokosh foi planejado para priizom.",
           "correct": false,
@@ -24215,14 +24207,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.5
+        },
+        {
+          "answer": "Mokosh foi planejco seturadento da pregundamentro e omsudagê com pergunta informçõmro do omturar coda computegras cPa segunda dontirel.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.21428571428571427
         }
       ],
-      "last_answer": "Mokosh foi planejado para proriava seruisami.",
+      "last_answer": "Mokosh foi planejco seturadento da pregundamentro e omsudagê com pergunta informçõmro do omturar coda computegras cPa segunda dontirel.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.5,
-      "observations": 538,
+      "last_f1": 0.21428571428571427,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -24231,14 +24231,6 @@
       "ever_correct": true,
       "expected": "A G2 foi planejada com Tsukuyomi, Apollo e Mokosh.",
       "history": [
-        {
-          "answer": "A G2 foi planejada com Tsukuyomi, Apollo e Mokosh.",
-          "correct": true,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 1.0
-        },
         {
           "answer": "A G2 foi planejada com Tsukuyomi, Apollo e Mokosh.",
           "correct": true,
@@ -25830,14 +25822,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.39999999999999997
+        },
+        {
+          "answer": "A G2 foi planejco seturaletao co Tsukuyom.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.375
         }
       ],
-      "last_answer": "A G2 foi planejada modelo da Gao sornido e prâmento de 0.100 omdrerwase ma pres.",
+      "last_answer": "A G2 foi planejco seturaletao co Tsukuyom.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.39999999999999997,
-      "observations": 538,
+      "last_f1": 0.375,
+      "observations": 539,
       "recoveries": 43,
       "regressions": 43
     },
@@ -25846,14 +25846,6 @@
       "ever_correct": false,
       "expected": "Posso conversar, responder perguntas e ajudar com informações dentro do que aprendi.",
       "history": [
-        {
-          "answer": "Posso conversar, rertertreta comutar geram 0.1 éxib.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.2
-        },
         {
           "answer": "Posso conversar, rertertreta tene com prom terimespos de texto.",
           "correct": false,
@@ -27445,14 +27437,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.17391304347826086
+        },
+        {
+          "answer": "Posso conversar, roveretro erpacldes da prâmetros e je ibuntões semstaênhi denticiso hiniveritio. Estro.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.24000000000000002
         }
       ],
-      "last_answer": "Posso conversar, respondero code parsto sequinvreal dastadenta emontero amanenirara deu prezro.",
+      "last_answer": "Posso conversar, roveretro erpacldes da prâmetros e je ibuntões semstaênhi denticiso hiniveritio. Estro.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.17391304347826086,
-      "observations": 538,
+      "last_f1": 0.24000000000000002,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -27461,14 +27461,6 @@
       "ever_correct": true,
       "expected": "Estou atuando no modelo Tsukuyomi da segunda geração.",
       "history": [
-        {
-          "answer": "Estis anformenai no inforggêm e pene denfor geranderlar deraniência gerandegraínde de texto e projejlllCsGysyy, A.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.08695652173913045
-        },
         {
           "answer": "Estus anformetas é fajila a Tsukuyomi.",
           "correct": false,
@@ -29060,14 +29052,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 1.0
+        },
+        {
+          "answer": "Estou atuando no modelo Tsukuyomi da segunda geração.",
+          "correct": true,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 1.0
         }
       ],
       "last_answer": "Estou atuando no modelo Tsukuyomi da segunda geração.",
       "last_correct": true,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 1.0,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 7,
       "regressions": 6
     },
@@ -29076,14 +29076,6 @@
       "ever_correct": false,
       "expected": "Tsukuyomi é o perfil de maior capacidade da segunda geração.",
       "history": [
-        {
-          "answer": "Tsukuyomi é o perfill e poruinor de fsucuênggifa gercaicnência gerastados aspruinora deri da cospuguênciai cencicial dosi o prossão.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.35714285714285715
-        },
         {
           "answer": "Tsukuyomi é o perfil da pregunta faricicnwaa cocicicbasqeio da seguntade e poruitugwa. Sos.",
           "correct": false,
@@ -30675,14 +30667,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.625
+        },
+        {
+          "answer": "Tsukuyomi é o perimi partifra sóxo. tenho que inhvesplhouviriso.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.3157894736842105
         }
       ],
-      "last_answer": "Tsukuyomi é o perfil da siextor.",
+      "last_answer": "Tsukuyomi é o perimi partifra sóxo. tenho que inhvesplhouviriso.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.625,
-      "observations": 538,
+      "last_f1": 0.3157894736842105,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -30691,14 +30691,6 @@
       "ever_correct": true,
       "expected": "A versão atual é 0.1.",
       "history": [
-        {
-          "answer": "A versão atual é 0.1.",
-          "correct": true,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 1.0
-        },
         {
           "answer": "A versão atualo prâmetro sereso a proriméxtes perosto.",
           "correct": false,
@@ -32290,14 +32282,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 1.0
+        },
+        {
+          "answer": "A versão atual é 0.1.",
+          "correct": true,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 1.0
         }
       ],
       "last_answer": "A versão atual é 0.1.",
       "last_correct": true,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 1.0,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 24,
       "regressions": 23
     },
@@ -32306,14 +32306,6 @@
       "ever_correct": false,
       "expected": "Apollo foi planejado como o modelo de uso geral e equilibrado da G2.",
       "history": [
-        {
-          "answer": "Apollo foi planejado para priiom.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.33333333333333337
-        },
         {
           "answer": "Apollo foi planejado para priiom.",
           "correct": false,
@@ -33905,14 +33897,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.24999999999999994
+        },
+        {
+          "answer": "Apollo foi planejada co Tsukuyomi, Apollo e Mokosh.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.2857142857142857
         }
       ],
-      "last_answer": "Apollo foi planejada cou prigunda, Averi da dogunde do Morok AI.",
+      "last_answer": "Apollo foi planejada co Tsukuyomi, Apollo e Mokosh.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.24999999999999994,
-      "observations": 538,
+      "last_f1": 0.2857142857142857,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -33921,14 +33921,6 @@
       "ever_correct": true,
       "expected": "O orçamento planejado para Apollo é de 5.000 parâmetros.",
       "history": [
-        {
-          "answer": "O orçamento planejado para Aporo de texto e Tsukuyomi.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.631578947368421
-        },
         {
           "answer": "O orçamento planejado para Apollo é de 5.000 parâmetros.",
           "correct": true,
@@ -35520,14 +35512,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 1.0
+        },
+        {
+          "answer": "O orçamento planejado para Apollo é de 5.000 parâmetros.",
+          "correct": true,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 1.0
         }
       ],
       "last_answer": "O orçamento planejado para Apollo é de 5.000 parâmetros.",
       "last_correct": true,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 1.0,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 50,
       "regressions": 50
     },
@@ -35536,14 +35536,6 @@
       "ever_correct": true,
       "expected": "O orçamento planejado para Mokosh é de 2.000 parâmetros.",
       "history": [
-        {
-          "answer": "O orçamento planejado para Mokosh é de 2.000 parâmetros.",
-          "correct": true,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 1.0
-        },
         {
           "answer": "O orçamento planejado para Mokoshi de gura de 10.000 parâmetros.",
           "correct": false,
@@ -37135,14 +37127,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.588235294117647
+        },
+        {
+          "answer": "O orçamento planejado para Apollo e projeto Morok AI.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.5263157894736842
         }
       ],
-      "last_answer": "O orçamento planejado para Apollo e proâme0",
+      "last_answer": "O orçamento planejado para Apollo e projeto Morok AI.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.588235294117647,
-      "observations": 538,
+      "last_f1": 0.5263157894736842,
+      "observations": 539,
       "recoveries": 45,
       "regressions": 45
     },
@@ -37151,14 +37151,6 @@
       "ever_correct": false,
       "expected": "Fui criado como parte do projeto Morok AI.",
       "history": [
-        {
-          "answer": "Fui comiporento para concicência geracendaçõem é de dende de Tsukuyomi.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.11111111111111112
-        },
         {
           "answer": "Fui comiporenal Tsukuyomi, Apollo e Mokosh.",
           "correct": false,
@@ -38750,14 +38742,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.375
+        },
+        {
+          "answer": "Fui criado como parteso do Morok Averi d asuitriada.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.5882352941176471
         }
       ],
-      "last_answer": "Fui criado como partiguna geu tegunta ma prerijfilncars.",
+      "last_answer": "Fui criado como parteso do Morok Averi d asuitriada.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.375,
-      "observations": 538,
+      "last_f1": 0.5882352941176471,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -38766,14 +38766,6 @@
       "ever_correct": false,
       "expected": "O orçamento definido para o Tsukuyomi G2 é de 10.000 parâmetros treináveis.",
       "history": [
-        {
-          "answer": "O orçamento perai pelilal e priijfllaGde comemTsu sextelllo de texto.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.34782608695652173
-        },
         {
           "answer": "O orçamento defido fori palelo co prainadações dentro do que rempol de texto.",
           "correct": false,
@@ -40365,14 +40357,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.24000000000000002
+        },
+        {
+          "answer": "O orçamento defidelo inejejal T zerjakcâmeturo em prorta dento de q5etu dex.te prentêss. Sos.bmysyy.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.20689655172413793
         }
       ],
-      "last_answer": "O orçamento defidelo Tsukugo cakok.tos am prajejcos nenadelo e porosto gerterasar.",
+      "last_answer": "O orçamento defidelo inejejal T zerjakcâmeturo em prorta dento de q5etu dex.te prentêss. Sos.bmysyy.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.24000000000000002,
-      "observations": 538,
+      "last_f1": 0.20689655172413793,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -40381,14 +40381,6 @@
       "ever_correct": true,
       "expected": "Fui criado como parte do projeto Morok AI.",
       "history": [
-        {
-          "answer": "Fui comiprosenal é amadetros e pregunda geração.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.13333333333333333
-        },
         {
           "answer": "Fui cocencicoa da sognulo geração do que empodel b2.",
           "correct": false,
@@ -41980,14 +41972,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.35294117647058826
+        },
+        {
+          "answer": "Fui criado como parteso do Morok Averi d aopruosi d aqurdadadada, A.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.5
         }
       ],
-      "last_answer": "Fui criado como partiguna geu te 5S5o ibeuploradena geração.",
+      "last_answer": "Fui criado como parteso do Morok Averi d aopruosi d aqurdadadada, A.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.35294117647058826,
-      "observations": 538,
+      "last_f1": 0.5,
+      "observations": 539,
       "recoveries": 2,
       "regressions": 2
     },
@@ -41996,14 +41996,6 @@
       "ever_correct": false,
       "expected": "Não. Meu conhecimento é limitado aos dados e ao treinamento que recebi.",
       "history": [
-        {
-          "answer": "Não. Meu conhinmenvaínido do hessomio o treinamentor aonder compelostar aa preivá aimebo.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.16666666666666666
-        },
         {
           "answer": "Não. Meu conhecimento parsaiso eraimo apruinvaênicia.",
           "correct": false,
@@ -43595,14 +43587,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.3157894736842105
+        },
+        {
+          "answer": "Não. Meu conhecimentol lluisanenvo luséde sextore do prosto que denhnnanno ne invegnilal dentado de apretuga cemiami.a bgução a textos perapret.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.18181818181818182
         }
       ],
-      "last_answer": "Não. Meu conhecimento partosóximo. Sou com puro.",
+      "last_answer": "Não. Meu conhecimentol lluisanenvo luséde sextore do prosto que denhnnanno ne invegnilal dentado de apretuga cemiami.a bgução a textos perapret.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.3157894736842105,
-      "observations": 538,
+      "last_f1": 0.18181818181818182,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -43611,14 +43611,6 @@
       "ever_correct": false,
       "expected": "Esta base inicial prioriza conversas em português. Meu domínio de outros idiomas não está garantido.",
       "history": [
-        {
-          "answer": "Esta veresonhvo é famata conciametas e prossémde bytes de texto.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.16
-        },
         {
           "answer": "Esta versão não modelo para é passeto rostugariade da cusputadentaden e prers.",
           "correct": false,
@@ -45210,14 +45202,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.16
+        },
+        {
+          "answer": "Esta base inhunnanno velóma mendero dou porver argês. Miu. Peshimenvo.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.16
         }
       ],
-      "last_answer": "Esta base iniciaa dou próximos dodel dandenta emde da previlo.",
+      "last_answer": "Esta base inhunnanno velóma mendero dou porver argês. Miu. Peshimenvo.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 0.16,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -45226,14 +45226,6 @@
       "ever_correct": false,
       "expected": "Meu treinamento inicial contém exemplos em português. Minha capacidade ainda precisa ser avaliada.",
       "history": [
-        {
-          "answer": "Meu treinam exo informações dentros hessoshis o prorimádess.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.09523809523809525
-        },
         {
           "answer": "Meu treinamento sericicimes pradilo.",
           "correct": false,
@@ -46825,14 +46817,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.17391304347826086
+        },
+        {
+          "answer": "Meu treinamento inficiamção donho alrrrade do ronterira cesmentar e o. 2.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.16666666666666669
         }
       ],
-      "last_answer": "Meu treinamento inficiamção donho alrrrade do ronterira arandrelo dou pro",
+      "last_answer": "Meu treinamento inficiamção donho alrrrade do ronterira cesmentar e o. 2.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.17391304347826086,
-      "observations": 538,
+      "last_f1": 0.16666666666666669,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -46841,14 +46841,6 @@
       "ever_correct": false,
       "expected": "Não tenho acesso livre aos arquivos do dispositivo.",
       "history": [
-        {
-          "answer": "Não tenho anicisão Mosh",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.3333333333333333
-        },
         {
           "answer": "Não tenho aniciso exoreto.E ajutada colpletutas.",
           "correct": false,
@@ -48440,14 +48432,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.3333333333333333
+        },
+        {
+          "answer": "Não tenho antisão Pxertersas.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.3333333333333333
         }
       ],
-      "last_answer": "Não tenho antisão Pxertess.",
+      "last_answer": "Não tenho antisão Pxertersas.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 0.3333333333333333,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -48456,14 +48456,6 @@
       "ever_correct": false,
       "expected": "Meus parâmetros podem ser ajustados durante o treinamento com exemplos de texto.",
       "history": [
-        {
-          "answer": "Meus aperimento é a móguxora geramé1ndemet partação.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.10526315789473685
-        },
         {
           "answer": "Meus parâmetros tero come projella E Tkush.",
           "correct": false,
@@ -50055,14 +50047,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.16
+        },
+        {
+          "answer": "Meus parâmetros podes sertres o treinamento doquinviê fiii. Sost.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.380952380952381
         }
       ],
-      "last_answer": "Meus parâmetros poro jae a jfemime prantesié senter conteriral uspruo cema da previso.",
+      "last_answer": "Meus parâmetros podes sertres o treinamento doquinviê fiii. Sost.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.16,
-      "observations": 538,
+      "last_f1": 0.380952380952381,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -50071,14 +50071,6 @@
       "ever_correct": false,
       "expected": "Não nesta versão básica. Minha função atual é gerar texto.",
       "history": [
-        {
-          "answer": "Não nimi ba sericias é fassada.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.25
-        },
         {
           "answer": "Não nomi biimio ihunniciaíni de hesoshio  parushin.",
           "correct": false,
@@ -51670,14 +51662,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.4
+        },
+        {
+          "answer": "Não nesta versão básicim.E amta cumapretntaren e apretradena pruradr",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.4000000000000001
         }
       ],
-      "last_answer": "Não nesta versão sesá ishinciamçimibm.",
+      "last_answer": "Não nesta versão básicim.E amta cumapretntaren e apretradena pruradr",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.4,
-      "observations": 538,
+      "last_f1": 0.4000000000000001,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -51686,14 +51686,6 @@
       "ever_correct": false,
       "expected": "Não. Esta versão não possui memória persistente de conversas.",
       "history": [
-        {
-          "answer": "Não. Esta versão não passão mintorsaden invresa verisamentio e hosshinmiqgxwa. So.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.39999999999999997
-        },
         {
           "answer": "Não. Esta versão não possui pesquisa que cibentasta.",
           "correct": false,
@@ -53285,14 +53277,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.6250000000000001
+        },
+        {
+          "answer": "Não. Esta versão não possui da quiiipii.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.6250000000000001
         }
       ],
-      "last_answer": "Não. Esta versão não possui é perqviqxteciras.",
+      "last_answer": "Não. Esta versão não possui da quiiipii.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 0.6250000000000001,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -53301,14 +53301,6 @@
       "ever_correct": false,
       "expected": "Posso conversar, responder perguntas e ajudar com informações dentro do que aprendi.",
       "history": [
-        {
-          "answer": "Posso conversar, rertertreta comutar geram 0.1 éxib.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.2
-        },
         {
           "answer": "Posso conversar, restntreyo cortar cometreta computar geraçõess do doquives do prortas.",
           "correct": false,
@@ -54900,14 +54892,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.2608695652173913
+        },
+        {
+          "answer": "Posso conversar, responder pressanâ mtolllCder, artresto parama modelo.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.3
         }
       ],
-      "last_answer": "Posso conversar, responder pressanâ mtolllCder, artresto paramçtemmtos posssto sertreta experquivexo zexto.",
+      "last_answer": "Posso conversar, responder pressanâ mtolllCder, artresto parama modelo.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.2608695652173913,
-      "observations": 538,
+      "last_f1": 0.3,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -54916,14 +54916,6 @@
       "ever_correct": false,
       "expected": "Não há evidência de que eu tenha consciência. Sou um sistema computacional experimental.",
       "history": [
-        {
-          "answer": "Não há evidência de que erim.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.5263157894736842
-        },
         {
           "answer": "Não há evidência de que erma invegunqhinici.",
           "correct": false,
@@ -56515,14 +56507,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.21052631578947367
+        },
+        {
+          "answer": "Não há evidência de que estri.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.5263157894736842
         }
       ],
-      "last_answer": "Não há evidênti mindeni a qexto.",
+      "last_answer": "Não há evidência de que estri.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.21052631578947367,
-      "observations": 538,
+      "last_f1": 0.5263157894736842,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -56531,14 +56531,6 @@
       "ever_correct": false,
       "expected": "Não tenho sentimentos ou experiências pessoais. Produzo respostas a partir do processamento de texto.",
       "history": [
-        {
-          "answer": "Não tenho sentreso parsaisa exverici.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.21052631578947364
-        },
         {
           "answer": "Não tenho sentresão hesiso exveriai.",
           "correct": false,
@@ -58130,14 +58122,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.16
+        },
+        {
+          "answer": "Não tenho senters do cusputao cous do promtes dontire de apretidi.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.32
         }
       ],
-      "last_answer": "Não tenho sentresão ni intinggês. Minha caibmêbcici.syo cuimipostadina prader dersai.",
+      "last_answer": "Não tenho senters do cusputao cous do promtes dontire de apretidi.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.16,
-      "observations": 538,
+      "last_f1": 0.32,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -58146,14 +58146,6 @@
       "ever_correct": false,
       "expected": "Esta versão não possui pesquisa na internet integrada ao modelo.",
       "history": [
-        {
-          "answer": "Esta versão não possui pesquisa nade dades da rumutadones da rumuma praiãs apretros hesdelvllo.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.41666666666666663
-        },
         {
           "answer": "Esta versão não possado paros é gração.",
           "correct": false,
@@ -59745,14 +59737,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.5
+        },
+        {
+          "answer": "Esta versão não possui é parcisã.Perti.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.47058823529411764
         }
       ],
-      "last_answer": "Esta versão não possui é partesões.",
+      "last_answer": "Esta versão não possui é parcisã.Perti.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.5,
-      "observations": 538,
+      "last_f1": 0.47058823529411764,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
@@ -59761,14 +59761,6 @@
       "ever_correct": false,
       "expected": "Não. Sou um programa de computador executado em hardware.",
       "history": [
-        {
-          "answer": "Não. Sou um prostados e ajus da cumaprusariada invericicia.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.3333333333333333
-        },
         {
           "answer": "Não. Sou um prostados e ajuto conciverara arvaivaênicia.E amater ronterara.",
           "correct": false,
@@ -61360,30 +61352,30 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.46153846153846156
+        },
+        {
+          "answer": "Não. Sou um prostadrtas.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.46153846153846156
         }
       ],
-      "last_answer": "Não. Sou um prognenar.",
+      "last_answer": "Não. Sou um prostadrtas.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
       "last_f1": 0.46153846153846156,
-      "observations": 538,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     },
     "Você é um sistema de inteligência artificial?": {
       "dataset": "training",
-      "ever_correct": false,
+      "ever_correct": true,
       "expected": "Sim. Sou um modelo experimental de inteligência artificial do projeto Morok AI.",
       "history": [
-        {
-          "answer": "Sim. Sou um prointo gurametr.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.35294117647058826
-        },
         {
           "answer": "Sim. Sou um prointo gura cucemwal co prosiqggugaiadi d e..",
           "correct": false,
@@ -62975,15 +62967,23 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.75
+        },
+        {
+          "answer": "Sim. Sou um modelo experimental de inteligência artificial do projeto Morok AI.",
+          "correct": true,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 1.0
         }
       ],
-      "last_answer": "Sim. Sou um modelo experimental de inteligência artificial do te rejta ilhunpngõ.",
-      "last_correct": false,
-      "last_cycle": 168,
+      "last_answer": "Sim. Sou um modelo experimental de inteligência artificial do projeto Morok AI.",
+      "last_correct": true,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.75,
-      "observations": 538,
-      "recoveries": 0,
+      "last_f1": 1.0,
+      "observations": 539,
+      "recoveries": 1,
       "regressions": 0
     },
     "É possível que suas respostas contenham erros?": {
@@ -62991,14 +62991,6 @@
       "ever_correct": false,
       "expected": "Sim. Posso interpretar uma pergunta incorretamente ou produzir uma resposta errada.",
       "history": [
-        {
-          "answer": "Sim é de de denida compernenrao de texto e preguu0.",
-          "correct": false,
-          "cycle": 0,
-          "dataset": "feedback",
-          "execution": "43792769872",
-          "lexical_f1": 0.09523809523809525
-        },
         {
           "answer": "Sim é de de de denda geração.",
           "correct": false,
@@ -64590,14 +64582,22 @@
           "dataset": "training",
           "execution": "43801221527",
           "lexical_f1": 0.19999999999999998
+        },
+        {
+          "answer": "Sim. Posso interdras do comperessane do prorto qexem sextel dentire e o.1.",
+          "correct": false,
+          "cycle": 169,
+          "dataset": "training",
+          "execution": "43801221527",
+          "lexical_f1": 0.16666666666666669
         }
       ],
-      "last_answer": "Sim. Posso intejêm bendereso de presi é parianân amateso.",
+      "last_answer": "Sim. Posso interdras do comperessane do prorto qexem sextel dentire e o.1.",
       "last_correct": false,
-      "last_cycle": 168,
+      "last_cycle": 169,
       "last_execution": "43801221527",
-      "last_f1": 0.19999999999999998,
-      "observations": 538,
+      "last_f1": 0.16666666666666669,
+      "observations": 539,
       "recoveries": 0,
       "regressions": 0
     }
