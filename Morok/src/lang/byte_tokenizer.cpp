@@ -179,7 +179,8 @@ Result<EncodedText> ByteTokenizer::encode_text(
     encoded.normalized_text = normalized.value_if()->text;
     encoded.replaced_invalid_utf8 = normalized.value_if()->replaced_invalid_utf8;
     encoded.byte_tokens.reserve(encoded.normalized_text.size());
-    for (const unsigned char byte : encoded.normalized_text) {
+    for (const char character : encoded.normalized_text) {
+        const auto byte = static_cast<unsigned char>(character);
         encoded.byte_tokens.push_back(static_cast<TokenId>(byte));
     }
     return Result<EncodedText>::success(std::move(encoded));
