@@ -28,8 +28,10 @@ arquitetura G3. Suas políticas e configurações podem variar sem duplicar o mo
 
 ## Estado
 
-A Etapa 1 integra o contrato comum, adapta o motor G1 existente e estabelece
-testes de compatibilidade. A arquitetura neural GRU da G3, o treinamento e a
-inferência de produção permanecem para as etapas seguintes.
+A Etapa 1 integrou o contrato comum e adaptou o motor G1 existente. A Etapa 2
+implementou a representação byte-level UTF-8 de 261 IDs, tokens de controle,
+normalização NFC configurável e validação de entrada/saída no Core compartilhado.
+A arquitetura neural GRU da G3, o treinamento e a inferência de produção
+permanecem para as etapas seguintes.
 
 Consulte [ARQUITETURA.md](ARQUITETURA.md) e [MODELOS.md](../MODELOS.md).
