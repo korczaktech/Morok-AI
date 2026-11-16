@@ -251,20 +251,25 @@ struct Generated final {
     return response;
 }
 
-[[nodiscard]] Result<double> score_response(
+struct ScoredReward final {
+    RewardComponents components;
+    double score{0.0};
+};
+
+[[nodiscard]] Result<ScoredReward> score_response(
     const RewardEvaluator& evaluator, const RewardWeights& weights,
     const RewardPenalties& penalties, std::span<const TokenId> prompt,
     std::span<const TokenId> response) {
     const auto evaluated = evaluator.evaluate(prompt, response);
     if (!evaluated) {
-        return Result<double>::failure(*evaluated.error_if());
+        return Result<ScoredReward>::failure(*evaluated.error_if());
     }
     const auto& components = *evaluated.value_if();
     if (!valid_component(components.correctness) ||
         !valid_component(components.intent) ||
         !valid_component(components.coherence) ||
         !valid_component(components.format)) {
-        return failure_result<double>(
+        return failure_result<ScoredReward>(
             ErrorCode::invalid_argument, "reward.range",
             "Evaluator components must be finite values in [-1, 1]");
     }
@@ -279,8 +284,8 @@ struct Generated final {
         response.size() > penalties.max_response_tokens) {
         score -= penalties.over_length;
     }
-    return Result<double>::success(
-        std::clamp(score, kScoreMinimum, kScoreMaximum));
+    return Result<ScoredReward>::success(ScoredReward{
+        components, std::clamp(score, kScoreMinimum, kScoreMaximum)});
 }
 
 [[nodiscard]] Result<std::vector<TokenId>> greedy_response(
@@ -364,8 +369,8 @@ Status audit_evaluator(const RewardEvaluator& evaluator,
         if (!score) {
             return Status::failure(*score.error_if());
         }
-        if (*score.value_if() < test_case.minimum_score ||
-            *score.value_if() > test_case.maximum_score) {
+        if (score.value_if()->score < test_case.minimum_score ||
+            score.value_if()->score > test_case.maximum_score) {
             return failure(ErrorCode::invalid_argument, "evaluator.audit_score",
                            "Evaluator output falls outside its human-audited score interval");
         }
@@ -406,6 +411,8 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
     }
 
     TrainingReport report;
+    report.config_snapshot = config_;
+    report.evaluator = evaluator_metadata;
     report.prompts = prompts.size();
     std::vector<SequenceGradient> batch_gradients;
     std::unordered_map<std::string, std::pair<double, std::size_t>> category_rewards;
@@ -439,7 +446,7 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
             if (!reward_result) {
                 return Result<TrainingReport>::failure(*reward_result.error_if());
             }
-            const double reward = *reward_result.value_if();
+            const double reward = reward_result.value_if()->score;
             const double advantage = reward - category_baseline;
 
             SequenceGradient gradient;
@@ -483,6 +490,7 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
                 ++repeated_count;
             }
             report.candidates_metrics.push_back(CandidateMetrics{
+                prompt.id, prompt.category, reward_result.value_if()->components,
                 reward, advantage,
                 generated.kl / static_cast<double>(
                     std::max<std::size_t>(generated.response.size(), 1U)),
@@ -560,7 +568,7 @@ Result<EvaluationReport> evaluate_policy(
         if (!score) {
             return Result<EvaluationReport>::failure(*score.error_if());
         }
-        total_reward += *score.value_if();
+        total_reward += score.value_if()->score;
         total_tokens += static_cast<double>(visible.size());
         empty += visible.empty() ? 1U : 0U;
         repeated += repeated_ratio(visible) > 0.0 ? 1U : 0U;
