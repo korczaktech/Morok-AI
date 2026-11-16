@@ -11,30 +11,31 @@
 namespace morok::g3::neural {
 
 inline constexpr std::size_t kVocabularySize = 261U;
-inline constexpr std::size_t kEmbeddingDim = 64U;
-inline constexpr std::size_t kHiddenDim = 128U;
+inline constexpr std::size_t kEmbeddingDim = 60U;
+inline constexpr std::size_t kLayer1HiddenDim = 97U;
+inline constexpr std::size_t kLayer2HiddenDim = 68U;
 inline constexpr std::size_t kRecurrentLayers = 2U;
 inline constexpr std::size_t kGateCount = 3U;
-inline constexpr std::size_t kReferenceParameterCount = 198149U;
-inline constexpr std::uint16_t kArchitectureId = 0x0301U;
+inline constexpr std::size_t kTargetParameterCount = 100000U;
+inline constexpr std::uint16_t kArchitectureId = 0x0302U;
 
 struct G3Config final {
     std::uint64_t seed{0x4D4F524F4B4733ULL};
     float rms_epsilon{1.0e-5F};
 };
 
-// All matrices are contiguous row-major arrays. The output head deliberately
-// has no second vocabulary matrix: it reads the transpose of embedding.
+// All matrices are contiguous row-major arrays. The output head reads the
+// transpose of embedding; no second vocabulary matrix is allocated.
 struct G3Weights final {
     std::vector<float> embedding;          // [V, E]
-    std::vector<float> layer1_input;       // [3H, E]
-    std::vector<float> layer1_recurrent;   // [3H, H]
-    std::vector<float> layer1_bias;        // [3H]
-    std::vector<float> layer2_input;       // [3H, H]
-    std::vector<float> layer2_recurrent;   // [3H, H]
-    std::vector<float> layer2_bias;        // [3H]
-    std::vector<float> rms_scale;          // [H]
-    std::vector<float> projection;         // [E, H]
+    std::vector<float> layer1_input;       // [3*H1, E]
+    std::vector<float> layer1_recurrent;   // [3*H1, H1]
+    std::vector<float> layer1_bias;        // [3*H1]
+    std::vector<float> layer2_input;       // [3*H2, H1]
+    std::vector<float> layer2_recurrent;   // [3*H2, H2]
+    std::vector<float> layer2_bias;        // [3*H2]
+    std::vector<float> rms_scale;          // [H1]
+    std::vector<float> projection;         // [E, H2]
     std::vector<float> projection_bias;    // [E]
     std::vector<float> output_bias;        // [V]
 };
@@ -58,9 +59,6 @@ public:
         std::span<float> log_probabilities) const override;
 
     [[nodiscard]] const G3Weights& weights() const noexcept { return weights_; }
-    // Mutable access is intentionally explicit for generation-owned trainers.
-    // The embedding vector is the sole vocabulary matrix used by both lookup
-    // and output projection, so weight tying cannot silently drift apart.
     [[nodiscard]] G3Weights& mutable_weights() noexcept { return weights_; }
     [[nodiscard]] std::uint64_t parameter_count() const noexcept {
         return count_parameters(weights_);
