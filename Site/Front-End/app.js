@@ -435,9 +435,21 @@
     $('#theme-select').dispatchEvent(new Event('change', { bubbles: true }));
     el.settings.showModal();
   }
-  function saveSettings() {
+  async function saveSettings() {
     state.theme = $('#theme-select').value;
-    applyTheme(); persist(); el.settings.close(); toast('Preferências salvas.'); return true;
+    applyTheme(); persist(); el.settings.close();
+    if (state.authSession?.access_token) {
+      try {
+        await authRequest('/v1/account/profile', {
+          token: state.authSession.access_token,
+          body: { name: state.authSession.user?.name || state.displayName || 'Usuário', preferences: { theme: state.theme, language: 'pt-BR' } }
+        });
+        toast('Preferências salvas e sincronizadas.');
+      } catch (error) {
+        toast('Preferências salvas neste dispositivo; a sincronização falhou: ' + error.message);
+      }
+    } else toast('Preferências salvas neste dispositivo.');
+    return true;
   }
   function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
   function renderProjectsSidebar() {
