@@ -232,7 +232,7 @@ async function handle(req, res) {
     return send(res, 200, { status: "ok" }, req.allowedOrigin);
   }
 
-  if (req.method === "POST" && ["/auth/signup", "/auth/login", "/auth/recover"].includes(path)) {
+  if (req.method === "POST" && ["/auth/signup", "/auth/login", "/auth/recover", "/auth/reset"].includes(path)) {
     if (!rateLimit(req)) return send(res, 429, { error: "Muitas tentativas. Aguarde 15 minutos." }, req.allowedOrigin);
   }
 
@@ -317,7 +317,39 @@ async function handle(req, res) {
   }
 
   if (req.method === "POST" && path === "/auth/recover") {
-    return send(res, 501, { error: "A recuperação por e-mail ainda não foi configurada." }, req.allowedOrigin);
+    if (!mailer) return send(res, 503, { error: "Recuperação por e-mail indisponível: configure SMTP_HOST, SMTP_USER, SMTP_PASS e SMTP_FROM no serviço." }, req.allowedOrigin);
+    try {
+      const body = await readBody(req);
+      const email = normalizeEmail(body.email);
+      if (!validEmail(email)) return send(res, 400, { error: "Informe um e-mail válido." }, req.allowedOrigin);
+      const account = await accounts.findOne({ Email: email }, { projection: { id: 1, Email: 1 } });
+      if (account) {
+        const rawToken = crypto.randomBytes(32).toString("base64url");
+        const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+        await recoveryTokens.deleteMany({ accountId: account.id });
+        await recoveryTokens.insertOne({ accountId: account.id, tokenHash, createdAt: new Date(), expiresAt: new Date(Date.now() + 30 * 60 * 1000) });
+        const baseUrl = process.env.PUBLIC_SITE_URL || "https://morokai.korczaktech.com.br";
+        const resetUrl = baseUrl + "/?reset=" + encodeURIComponent(rawToken);
+        await mailer.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to: account.Email, subject: "Redefinição de senha do Morok", text: "Para redefinir sua senha, abra este link em até 30 minutos:\n\n" + resetUrl + "\n\nSe você não solicitou, ignore esta mensagem." });
+      }
+      return send(res, 200, { success: true, message: "Se o endereço estiver cadastrado, enviaremos instruções de recuperação." }, req.allowedOrigin);
+    } catch {
+      return send(res, 503, { error: "Não foi possível enviar o e-mail de recuperação." }, req.allowedOrigin);
+    }
+  }
+
+  if (req.method === "POST" && path === "/auth/reset") {
+    const body = await readBody(req);
+    const rawToken = typeof body.token === "string" ? body.token : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    if (password.length < 10 || password.length > 128) return send(res, 400, { error: "A senha deve ter entre 10 e 128 caracteres." }, req.allowedOrigin);
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const recovery = await recoveryTokens.findOne({ tokenHash, expiresAt: { $gt: new Date() } });
+    if (!recovery) return send(res, 400, { error: "Link inválido ou expirado." }, req.allowedOrigin);
+    await accounts.updateOne({ id: recovery.accountId }, { $set: { "Autenticacao.SenhaHash": await bcrypt.hash(password, 12), PasswordChangedAt: new Date(), "Conta.AtualizadaEm": new Date() } });
+    await sessions.deleteMany({ accountId: recovery.accountId });
+    await recoveryTokens.deleteMany({ accountId: recovery.accountId });
+    return send(res, 200, { success: true }, req.allowedOrigin);
   }
 
   if (req.method === "GET" && path === "/v1/conversations") {
