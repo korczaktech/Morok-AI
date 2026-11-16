@@ -122,6 +122,34 @@ function rateLimit(req) {
   return current.count <= MAX_ATTEMPTS;
 }
 
+
+function base32Encode(buffer) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = 0, value = 0, output = "";
+  for (const byte of buffer) { value = (value << 8) | byte; bits += 8; while (bits >= 5) { output += alphabet[(value >>> (bits - 5)) & 31]; bits -= 5; } }
+  if (bits) output += alphabet[(value << (5 - bits)) & 31];
+  return output;
+}
+function base32Decode(input) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = 0, value = 0; const bytes = [];
+  for (const char of String(input).replace(/=+$/,"").toUpperCase()) { const n = alphabet.indexOf(char); if (n < 0) throw new Error("Segredo TOTP inválido."); value = (value << 5) | n; bits += 5; if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; } }
+  return Buffer.from(bytes);
+}
+function totp(secret, time = Date.now()) {
+  const counter = Math.floor(time / 30000);
+  const message = Buffer.alloc(8); message.writeBigUInt64BE(BigInt(counter));
+  const digest = crypto.createHmac("sha1", base32Decode(secret)).update(message).digest();
+  const offset = digest[digest.length - 1] & 15;
+  const binary = (digest.readUInt32BE(offset) & 0x7fffffff) % 1000000;
+  return String(binary).padStart(6, "0");
+}
+function verifyTotp(secret, code) {
+  if (!/^\\d{6}$/.test(String(code || ""))) return false;
+  const now = Date.now();
+  return [-1,0,1].some(step => totp(secret, now + step * 30000) === String(code));
+}
+
 function normalizeEmail(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
@@ -244,6 +272,7 @@ async function handle(req, res) {
       if (!account || account.Conta?.Status !== "active" || !(await bcrypt.compare(password, account.Autenticacao?.SenhaHash || ""))) {
         return send(res, 401, { error: "E-mail ou senha incorretos." }, req.allowedOrigin);
       }
+      if (account.Seguranca?.TwoFactorEnabled && !verifyTotp(account.Seguranca.TwoFactorSecret, body.totp)) return send(res, 401, { error: "Código de autenticação em dois fatores necessário ou inválido.", two_factor_required: true }, req.allowedOrigin);
       const loginAt = new Date();
       await accounts.updateOne({ _id: account._id }, { $set: { "Conta.UltimoLogin": loginAt, "Conta.AtualizadaEm": loginAt } });
       return send(res, 200, {
@@ -388,6 +417,38 @@ async function handle(req, res) {
     if (typeof body.sessionId !== "string" || body.sessionId === token.jti) return send(res, 400, { error: "Selecione outra sessão válida." }, req.allowedOrigin);
     const result = await sessions.deleteOne({ accountId: token.sub, jti: body.sessionId });
     return send(res, 200, { success: true, revoked: result.deletedCount === 1 }, req.allowedOrigin);
+  }
+
+
+  if (req.method === "POST" && path === "/v1/account/2fa/setup") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const secret = base32Encode(crypto.randomBytes(20));
+    await accounts.updateOne({ id: token.sub }, { $set: { "Seguranca.TwoFactorSecretPending": secret } });
+    const account = await accounts.findOne({ id: token.sub }, { projection: { Email: 1 } });
+    const label = encodeURIComponent("Morok:" + (account?.Email || token.sub));
+    return send(res, 200, { secret, otpauth: "otpauth://totp/" + label + "?secret=" + secret + "&issuer=Morok&algorithm=SHA1&digits=6&period=30" }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/account/2fa/enable") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req);
+    const account = await accounts.findOne({ id: token.sub });
+    const secret = account?.Seguranca?.TwoFactorSecretPending;
+    if (!secret || !verifyTotp(secret, body.code)) return send(res, 400, { error: "Código inválido. Verifique o aplicativo autenticador." }, req.allowedOrigin);
+    await accounts.updateOne({ id: token.sub }, { $set: { "Seguranca.TwoFactorEnabled": true, "Seguranca.TwoFactorSecret": secret }, $unset: { "Seguranca.TwoFactorSecretPending": "" } });
+    return send(res, 200, { success: true, enabled: true }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/account/2fa/disable") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req);
+    const account = await accounts.findOne({ id: token.sub });
+    if (!account || !(await bcrypt.compare(String(body.password || ""), account.Autenticacao?.SenhaHash || "")) || !verifyTotp(account.Seguranca?.TwoFactorSecret, body.code)) return send(res, 401, { error: "Senha ou código de autenticação inválido." }, req.allowedOrigin);
+    await accounts.updateOne({ id: token.sub }, { $set: { "Seguranca.TwoFactorEnabled": false }, $unset: { "Seguranca.TwoFactorSecret": "", "Seguranca.TwoFactorSecretPending": "" } });
+    return send(res, 200, { success: true, enabled: false }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && path === "/v1/account/password") {
