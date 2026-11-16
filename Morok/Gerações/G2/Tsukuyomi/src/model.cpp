@@ -607,17 +607,23 @@ bool compute_target_gradient(const Model& model,
 
 TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
                     const TrainingConfig& config, TrainingState* supplied_state,
-                    std::span<const std::uint8_t> target_mask) {
+                    std::span<const std::uint8_t> target_mask,
+                    std::span<const double> target_learning_rates) {
     TrainingReport report;
     if (bytes.size() < 2 || config.epochs == 0 || config.batch_size == 0 || config.bptt_steps == 0 ||
         config.bptt_steps > kBpttTruncation ||
         !std::isfinite(config.learning_rate) || config.learning_rate <= 0.0 ||
         !std::isfinite(config.weight_decay) || config.weight_decay < 0.0 ||
         !std::isfinite(config.gradient_clip) || config.gradient_clip <= 0.0 ||
-        (!target_mask.empty() && target_mask.size() != bytes.size()))
+        (!target_mask.empty() && target_mask.size() != bytes.size()) ||
+        (!target_learning_rates.empty() && target_learning_rates.size() != bytes.size()))
         return report;
     if (!target_mask.empty() &&
         std::none_of(target_mask.begin(), target_mask.end(), [](std::uint8_t value) { return value != 0; }))
+        return report;
+    if (!target_learning_rates.empty() &&
+        !std::all_of(target_learning_rates.begin(), target_learning_rates.end(),
+            [](double value) { return std::isfinite(value) && value > 0.0 && value <= 0.1; }))
         return report;
 
     report.initial_loss = evaluate_loss(model, bytes, target_mask);
@@ -635,16 +641,20 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
     }
     std::array<float, kParameterCount> gradient{};
     std::size_t accumulated_targets = 0;
-    const auto apply_batch = [&]() {
+    const auto apply_batch = [&](double batch_learning_rate) {
         if (accumulated_targets == 0) return true;
         if (state.step == std::numeric_limits<std::uint64_t>::max() ||
+            !std::isfinite(batch_learning_rate) || batch_learning_rate <= 0.0 ||
+            batch_learning_rate > 0.1 ||
             !std::all_of(gradient.begin(), gradient.end(),
                          [](float value) { return std::isfinite(value); }))
             return false;
         const float inverse_batch = 1.0F / static_cast<float>(accumulated_targets);
         for (auto& value : gradient) value *= inverse_batch;
         ++state.step;
-        apply_adam(model, gradient, state, config);
+        TrainingConfig batch_config = config;
+        batch_config.learning_rate = batch_learning_rate;
+        apply_adam(model, gradient, state, batch_config);
         gradient.fill(0.0F);
         accumulated_targets = 0;
         return std::all_of(model.parameters.begin(), model.parameters.end(),
@@ -665,16 +675,24 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
         std::sort(target_order.begin(), target_order.end());
         std::vector<std::vector<std::size_t>> target_batches;
         target_batches.reserve((target_order.size() + config.batch_size - 1) / config.batch_size);
-        for (std::size_t begin = 0; begin < target_order.size(); begin += config.batch_size) {
-            const std::size_t end = std::min(target_order.size(), begin + config.batch_size);
-            target_batches.emplace_back(target_order.begin() + static_cast<std::ptrdiff_t>(begin),
-                                         target_order.begin() + static_cast<std::ptrdiff_t>(end));
+        double current_batch_rate = 0.0;
+        for (const std::size_t target : target_order) {
+            const double target_rate = target_learning_rates.empty()
+                ? config.learning_rate : target_learning_rates[target];
+            if (target_batches.empty() || target_batches.back().size() >= config.batch_size ||
+                target_rate != current_batch_rate) {
+                target_batches.emplace_back();
+                current_batch_rate = target_rate;
+            }
+            target_batches.back().push_back(target);
         }
         std::mt19937_64 shuffle_rng(
             config.seed ^ (state.step + 0x9E3779B97F4A7C15ULL));
         std::shuffle(target_batches.begin(), target_batches.end(), shuffle_rng);
 
         for (const auto& batch : target_batches) {
+            const double batch_learning_rate = target_learning_rates.empty()
+                ? config.learning_rate : target_learning_rates[batch.front()];
             Cache cache;
             bool cache_valid = false;
             for (const std::size_t target : batch) {
@@ -689,9 +707,9 @@ TrainingReport train(Model& model, std::span<const std::uint8_t> bytes,
                 ++accumulated_targets;
                 ++epoch_targets;
             }
-            if (!apply_batch()) return report;
+            if (!apply_batch(batch_learning_rate)) return report;
         }
-        if (!apply_batch()) return report;
+        if (!apply_batch(config.learning_rate)) return report;
         ++report.epochs_completed;
         report.target_bytes += epoch_targets;
     }
