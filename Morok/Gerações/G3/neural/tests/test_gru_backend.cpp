@@ -28,10 +28,14 @@ void test_exact_parameter_budget_and_descriptor() {
     assert(backend.parameter_count() == 100000U);
     assert(descriptor.parameter_count == 100000U);
 
-    auto& weights = backend.mutable_weights();
-    weights.output_bias.pop_back();
-    assert(backend.parameter_count() == 99999U);
-    assert(backend.descriptor().parameter_count == 99999U);
+    G3Weights altered_shape = backend.weights();
+    altered_shape.output_bias.pop_back();
+    assert(count_parameters(altered_shape) == 99999U);
+    // The backend exposes value-only spans; its tensor shapes cannot be resized.
+    auto mutable_view = backend.mutable_weights();
+    assert(mutable_view.output_bias.size() == 261U);
+    assert(backend.parameter_count() == 100000U);
+    assert(backend.descriptor().parameter_count == 100000U);
 }
 
 void test_tensor_shapes_initialization_and_seed() {
