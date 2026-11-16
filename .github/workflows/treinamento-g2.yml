@@ -14,7 +14,7 @@ on:
         description: "Máximo de épocas por tentativa (passagens completas pelo corpus)"
         type: number
         required: true
-        default: 1000
+        default: 50
       tentativas:
         description: "Número máximo de ciclos de treinamento"
         type: number
@@ -44,7 +44,7 @@ jobs:
 
       - name: Validar parâmetros
         env:
-          EPOCAS: ${{ github.event_name == 'push' && 1000 || inputs.epocas || 1000 }}
+          EPOCAS: ${{ github.event_name == 'push' && 50 || inputs.epocas || 50 }}
           TENTATIVAS: ${{ github.event_name == 'push' && 100 || inputs.tentativas || 100 }}
         run: |
           python3 - <<'PY'
