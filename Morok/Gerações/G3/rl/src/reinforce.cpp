@@ -607,6 +607,9 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
                 const auto& sample_probabilities = generated.sampling[step];
                 const auto& current_probabilities = generated.current[step];
                 const auto& reference_probabilities = generated.reference[step];
+                const double kl_value = calculate_kl(
+                    current_probabilities, reference_probabilities,
+                    config_.kl_epsilon);
                 for (std::size_t token = 0; token < kVocabularySize; ++token) {
                     const double indicator = token == selected ? 1.0 : 0.0;
                     const double reinforce_gradient =
@@ -616,9 +619,6 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
                     const double current_probability = current_probabilities[token];
                     const double reference_probability =
                         std::max(reference_probabilities[token], config_.kl_epsilon);
-                    const double kl_value = calculate_kl(
-                        current_probabilities, reference_probabilities,
-                        config_.kl_epsilon);
                     const double kl_gradient = current_probability > 0.0
                         ? config_.kl_beta * current_probability *
                             (std::log(current_probability / reference_probability) -
