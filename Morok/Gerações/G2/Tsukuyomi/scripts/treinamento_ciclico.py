@@ -616,6 +616,11 @@ def main() -> int:
 
         if best_checkpoint.is_file() and best_optimizer_state.is_file():
             restore_best_state(best_checkpoint, best_optimizer_state, checkpoint, optimizer_state)
+        if continuous and best_correct < TRAINING_QUESTIONS:
+            raise RuntimeError(
+                f"Objetivo contínuo não atingido: {best_correct}/{TRAINING_QUESTIONS} "
+                f"após {cycle} ciclos."
+            )
         final_results = evaluate_set(generator, checkpoint, training_dialogues)
         final_correct, final_total = write_results(report, "Resultado final — 40 perguntas treinadas", training_dialogues, final_results)
         report.write(f"**Resultado final: {final_correct}/{final_total} respostas exatas nas 40 perguntas treinadas.**\n")
