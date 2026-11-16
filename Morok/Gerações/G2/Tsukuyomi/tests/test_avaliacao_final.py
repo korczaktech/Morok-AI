@@ -39,23 +39,32 @@ class FinalEvaluationTests(unittest.TestCase):
         data = SCRIPT.parents[1] / "data"
         original = set(MODULE.read_dialogues(data / "treinamento-inicial.txt"))
         training = set(MODULE.read_dialogues(data / "treinamento.txt"))
+        feedback = set(MODULE.read_dialogues(data / "feedback.txt"))
         validation = set(MODULE.read_dialogues(data / "validacao.txt"))
         test = set(MODULE.read_dialogues(data / "teste.txt"))
         self.assertEqual(len(training), 56)
         self.assertEqual(len(original & training), 32)
+        self.assertFalse(training & feedback)
         self.assertFalse(training & validation)
         self.assertFalse(training & test)
+        self.assertFalse(feedback & validation)
+        self.assertFalse(feedback & test)
         self.assertFalse(validation & test)
         train_questions = {question for question, _ in training}
+        feedback_questions = {question for question, _ in feedback}
         validation_questions = {question for question, _ in validation}
         test_questions = {question for question, _ in test}
+        self.assertFalse(train_questions & feedback_questions)
         self.assertFalse(train_questions & validation_questions)
         self.assertFalse(train_questions & test_questions)
+        self.assertFalse(feedback_questions & validation_questions)
+        self.assertFalse(feedback_questions & test_questions)
         self.assertFalse(validation_questions & test_questions)
 
     def test_corpora_keep_validation_and_test_sizes(self):
         data = SCRIPT.parents[1] / "data"
-        self.assertEqual(len(MODULE.read_dialogues(data / "validacao.txt")), 40)
+        self.assertEqual(len(MODULE.read_dialogues(data / "feedback.txt")), 40)
+        self.assertEqual(len(MODULE.read_dialogues(data / "validacao.txt")), 20)
         self.assertEqual(len(MODULE.read_dialogues(data / "teste.txt")), 12)
 
 
