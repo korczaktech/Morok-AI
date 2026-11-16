@@ -10,6 +10,7 @@ on:
       - "Morok/Gerações/G3/training/**"
       - "Morok/CMakeLists.txt"
       - "Morok/tests/CMakeLists.txt"
+      - "Morok/tests/scripts/test_g3_int8_deployment.cmake"
       - "Morok/include/morok/model/model_backend.hpp"
       - "Morok/include/morok/model/model_session.hpp"
       - "Morok/include/morok/lang/byte_tokenizer.hpp"
