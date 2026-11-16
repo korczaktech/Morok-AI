@@ -1,9 +1,13 @@
 # Artemis — G3
 
-Modelo multiagente que utiliza mais de dois agentes (mínimo de três).
+Sistema multiagente com no mínimo três agentes.
 
-Implementação exclusiva de Artemis na geração G3. Não deve importar código privado de outro modelo. Dependências compartilhadas devem permanecer nas bibliotecas públicas da raiz.
+Este perfil utiliza a infraestrutura compartilhada de Morok e o backend comum
+definido em [ARQUITETURA.md](../ARQUITETURA.md). Não cria Core, runtime ou motor
+neural independente. A implementação específica do perfil fica limitada às
+suas políticas, configurações e integrações próprias.
 
-**Estado:** diretório inicial de organização. A implementação será migrada após o inventário de dependências e a separação dos alvos CMake.
+**Estado:** perfil reservado; implementação posterior à integração do contrato
+comum e à construção da arquitetura neural G3.
 
 Especificação: [MODELOS.md](../../MODELOS.md).
