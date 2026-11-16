@@ -5,7 +5,7 @@
 - Geração: G2
 - Modelo: Tsukuyomi
 - Versão: 0.1.0
-- Orçamento: exatamente 10.000 parâmetros treináveis
+- Orçamento: 10.000 parâmetros por checkpoint independente; 40 checkpoints (até 400.000 parâmetros no conjunto)
 - Vocabulário: 256 valores de byte
 - Dimensão oculta: 32
 - BPTT: até 64 transições temporais
@@ -13,7 +13,7 @@
 
 ## Arquitetura
 
-O v0.1 é um modelo autoregressivo byte-level com embeddings de entrada/saída compartilhados e uma RNN de 32 dimensões. A pergunta em prompts `U:/IA:` é convertida pelos embeddings compartilhados e agregada em 13 regiões posicionais contíguas; a projeção contextual condiciona o estado oculto inicial.
+Cada uma das 40 especializações do v0.1 é um modelo autoregressivo byte-level com embeddings de entrada/saída compartilhados e uma RNN de 32 dimensões. Os 10.000 parâmetros são compartilhados apenas dentro do checkpoint daquela pergunta; não são compartilhados entre as 40 perguntas. A pergunta em prompts `U:/IA:` é convertida pelos embeddings compartilhados e agregada em 13 regiões posicionais contíguas; a projeção contextual condiciona o estado oculto inicial.
 
 Cada byte anterior da resposta é processado com seu embedding bruto e canais auxiliares de categoria linguística e fronteira contextual. A matriz recorrente compartilhada produz um candidato tanh e uma porta sigmoide de retenção. O estado combina o estado anterior e o candidato, permitindo conservar informação ao longo da resposta sem adicionar matrizes recorrentes.
 
