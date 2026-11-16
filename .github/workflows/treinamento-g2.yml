@@ -126,6 +126,8 @@ jobs:
           TENTATIVAS: ${{ github.event_name == 'push' && 100 || inputs.tentativas || 100 }}
           QUESTOES: ${{ inputs.questoes || 20 }}
           TREINAMENTO_CONTINUO: ${{ github.event_name == 'workflow_dispatch' && inputs.treinamento_continuo || false }}
+          TSUKUYOMI_PERSIST_STATE: "1"
+          GH_TOKEN: ${{ github.token }}
         run: |
           CONTINUO=0
           if [ "$TREINAMENTO_CONTINUO" = "true" ]; then CONTINUO=1; fi
