@@ -1,3 +1,4 @@
+import hashlib
 import sys
 import tempfile
 import unittest
@@ -31,6 +32,37 @@ class TrainingDataTests(unittest.TestCase):
         for level in (-0.1, 1.1, float("nan")):
             with self.assertRaises(ValueError):
                 training.learning_rate_for_lexical_level(base, level)
+
+    def test_global_cycle_counter_increments_and_survives_history_round_trip(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "history.json"
+            history = training.load_question_history(path)
+            self.assertEqual(history["global_cycles"], 0)
+            self.assertEqual(training.next_global_cycle(history), 1)
+            self.assertEqual(training.next_global_cycle(history), 2)
+            training.write_question_history(path, history)
+            loaded = training.load_question_history(path)
+            self.assertEqual(loaded["global_cycles"], 2)
+            self.assertEqual(training.next_global_cycle(loaded), 3)
+
+    def test_legacy_question_history_gets_global_cycle_counter(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "history.json"
+            path.write_text('{"version": 1, "questions": {}}', encoding="utf-8")
+            history = training.load_question_history(path)
+            self.assertEqual(history["global_cycles"], 0)
+
+    def test_checkpoint_sha256_detects_weight_and_adam_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "model.ckpt"
+            self.assertIsNone(training.checkpoint_sha256(path))
+            path.write_bytes(b"weights-cycle-1")
+            first = training.checkpoint_sha256(path)
+            self.assertEqual(len(first), 64)
+            self.assertEqual(first, hashlib.sha256(b"weights-cycle-1").hexdigest())
+            path.write_bytes(b"weights-cycle-2")
+            second = training.checkpoint_sha256(path)
+            self.assertNotEqual(first, second)
 
     def test_question_learning_rate_map_assigns_each_answer_byte(self):
         with tempfile.TemporaryDirectory() as directory:
