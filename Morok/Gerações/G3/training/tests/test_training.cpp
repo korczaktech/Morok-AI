@@ -23,11 +23,12 @@ void test_dataset_loader_and_group_split() {
         for (int i = 0; i < 20; ++i) {
             out << "{\"example_id\":\"ex-" << i
                 << "\",\"group_id\":\"family-" << (i / 2)
-                << "\",\"category\":\"general\",\"question\":\"Ola " << i
+                << "\",\"category\":\"general\",\"question\":\"Como {0} {1} " << i
                 << "\",\"answer\":\"Oi\",\"source\":\"fixture\","
                    "\"language\":\"pt-BR\",\"dataset_version\":\"test-v1\","
                    "\"quality\":1.0,\"sensitive\":false,"
-                   "\"question_variants\":[\"Olá " << i << "\",\"E aí " << i << "\"]}\n";
+                   "\"question_variants\":[\"Olá " << i << "\",\"E aí " << i << "\"],"
+                   "\"expansion_axes\":[[\"fazer\",\"realizar\"],[\"isso\",\"isto\"]]}\n"
         }
     }
     const auto dataset = load_jsonl(path);
