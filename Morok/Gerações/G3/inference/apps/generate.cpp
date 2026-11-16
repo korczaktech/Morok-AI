@@ -2,6 +2,7 @@
 #include "morok/g3/inference/int8_backend.hpp"
 #include "morok/g3/inference/model_artifact.hpp"
 #include "morok/g3/inference/session_manager.hpp"
+#include "morok/g3/profiles/profile.hpp"
 #include "morok/g3/neural/gru_backend.hpp"
 #include "morok/g3/training/checkpoint.hpp"
 
@@ -56,6 +57,15 @@ std::unique_ptr<morok::model::ModelBackend> load_backend(
 
 } // namespace
 
+morok::g3::profiles::ProfileId parse_profile(std::string_view value) {
+    using morok::g3::profiles::ProfileId;
+    if (value == "mokosh") return ProfileId::mokosh;
+    if (value == "tsukuyomi") return ProfileId::tsukuyomi;
+    if (value == "artemis") return ProfileId::artemis;
+    if (value == "apollo") return ProfileId::apollo;
+    throw std::invalid_argument("unknown G3 profile: " + std::string(value));
+}
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         std::cerr << "Uso: morok-g3-generate <modelo.morok> [--benchmark] [prompt]\n";
@@ -66,13 +76,24 @@ int main(int argc, char** argv) {
         if (!artifact) throw std::runtime_error("Unable to load or validate .morok model");
         auto backend = load_backend(*artifact.value_if());
 
-        morok::g3::inference::GenerationConfig config;
-        morok::g3::inference::SessionManager sessions;
+        using morok::g3::profiles::ProfileId;
+        ProfileId profile_id = ProfileId::tsukuyomi;
+        for (int i = 2; i < argc; ++i) {
+            const std::string_view argument(argv[i]);
+            if (argument.starts_with("--profile="))
+                profile_id = parse_profile(argument.substr(10U));
+        }
+        const auto profile = morok::g3::profiles::profile_config(profile_id);
+        morok::g3::inference::GenerationConfig config = profile.generation;
+        morok::g3::inference::SessionManager sessions(
+            profile.recommended_session_capacity);
         bool benchmark_mode = false;
         std::string prompt;
         for (int i = 2; i < argc; ++i) {
             const std::string_view argument(argv[i]);
-            if (argument == "--benchmark") {
+            if (argument.starts_with("--profile=")) {
+                continue;
+            } else if (argument == "--benchmark") {
                 benchmark_mode = true;
             } else if (argument.starts_with("--temperature=")) {
                 config.temperature = std::stod(std::string(argument.substr(14U)));
@@ -117,23 +138,34 @@ int main(int argc, char** argv) {
         }
 
         if (!prompt.empty()) {
-            const auto result = sessions.generate(*backend, "cli", prompt, config);
-            if (!result) throw std::runtime_error("G3 generation failed");
-            std::cout << result.value_if()->text << '\n';
-            if (result.value_if()->repetition_detected)
-                std::cerr << "[G3] generation stopped: repeated n-gram detected\n";
+            const auto results = morok::g3::profiles::run_profile(
+                *backend, sessions, profile_id, "cli", prompt);
+            if (!results) throw std::runtime_error("G3 profile generation failed");
+            for (const auto& result : *results.value_if()) {
+                if (profile.agent_count > 1U)
+                    std::cout << "[agent-" << (result.agent_index + 1U) << "] ";
+                std::cout << result.text << '\n';
+                if (result.generation.repetition_detected)
+                    std::cerr << "[G3] generation stopped: repeated n-gram detected\n";
+            }
             return 0;
         }
 
         std::string line;
         while (std::getline(std::cin, line)) {
             if (line == "/sair") break;
-            const auto result = sessions.generate(*backend, "interactive", line, config);
-            if (!result) {
-                std::cerr << "[G3] generation failed\n";
+            const auto results = morok::g3::profiles::run_profile(
+                *backend, sessions, profile_id, "interactive", line);
+            if (!results) {
+                std::cerr << "[G3] profile generation failed\n";
                 continue;
             }
-            std::cout << result.value_if()->text << "\n\n";
+            for (const auto& result : *results.value_if()) {
+                if (profile.agent_count > 1U)
+                    std::cout << "[agent-" << (result.agent_index + 1U) << "] ";
+                std::cout << result.text << '\n';
+            }
+            std::cout << '\n';
         }
         return 0;
     } catch (const std::exception& error) {
