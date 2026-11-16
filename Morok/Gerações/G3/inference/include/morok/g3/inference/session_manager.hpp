@@ -41,6 +41,7 @@ private:
     struct Entry final {
         explicit Entry(const model::ModelDescriptor& descriptor,
                        std::uint64_t seed);
+        model::ModelDescriptor descriptor{};
         std::vector<std::byte> state;
         std::mt19937_64 random;
         std::mutex mutex;
