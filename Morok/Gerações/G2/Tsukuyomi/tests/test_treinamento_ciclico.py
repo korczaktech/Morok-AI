@@ -95,7 +95,7 @@ class TrainingDataTests(unittest.TestCase):
                 corpus.read_bytes(),
                 b"U: pergunta?\nIA: resposta esperada\n",
             )
-            self.assertNotIn(b"\n", corpus.read_bytes())
+            self.assertEqual(corpus.read_bytes().count(b"\n"), 2)
             self.assertEqual(
                 training.read_dialogues(corpus),
                 [("pergunta?", "resposta esperada")],
