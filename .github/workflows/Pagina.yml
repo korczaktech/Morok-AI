@@ -45,6 +45,10 @@ jobs:
           node --check Site/Front-End/validate.mjs
           node --check Site/Back-End/server.js
           node -e "JSON.parse(require('node:fs').readFileSync('Site/Back-End/package.json', 'utf8'))"
+          cd Site/Back-End
+          npm install --ignore-scripts
+          npm audit --omit=dev --audit-level=high
+          cd ../..
           node Site/Front-End/validate.mjs
       - name: Validar contratos de sincronização
         run: |
