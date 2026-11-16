@@ -623,6 +623,14 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
         }
     }
 
+    const float batch_scale = 1.0F /
+        static_cast<float>(std::max<std::size_t>(batch_gradients.size(), 1U));
+    for (auto& sequence : batch_gradients) {
+        for (float& gradient : sequence.logit_gradients) {
+            gradient *= batch_scale;
+        }
+    }
+
     const auto apply_status = policy.apply_batch_gradients(batch_gradients);
     if (!apply_status) {
         return Result<TrainingReport>::failure(*apply_status.error_if());
