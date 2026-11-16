@@ -1,5 +1,6 @@
 #include "morok/g3/profiles/profile.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
