@@ -236,6 +236,16 @@ def load_feedback_memory(path: Path) -> dict[str, str]:
     return memory
 
 
+def exclude_validation_from_feedback(memory: dict[str, str],
+                                     validation_dialogues: list[tuple[str, str]]) -> int:
+    """Remove feedback legado que contaminaria o novo holdout independente."""
+    held_out_questions = {question for question, _ in validation_dialogues}
+    contaminated = held_out_questions.intersection(memory)
+    for question in contaminated:
+        del memory[question]
+    return len(contaminated)
+
+
 def record_validation_errors(memory: dict[str, str],
                              dialogues: list[tuple[str, str]],
                              results: list[tuple[str, bool, float]]) -> int:
@@ -482,6 +492,16 @@ def main() -> int:
     learning_rate_path = Path("build/g2/tsukuyomi-learning-rate.txt")
     question_history_path = Path("build/g2/tsukuyomi-historico-perguntas.json")
     feedback_memory = load_feedback_memory(feedback_path)
+    removed_legacy_feedback = exclude_validation_from_feedback(
+        feedback_memory, independent_validation_pool
+    )
+    if removed_legacy_feedback:
+        write_feedback_memory(feedback_path, feedback_memory)
+        print(
+            f"Memória migrada: {removed_legacy_feedback} correção(ões) removida(s) "
+            "do holdout independente.",
+            flush=True,
+        )
     question_history = load_question_history(question_history_path)
     resume_previous_run = resumable_state_exists(checkpoint, optimizer_state)
     learning_rate = load_learning_rate(learning_rate_path, INITIAL_LEARNING_RATE)
