@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <stdexcept>
 #include <utility>
 
 namespace morok::g3::inference {
