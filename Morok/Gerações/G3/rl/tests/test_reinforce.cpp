@@ -160,6 +160,23 @@ void test_evaluator_audit_and_reward_hacking() {
     assert(generic.value_if()->mean_reward < 0.0);
 }
 
+
+void test_training_requires_evaluator_audit() {
+    Config config;
+    config.candidates_per_prompt = 1;
+    MockPolicy policy("unaudited-policy", {static_cast<TokenId>('A')});
+    MockPolicy reference("unaudited-sft", {static_cast<TokenId>('B')});
+    MockEvaluator evaluator;
+    ReinforceTrainer trainer(config);
+    const std::array<Prompt, 1> prompts{{
+        Prompt{"audit-required", "general", {morok::lang::kUsrToken}}}};
+    const auto result = trainer.train_batch(
+        prompts, policy, reference, evaluator,
+        std::span<const RewardAuditCase>{});
+    assert(!result.has_value());
+    assert(policy.updates == 0U);
+}
+
 void test_reinforce_and_reference_kl() {
     Config config;
     config.candidates_per_prompt = 3;
@@ -290,6 +307,7 @@ void test_closed_set_comparison() {
 int main() {
     test_config_validation();
     test_evaluator_audit_and_reward_hacking();
+    test_training_requires_evaluator_audit();
     test_reinforce_and_reference_kl();
     test_copy_and_justified_length_penalties();
     test_closed_set_comparison();
