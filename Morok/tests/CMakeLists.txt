@@ -265,7 +265,7 @@ set_tests_properties(g3.neural PROPERTIES LABELS "g3;neural;architecture" TIMEOU
 add_executable(morok_test_g3_inference
     ../Gerações/G3/inference/tests/test_inference.cpp)
 target_link_libraries(morok_test_g3_inference
-    PRIVATE Morok::G3::Inference Threads::Threads morok_build_options)
+    PRIVATE Morok::G3::Inference Morok::G3::Neural Threads::Threads morok_build_options)
 morok_enable_sanitizers(morok_test_g3_inference)
 add_test(NAME g3.inference COMMAND morok_test_g3_inference)
 set_tests_properties(g3.inference PROPERTIES LABELS "g3;inference;export" TIMEOUT 60)
