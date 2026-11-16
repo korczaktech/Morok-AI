@@ -703,7 +703,7 @@ def main() -> int:
             )
         final_results = evaluate_set(generator, trainer, checkpoint_directory, training_dialogues)
         final_correct, final_total = write_results(
-            report, "Resultado final — 40 checkpoints individuais", training_dialogues, final_results)
+            report, "Resultado final — 100 checkpoints individuais", training_dialogues, final_results)
         report.write(f"**Resultado final: {final_correct}/{final_total} respostas exatas nas 100 perguntas treinadas.**\n")
         print(f"Resultado final nas 100 perguntas: {final_correct}/{final_total}.", flush=True)
 
