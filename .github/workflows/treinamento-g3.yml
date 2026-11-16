@@ -1,0 +1,170 @@
+name: Treinamento — G3
+
+on:
+  workflow_dispatch:
+    inputs:
+      epocas_sft:
+        description: "Épocas do treinamento supervisionado (SFT)"
+        type: number
+        required: true
+        default: 10
+      seed:
+        description: "Seed para reprodutibilidade"
+        type: number
+        required: true
+        default: 42
+      executar_rl:
+        description: "Executar REINFORCE depois do SFT e da avaliação"
+        type: boolean
+        required: true
+        default: false
+      epocas_rl:
+        description: "Épocas de REINFORCE, se habilitado (1 a 100)"
+        type: number
+        required: true
+        default: 3
+
+permissions:
+  contents: read
+
+concurrency:
+  group: treinamento-g3-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  treinar-g3:
+    name: SFT, avaliação e REINFORCE opcional
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      DATASET: Gerações/G3/training/dataset/g3_ptbr_v1.jsonl
+      OUTPUT_DIR: build/g3-training
+      SEED: ${{ inputs.seed }}
+      EPOCAS_SFT: ${{ inputs.epocas_sft }}
+      EXECUTAR_RL: ${{ inputs.executar_rl }}
+      EPOCAS_RL: ${{ inputs.epocas_rl }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validar parâmetros
+        run: |
+          python3 - <<'PY'
+          import os
+          sft = int(os.environ["EPOCAS_SFT"])
+          seed = int(os.environ["SEED"])
+          rl = int(os.environ["EPOCAS_RL"])
+          if not 1 <= sft <= 1000:
+              raise SystemExit("epocas_sft deve estar entre 1 e 1000.")
+          if not 0 <= seed <= 18446744073709551615:
+              raise SystemExit("seed fora do intervalo uint64.")
+          if not 1 <= rl <= 100:
+              raise SystemExit("epocas_rl deve estar entre 1 e 100.")
+          PY
+
+      - name: Validar corpus pt-BR
+        run: |
+          python3 "Morok/Gerações/G3/training/dataset/validate_corpus.py" "Morok/${DATASET}"
+
+      - name: Instalar dependências
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build libsqlite3-dev libicu-dev
+
+      - name: Configurar projeto
+        working-directory: Morok
+        run: |
+          cmake -S . -B build/g3-training -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DMOROK_BUILD_TESTS=ON \
+            -DMOROK_BUILD_APPS=ON
+
+      - name: Compilar treinamento e testes G3
+        working-directory: Morok
+        run: |
+          cmake --build build/g3-training --parallel 2 --target \
+            morok_g3_train \
+            morok_g3_evaluate \
+            morok_g3_reinforce \
+            morok_test_g3_training \
+            morok_test_g3_reinforcement
+
+      - name: Executar testes do pipeline G3
+        working-directory: Morok
+        run: |
+          ctest --test-dir build/g3-training \
+            -R "g3.training|g3.reinforcement" \
+            --output-on-failure
+
+      - name: Preparar diretório de resultados
+        working-directory: Morok
+        run: mkdir -p "${OUTPUT_DIR}"
+
+      - name: Treinar G3 — SFT
+        working-directory: Morok
+        run: |
+          build/morok-g3-train \
+            "${DATASET}" \
+            "${OUTPUT_DIR}/sft-metrics.jsonl" \
+            "${OUTPUT_DIR}/g3-sft.morok" \
+            "${EPOCAS_SFT}" "${SEED}" \
+            --checkpoint="${OUTPUT_DIR}/g3-sft.g3ckpt"
+
+      - name: Avaliar generalização do SFT
+        working-directory: Morok
+        run: |
+          build/morok-g3-evaluate \
+            "${DATASET}" \
+            "${OUTPUT_DIR}/g3-sft.morok" \
+            "${OUTPUT_DIR}/sft-evaluation.json" \
+            "${SEED}"
+
+      - name: Treinar G3 — REINFORCE
+        if: ${{ inputs.executar_rl }}
+        working-directory: Morok
+        run: |
+          build/morok-g3-reinforce \
+            "${DATASET}" \
+            "${OUTPUT_DIR}/g3-sft.morok" \
+            "${OUTPUT_DIR}/g3-rl.morok" \
+            "${OUTPUT_DIR}/rl-report.json" \
+            "${EPOCAS_RL}"
+
+      - name: Publicar resumo do treinamento
+        if: always()
+        working-directory: Morok
+        run: |
+          {
+            echo "## Treinamento Morok G3"
+            echo
+            echo "- Corpus: \`${DATASET}\`"
+            echo "- Épocas SFT solicitadas: ${EPOCAS_SFT}"
+            echo "- Seed: ${SEED}"
+            echo "- REINFORCE solicitado: ${EXECUTAR_RL}"
+            if [ -f "${OUTPUT_DIR}/sft-evaluation.json" ]; then
+              echo
+              echo "### Avaliação SFT"
+              cat "${OUTPUT_DIR}/sft-evaluation.json"
+            fi
+            if [ -f "${OUTPUT_DIR}/rl-report.json" ]; then
+              echo
+              echo "### Relatório REINFORCE"
+              cat "${OUTPUT_DIR}/rl-report.json"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Salvar modelo, checkpoint e relatórios
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: morok-g3-training-${{ github.run_number }}
+          path: |
+            Morok/build/g3-training/g3-sft.morok
+            Morok/build/g3-training/g3-sft.g3ckpt
+            Morok/build/g3-training/sft-metrics.jsonl
+            Morok/build/g3-training/sft-evaluation.json
+            Morok/build/g3-training/g3-rl.morok
+            Morok/build/g3-training/rl-report.json
+          if-no-files-found: warn
+          retention-days: 30
