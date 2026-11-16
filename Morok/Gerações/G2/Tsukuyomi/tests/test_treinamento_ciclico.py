@@ -87,6 +87,23 @@ class TrainingDataTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 training.build_training_corpus(base, {"outra": "correção"}, root / "out.txt")
 
+    def test_training_corpus_rejects_duplicate_answers_after_memory_overrides(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / "base.txt"
+            base.write_text(
+                "U: pergunta um\nIA: resposta original um\n\n"
+                "U: pergunta dois\nIA: resposta original dois\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "respostas-alvo duplicadas"):
+                training.build_training_corpus(
+                    base,
+                    {"pergunta dois": "resposta original um"},
+                    root / "out.txt",
+                )
+            self.assertFalse((root / "out.txt").exists())
+
     def test_individual_loss_corpus_uses_real_line_breaks(self):
         with tempfile.TemporaryDirectory() as directory:
             corpus = Path(directory) / "single-question.txt"
