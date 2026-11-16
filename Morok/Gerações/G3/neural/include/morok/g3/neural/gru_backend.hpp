@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace morok::g3::neural {
@@ -65,10 +66,15 @@ public:
         return count_parameters(weights_);
     }
     [[nodiscard]] float rms_epsilon() const noexcept { return rms_epsilon_; }
+    [[nodiscard]] std::uint64_t initialization_seed() const noexcept { return seed_; }
+    [[nodiscard]] static constexpr std::string_view initialization_method() noexcept {
+        return "xavier_glorot+orthogonal_per_gate_gram_schmidt";
+    }
 
 private:
     G3Weights weights_;
     float rms_epsilon_{1.0e-5F};
+    std::uint64_t seed_{0};
 };
 
 } // namespace morok::g3::neural
