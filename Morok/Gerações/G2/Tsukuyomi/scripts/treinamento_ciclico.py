@@ -814,6 +814,12 @@ def main() -> int:
                 best_validation_cycle = cycle
                 best_validation_score = validation_score
                 best_validation_results = candidate_all_results
+            print(
+                f"Seleção por Loss de validação: candidato={candidate_validation_loss:.6f}; "
+                f"melhor={best_validation_loss:.6f}; "
+                f"checkpoint={'ACEITO' if candidate_accepted else 'REJEITADO'}.",
+                flush=True,
+            )
             # Acertos e regressões continuam como diagnóstico; a seleção é pela
             # cross-entropy independente, não pelo ranking lexical nem pela Loss de treino.
             report.write(
