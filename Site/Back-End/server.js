@@ -160,7 +160,7 @@ function totp(secret, time = Date.now()) {
   return String(binary).padStart(6, "0");
 }
 function verifyTotp(secret, code) {
-  if (!/^\\d{6}$/.test(String(code || ""))) return false;
+  if (!/^\d{6}$/.test(String(code || ""))) return false;
   const now = Date.now();
   return [-1,0,1].some(step => totp(secret, now + step * 30000) === String(code));
 }
