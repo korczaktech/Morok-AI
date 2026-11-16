@@ -613,9 +613,17 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
                         advantage * temporal_weight *
                         (sample_probabilities[token] - indicator) /
                         config_.temperature;
-                    const double kl_gradient = config_.kl_beta *
-                        (current_probabilities[token] -
-                         reference_probabilities[token]);
+                    const double current_probability = current_probabilities[token];
+                    const double reference_probability =
+                        std::max(reference_probabilities[token], config_.kl_epsilon);
+                    const double kl_value = calculate_kl(
+                        current_probabilities, reference_probabilities,
+                        config_.kl_epsilon);
+                    const double kl_gradient = current_probability > 0.0
+                        ? config_.kl_beta * current_probability *
+                            (std::log(current_probability / reference_probability) -
+                             kl_value)
+                        : 0.0;
                     gradient.logit_gradients[
                         step * kVocabularySize + token] =
                         static_cast<float>(reinforce_gradient + kl_gradient);

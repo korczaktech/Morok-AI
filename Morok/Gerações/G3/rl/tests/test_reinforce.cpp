@@ -54,6 +54,7 @@ public:
         std::span<const SequenceGradient> gradients) override {
         ++updates;
         last_batch_size = gradients.size();
+        last_gradients.assign(gradients.begin(), gradients.end());
         last_gradients_finite = true;
         for (const auto& sequence : gradients) {
             if (sequence.logit_gradients.size() !=
@@ -71,6 +72,7 @@ public:
     std::size_t updates{0};
     std::size_t last_batch_size{0};
     bool last_gradients_finite{false};
+    std::vector<SequenceGradient> last_gradients{};
 
 private:
     std::string name_;
@@ -253,6 +255,57 @@ void test_reinforce_and_reference_kl() {
 }
 
 
+class ZeroEvaluator final : public RewardEvaluator {
+public:
+    EvaluatorMetadata metadata() const override {
+        return {"independent-zero-rubric", "v1.0", "human-labelled-gradient-fixture"};
+    }
+
+    morok::common::Result<RewardComponents> evaluate(
+        std::span<const TokenId>,
+        std::span<const TokenId>) const override {
+        return morok::common::Result<RewardComponents>::success(
+            RewardComponents{0.0, 0.0, 0.0, 0.0});
+    }
+};
+
+void test_exact_kl_logit_gradient() {
+    Config config;
+    config.candidates_per_prompt = 1;
+    config.max_response_tokens = 1;
+    config.top_k = 2;
+    config.temperature = 1.0;
+    config.kl_beta = 0.02;
+    config.penalties.empty_response = 0.0;
+
+    MockPolicy policy("current-policy", {static_cast<TokenId>('A')}, 0.8F);
+    MockPolicy reference("frozen-reference", {static_cast<TokenId>('B')}, 0.8F);
+    ZeroEvaluator evaluator;
+    ReinforceTrainer trainer(config);
+    const std::array<Prompt, 1> prompts{{
+        Prompt{"kl-gradient", "math", {morok::lang::kUsrToken}}}};
+    const std::array<RewardAuditCase, 1> audit{{
+        {"zero-score", {}, {static_cast<TokenId>('A')}, 0.0, 0.0}}};
+
+    const auto trained = trainer.train_batch(
+        prompts, policy, reference, evaluator, audit);
+    assert(trained.has_value());
+    assert(policy.last_gradients.size() == 1U);
+    const auto& gradient = policy.last_gradients.front().logit_gradients;
+    assert(gradient.size() == kVocabularySize);
+
+    const double p = 0.8;
+    const double q_floor = config.kl_epsilon;
+    const double kl = p * std::log(p / q_floor);
+    const double expected_a =
+        config.kl_beta * p * (std::log(p / q_floor) - kl);
+    const double expected_eos =
+        config.kl_beta * 0.2 * (0.0 - kl);
+    assert(std::abs(gradient[static_cast<std::size_t>('A')] - expected_a) < 1.0e-5);
+    assert(std::abs(gradient[morok::lang::kEosToken] - expected_eos) < 1.0e-5);
+    assert(std::abs(gradient[static_cast<std::size_t>('B')]) < 1.0e-7);
+}
+
 void test_copy_and_justified_length_penalties() {
     MockEvaluator evaluator;
     MockPolicy answer("answer", {static_cast<TokenId>('A')});
@@ -318,6 +371,7 @@ int main() {
     test_config_validation();
     test_evaluator_audit_and_reward_hacking();
     test_training_requires_evaluator_audit();
+    test_exact_kl_logit_gradient();
     test_reinforce_and_reference_kl();
     test_copy_and_justified_length_penalties();
     test_closed_set_comparison();
