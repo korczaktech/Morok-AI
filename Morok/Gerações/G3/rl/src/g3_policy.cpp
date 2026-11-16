@@ -48,8 +48,30 @@ Status G3PolicyAdapter::next_token_probabilities(
     std::span<float> probabilities) const {
     if(probabilities.size()!=V) return fail("policy.shape","G3 policy output must have 261 entries");
     std::vector<std::byte> state(backend_->descriptor().state_size_bytes);
-    if(!replay(*backend_,context,prefix,state))
+    bool reused=false;
+    if(cache_valid_ && cached_context_.size()==context.size() &&
+       std::equal(cached_context_.begin(),cached_context_.end(),context.begin())) {
+        if(prefix.size()==cached_prefix_.size() &&
+           std::equal(cached_prefix_.begin(),cached_prefix_.end(),prefix.begin())) {
+            state=cached_state_;
+            reused=true;
+        } else if(prefix.size()==cached_prefix_.size()+1U &&
+                  std::equal(cached_prefix_.begin(),cached_prefix_.end(),prefix.begin())) {
+            state=cached_state_;
+            const TokenId appended=prefix.back();
+            if(appended==morok::lang::kEosToken ||
+               !morok::lang::ByteTokenizer::is_byte_token(appended) ||
+               !backend_->consume_token(state,appended))
+                return fail("policy.cache","G3 policy cache received an invalid appended token");
+            reused=true;
+        }
+    }
+    if(!reused && !replay(*backend_,context,prefix,state))
         return fail("policy.replay","G3 policy could not replay prompt and sampled prefix");
+    cached_context_.assign(context.begin(),context.end());
+    cached_prefix_.assign(prefix.begin(),prefix.end());
+    cached_state_=state;
+    cache_valid_=true;
     std::vector<float> logs(V);
     const auto status=backend_->next_token_log_probabilities(state,logs);
     if(!status) return status;
@@ -59,6 +81,7 @@ Status G3PolicyAdapter::next_token_probabilities(
 Status G3PolicyAdapter::apply_batch_gradients(
     std::span<const SequenceGradient> gradients) {
     try {
+        cache_valid_=false;
         (void)training::apply_reinforce_gradients(
             *backend_,gradients,optimizer_state_,optimizer_config_);
     } catch(const std::exception& error) {
