@@ -214,13 +214,13 @@ def write_feedback_memory(path: Path, memory: dict[str, str]) -> None:
     """Grava a memória corretiva atomicamente no formato U:/IA:."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
-    with temporary.open("w", encoding="utf-8", newline="\\n") as output:
+    with temporary.open("w", encoding="utf-8", newline="\n") as output:
         for question, answer in sorted(memory.items()):
-            q = " ".join(question.replace("\\r", " ").replace("\\n", " ").split())
-            a = " ".join(answer.replace("\\r", " ").replace("\\n", " ").split())
+            q = " ".join(question.replace("\r", " ").replace("\n", " ").split())
+            a = " ".join(answer.replace("\r", " ").replace("\n", " ").split())
             if not q or not a:
                 raise RuntimeError("Memória corretiva contém pergunta ou resposta vazia.")
-            output.write(f"U: {q}\\nIA: {a}\\n\\n")
+            output.write(f"U: {q}\nIA: {a}\n\n")
     os.replace(temporary, path)
 
 
@@ -229,14 +229,14 @@ def build_training_corpus(base: Path, memory: dict[str, str], destination: Path)
     original = base.read_text(encoding="utf-8-sig").rstrip()
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(destination.name + ".tmp")
-    with temporary.open("w", encoding="utf-8", newline="\\n") as output:
+    with temporary.open("w", encoding="utf-8", newline="\n") as output:
         output.write(original)
         if memory:
-            output.write("\\n\\n")
+            output.write("\n\n")
             for question, answer in sorted(memory.items()):
-                q = " ".join(question.replace("\\r", " ").replace("\\n", " ").split())
-                a = " ".join(answer.replace("\\r", " ").replace("\\n", " ").split())
-                output.write(f"U: {q}\\nIA: {a}\\n\\n")
+                q = " ".join(question.replace("\r", " ").replace("\n", " ").split())
+                a = " ".join(answer.replace("\r", " ").replace("\n", " ").split())
+                output.write(f"U: {q}\nIA: {a}\n\n")
     os.replace(temporary, destination)
 
 
