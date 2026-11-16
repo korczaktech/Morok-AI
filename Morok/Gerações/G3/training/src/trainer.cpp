@@ -1,4 +1,5 @@
 #include "morok/g3/training/trainer.hpp"
+#include "morok/g3/rl/reinforce.hpp"
 
 #include <unicode/unistr.h>
 
@@ -755,6 +756,148 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
         append_jsonl(config.metrics_jsonl, event.str());
     }
     return report;
+}
+
+
+double apply_reinforce_gradients(
+    neural::G3Backend& backend,
+    std::span<const rl::SequenceGradient> sequences,
+    ReinforceOptimizerState& optimizer_state,
+    const TrainingConfig& config) {
+    if (sequences.empty() || config.bptt_steps == 0U ||
+        !std::isfinite(config.learning_rate) || config.learning_rate <= 0.0 ||
+        !std::isfinite(config.minimum_learning_rate) ||
+        config.minimum_learning_rate <= 0.0 ||
+        !std::isfinite(config.weight_decay) || config.weight_decay < 0.0) {
+        throw std::invalid_argument("Invalid G3 REINFORCE optimizer input");
+    }
+    Gradients accumulated(backend.weights());
+    const auto& weights = backend.weights();
+    for (const auto& sequence : sequences) {
+        if (sequence.context.empty() || sequence.response.empty() ||
+            sequence.logit_gradients.size() !=
+                sequence.response.size() * V) {
+            throw std::invalid_argument("Invalid G3 REINFORCE sequence gradient shape");
+        }
+        for (const auto token : sequence.context)
+            if (token >= V) throw std::invalid_argument("Invalid token in G3 RL context");
+        for (const auto token : sequence.response)
+            if (token >= V || (token >= 256U && token != EOS))
+                throw std::invalid_argument("Invalid token in G3 RL sampled response");
+
+        std::vector<std::uint16_t> inputs = sequence.context;
+        for (std::size_t i = 0; i + 1U < sequence.response.size(); ++i)
+            inputs.push_back(sequence.response[i]);
+        std::vector<float> h1(H1, 0.0F), h2(H2, 0.0F);
+        for (std::size_t begin = 0; begin < inputs.size();
+             begin += config.bptt_steps) {
+            const std::size_t end = std::min(inputs.size(), begin + config.bptt_steps);
+            std::vector<StepTape> tape;
+            tape.reserve(end - begin);
+            for (std::size_t t = begin; t < end; ++t) {
+                StepTape step;
+                step.input_token = inputs[t];
+                step.input_mask.assign(E, 1.0F);
+                step.second_mask.assign(H1, 1.0F);
+                const std::size_t response_index =
+                    t >= sequence.context.size() - 1U
+                        ? t - (sequence.context.size() - 1U)
+                        : 0U;
+                step.supervised = t >= sequence.context.size() - 1U &&
+                                  response_index < sequence.response.size();
+                step.target = step.supervised ? sequence.response[response_index] :
+                    (t + 1U < sequence.context.size() ? sequence.context[t + 1U] : EOS);
+                std::vector<float> embedded(E);
+                const std::size_t embedding_offset =
+                    static_cast<std::size_t>(step.input_token) * E;
+                for (std::size_t i = 0; i < E; ++i)
+                    embedded[i] = weights.embedding[embedding_offset + i];
+                step.first = gru_forward(embedded, h1, weights.layer1_input,
+                    weights.layer1_recurrent, weights.layer1_bias, H1);
+                step.first_raw = step.first.output;
+                normalize_forward(step.first_raw, weights.rms_scale,
+                    backend.rms_epsilon(), step.normalized, step.inverse_rms);
+                step.second = gru_forward(step.normalized, h2,
+                    weights.layer2_input, weights.layer2_recurrent,
+                    weights.layer2_bias, H2);
+                step.logits = output_logits(weights, step.second.output);
+                h1 = step.first.output;
+                h2 = step.second.output;
+                tape.push_back(std::move(step));
+            }
+
+            std::vector<float> dh1_future(H1, 0.0F), dh2_future(H2, 0.0F);
+            for (std::size_t reverse = tape.size(); reverse-- > 0U;) {
+                const auto& step = tape[reverse];
+                const std::size_t absolute_t = begin + reverse;
+                std::vector<float> dh2(H2, 0.0F);
+                if (step.supervised) {
+                    const std::size_t response_index =
+                        absolute_t - (sequence.context.size() - 1U);
+                    const std::size_t gradient_offset = response_index * V;
+                    std::vector<float> projected;
+                    (void)output_logits(weights, step.second.output, &projected);
+                    std::vector<float> dprojected(E, 0.0F);
+                    for (std::size_t token = 0; token < V; ++token) {
+                        const float dl = sequence.logit_gradients[gradient_offset + token];
+                        accumulated.w.output_bias[token] += dl;
+                        for (std::size_t dim = 0; dim < E; ++dim) {
+                            accumulated.w.embedding[token * E + dim] +=
+                                dl * projected[dim];
+                            dprojected[dim] +=
+                                dl * weights.embedding[token * E + dim];
+                        }
+                    }
+                    for (std::size_t row = 0; row < E; ++row) {
+                        accumulated.w.projection_bias[row] += dprojected[row];
+                        for (std::size_t col = 0; col < H2; ++col) {
+                            accumulated.w.projection[row * H2 + col] +=
+                                dprojected[row] * step.second.output[col];
+                            dh2[col] += weights.projection[row * H2 + col] *
+                                        dprojected[row];
+                        }
+                    }
+                }
+                for (std::size_t i = 0; i < H2; ++i)
+                    dh2[i] += dh2_future[i];
+                std::vector<float> dnorm, dprev2;
+                gru_backward(step.second, H2, weights.layer2_input,
+                    weights.layer2_recurrent, accumulated.w.layer2_input,
+                    accumulated.w.layer2_recurrent, accumulated.w.layer2_bias,
+                    dh2, dnorm, dprev2);
+                std::vector<float> dfirst, dscale(H1, 0.0F);
+                normalize_backward(step.first_raw, weights.rms_scale,
+                    step.inverse_rms, dnorm, dfirst, dscale);
+                for (std::size_t i = 0; i < H1; ++i) {
+                    dfirst[i] += dh1_future[i];
+                    accumulated.w.rms_scale[i] += dscale[i];
+                }
+                std::vector<float> dembedded, dprev1;
+                gru_backward(step.first, H1, weights.layer1_input,
+                    weights.layer1_recurrent, accumulated.w.layer1_input,
+                    accumulated.w.layer1_recurrent, accumulated.w.layer1_bias,
+                    dfirst, dembedded, dprev1);
+                const std::size_t emb_offset =
+                    static_cast<std::size_t>(step.input_token) * E;
+                for (std::size_t i = 0; i < E; ++i)
+                    accumulated.w.embedding[emb_offset + i] += dembedded[i];
+                dh1_future = std::move(dprev1);
+                dh2_future = std::move(dprev2);
+            }
+        }
+    }
+    AdamState state{optimizer_state.first_moment,
+                    optimizer_state.second_moment, optimizer_state.step};
+    TrainingConfig optimizer_config = config;
+    optimizer_config.warmup_fraction = 0.0;
+    optimizer_config.minimum_learning_rate = config.learning_rate;
+    double clipped_norm = 0.0;
+    (void)adamw_update(backend, accumulated, state, optimizer_config, 1U, 1U,
+                       clipped_norm);
+    optimizer_state.first_moment = std::move(state.first);
+    optimizer_state.second_moment = std::move(state.second);
+    optimizer_state.step = state.step;
+    return clipped_norm;
 }
 
 } // namespace morok::g3::training
