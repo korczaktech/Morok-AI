@@ -37,10 +37,10 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: treinamento-g2-${{ github.run_id }}
+  group: treinamento-g2-persistent-state
   cancel-in-progress: false
 
 jobs:
@@ -108,6 +108,20 @@ jobs:
         working-directory: Morok
         run: ctest --test-dir build/g2 -R "g2.tsukuyomi.model|architecture.generation_isolation" --output-on-failure
 
+      - name: Recuperar memória persistente do Tsukuyomi
+        if: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi) }}
+        run: |
+          mkdir -p Morok/build/g2
+          if git fetch origin refs/heads/tsukuyomi-state:refs/remotes/origin/tsukuyomi-state 2>/dev/null; then
+            git show origin/tsukuyomi-state:state/tsukuyomi-g2.ckpt > Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
+            git show origin/tsukuyomi-state:state/tsukuyomi-g2.ckpt.adam > Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
+            test -s Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
+            test -s Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
+            echo "Memória persistente recuperada: pesos + estado Adam."
+          else
+            echo "Primeira execução: ainda não existe memória persistente."
+          fi
+
       - name: Treinar e avaliar somente as questões selecionadas
         if: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi) }}
         working-directory: Morok
@@ -138,6 +152,36 @@ jobs:
             "Gerações/G2/Tsukuyomi/data/validacao.txt" \
             "Gerações/G2/Tsukuyomi/data/teste.txt" \
             build/g2/avaliacao-final-tsukuyomi.json
+
+      - name: Persistir pesos e memória de treinamento
+        if: ${{ success() && ((github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi)) }}
+        working-directory: Morok
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          STATE_DIR="$RUNNER_TEMP/tsukuyomi-state"
+          if git -C "$GITHUB_WORKSPACE" fetch origin refs/heads/tsukuyomi-state:refs/remotes/origin/tsukuyomi-state 2>/dev/null; then
+            git -C "$GITHUB_WORKSPACE" worktree add -B tsukuyomi-state "$STATE_DIR" origin/tsukuyomi-state
+          else
+            git -C "$GITHUB_WORKSPACE" worktree add -b tsukuyomi-state "$STATE_DIR" HEAD
+            git -C "$STATE_DIR" rm -rf .
+          fi
+          mkdir -p "$STATE_DIR/state"
+          install -m 0644 build/g2/tsukuyomi-treinamento-ciclico.ckpt "$STATE_DIR/state/tsukuyomi-g2.ckpt"
+          install -m 0644 build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam "$STATE_DIR/state/tsukuyomi-g2.ckpt.adam"
+          cat > "$STATE_DIR/state/README.txt" <<'EOF'
+          Tsukuyomi G2 persistent training state.
+          Keep the .ckpt and .adam files together; both are required for exact optimizer continuation.
+          This branch is machine state, not source code. Do not merge it into main.
+          EOF
+          git -C "$STATE_DIR" add state/
+          if git -C "$STATE_DIR" diff --cached --quiet; then
+            echo "O estado persistente não mudou; nenhuma gravação necessária."
+          else
+            git -C "$STATE_DIR" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Persistir estado de treinamento Tsukuyomi G2"
+            git -C "$STATE_DIR" push origin tsukuyomi-state
+          fi
 
       - name: Publicar tabela de respostas e annotations G2
         if: always()
