@@ -415,10 +415,10 @@ def evaluate_one(generator: Path, trainer: Path, checkpoint: Path,
         [str(generator), str(checkpoint), f"U: {question}", str(MAX_RESPONSE_BYTES)],
         check=True, capture_output=True, text=True, encoding="utf-8",
     )
-    answer = process.stdout.rstrip("\\r\\n")
+    answer = process.stdout.rstrip("\r\n")
     with tempfile.TemporaryDirectory(prefix="tsukuyomi-loss-") as directory:
         corpus = Path(directory) / "pergunta.txt"
-        corpus.write_text(f"U: {question}\\nIA: {expected}\\n", encoding="utf-8")
+        corpus.write_text(f"U: {question}\nIA: {expected}\n", encoding="utf-8")
         evaluated = subprocess.run(
             [str(trainer), "--evaluate-each", str(corpus), str(checkpoint)],
             check=True, capture_output=True, text=True, encoding="utf-8",
@@ -426,7 +426,7 @@ def evaluate_one(generator: Path, trainer: Path, checkpoint: Path,
     lines = evaluated.stdout.splitlines()
     if len(lines) != 1:
         raise RuntimeError(f"A pergunta individual retornou {len(lines)} métricas de Loss.")
-    fields = lines[0].split("\\t")
+    fields = lines[0].split("\t")
     if len(fields) != 4 or int(fields[0]) != 1:
         raise RuntimeError("Formato da Loss individual inválido.")
     loss, bpb, targets = float(fields[1]), float(fields[2]), int(fields[3])
