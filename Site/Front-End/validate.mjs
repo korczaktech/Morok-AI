@@ -31,6 +31,7 @@ const requiredContracts = [
   [app, "state.tasks = merged.slice(0, 100);", "sincronização deve preservar IDs de tarefas"],
   [app, "pendingResourceDeletions", "falhas de exclusão remota devem ficar pendentes"],
   [app, "pendingConversationDeletions", "exclusões de conversa devem sobreviver a falhas de rede"],
+  [app, "Preferências salvas e sincronizadas.", "tema deve sincronizar com a conta"],
   [backend, "createToken(account, req)", "sessão deve registrar user-agent"],
   [backend, "/v1/account/2fa/enable", "backend deve oferecer ativação de 2FA"],
   [backend, "/v1/support/tickets", "backend deve oferecer chamados"],
