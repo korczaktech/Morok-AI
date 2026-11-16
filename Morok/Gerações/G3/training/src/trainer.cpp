@@ -787,10 +787,13 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
         ? config.checkpoint_path : config.resume_from_checkpoint;
 
     for (std::size_t epoch = first_epoch; epoch <= last_epoch; ++epoch) {
-        std::shuffle(train_examples.begin(), train_examples.end(), rng);
+        std::vector<std::size_t> sampler_order(train_examples.size());
+        std::iota(sampler_order.begin(), sampler_order.end(), 0U);
+        std::shuffle(sampler_order.begin(), sampler_order.end(), rng);
         double train_loss = 0.0, last_norm = 0.0, max_norm = 0.0, last_lr = config.learning_rate;
         std::size_t seen = 0U;
-        for (const auto& example : train_examples) {
+        for (const auto example_index : sampler_order) {
+            const auto& example = train_examples[example_index];
             Gradients gradients(backend.weights());
             double raw_norm = 0.0;
             const double loss = example_forward_backward(
@@ -868,6 +871,10 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
             checkpoint.scheduler_step = global_step;
             checkpoint.scheduler_learning_rate = std::max(last_lr, config.minimum_learning_rate);
             checkpoint.completed_epochs = epoch;
+            checkpoint.sampler_order.reserve(sampler_order.size());
+            for (const auto index : sampler_order)
+                checkpoint.sampler_order.push_back(static_cast<std::uint64_t>(index));
+            checkpoint.sampler_position = 0U;
             checkpoint.train_split = widen_indices(report.splits.train);
             checkpoint.validation_split = widen_indices(report.splits.validation);
             checkpoint.test_split = widen_indices(report.splits.test);
