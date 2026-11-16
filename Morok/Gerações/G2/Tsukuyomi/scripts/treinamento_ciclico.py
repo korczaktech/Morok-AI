@@ -684,7 +684,7 @@ def main() -> int:
                 execution_id, dataset="training")
             write_question_history(history_path, history)
             correct, total = write_results(
-                report, f"Resultado do ciclo {cycle} — 40 perguntas", training_dialogues, cycle_results)
+                report, f"Resultado do ciclo {cycle} — 100 perguntas", training_dialogues, cycle_results)
             best_correct = correct
             report.write(f"- Checkpoints individuais aceitos: {accepted_count}/100.\n")
             report.write(f"- Checkpoints individuais rejeitados: {rejected_count}/100.\n")
