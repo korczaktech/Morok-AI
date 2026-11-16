@@ -34,6 +34,8 @@ const requiredContracts = [
   [backend, "createToken(account, req)", "sessão deve registrar user-agent"],
   [backend, "/v1/account/2fa/enable", "backend deve oferecer ativação de 2FA"],
   [backend, "/v1/support/tickets", "backend deve oferecer chamados"],
+  [backend, 'path === "/v1/support/tickets/close"', "backend deve permitir encerrar chamados"],
+  [app, "data-close-ticket", "frontend deve expor encerramento de chamados"],
   [worker, 'addEventListener("push"', "service worker deve tratar push"]
 ];
 for (const [source, expected, description] of requiredContracts) {
