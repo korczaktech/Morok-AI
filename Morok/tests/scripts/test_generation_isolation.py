@@ -66,6 +66,10 @@ def main() -> int:
     if not backend_contract.is_file():
         errors.append("shared model backend contract is missing from Morok::Core")
 
+    model_session = ROOT / "include" / "morok" / "model" / "model_session.hpp"
+    if not model_session.is_file():
+        errors.append("shared model session facade is missing from Morok::Core")
+
     g1_backend_header = g1 / "shared" / "include" / "morok" / "model" / "g1_backend.hpp"
     g1_backend_source = g1 / "shared" / "src" / "model" / "g1_backend.cpp"
     if not g1_backend_header.is_file() or not g1_backend_source.is_file():
