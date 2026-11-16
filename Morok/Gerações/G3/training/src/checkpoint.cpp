@@ -514,4 +514,46 @@ Result<G3TrainingCheckpoint> read_training_checkpoint(
     return deserialize_training_checkpoint(bytes, expected);
 }
 
+
+std::vector<float> capture_g3_model_weights(const neural::G3Backend& backend) {
+    const auto& w = backend.weights();
+    std::vector<float> result;
+    result.reserve(static_cast<std::size_t>(backend.parameter_count()));
+    const std::array<const std::vector<float>*, 11> tensors{
+        &w.embedding, &w.layer1_input, &w.layer1_recurrent, &w.layer1_bias,
+        &w.layer2_input, &w.layer2_recurrent, &w.layer2_bias, &w.rms_scale,
+        &w.projection, &w.projection_bias, &w.output_bias};
+    for (const auto* tensor : tensors)
+        result.insert(result.end(), tensor->begin(), tensor->end());
+    return result;
+}
+
+Status restore_g3_model_weights(std::span<const float> weights,
+                                neural::G3Backend& backend) {
+    if (weights.size() != kG3CheckpointParameterCount ||
+        backend.parameter_count() != kG3CheckpointParameterCount ||
+        !std::all_of(weights.begin(), weights.end(),
+                     [](float value) { return std::isfinite(value); }))
+        return fail(ErrorCode::model_version_mismatch, "restore.weights",
+                    "Model weights do not match the finite 100000-parameter G3 architecture");
+    auto view = backend.mutable_weights();
+    const std::array<std::span<float>, 11> tensors{
+        view.embedding, view.layer1_input, view.layer1_recurrent, view.layer1_bias,
+        view.layer2_input, view.layer2_recurrent, view.layer2_bias, view.rms_scale,
+        view.projection, view.projection_bias, view.output_bias};
+    std::size_t offset = 0U;
+    for (auto tensor : tensors) {
+        if (offset + tensor.size() > weights.size())
+            return fail(ErrorCode::model_version_mismatch, "restore.layout",
+                        "G3 tensor layout exceeds the checkpoint weight payload");
+        std::copy_n(weights.begin() + static_cast<std::ptrdiff_t>(offset),
+                    tensor.size(), tensor.begin());
+        offset += tensor.size();
+    }
+    if (offset != weights.size())
+        return fail(ErrorCode::model_version_mismatch, "restore.layout",
+                    "G3 tensor layout does not consume the complete checkpoint weight payload");
+    return Status::success();
+}
+
 } // namespace morok::g3::training
