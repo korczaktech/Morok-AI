@@ -191,7 +191,7 @@ recompensa composta é limitada a [-1, +1].
 
 Penalidades configuráveis:
 - resposta vazia;
-- repetição de bytes consecutivos;
+- repetição de bytes consecutivos e de sequências de bytes repetidas;
 - cópia de sequência contígua de bytes do prompt;
 - excesso de comprimento somente quando um limite justificado for configurado.
 
