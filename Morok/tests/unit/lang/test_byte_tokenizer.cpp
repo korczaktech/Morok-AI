@@ -148,14 +148,15 @@ void test_decoding_and_control_validation() {
     const std::array<TokenId, 5> valid{
         0x4FU, 0x6CU, 0xC3U, 0xA1U, kEosToken};
     const auto decoded = ByteTokenizer::decode_text(valid);
-    check(decoded.has_value() && *decoded.value_if() == "Olá",
+    check(decoded.has_value() && decoded.value_if()->text == "Olá",
           "byte IDs decode into validated UTF-8 and stop at EOS");
 
     const std::array<TokenId, 1> invalid_utf8{0xC3U};
     const auto replaced = ByteTokenizer::decode_text(invalid_utf8);
     check(replaced.has_value() &&
-              replaced.value_if()->find("\xEF\xBF\xBD") != std::string::npos,
-          "invalid generated UTF-8 is replaced before delivery");
+              replaced.value_if()->text.find("\xEF\xBF\xBD") != std::string::npos &&
+              replaced.value_if()->replaced_invalid_utf8,
+          "invalid generated UTF-8 is replaced and reported before delivery");
 
     TextCodecConfig strict;
     strict.invalid_utf8 = InvalidUtf8Policy::reject;
@@ -169,7 +170,7 @@ void test_decoding_and_control_validation() {
 
     const std::array<TokenId, 2> after_eos{kEosToken, 0xFFU};
     const auto stopped = ByteTokenizer::decode_text(after_eos);
-    check(stopped.has_value() && stopped.value_if()->empty(),
+    check(stopped.has_value() && stopped.value_if()->text.empty(),
           "decoder stops at EOS without consuming later tokens");
 }
 
