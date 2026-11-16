@@ -18,6 +18,7 @@ on:
     paths:
       - "Morok/Gerações/G3/**"
       - "Morok/include/morok/model/**"
+      - "Morok/tests/unit/model/test_model_session.cpp"
       - "Morok/Gerações/G1/shared/include/morok/model/g1_backend.hpp"
       - "Morok/Gerações/G1/shared/src/model/g1_backend.cpp"
       - "Morok/Gerações/G1/shared/tests/unit/model/test_g1_backend.cpp"
@@ -76,6 +77,7 @@ jobs:
         working-directory: Morok
         run: |
           test -f include/morok/model/model_backend.hpp
+          test -f include/morok/model/model_session.hpp
           test -f "Gerações/G1/shared/include/morok/model/g1_backend.hpp"
           test -f "Gerações/G3/ARQUITETURA.md"
           test ! -d "Gerações/G3/shared"
