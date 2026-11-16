@@ -86,6 +86,21 @@ def should_stop(continuous: bool, correct_count: int, total: int) -> bool:
     return continuous and total > 0 and correct_count == total
 
 
+def resumable_state_exists(checkpoint: Path, optimizer_state: Path) -> bool:
+    """Exige pesos e estado Adam juntos para retomar sem perder o histórico do otimizador."""
+    checkpoint_exists = checkpoint.is_file()
+    optimizer_exists = optimizer_state.is_file()
+    if checkpoint_exists != optimizer_exists:
+        raise RuntimeError(
+            "Estado persistente incompleto: checkpoint e arquivo .adam precisam existir juntos."
+        )
+    if checkpoint_exists and (
+        checkpoint.stat().st_size == 0 or optimizer_state.stat().st_size == 0
+    ):
+        raise RuntimeError("Estado persistente vazio; recusando reinicialização silenciosa.")
+    return checkpoint_exists
+
+
 def select_validation_questions(train_dialogues, validation_pool, count):
     """Seleciona perguntas em ordem fixa, sem favorecer respostas memorizadas."""
     del train_dialogues
@@ -296,6 +311,14 @@ def main() -> int:
     best_optimizer_state = Path(str(optimizer_state) + ".best")
     output = Path("build/g2/respostas-tsukuyomi.md")
     output.parent.mkdir(parents=True, exist_ok=True)
+    resume_previous_run = resumable_state_exists(checkpoint, optimizer_state)
+    if resume_previous_run:
+        print(
+            "Estado persistente encontrado: retomando pesos e momentos Adam da execução anterior.",
+            flush=True,
+        )
+    else:
+        print("Nenhum estado persistente encontrado: inicialização do modelo.", flush=True)
 
     cycle = 0
     learning_rate = INITIAL_LEARNING_RATE
@@ -328,7 +351,7 @@ def main() -> int:
                 str(trainer), str(train_corpus), str(checkpoint),
                 str(epochs), "42", f"{learning_rate:.8f}",
             ]
-            if cycle > 1:
+            if cycle > 1 or resume_previous_run:
                 command.append("--resume")
 
             print(
