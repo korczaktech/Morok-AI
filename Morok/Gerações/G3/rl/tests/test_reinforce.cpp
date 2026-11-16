@@ -17,6 +17,9 @@ namespace {
 using morok::lang::TokenId;
 using namespace morok::g3::rl;
 
+const std::array<RewardAuditCase, 1> kValidEvaluatorAudit{{
+    {"correct-A", {}, {static_cast<TokenId>('A')}, 0.5, 1.0}}};
+
 class MockPolicy final : public Policy {
 public:
     explicit MockPolicy(std::string name, std::vector<TokenId> output,
@@ -175,7 +178,7 @@ void test_reinforce_and_reference_kl() {
         Prompt{"p2", "factual", {morok::lang::kUsrToken,
                                   static_cast<TokenId>('R')}}}};
 
-    const auto trained = trainer.train_batch(prompts, policy, reference, evaluator);
+    const auto trained = trainer.train_batch(prompts, policy, reference, evaluator, kValidEvaluatorAudit);
     assert(trained.has_value());
     const auto& report = *trained.value_if();
     assert(report.prompts == 2U);
@@ -248,7 +251,7 @@ void test_copy_and_justified_length_penalties() {
         static_cast<TokenId>('Z')}, 1.0F);
     ReinforceTrainer unrestricted(no_length_penalty);
     const auto no_penalty = unrestricted.train_batch(
-        clean_prompt, long_answer, frozen, evaluator);
+        clean_prompt, long_answer, frozen, evaluator, kValidEvaluatorAudit);
     assert(no_penalty.has_value());
 
     Config bounded = no_length_penalty;
@@ -262,7 +265,7 @@ void test_copy_and_justified_length_penalties() {
         static_cast<TokenId>('Z')}, 1.0F);
     ReinforceTrainer bounded_trainer(bounded);
     const auto with_penalty = bounded_trainer.train_batch(
-        clean_prompt, bounded_policy, bounded_reference, evaluator);
+        clean_prompt, bounded_policy, bounded_reference, evaluator, kValidEvaluatorAudit);
     assert(with_penalty.has_value());
     assert(with_penalty.value_if()->mean_reward <
            no_penalty.value_if()->mean_reward);
