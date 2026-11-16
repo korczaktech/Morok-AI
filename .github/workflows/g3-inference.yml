@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "Morok/Gerações/G3/inference/**"
+      - "Morok/Gerações/G3/neural/**"
       - "Morok/CMakeLists.txt"
       - "Morok/tests/CMakeLists.txt"
       - "Morok/include/morok/model/model_backend.hpp"
