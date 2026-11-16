@@ -1,58 +1,90 @@
-# Corpus inicial de produção — Morok G3 (pt-BR)
+# Corpus pt-BR — Morok G3
 
-Versão: g3-ptbr-v1.0  
+Versão: g3-ptbr-v1.1  
 Arquivo: `g3_ptbr_v1.jsonl`  
-Formato: JSONL UTF-8, um registro por intenção.
+Formato: JSONL UTF-8, um registro canônico por intenção.
 
-## Conteúdo
+## Inventário
 
-- 131 registros canônicos, cada um com `example_id` e `group_id` únicos.
-- 262 paráfrases curadas (`question_variants`), duas por intenção.
-- 393 perguntas textuais antes da perturbação dinâmica.
-- Português brasileiro (`pt-BR`).
-- Categorias: conversação, português, matemática, ciências, biologia, química, física, geografia, história, ambiente, economia básica, computação, programação, sistemas, redes, Git, engenharia de software, testes, dados, IA, segurança, privacidade, raciocínio, estudo, escrita, saúde geral e ética.
-- Respostas de referência concisas, em linguagem direta.
-- Nenhum registro contém dado pessoal intencional; todos usam `sensitive=false`.
+- 235 intenções com `example_id` e `group_id` únicos.
+- 470 paráfrases curadas, duas por intenção.
+- 705 formas de pergunta antes da perturbação dinâmica.
+- 42 categorias semânticas.
+- Idioma: português brasileiro (`pt-BR`).
+- Todos os registros têm resposta de referência, proveniência interna e `sensitive=false`.
+- Nenhum dado pessoal real foi intencionalmente incluído.
 
-## Expansão e ruído
+As categorias abrangem conversação, português, matemática, ciências, biologia, química, física, geografia, história, ambiente, economia básica, computação, programação, sistemas, redes, Git, engenharia de software, testes, dados, IA, segurança, privacidade, raciocínio, estudo, escrita, saúde geral, ética e tarefas cotidianas.
 
-As paráfrases foram escritas para preservar a intenção e compartilham o mesmo `group_id` do enunciado canônico. O loader G3 expande até quatro perguntas por registro, deduplica as perguntas e aplica perturbação apenas nos exemplos do split de treino.
+## Expansão e robustez
 
-A perturbação dinâmica padrão tem probabilidade de 45% por exemplo e cobre troca de caracteres adjacentes, omissão, substituição por tecla próxima, variação de acentos/caixa/pontuação e repetição/espaçamento. As mutações são feitas em caracteres Unicode e preservam UTF-8 válido. Não são gravadas como cópias estáticas no corpus.
+Cada intenção contém uma pergunta canônica e duas paráfrases. O carregador expande até quatro formas por registro; portanto, as três formas atualmente armazenadas são aproveitadas. A expansão é aplicada somente ao split de treino.
 
-## Split
+A perturbação dinâmica padrão tem probabilidade de 45% por exemplo e pesos condicionais:
+- troca de caracteres adjacentes: 20%;
+- omissão: 20%;
+- substituição por tecla próxima: 20%;
+- variação de acentos, caixa e pontuação: 25%;
+- repetição e espaçamento: 15%.
 
-O split padrão é feito por `group_id`, seed 42, proporções 85%/10%/5%. Com 131 grupos, o algoritmo atual aloca 111 grupos para treino, 13 para validação e 7 para teste. Nenhuma paráfrase de uma intenção atravessa os splits. A expansão e o ruído são aplicados somente ao treino.
+Os pesos somam 100%. As mutações são feitas em caracteres Unicode e preservam UTF-8 válido. Validação e teste permanecem limpos.
 
-## Validar e treinar
+## Split e prevenção de vazamento
+
+A divisão padrão é feita por `group_id`, seed 42, nas proporções 85%/10%/5%. Com 235 grupos, a implementação atual produz 199 grupos de treino, 23 de validação e 13 de teste. Todas as formas de uma intenção permanecem no mesmo grupo e, consequentemente, no mesmo split.
+
+A expansão e a perturbação são aplicadas somente ao treino. Validação orienta o acompanhamento do treinamento; teste fica reservado à avaliação final.
+
+## Validar o corpus
 
 Na raiz do repositório:
 
 ```sh
+python3 Morok/Gerações/G3/training/dataset/validate_corpus.py Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl
+```
+
+O validador verifica UTF-8, JSONL, campos obrigatórios, versão, idioma, qualidade, ausência de registros sensíveis, duas paráfrases por intenção, IDs únicos, grupos únicos e perguntas duplicadas.
+
+## Treinamento SFT
+
+Compile os alvos necessários:
+
+```sh
 cmake -S Morok -B Morok/build -DCMAKE_BUILD_TYPE=Release -DMOROK_BUILD_TESTS=ON -DMOROK_BUILD_APPS=ON
-cmake --build Morok/build --target morok-g3-train morok_test_g3_training --parallel 2
+cmake --build Morok/build --target morok-g3-train morok-g3-evaluate morok-g3-reinforce morok_test_g3_training --parallel 2
 ctest --test-dir Morok/build --output-on-failure -R g3.training
-Morok/build/morok-g3-train Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/metrics-g3-ptbr-v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1.morok 10 42 --checkpoint=Morok/Gerações/G3/training/dataset/g3-ptbr-v1.g3ckpt
 ```
 
-Para retomar uma execução interrompida entre épocas, use o mesmo dataset/configuração e:
+Execute o SFT:
 
 ```sh
-Morok/build/morok-g3-train Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/metrics-g3-ptbr-v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1.morok 10 42 --resume=Morok/Gerações/G3/training/dataset/g3-ptbr-v1.g3ckpt
+Morok/build/morok-g3-train Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/metrics-g3-ptbr-v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-sft.morok 10 42 --checkpoint=Morok/Gerações/G3/training/dataset/g3-ptbr-v1.g3ckpt
 ```
 
-Após o SFT, avalie com a mesma seed:
+Para retomar uma execução interrompida entre épocas, use a mesma configuração e:
 
 ```sh
-Morok/build/morok-g3-evaluate Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1.morok Morok/Gerações/G3/training/dataset/evaluation-g3-ptbr-v1.json 42
+Morok/build/morok-g3-train Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/metrics-g3-ptbr-v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-sft.morok 10 42 --resume=Morok/Gerações/G3/training/dataset/g3-ptbr-v1.g3ckpt
 ```
 
-Consulte também `../README.md` para os detalhes do pipeline e os limites do avaliador.
+## Avaliação e RL
 
-## Limites e status de qualidade
+Avalie o SFT com a mesma seed:
 
-Este arquivo é um corpus inicial curado para validar e iniciar um primeiro ciclo SFT controlado. Ele não deve ser descrito como corpus universal, exaustivo ou suficiente para produzir um assistente geral robusto. São 131 intenções e 393 formas de pergunta antes da perturbação; isso é pequeno para estabelecer competência ampla em linguagem.
+```sh
+Morok/build/morok-g3-evaluate Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-sft.morok Morok/Gerações/G3/training/dataset/evaluation-g3-ptbr-v1.json 42
+```
 
-Antes de declarar um modelo de produção, amplie o corpus em profundidade e volume, acrescente diálogos multi-turno, tarefas de composição e transformação, perguntas com contexto, casos difíceis, contraexemplos, raciocínio verificável e um conjunto de teste independente revisado por humanos. Inclua fontes e licenças verificáveis caso dados externos sejam adicionados. Não misture dados de teste ao treino nem crie paráfrases de teste no treino.
+Depois da inspeção do relatório SFT, execute o RL:
 
-O campo `source` registra curadoria interna; não representa validação externa independente. As respostas devem passar por revisão humana de domínio antes de uso em produção. O comando acima inicia SFT, não executa automaticamente o RL.
+```sh
+Morok/build/morok-g3-reinforce Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-sft.morok Morok/Gerações/G3/training/dataset/g3-ptbr-v1-rl.morok Morok/Gerações/G3/training/dataset/rl-report-g3-ptbr-v1.json 3
+```
+
+O comando RL usa o SFT como política de referência congelada, atualiza uma cópia treinável e compara as políticas no split de teste. O avaliador automático é lexical e não substitui revisão humana.
+
+## Limites de qualidade
+
+A versão 1.1 é um corpus inicial ampliado para iniciar ciclos controlados de SFT e RL. Ela não é um corpus universal nem prova competência geral. As respostas foram preparadas por curadoria interna e ainda precisam de revisão humana independente, especialmente em domínios factuais e técnicos.
+
+Para uma geração de produção, amplie a cobertura com diálogos multi-turno, tarefas de composição e transformação, contexto longo, exemplos adversariais, raciocínio verificável, contraexemplos e teste independente revisado. Não use dados de teste para criar paráfrases de treino. Se dados externos forem adicionados, registre fonte, licença e versão.
