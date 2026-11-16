@@ -64,7 +64,8 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(len(train), 56)
         self.assertEqual(len(original), 40)
         self.assertEqual(len(set(original) & set(train)), 32)
-        self.assertEqual(len(training.read_dialogues(DATA_DIR / "validacao.txt")), 40)
+        self.assertEqual(len(training.read_dialogues(DATA_DIR / "feedback.txt")), 40)
+        self.assertEqual(len(training.read_dialogues(DATA_DIR / "validacao.txt")), 20)
         self.assertEqual(len(training.read_dialogues(DATA_DIR / "teste.txt")), 12)
 
     def test_training_metrics_are_parsed_and_must_be_finite(self):
@@ -174,11 +175,11 @@ class TrainingDataTests(unittest.TestCase):
     def test_splits_have_no_question_overlap(self):
         groups = [
             {question for question, _ in training.read_dialogues(DATA_DIR / name)}
-            for name in ("treinamento.txt", "validacao.txt", "teste.txt")
+            for name in ("treinamento.txt", "feedback.txt", "validacao.txt", "teste.txt")
         ]
-        self.assertTrue(groups[0].isdisjoint(groups[1]))
-        self.assertTrue(groups[0].isdisjoint(groups[2]))
-        self.assertTrue(groups[1].isdisjoint(groups[2]))
+        for index, group in enumerate(groups):
+            for other in groups[index + 1:]:
+                self.assertTrue(group.isdisjoint(other))
 
 
     def test_bom_and_indented_markers(self):
@@ -258,29 +259,28 @@ class TrainingDataTests(unittest.TestCase):
 
 
 
-    def test_legacy_feedback_is_removed_from_independent_validation(self):
-        memory = {
-            "feedback antiga": "correção",
-            "pergunta do holdout": "gabarito contaminante",
-        }
-        removed = training.exclude_validation_from_feedback(
-            memory, [("pergunta do holdout", "gabarito correto")]
-        )
-        self.assertEqual(removed, 1)
-        self.assertEqual(memory, {"feedback antiga": "correção"})
-
-    def test_feedback_and_validation_are_disjoint(self):
-        combined = training.read_dialogues(DATA_DIR / "validacao.txt")
-        feedback, validation = training.split_feedback_and_validation(combined)
-        self.assertEqual(len(feedback), 20)
+    def test_feedback_and_validation_are_distinct_new_datasets(self):
+        feedback = training.read_dialogues(DATA_DIR / "feedback.txt")
+        validation = training.read_dialogues(DATA_DIR / "validacao.txt")
+        test = training.read_dialogues(DATA_DIR / "teste.txt")
+        self.assertEqual(len(feedback), 40)
         self.assertEqual(len(validation), 20)
-        self.assertTrue({q for q, _ in feedback}.isdisjoint({q for q, _ in validation}))
-        selected = training.select_validation_questions([], validation, 7)
-        self.assertEqual(selected, validation[:7])
+        self.assertEqual(len(test), 12)
+        question_sets = [
+            {question for question, _ in group}
+            for group in (feedback, validation, test)
+        ]
+        self.assertTrue(question_sets[0].isdisjoint(question_sets[1]))
+        self.assertTrue(question_sets[0].isdisjoint(question_sets[2]))
+        self.assertTrue(question_sets[1].isdisjoint(question_sets[2]))
+        train_questions = {
+            question for question, _ in training.read_dialogues(DATA_DIR / "treinamento.txt")
+        }
+        self.assertTrue(train_questions.isdisjoint(question_sets[1]))
 
     def test_validation_count_is_limited_to_independent_holdout(self):
         self.assertEqual(training.MAX_VALIDATION_QUESTIONS, 20)
-        self.assertEqual(training.MAX_FEEDBACK_QUESTIONS, 20)
+        self.assertEqual(training.MAX_FEEDBACK_QUESTIONS, 40)
         with self.assertRaises(ValueError):
             training.select_validation_questions([], [("q", "a")], 21)
 
@@ -320,6 +320,8 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(item["recoveries"], 1)
         self.assertTrue(item["ever_correct"])
         self.assertEqual(item["last_execution"], "run-b")
+        self.assertEqual(len(item["history"]), 3)
+        self.assertEqual([entry["correct"] for entry in item["history"]], [True, False, True])
 
     def test_question_history_round_trip_and_rejects_changed_answer_key(self):
         with tempfile.TemporaryDirectory() as directory:
