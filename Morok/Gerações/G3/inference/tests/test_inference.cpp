@@ -1,5 +1,8 @@
 #include "morok/g3/inference/benchmark.hpp"
 #include "morok/g3/inference/generator.hpp"
+#include "morok/g3/inference/int8_backend.hpp"
+#include "morok/g3/inference/session_manager.hpp"
+#include "morok/g3/neural/gru_backend.hpp"
 #include "morok/g3/inference/model_artifact.hpp"
 #include "morok/g3/inference/quantization.hpp"
 
@@ -78,6 +81,41 @@ public:
 private:
     bool immediate_eos_{false};
     std::chrono::milliseconds delay_{0};
+};
+
+class RepeatingBackend final : public model::ModelBackend {
+public:
+    model::ModelDescriptor descriptor() const noexcept override {
+        return {3U, kG3ArchitectureGruRmsNormTied, 261U, 100000U,
+                sizeof(std::uint32_t), alignof(std::uint32_t), true};
+    }
+    common::Status reset_state(std::span<std::byte> state) const override {
+        if (state.size() != sizeof(std::uint32_t))
+            return common::Status::failure(common::Error::make(
+                common::ErrorCode::invalid_argument, "bad repeat state"));
+        const std::uint32_t zero = 0U;
+        std::memcpy(state.data(), &zero, sizeof(zero));
+        return common::Status::success();
+    }
+    common::Status consume_byte(std::span<std::byte> state, std::uint8_t) const override {
+        std::uint32_t count = 0U;
+        std::memcpy(&count, state.data(), sizeof(count));
+        ++count;
+        std::memcpy(state.data(), &count, sizeof(count));
+        return common::Status::success();
+    }
+    common::Status next_token_log_probabilities(
+        std::span<const std::byte> state, std::span<float> output) const override {
+        std::uint32_t count = 0U;
+        std::memcpy(&count, state.data(), sizeof(count));
+        std::fill(output.begin(), output.end(),
+                  -std::numeric_limits<float>::infinity());
+        constexpr std::array<std::uint8_t, 6> pattern{'a','b','c','a','b','c'};
+        const auto token = count <= pattern.size()
+            ? static_cast<lang::TokenId>(pattern[count - 1U]) : lang::kEosToken;
+        output[token] = 0.0F;
+        return common::Status::success();
+    }
 };
 
 ModelArtifact valid_fp32_artifact() {
@@ -249,6 +287,84 @@ void test_concurrent_session_isolation() {
     }
 }
 
+void test_repetition_guard_blocks_repeated_byte_ngrams() {
+    RepeatingBackend backend;
+    alignas(8) std::array<std::byte, sizeof(std::uint32_t)> state{};
+    GenerationConfig config;
+    config.top_k = 1U;
+    config.max_output_bytes = 32U;
+    config.text_codec.normalization = lang::UnicodeNormalization::none;
+    std::mt19937_64 random(12U);
+    const auto result = generate(backend, state, "x", config, random);
+    assert(result);
+    assert(result.value_if()->repetition_detected);
+    assert(result.value_if()->text == "abcab");
+    assert(!result.value_if()->reached_output_limit);
+}
+
+void test_session_manager_preserves_context_and_isolates_ids() {
+    FixtureBackend backend;
+    SessionManager sessions(8U, std::chrono::minutes{5}, 123U);
+    GenerationConfig config;
+    config.top_k = 1U;
+    config.empty_response = EmptyResponsePolicy::allow;
+    config.text_codec.normalization = lang::UnicodeNormalization::none;
+    const auto first = sessions.generate(backend, "conversation-a", "x", config);
+    const auto second = sessions.generate(backend, "conversation-a", "y", config);
+    const auto independent = sessions.generate(backend, "conversation-b", "x", config);
+    assert(first && first.value_if()->text == "A");
+    assert(second && second.value_if()->text.empty());
+    assert(independent && independent.value_if()->text == "A");
+    assert(sessions.size() == 2U);
+    assert(sessions.reset(backend, "conversation-a"));
+    const auto reset = sessions.generate(backend, "conversation-a", "z", config);
+    assert(reset && reset.value_if()->text == "A");
+    assert(sessions.erase("conversation-b"));
+    assert(sessions.size() == 1U);
+}
+
+void test_native_int8_backend_export_and_inference() {
+    neural::G3Backend fp32(neural::G3Config{321U, 1.0e-5F});
+    const auto artifact = export_g3_int8_artifact(fp32);
+    assert(artifact);
+    assert(artifact.value_if()->metadata.precision ==
+           PrecisionMode::int8_symmetric_per_row);
+    assert(artifact.value_if()->metadata.scale_count == 1311U);
+    assert(artifact.value_if()->payload.size() < 150000U);
+    const auto serialized = serialize_model_artifact(*artifact.value_if());
+    assert(serialized);
+    const auto loaded_artifact = deserialize_model_artifact(*serialized.value_if());
+    assert(loaded_artifact);
+    const auto int8 = load_g3_int8_backend(*loaded_artifact.value_if());
+    assert(int8);
+    assert(int8.value_if()->get()->descriptor().parameter_count == 100000U);
+
+    alignas(8) std::array<std::byte, 660U> fp32_state{}, int8_state{};
+    assert(fp32.reset_state(fp32_state));
+    assert(int8.value_if()->get()->reset_state(int8_state));
+    for (const auto byte : std::string_view("Morok G3"))
+    {
+        assert(fp32.consume_byte(fp32_state, static_cast<std::uint8_t>(byte)));
+        assert(int8.value_if()->get()->consume_byte(
+            int8_state, static_cast<std::uint8_t>(byte)));
+    }
+    std::array<float, 261U> fp32_output{}, int8_output{};
+    assert(fp32.next_token_log_probabilities(fp32_state, fp32_output));
+    assert(int8.value_if()->get()->next_token_log_probabilities(
+        int8_state, int8_output));
+    double fp32_sum = 0.0, int8_sum = 0.0;
+    double max_difference = 0.0;
+    for (std::size_t i = 0; i < fp32_output.size(); ++i) {
+        fp32_sum += std::exp(static_cast<double>(fp32_output[i]));
+        int8_sum += std::exp(static_cast<double>(int8_output[i]));
+        max_difference = std::max(max_difference,
+            std::abs(static_cast<double>(fp32_output[i] - int8_output[i])));
+    }
+    assert(std::abs(fp32_sum - 1.0) < 1.0e-5);
+    assert(std::abs(int8_sum - 1.0) < 1.0e-5);
+    assert(max_difference < 1.0);
+}
+
 void test_benchmark_harness() {
     FixtureBackend backend;
     alignas(8) std::array<std::byte, sizeof(std::uint32_t)> state{};
@@ -280,5 +396,8 @@ int main() {
     test_timeout();
     test_concurrent_session_isolation();
     test_benchmark_harness();
+    test_repetition_guard_blocks_repeated_byte_ngrams();
+    test_session_manager_preserves_context_and_isolates_ids();
+    test_native_int8_backend_export_and_inference();
     return 0;
 }
