@@ -319,3 +319,65 @@ outro runtime nem altera os fontes das gerações anteriores.
 Os itens pendentes dependem da implementação do backend neural e dos pesos SFT
 G3. Fixtures sintéticas validam os contratos e a infraestrutura, não a
 qualidade nem o desempenho do modelo final.
+
+## 10. Arquitetura neural G3 — implementação
+
+O backend neural específico está em Gerações/G3/neural/ e implementa o
+contrato morok::model::ModelBackend, sem criar um Core ou runtime paralelo.
+
+- Cabeçalho: neural/include/morok/g3/neural/gru_backend.hpp.
+- Implementação: neural/src/gru_backend.cpp.
+- Testes: neural/tests/test_gru_backend.cpp.
+- Biblioteca: Morok::G3::Neural.
+- Arquitetura: GRU de duas camadas, E=64, H=128, V=261, identificador 0x0301.
+
+A ordem das portas é fixa: update, reset, candidate. A convenção é
+h_t = (1-z_t) * n_t + z_t * h_(t-1). Cada porta possui uma matriz de entrada,
+uma matriz recorrente e um único vetor de bias. A porta candidate aplica o
+reset ao estado anterior antes da multiplicação recorrente.
+
+A primeira GRU recebe o embedding de 64 dimensões. RMSNorm com escala
+aprendível e epsilon configurável é aplicada entre as camadas. A segunda GRU
+recebe dimensão 128 e mantém estado próprio. O estado de sessão contém os dois
+vetores ocultos FP32 (1.024 bytes), é fornecido pelo chamador e não é
+compartilhado entre sessões.
+
+A cabeça de saída projeta H=128 para E=64 e calcula os logits com a transposta
+da própria matriz de embedding, mais bias de saída independente. Não existe
+uma segunda matriz de vocabulário: lookup e saída usam o mesmo vetor de pesos,
+implementando weight tying por armazenamento único.
+
+Inicialização:
+- embedding, matrizes de entrada das portas e projeção: Xavier/Glorot;
+- matrizes recorrentes: ortogonal por porta, via Gram-Schmidt;
+- bias update: +1, após fixar a convenção acima;
+- demais biases: zero;
+- escala RMSNorm: um;
+- seed e epsilon são configuráveis; a seed padrão é determinística.
+
+A contagem é calculada somando os tamanhos reais dos tensores alocados. Na
+configuração de referência, a implementação retorna 198.149 parâmetros:
+16.704 embedding + 74.112 GRU 1 + 98.688 GRU 2 + 8.192 projeção + 64 bias da
+projeção + 128 escala RMSNorm + 261 bias de saída. O descritor do backend usa
+essa contagem calculada, não uma constante forçada.
+
+### Critérios da arquitetura neural
+
+- [x] Embedding de dimensão 64.
+- [x] GRU com duas camadas.
+- [x] Estado oculto de dimensão 128 por camada.
+- [x] RMSNorm entre as camadas, com escala aprendível e epsilon configurável.
+- [x] Projeção de saída 128 → 64 e logits no vocabulário de 261 IDs.
+- [x] Weight tying com armazenamento único entre embedding e matriz de saída.
+- [x] Inicialização Xavier/Glorot, recorrência ortogonal e biases documentados.
+- [x] Contagem automática dos parâmetros a partir dos tensores reais.
+
+Os testes verificam dimensões, inicialização determinística por seed,
+ortogonalidade das matrizes recorrentes, bias da porta update, escala RMSNorm,
+contagem real, normalização das log-probabilidades, compartilhamento do
+embedding na saída, validação de dimensões e isolamento de estados entre sessões.
+
+Limite explícito: esta entrega implementa a arquitetura e seu forward pass
+incremental de inferência. BPTT, gradientes dos parâmetros, otimizador e
+treinamento SFT continuam sendo responsabilidades das etapas de treinamento;
+esta entrega não declara esses itens concluídos.
