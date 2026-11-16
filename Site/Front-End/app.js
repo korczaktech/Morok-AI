@@ -785,6 +785,31 @@
     const raw = atob(base64);
     return Uint8Array.from(raw, char => char.charCodeAt(0));
   }
+  async function clearLocalPushSubscription() {
+    if (!("serviceWorker" in navigator)) return;
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) {
+        if (state.authSession?.access_token) {
+          try {
+            await authRequest('/v1/push/unsubscribe', {
+              token: state.authSession.access_token,
+              body: { endpoint: subscription.endpoint }
+            });
+          } catch (error) {
+            console.warn('Não foi possível remover a inscrição push do servidor:', error.message);
+          }
+        }
+        await subscription.unsubscribe();
+      }
+    } catch (error) {
+      console.warn('Não foi possível remover a inscrição push local:', error.message);
+    }
+    state.notifications = false;
+    persist();
+  }
+
   async function configurePush(enabled) {
     if (!state.authSession?.access_token) throw new Error("Entre na conta para ativar notificações entre dispositivos.");
     if (!("serviceWorker" in navigator) || !("PushManager" in window) || typeof Notification === "undefined") throw new Error("Este navegador não oferece suporte a notificações push.");
@@ -866,13 +891,17 @@
     const session=state.authSession;
     if(!session?.access_token) return;
     if(Number(session.expires_at || 0) <= Date.now()/1000) {
+      await clearLocalPushSubscription();
       saveAuthSession(null);
       return;
     }
     try {
       const data=await authRequest('/auth/me',{method:'GET',token:session.access_token});
       if(data.user) { state.authSession.user=data.user; saveAuthSession(state.authSession); await loadRemoteConversations(); await syncAccountResources(); }
-    } catch(error) { if(error.status===401) saveAuthSession(null); else updateProfile(); }
+    } catch(error) {
+      if(error.status===401) { await clearLocalPushSubscription(); saveAuthSession(null); }
+      else updateProfile();
+    }
   }
   async function submitAuth() {
     const email=$('#auth-email').value.trim(); const password=$('#auth-password').value; const name=$('#auth-name').value.trim();
@@ -906,6 +935,7 @@
     finally { $('#auth-submit').disabled=false; }
   }
   async function logout() {
+    await clearLocalPushSubscription();
     try { if(state.authSession?.access_token) await authRequest('/auth/logout',{token:state.authSession.access_token}); } catch {}
     saveAuthSession(null); state.displayName='Visitante'; updateProfile(); persist(); if(el.auth.open) el.auth.close(); closeProfileMenu(); toast('Sessão encerrada neste dispositivo.');
   }
