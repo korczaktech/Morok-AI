@@ -25,6 +25,11 @@ on:
         type: number
         required: true
         default: 40
+      learning_rate:
+        description: "Learning rate inicial (maior que 0 e até 0.1; padrão: 0.001)"
+        type: number
+        required: true
+        default: 0.001
       treinamento_continuo:
         description: "Parar antecipadamente se todas as perguntas estiverem corretas (limite de tentativas permanece ativo)"
         type: boolean
@@ -52,6 +57,7 @@ jobs:
           EPOCAS: ${{ github.event_name == 'push' && 20 || inputs.epocas || 20 }}
           TENTATIVAS: ${{ github.event_name == 'push' && 10 || inputs.tentativas || 10 }}
           QUESTOES: ${{ github.event_name == 'push' && 40 || inputs.questoes || 40 }}
+          LEARNING_RATE: ${{ github.event_name == 'push' && '0.001' || inputs.learning_rate || '0.001' }}
         run: |
           python3 - <<'PY'
           import os
@@ -66,6 +72,10 @@ jobs:
           questoes = int(os.environ["QUESTOES"])
           if not 1 <= questoes <= 40:
               raise SystemExit("QUESTOES precisa estar entre 1 e 40.")
+          learning_rate = float(os.environ["LEARNING_RATE"])
+          import math
+          if not math.isfinite(learning_rate) or not 0.0 < learning_rate <= 0.1:
+              raise SystemExit("LEARNING_RATE precisa estar entre 0 e 0.1.")
           PY
 
       - name: Validar conjuntos e avaliador
@@ -105,6 +115,7 @@ jobs:
           EPOCAS: ${{ inputs.epocas || 20 }}
           TENTATIVAS: ${{ inputs.tentativas || 10 }}
           QUESTOES: ${{ inputs.questoes || 40 }}
+          TSUKUYOMI_LEARNING_RATE: ${{ inputs.learning_rate || '0.001' }}
           TREINAMENTO_CONTINUO: ${{ github.event_name == 'workflow_dispatch' && inputs.treinamento_continuo || false }}
         run: |
           CONTINUO=0
