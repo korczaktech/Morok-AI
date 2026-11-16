@@ -307,7 +307,7 @@ Status durable_flush(const std::filesystem::path& path) {
     CloseHandle(file);
     if (!ok) return fail(ErrorCode::internal_error, "save.flush", "Could not flush checkpoint to storage");
 #else
-    const int fd = ::open(path.c_str(), O_RDONLY);
+    const int fd = ::open(path.c_str(), O_RDWR);
     if (fd < 0) return fail(ErrorCode::internal_error, "save.flush", "Could not open checkpoint for fsync");
     const int result = ::fsync(fd);
     ::close(fd);
