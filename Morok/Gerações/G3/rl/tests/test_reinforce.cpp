@@ -210,7 +210,7 @@ int main() {
     test_config_validation();
     test_evaluator_audit_and_reward_hacking();
     test_reinforce_and_reference_kl();
-    test_closed_set_comparison();
+    test_copy_and_justified_length_penalties();\n    test_closed_set_comparison();
     std::cout << "G3 REINFORCE tests passed.\n";
     return 0;
 }
