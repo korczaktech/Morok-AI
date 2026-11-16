@@ -101,7 +101,7 @@ prompt "Morok G3", saída limitada a 8 bytes):
 | Latência P95 | 840.286 ns (0,840 ms) |
 | Throughput | 8.746,47 bytes/s |
 
-O payload INT8 é 72,999% menor que o payload FP32. O RSS é medição do processo
+O payload INT8 é 73,004% menor que o payload FP32. O RSS é medição do processo
 inteiro, não somente dos pesos; varia com sistema, alocador, bibliotecas e
 runner. A medição de latência é para geração curta, sobre pesos de um treino
 sintético de smoke test; não representa desempenho de produção ou de conversas
@@ -152,7 +152,7 @@ morok-g3-generate modelo.morok --profile=apollo "pergunta"
 
 ## Status de aprovação
 
-<badge>APROVADA</badge>
+**Status: APROVADA**
 
 - Commit de código validado: `9534d1d50f959878630e24245736d92c8812a77f`.
 - Workflow G3: [43924662542](https://github.com/korczaktech/Morok-AI/actions/runs/43924662542) — sucesso.
