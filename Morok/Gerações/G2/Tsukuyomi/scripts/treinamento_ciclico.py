@@ -259,6 +259,23 @@ def load_question_history(path: Path) -> dict:
     return data
 
 
+def find_retention_regressions(previous_results, current_dialogues, current_results) -> list[str]:
+    """Identifica perguntas corretas no melhor estado que regrediram no candidato."""
+    if previous_results is None:
+        return []
+    if len(current_dialogues) != len(current_results) or len(previous_results) != len(current_results):
+        raise ValueError("Resultados candidatos incompatíveis com o holdout.")
+    previous_correct = {
+        question for (question, _), result in zip(current_dialogues, previous_results)
+        if result[1]
+    }
+    current_correct = {
+        question for (question, _), result in zip(current_dialogues, current_results)
+        if result[1]
+    }
+    return sorted(previous_correct - current_correct)
+
+
 def update_question_history(history: dict, dialogues, results, cycle: int,
                             execution_id: str) -> tuple[int, int]:
     """Conta regressões e recuperações sem descartar respostas ou resultados anteriores."""
@@ -520,27 +537,29 @@ def main() -> int:
         report.write("- Cada ciclo começa pelo melhor par checkpoint + momentos Adam; o estado persistido anterior é avaliado antes de qualquer atualização.\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
+        best_validation_results = None
         if resume_previous_run:
-            baseline_results = evaluate_set(generator, checkpoint, validation)
+            best_validation_results = evaluate_set(generator, checkpoint, validation_pool)
+            baseline_selected = best_validation_results[:question_count]
             (best_validation_correct, _, baseline_f1, baseline_char,
              best_validation_score, best_validation_rank) = validation_metrics(
-                validation, baseline_results
+                validation, baseline_selected
             )
             best_validation_cycle = 0
             save_best_state(
                 checkpoint, optimizer_state, best_checkpoint, best_optimizer_state
             )
             regressions, recoveries = update_question_history(
-                question_history, validation, baseline_results, 0, execution_id
+                question_history, validation_pool, best_validation_results, 0, execution_id
             )
             write_question_history(question_history_path, question_history)
             print(
-                f"Checkpoint anterior avaliado: {best_validation_correct}/{len(validation)}; "
+                f"Checkpoint anterior avaliado: {best_validation_correct}/{question_count}; "
                 f"regressões históricas={regressions}; recuperações={recoveries}.",
                 flush=True,
             )
             report.write(
-                f"**Checkpoint anterior: {best_validation_correct}/{len(validation)}; "
+                f"**Checkpoint anterior: {best_validation_correct}/{question_count}; "
                 f"F1={baseline_f1:.3f}; similaridade={baseline_char:.3f}.**\n\n"
             )
 
@@ -577,14 +596,18 @@ def main() -> int:
             if (not checkpoint.is_file() or checkpoint.stat().st_size == 0 or
                     not optimizer_state.is_file() or optimizer_state.stat().st_size == 0):
                 raise RuntimeError("O treinador não publicou checkpoint e estado Adam válidos.")
-            validation_results = evaluate_set(generator, checkpoint, validation)
+            candidate_all_results = evaluate_set(generator, checkpoint, validation_pool)
+            validation_results = candidate_all_results[:question_count]
+            retention_regressions = find_retention_regressions(
+                best_validation_results, validation_pool, candidate_all_results
+            )
             feedback_results = evaluate_set(generator, checkpoint, feedback_questions)
             new_corrections = record_feedback_errors(
                 feedback_memory, feedback_questions, feedback_results
             )
             write_feedback_memory(feedback_path, feedback_memory)
             regressions, recoveries = update_question_history(
-                question_history, validation, validation_results, cycle, execution_id
+                question_history, validation_pool, candidate_all_results, cycle, execution_id
             )
             write_question_history(question_history_path, question_history)
             print(
@@ -594,7 +617,8 @@ def main() -> int:
             )
             print(
                 f"Histórico da validação: {regressions} regressão(ões), "
-                f"{recoveries} recuperação(ões) neste ciclo.",
+                f"{recoveries} recuperação(ões) neste ciclo; "
+                f"regressões contra o melhor checkpoint: {len(retention_regressions)}.",
                 flush=True,
             )
             total_questions = len(validation_results)
@@ -624,12 +648,13 @@ def main() -> int:
                 and observed_rank[1] > best_validation_rank[1] + 0.005
             )):
                 best_validation_rank = observed_rank
-            if best_validation_rank != previous_best_rank:
+            if not retention_regressions and best_validation_rank != previous_best_rank:
                 save_best_state(checkpoint, optimizer_state,
                                 best_checkpoint, best_optimizer_state)
                 best_validation_correct = correct_count
                 best_validation_cycle = cycle
                 best_validation_score = validation_score
+                best_validation_results = candidate_all_results
             # O próximo ciclo sempre parte do melhor estado, nunca do último estado pior.
             restore_best_state(
                 best_checkpoint, best_optimizer_state, checkpoint, optimizer_state
@@ -647,7 +672,8 @@ def main() -> int:
                 f"**Treino: {completed_epochs:.0f} época(s), {target_bytes:.0f} bytes-alvo, "
                 f"train_bpb {initial_bpb:.4f} → {final_bpb:.4f}.**\n"
                 f"**Validação independente: {correct_count}/{total}; F1 médio: {mean_f1:.3f}; "
-                f"similaridade char: {mean_char_similarity:.3f}; regressões: {regressions}; "
+                f"similaridade char: {mean_char_similarity:.3f}; regressões históricas: {regressions}; "
+                f"regressões contra melhor estado: {len(retention_regressions)}; "
                 f"recuperações: {recoveries}; pontuação: {validation_score:.3f}; "
                 f"próximo LR: {learning_rate:.8g}; "
                 f"duração: {elapsed:.2f}s.**\n\n"
@@ -656,7 +682,8 @@ def main() -> int:
             print(
                 f"Validação independente do ciclo {cycle}: {correct_count}/{total}; "
                 f"F1={mean_f1:.3f}; char={mean_char_similarity:.3f}; "
-                f"regressões={regressions}; recuperações={recoveries}; "
+                f"regressões históricas={regressions}; "
+                f"regressões contra melhor={len(retention_regressions)}; recuperações={recoveries}; "
                 f"score={validation_score:.3f}; próximo LR={learning_rate:.8g}; {elapsed:.2f}s.",
                 flush=True,
             )
