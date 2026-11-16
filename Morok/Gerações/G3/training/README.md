@@ -4,7 +4,7 @@ Este módulo implementa o pipeline SFT da G3 sobre o backend neural existente. N
 
 ## Corpus oficial de desenvolvimento
 
-O corpus pt-BR versionado está em `dataset/g3_ptbr_v1.jsonl` e é descrito em `dataset/README.md`. A versão atual contém 235 intenções, 470 paráfrases curadas e 705 formas de pergunta em 42 categorias. É adequado para iniciar um ciclo controlado e testar o pipeline, mas não deve ser considerado exaustivo ou suficiente para declarar competência geral.
+O corpus pt-BR versionado está em `dataset/g3_ptbr_v1.jsonl` e é descrito em `dataset/README.md`. A versão atual contém 235 intenções, 470 paráfrases curadas e 705 formas de pergunta em 42 categorias. É adequado para iniciar um ciclo experimental controlado e testar o pipeline, mas não deve ser considerado exaustivo ou suficiente para declarar competência geral. Dos 235 registros, 104 são expansão assistida sinalizada para revisão humana (`review_status=pending-human-review`, `quality=0.80`); não os trate como rótulos revisados.
 
 Valide o arquivo antes de treinar:
 
