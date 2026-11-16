@@ -199,7 +199,7 @@ Não há penalidade automática de comprimento por padrão. A semântica não é
 inferida por distância de edição ou n-gramas. O avaliador deve ter identidade,
 versão de rubrica e origem dos rótulos distintas da política treinada. A função
 `audit_evaluator` compara resultados com intervalos aprovados em casos
-rotulados; essa auditoria não substitui revisão humana periódica.
+rotulados; o treinamento exige esses casos e bloqueia atualizações se a auditoria falhar. Essa auditoria não substitui revisão humana periódica.
 
 ### 9.4 KL de referência
 
