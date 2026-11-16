@@ -501,6 +501,10 @@ def main() -> int:
     feedback_memory = load_feedback_memory(feedback_path)
     question_history = load_question_history(question_history_path)
     resume_previous_run = resumable_state_exists(checkpoint, optimizer_state)
+    if not resume_previous_run:
+        for stale_best in (best_checkpoint, best_optimizer_state):
+            if stale_best.exists():
+                stale_best.unlink()
     learning_rate = load_learning_rate(learning_rate_path, INITIAL_LEARNING_RATE)
     execution_id = os.environ.get("GITHUB_RUN_ID", "local")
     if resume_previous_run:
