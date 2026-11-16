@@ -1,7 +1,10 @@
 #include "morok/g3/rl/g3_policy.hpp"
 #include "morok/common/error.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <utility>
 #include <cstring>
 #include <stdexcept>
 #include <vector>
