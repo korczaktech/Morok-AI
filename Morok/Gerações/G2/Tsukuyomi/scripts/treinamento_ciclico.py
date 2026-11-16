@@ -18,7 +18,12 @@ MAX_VALIDATION_QUESTIONS = 40
 MAX_CYCLES = 10
 MAX_EPOCHS_PER_CYCLE = 100
 MAX_TOTAL_EPOCHS = 200
-INITIAL_LEARNING_RATE = 0.001
+try:
+    INITIAL_LEARNING_RATE = float(os.environ.get("TSUKUYOMI_LEARNING_RATE", "0.001"))
+except ValueError as error:
+    raise SystemExit("TSUKUYOMI_LEARNING_RATE precisa ser um número válido.") from error
+if not math.isfinite(INITIAL_LEARNING_RATE) or not 0.0 < INITIAL_LEARNING_RATE <= 0.1:
+    raise SystemExit("TSUKUYOMI_LEARNING_RATE precisa estar entre 0 e 0.1.")
 MIN_LEARNING_RATE = 0.00005
 LR_REDUCE_FACTOR = 0.5
 LR_PLATEAU_CYCLES = 3
