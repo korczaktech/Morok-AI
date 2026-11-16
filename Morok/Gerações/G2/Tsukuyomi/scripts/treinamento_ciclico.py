@@ -227,7 +227,7 @@ def load_feedback_memory(path: Path) -> dict[str, str]:
     return memory
 
 
-def record_validation_errors(memory: dict[str, str],
+def record_feedback_errors(memory: dict[str, str],
                              dialogues: list[tuple[str, str]],
                              results: list[tuple[str, bool, float]]) -> int:
     """Guarda respostas incorretas como exemplos supervisionados sem duplicar perguntas."""
@@ -254,7 +254,7 @@ def load_question_history(path: Path) -> dict:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise RuntimeError("Histórico persistente de perguntas inválido.") from error
-    if data.get("version") != 1 or not isinstance(data.get("questions"), dict):
+    if not isinstance(data, dict) or data.get("version") != 1 or not isinstance(data.get("questions"), dict):
         raise RuntimeError("Formato do histórico persistente de perguntas incompatível.")
     return data
 
@@ -274,6 +274,7 @@ def update_question_history(history: dict, dialogues, results, cycle: int,
             "regressions": 0,
             "recoveries": 0,
             "ever_correct": False,
+            "history": [],
         })
         if entry.get("expected") != expected:
             raise RuntimeError(f"Gabarito mudou para uma pergunta já monitorada: {question}")
@@ -285,6 +286,15 @@ def update_question_history(history: dict, dialogues, results, cycle: int,
             recoveries += 1
             entry["recoveries"] = int(entry.get("recoveries", 0)) + 1
         entry["observations"] = int(entry.get("observations", 0)) + 1
+        observations = entry.setdefault("history", [])
+        observations.append({
+            "execution": execution_id,
+            "cycle": int(cycle),
+            "correct": bool(correct),
+            "answer": answer,
+            "lexical_f1": float(lexical_score),
+        })
+        del observations[:-200]
         entry["ever_correct"] = bool(entry.get("ever_correct")) or bool(correct)
         entry["last_correct"] = bool(correct)
         entry["last_answer"] = answer
@@ -569,7 +579,7 @@ def main() -> int:
                 raise RuntimeError("O treinador não publicou checkpoint e estado Adam válidos.")
             validation_results = evaluate_set(generator, checkpoint, validation)
             feedback_results = evaluate_set(generator, checkpoint, feedback_questions)
-            new_corrections = record_validation_errors(
+            new_corrections = record_feedback_errors(
                 feedback_memory, feedback_questions, feedback_results
             )
             write_feedback_memory(feedback_path, feedback_memory)
