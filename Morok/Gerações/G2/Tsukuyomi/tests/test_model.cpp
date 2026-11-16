@@ -515,6 +515,33 @@ int main() {
             assert(std::abs(analytic[i]) < 1.0e-8F);
     }
 
+    // O mapa de taxas mantém o LR específico de cada resposta dentro do mesmo corpus.
+    {
+        const std::string mapped_text = "U: A\nIA:x\n\nU: B\nIA:y\n";
+        const std::vector<std::uint8_t> mapped_bytes(mapped_text.begin(), mapped_text.end());
+        std::vector<std::uint8_t> mapped_mask(mapped_bytes.size(), 0);
+        std::vector<double> mapped_rates(mapped_bytes.size(), 0.001);
+        const auto first_answer = mapped_text.find("x\n");
+        const auto second_answer = mapped_text.find("y\n");
+        assert(first_answer != std::string::npos && second_answer != std::string::npos);
+        mapped_mask[first_answer] = mapped_mask[first_answer + 1] = 1;
+        mapped_mask[second_answer] = mapped_mask[second_answer + 1] = 1;
+        mapped_rates[second_answer] = mapped_rates[second_answer + 1] = 0.0001;
+        Model uniform_model, adaptive_model;
+        initialize(uniform_model, 9876);
+        initialize(adaptive_model, 9876);
+        TrainingConfig mapped_config;
+        mapped_config.epochs = 1;
+        mapped_config.batch_size = 1;
+        mapped_config.weight_decay = 0.0;
+        const auto uniform_report = train(
+            uniform_model, mapped_bytes, mapped_config, nullptr, mapped_mask);
+        const auto adaptive_report = train(
+            adaptive_model, mapped_bytes, mapped_config, nullptr, mapped_mask, mapped_rates);
+        assert(uniform_report.epochs_completed == 1 && adaptive_report.epochs_completed == 1);
+        assert(uniform_model.parameters != adaptive_model.parameters);
+    }
+
     // O treinamento supervisionado atualiza somente os bytes marcados como resposta.
     const std::array<std::uint8_t, 9> dialogue{
         'U', ':', 'Q', '\n', 'I', 'A', ':', 'A', '\n'
