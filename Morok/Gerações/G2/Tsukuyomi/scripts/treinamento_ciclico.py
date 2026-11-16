@@ -378,6 +378,17 @@ def extract_training_metric(output: str, name: str) -> float:
     return value
 
 
+def accept_question_checkpoint(previous_loss: float | None, candidate_loss: float) -> bool:
+    """Decide somente a aceitação da pergunta atual; menor Loss é melhor."""
+    if not math.isfinite(candidate_loss):
+        raise ValueError("Loss candidata precisa ser finita.")
+    if previous_loss is None:
+        return True
+    if not math.isfinite(previous_loss):
+        raise ValueError("Loss anterior precisa ser finita.")
+    return candidate_loss < previous_loss - 1e-12
+
+
 def question_checkpoint_paths(directory: Path, question: str) -> tuple[Path, Path]:
     """Retorna o checkpoint e o Adam exclusivos de uma pergunta."""
     key = 14695981039346656037
@@ -530,11 +541,14 @@ def main() -> int:
     legacy_checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
     legacy_adam = Path(str(legacy_checkpoint) + ".adam")
     existing_individual = any(checkpoint_directory.glob("*.ckpt"))
+    if legacy_checkpoint.exists() != legacy_adam.exists():
+        raise RuntimeError("Checkpoint global legado sem seu estado Adam correspondente.")
     if not existing_individual and legacy_checkpoint.is_file() and legacy_adam.is_file():
         for question, _ in training_dialogues:
             target, target_adam = question_checkpoint_paths(checkpoint_directory, question)
             shutil.copy2(legacy_checkpoint, target)
             shutil.copy2(legacy_adam, target_adam)
+        existing_individual = True
 
     for question, _ in training_dialogues:
         checkpoint, adam = question_checkpoint_paths(checkpoint_directory, question)
@@ -555,7 +569,11 @@ def main() -> int:
         report.write(f"- Ciclos globais anteriores: {history['global_cycles']}\n")
         report.write(f"- Épocas por pergunta/ciclo: {epochs}; máximo de ciclos: {max_cycles}.\n\n")
 
-        if existing_individual or legacy_checkpoint.is_file():
+        all_individual_exist = all(
+            question_checkpoint_paths(checkpoint_directory, question)[0].is_file()
+            for question, _ in training_dialogues
+        )
+        if all_individual_exist:
             baseline = evaluate_set(generator, trainer, checkpoint_directory, training_dialogues)
             best_correct, _ = write_results(report, "Estado retomado — 40 checkpoints individuais", training_dialogues, baseline)
             update_question_history(history, training_dialogues, baseline, 0, execution_id, dataset="training")
@@ -610,7 +628,7 @@ def main() -> int:
                         raise RuntimeError(f"Treinamento ou persistência inválida na pergunta {index:02d}.")
 
                     candidate = evaluate_one(generator, trainer, checkpoint, dialogue)
-                    accepted = old_loss is None or candidate[3] < old_loss - 1e-12
+                    accepted = accept_question_checkpoint(old_loss, candidate[3])
                     if accepted:
                         accepted_count += 1
                     else:
