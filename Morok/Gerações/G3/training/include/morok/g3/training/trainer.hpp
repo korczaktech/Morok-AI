@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <string>
+#include <random>
 #include <vector>
 
 namespace morok::g3::training {
