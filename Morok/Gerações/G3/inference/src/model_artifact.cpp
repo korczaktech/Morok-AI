@@ -91,11 +91,10 @@ bool valid_metadata(const ModelArtifactMetadata& metadata,
     if (metadata.generation_id != 3U ||
         metadata.architecture_id != kG3ArchitectureGruRmsNormTied ||
         metadata.vocabulary_size != 261U ||
-        metadata.embedding_dim != 64U || metadata.hidden_dim != 128U ||
-        metadata.recurrent_layers != 2U ||
-        metadata.state_size_bytes != 1024U ||
-        metadata.parameter_count == 0U ||
-        metadata.parameter_count > 100'000'000ULL ||
+        metadata.embedding_dim != 60U || metadata.hidden_dim != 97U ||
+        metadata.hidden_dim_second != 68U || metadata.recurrent_layers != 2U ||
+        metadata.state_size_bytes != 660U ||
+        metadata.parameter_count != 100000U ||
         payload_size > kMaximumModelPayloadBytes) {
         return false;
     }
@@ -253,6 +252,7 @@ common::Result<std::vector<std::byte>> serialize_model_artifact(
     put_u16(header, 20U, artifact.metadata.embedding_dim);
     put_u16(header, 22U, artifact.metadata.hidden_dim);
     put_u16(header, 24U, artifact.metadata.recurrent_layers);
+    put_u16(header, 26U, artifact.metadata.hidden_dim_second);
     put_u32(header, 28U, artifact.metadata.state_size_bytes);
     put_u64(header, 32U, artifact.metadata.parameter_count);
     put_u64(header, 40U, static_cast<std::uint64_t>(artifact.payload.size()));
@@ -279,7 +279,7 @@ common::Result<ModelArtifact> deserialize_model_artifact(
             common::ErrorCode::model_version_mismatch, "load.version",
             "Model format version or header size is unsupported");
     }
-    for (std::size_t index : {14U, 15U, 26U, 27U, 56U, 57U, 58U, 59U,
+    for (std::size_t index : {14U, 15U, 56U, 57U, 58U, 59U,
                               60U, 61U, 62U, 63U}) {
         if (header[index] != std::byte{0}) {
             return failure<ModelArtifact>(
@@ -297,6 +297,7 @@ common::Result<ModelArtifact> deserialize_model_artifact(
     artifact.metadata.embedding_dim = get_u16(header, 20U);
     artifact.metadata.hidden_dim = get_u16(header, 22U);
     artifact.metadata.recurrent_layers = get_u16(header, 24U);
+    artifact.metadata.hidden_dim_second = get_u16(header, 26U);
     artifact.metadata.state_size_bytes = get_u32(header, 28U);
     artifact.metadata.parameter_count = get_u64(header, 32U);
     const auto payload_size = get_u64(header, 40U);
