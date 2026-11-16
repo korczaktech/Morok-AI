@@ -237,7 +237,8 @@ Status ByteTokenizer::append_message(
 }
 
 Result<DecodedText> ByteTokenizer::decode_text(
-    std::span<const TokenId> tokens, const TextCodecConfig& config) {
+    std::span<const TokenId> tokens, const TextCodecConfig& config,
+    std::size_t max_output_bytes) {
     std::string bytes;
     bytes.reserve(tokens.size());
     for (const TokenId token : tokens) {
@@ -256,9 +257,23 @@ Result<DecodedText> ByteTokenizer::decode_text(
     if (!normalized) {
         return Result<DecodedText>::failure(*normalized.error_if());
     }
+    std::string output = normalized.value_if()->text;
+    const bool truncated = output.size() > max_output_bytes;
+    if (truncated) {
+        std::size_t boundary = max_output_bytes;
+        while (boundary > 0U && boundary < output.size()) {
+            const auto next_byte = static_cast<unsigned char>(output[boundary]);
+            if ((next_byte & 0xC0U) != 0x80U) {
+                break;
+            }
+            --boundary;
+        }
+        output.resize(boundary);
+    }
     return Result<DecodedText>::success(DecodedText{
-        normalized.value_if()->text,
-        normalized.value_if()->replaced_invalid_utf8});
+        std::move(output),
+        normalized.value_if()->replaced_invalid_utf8,
+        truncated});
 }
 
 } // namespace morok::lang
