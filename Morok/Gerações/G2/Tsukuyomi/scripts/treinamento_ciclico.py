@@ -49,6 +49,56 @@ def decay_learning_rate(current: float) -> float:
     return max(MIN_LEARNING_RATE, current * LR_REDUCE_FACTOR)
 
 
+def learning_rate_for_lexical_level(base_learning_rate: float, lexical_level: float) -> float:
+    """Curva exponencial: 0% usa o LR-base; 100% usa 10% dele."""
+    if (not math.isfinite(base_learning_rate) or
+            not MIN_LEARNING_RATE <= base_learning_rate <= 0.1):
+        raise ValueError("Learning rate-base inválido.")
+    if not math.isfinite(lexical_level) or not 0.0 <= lexical_level <= 1.0:
+        raise ValueError("Nível lexical precisa estar entre 0 e 1.")
+    return max(MIN_LEARNING_RATE, base_learning_rate * (0.1 ** lexical_level))
+
+
+def write_question_learning_rates(corpus: Path, rates: dict[str, float], destination: Path) -> int:
+    """Associa cada byte-alvo IA: ao LR calculado para sua própria pergunta."""
+    raw = corpus.read_bytes()
+    offset = 0
+    current_question = None
+    found = set()
+    ranges = []
+    for line in raw.splitlines(keepends=True):
+        content = line.rstrip(b"\r\n")
+        leading = len(content) - len(content.lstrip(b" \t"))
+        marker = content[leading:]
+        if offset == 0 and marker.startswith(b"\xef\xbb\xbf"):
+            marker = marker[3:]
+            leading += 3
+        if marker.startswith(b"U:"):
+            current_question = marker[2:].decode("utf-8").strip()
+        elif marker.startswith(b"IA:") and current_question is not None:
+            if current_question not in rates:
+                raise RuntimeError(f"Learning rate ausente para a pergunta: {current_question}")
+            rate = rates[current_question]
+            if not math.isfinite(rate) or not MIN_LEARNING_RATE <= rate <= 0.1:
+                raise ValueError(f"Learning rate inválido para a pergunta: {current_question}")
+            begin = offset + leading + 3
+            end = offset + len(line)
+            if begin < end:
+                ranges.append((begin, end, rate))
+            found.add(current_question)
+            current_question = None
+        offset += len(line)
+    if found != set(rates):
+        missing = sorted(set(rates) - found)
+        raise RuntimeError(f"Perguntas sem intervalo de treinamento: {missing}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(destination.name + ".tmp")
+    temporary.write_text("".join(f"{begin} {end} {rate:.12g}\n" for begin, end, rate in ranges),
+                         encoding="ascii")
+    os.replace(temporary, destination)
+    return len(ranges)
+
+
 def load_learning_rate(path: Path, fallback: float) -> float:
     """Retoma o scheduler persistido; estado presente e inválido nunca é ignorado."""
     if not path.exists():
@@ -497,6 +547,7 @@ def main() -> int:
     feedback_path = Path("build/g2/tsukuyomi-memoria-erros.txt")
     combined_training = Path("build/g2/treinamento-com-memoria.txt")
     learning_rate_path = Path("build/g2/tsukuyomi-learning-rate.txt")
+    question_learning_rate_path = Path("build/g2/tsukuyomi-learning-rates-by-question.txt")
     question_history_path = Path("build/g2/tsukuyomi-historico-perguntas.json")
     feedback_memory = load_feedback_memory(feedback_path)
     question_history = load_question_history(question_history_path)
@@ -584,9 +635,42 @@ def main() -> int:
                     best_checkpoint, best_optimizer_state, checkpoint, optimizer_state
                 )
             build_training_corpus(train_corpus, feedback_memory, combined_training)
+            current_training_dialogues = read_dialogues(combined_training)
+            if checkpoint.is_file():
+                lexical_probe_results = evaluate_set(
+                    generator, checkpoint, current_training_dialogues
+                )
+            else:
+                lexical_probe_results = [("", False, 0.0)] * len(current_training_dialogues)
+            question_rates = {
+                question: learning_rate_for_lexical_level(learning_rate, result[2])
+                for (question, _), result in zip(current_training_dialogues, lexical_probe_results)
+            }
+            rate_ranges = write_question_learning_rates(
+                combined_training, question_rates, question_learning_rate_path
+            )
+            lexical_levels = [result[2] for result in lexical_probe_results]
+            individual_rates = list(question_rates.values())
+            print(
+                f"LR adaptativo por questão: {rate_ranges} intervalos; "
+                f"nível lexical médio={sum(lexical_levels) / max(1, len(lexical_levels)):.1%}; "
+                f"LR individual mínimo={min(individual_rates):.8g}; "
+                f"máximo={max(individual_rates):.8g}.", flush=True
+            )
+            report.write(f"### Learning rate adaptativo — ciclo {cycle}\n\n")
+            report.write("| Pergunta | Nível lexical atual | Learning rate individual |\n")
+            report.write("|---|---:|---:|\n")
+            for (question, _), result in zip(current_training_dialogues, lexical_probe_results):
+                safe_question = question.replace("|", "&#124;")
+                report.write(
+                    f"| {safe_question} | {result[2]:.1%} | "
+                    f"{question_rates[question]:.8g} |\n"
+                )
+            report.write("\n")
             command = [
                 str(trainer), str(combined_training), str(checkpoint),
-                str(epochs), "42", f"{learning_rate:.12g}",
+                str(epochs), "42", f"{learning_rate:.12g}", "--lr-map",
+                str(question_learning_rate_path),
             ]
             if cycle > 1 or resume_previous_run or best_checkpoint.is_file():
                 command.append("--resume")
