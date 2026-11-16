@@ -410,7 +410,7 @@ class TrainingDataTests(unittest.TestCase):
     def test_question_history_round_trip_and_rejects_changed_answer_key(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "history.json"
-            history = {"version": 1, "questions": {}}
+            history = {"version": 1, "global_cycles": 0, "questions": {}}
             training.update_question_history(
                 history, [("pergunta", "gabarito")],
                 [("resposta", False, 0.0)], 1, "run-1"
