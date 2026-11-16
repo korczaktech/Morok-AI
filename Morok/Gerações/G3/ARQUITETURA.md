@@ -227,7 +227,10 @@ usando decodificação gulosa e o mesmo avaliador. Relata recompensa média,
 comprimento médio, taxa de respostas vazias e taxa de repetição, além da
 diferença de recompensa RL menos SFT. O relatório retém configuração, identidade
  e versão da rubrica, origem dos rótulos, componentes da recompensa, tokens
- amostrados e log-probabilidades sob a distribuição de amostragem.
+ amostrados e log-probabilidades sob a distribuição de amostragem. O estado
+  recuperável do treinador guarda configuração, baseline por categoria, estado
+  do gerador aleatório e identidades da política, referência e avaliador; pesos
+  e estado do otimizador continuam no checkpoint do backend.
 
 ### Critérios de conclusão da Etapa 3
 
@@ -239,6 +242,7 @@ diferença de recompensa RL menos SFT. O relatório retém configuração, ident
 - [x] Penalidade KL em relação à referência SFT e gradiente correspondente.
 - [x] Proteções e testes iniciais contra reward hacking.
 - [x] Comparação SFT/RL no mesmo conjunto fechado.
+- [x] Captura e restauração de baseline, RNG, configuração e proveniência do treino.
 - [x] Biblioteca, testes CTest e workflow G3 integrados.
 - [ ] Integração com pesos reais e BPTT da GRU G3: depende da implementação
       do backend neural treinável, ainda não entregue nas etapas anteriores.
