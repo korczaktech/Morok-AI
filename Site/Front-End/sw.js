@@ -4,8 +4,6 @@ self.addEventListener("push", event => {
   const title = data.title || "Morok";
   const options = {
     body: data.body || "Você tem uma nova atualização.",
-    icon: "./assets/morok-icon.png",
-    badge: "./assets/morok-badge.png",
     data: { url: data.url || "/" },
     tag: "morok-update",
     renotify: true
