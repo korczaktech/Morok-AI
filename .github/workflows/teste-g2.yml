@@ -103,7 +103,6 @@ jobs:
         working-directory: Morok
         env:
           RODADA: ${{ inputs.rodada }}
-          TSUKUYOMI_PERSIST_STATE: "1"
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "Iniciando rodada $RODADA de 10."
