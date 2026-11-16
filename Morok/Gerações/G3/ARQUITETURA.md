@@ -36,6 +36,12 @@ A G2 permanece sem dependência da implementação privada da G1. Nenhum código
 - `consume_byte(state, byte)`: incorpora um byte observado sem compartilhar estado entre sessões.
 - `next_token_log_probabilities(state, output)`: produz uma log-probabilidade por elemento do vocabulário.
 
+A fachada `morok::model::ModelSession`, também publicada pelo Core, conecta um
+backend a um buffer de estado fornecido pelo chamador. Ela valida descritor,
+tamanho e alinhamento, exige reset antes de entrada/inferência e impede cópia
+acidental do objeto de sessão. Não possui pesos, kernels, gerador ou otimizador:
+é apenas o caminho comum de ciclo de vida e despacho para o backend existente.
+
 O estado é opaco para o Core. O chamador aloca e possui o buffer; o backend só interpreta o estado criado por sua própria implementação. O tamanho exato é declarado no descritor. O alinhamento é informado para que futuros backends possam usar armazenamento especializado.
 
 As saídas são log-probabilidades, não logits arbitrários. Entradas não suportadas pelo vocabulário devem ser representadas por menos infinito. A quantidade de saídas precisa corresponder exatamente ao tamanho do vocabulário declarado.
