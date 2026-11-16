@@ -111,6 +111,9 @@ struct RewardAuditCase final {
 };
 
 struct CandidateMetrics final {
+    std::string prompt_id;
+    std::string category;
+    RewardComponents components{};
     double reward{0.0};
     double advantage{0.0};
     double kl{0.0};
@@ -119,6 +122,8 @@ struct CandidateMetrics final {
 };
 
 struct TrainingReport final {
+    Config config_snapshot{};
+    EvaluatorMetadata evaluator{};
     std::size_t prompts{0};
     std::size_t candidates{0};
     std::size_t optimizer_updates{0};
