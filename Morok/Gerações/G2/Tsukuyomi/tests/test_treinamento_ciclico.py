@@ -1,7 +1,9 @@
 import hashlib
+import io
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1] / "scripts"
@@ -155,6 +157,34 @@ class TrainingDataTests(unittest.TestCase):
         result = [("resposta", True, 1.0)]
         training.update_question_history(history, dialogues, result, 1, "run-1", dataset="training")
         self.assertEqual(history["questions"]["pergunta"]["dataset"], "training")
+
+    def test_each_question_report_contains_individual_metrics_and_colored_status(self):
+        dialogues = [
+            ("pergunta correta?", "resposta certa"),
+            ("pergunta incorreta?", "gabarito esperado"),
+        ]
+        results = [
+            ("resposta certa", True, 1.0, 0.12, 0.1731, 14),
+            ("resposta errada", False, 0.5, 1.20, 1.7312, 18),
+        ]
+        report = io.StringIO()
+        logs = io.StringIO()
+        with redirect_stdout(logs):
+            correct, total = training.write_results(report, "Ciclo 1", dialogues, results)
+        self.assertEqual((correct, total), (1, 2))
+        output = report.getvalue()
+        self.assertIn('color: green', output)
+        self.assertIn('Success: Pergunta 01 — pergunta correta?', output)
+        self.assertIn('color: red', output)
+        self.assertIn('Error: Pergunta 02 — pergunta incorreta?', output)
+        self.assertIn('Resposta gerada: resposta certa', output)
+        self.assertIn('Nível lexical (F1): 100.00%', output)
+        self.assertIn('Loss individual: 0.12000000', output)
+        self.assertIn('BPB individual: 0.17310000', output)
+        self.assertIn('Learning rate individual:', output)
+        self.assertIn('Bytes-alvo da resposta: 18', output)
+        self.assertIn('\\033[32mSuccess: Pergunta 01', logs.getvalue())
+        self.assertIn('\\033[31mError: Pergunta 02', logs.getvalue())
 
     def test_exact_match_normalization_and_diagnostics(self):
         correct, score = training.evaluate("O ceu e azul!", "O céu é azul.")
