@@ -44,6 +44,7 @@ const appDb = client.db(APP_DATABASE);
 const conversations = appDb.collection("conversations");
 const messages = appDb.collection("messages");
 const accountResources = appDb.collection("account_resources");
+const accountResourceDeletions = appDb.collection("account_resource_deletions");
 const supportTickets = appDb.collection("support_tickets");
 const pushSubscriptions = appDb.collection("push_subscriptions");
 const recoveryTokens = appDb.collection("password_recovery_tokens");
@@ -53,6 +54,7 @@ await conversations.createIndex({ accountId: 1, conversationId: 1 }, { name: "mo
 await messages.createIndex({ accountId: 1, conversationId: 1, createdAt: 1 }, { name: "morok_messages_conversation_time" });
 await messages.createIndex({ accountId: 1, conversationId: 1, messageId: 1 }, { name: "morok_messages_id_unique" });
 await accountResources.createIndex({ accountId: 1, type: 1, resourceId: 1 }, { unique: true, name: "morok_account_resource_unique" });
+await accountResourceDeletions.createIndex({ accountId: 1, type: 1, resourceId: 1 }, { unique: true, name: "morok_account_resource_deletion_unique" });
 await supportTickets.createIndex({ accountId: 1, createdAt: -1 }, { name: "morok_support_tickets_account_date" });
 await pushSubscriptions.createIndex({ accountId: 1, endpoint: 1 }, { unique: true, name: "morok_push_subscription_unique" });
 await recoveryTokens.createIndex({ tokenHash: 1 }, { unique: true, name: "morok_recovery_token_unique" });
@@ -534,7 +536,8 @@ async function handle(req, res) {
     const type = url.searchParams.get("type");
     if (!["projects", "tasks"].includes(type)) return send(res, 400, { error: "Tipo de recurso inválido." }, req.allowedOrigin);
     const docs = await accountResources.find({ accountId: token.sub, type }).sort({ updatedAt: -1 }).limit(500).toArray();
-    return send(res, 200, { items: docs.map(x => ({ id: x.resourceId, data: x.data, updatedAt: x.updatedAt })) }, req.allowedOrigin);
+    const deleted = await accountResourceDeletions.find({ accountId: token.sub, type }).toArray();
+    return send(res, 200, { items: docs.map(x => ({ id: x.resourceId, data: x.data, updatedAt: x.updatedAt })), deleted: deleted.map(x => ({ id: x.resourceId, deletedAt: x.deletedAt })) }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && path === "/v1/resources/delete") {
@@ -543,8 +546,12 @@ async function handle(req, res) {
     const body = await readBody(req);
     if (!["projects", "tasks"].includes(body.type) || !Array.isArray(body.ids) || body.ids.length > 500) return send(res, 400, { error: "Solicitação de exclusão inválida." }, req.allowedOrigin);
     const ids = body.ids.filter(value => typeof value === "string" && value.length > 0 && value.length <= 128);
-    const result = ids.length ? await accountResources.deleteMany({ accountId: token.sub, type: body.type, resourceId: { $in: ids } }) : { deletedCount: 0 };
-    return send(res, 200, { success: true, deleted: result.deletedCount }, req.allowedOrigin);
+    if (ids.length) {
+      const deletedAt = new Date();
+      await accountResourceDeletions.bulkWrite(ids.map(resourceId => ({ updateOne: { filter: { accountId: token.sub, type: body.type, resourceId }, update: { $set: { accountId: token.sub, type: body.type, resourceId, deletedAt } }, upsert: true } })), { ordered: false });
+      await accountResources.deleteMany({ accountId: token.sub, type: body.type, resourceId: { $in: ids } });
+    }
+    return send(res, 200, { success: true, deleted: ids.length }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && path === "/v1/resources/sync") {
@@ -559,7 +566,11 @@ async function handle(req, res) {
       if (!item || typeof item.id !== "string" || !item.id || item.id.length > 128 || !item.data || typeof item.data !== "object") continue;
       const data = JSON.parse(JSON.stringify(item.data));
       if (JSON.stringify(data).length > 20_000) continue;
-      ops.push({ updateOne: { filter: { accountId: token.sub, type, resourceId: item.id }, update: { $set: { data, updatedAt: new Date() }, $setOnInsert: { accountId: token.sub, type, resourceId: item.id, createdAt: new Date() } }, upsert: true } });
+      const itemUpdatedAt = item.updatedAt ? new Date(item.updatedAt) : new Date();
+      const tombstone = await accountResourceDeletions.findOne({ accountId: token.sub, type, resourceId: item.id });
+      if (tombstone && itemUpdatedAt <= tombstone.deletedAt) continue;
+      if (tombstone) await accountResourceDeletions.deleteOne({ _id: tombstone._id });
+      ops.push({ updateOne: { filter: { accountId: token.sub, type, resourceId: item.id }, update: { $set: { data, updatedAt: itemUpdatedAt }, $setOnInsert: { accountId: token.sub, type, resourceId: item.id, createdAt: new Date() } }, upsert: true } });
     }
     if (ops.length) await accountResources.bulkWrite(ops, { ordered: false });
     return send(res, 200, { success: true, saved: ops.length }, req.allowedOrigin);
@@ -617,6 +628,7 @@ async function handle(req, res) {
       conversations.deleteMany({ accountId: token.sub }),
       messages.deleteMany({ accountId: token.sub }),
       accountResources.deleteMany({ accountId: token.sub }),
+      accountResourceDeletions.deleteMany({ accountId: token.sub }),
       supportTickets.deleteMany({ accountId: token.sub }),
       pushSubscriptions.deleteMany({ accountId: token.sub }),
       recoveryTokens.deleteMany({ accountId: token.sub })
