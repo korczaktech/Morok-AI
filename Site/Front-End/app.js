@@ -630,16 +630,18 @@
   async function deleteRemoteConversation(conversationId) {
     const token = state.authSession?.access_token;
     if (!token || !conversationId) return true;
+    const accountId = state.authSession?.user?.id;
+    if (accountId && !state.pendingConversationDeletions.some(item => item.id === conversationId && item.accountId === accountId)) {
+      state.pendingConversationDeletions.push({ id: conversationId, accountId });
+      persist();
+    }
     try {
       await authRequest('/v1/conversations/delete', { token, body: { ids: [conversationId] } });
+      state.pendingConversationDeletions = state.pendingConversationDeletions.filter(item => !(item.id === conversationId && item.accountId === accountId));
+      persist();
       return true;
     } catch (error) {
       console.warn('Não foi possível excluir a conversa na nuvem:', error.message);
-      const accountId = state.authSession?.user?.id;
-      if (accountId && !state.pendingConversationDeletions.some(item => item.id === conversationId && item.accountId === accountId)) {
-        state.pendingConversationDeletions.push({ id: conversationId, accountId });
-        persist();
-      }
       toast('A exclusão na nuvem ficou pendente e será repetida na próxima sincronização.');
       return false;
     }
@@ -728,16 +730,18 @@
   async function deleteRemoteResource(type, resourceId) {
     const token = state.authSession?.access_token;
     if (!token || !resourceId) return true;
+    const accountId = state.authSession?.user?.id;
+    if (accountId && !state.pendingResourceDeletions.some(item => item.type === type && item.id === resourceId && item.accountId === accountId)) {
+      state.pendingResourceDeletions.push({ type, id: resourceId, accountId });
+      persist();
+    }
     try {
       await authRequest("/v1/resources/delete", { token, body: { type, ids: [resourceId] } });
+      state.pendingResourceDeletions = state.pendingResourceDeletions.filter(item => !(item.type === type && item.id === resourceId && item.accountId === accountId));
+      persist();
       return true;
     } catch (error) {
       console.warn("Não foi possível remover o recurso remoto:", error.message);
-      const accountId = state.authSession?.user?.id;
-      if (accountId && !state.pendingResourceDeletions.some(item => item.type === type && item.id === resourceId && item.accountId === accountId)) {
-        state.pendingResourceDeletions.push({ type, id: resourceId, accountId });
-        persist();
-      }
       toast("A exclusão na nuvem ficou pendente e será repetida na próxima sincronização.");
       return false;
     }
