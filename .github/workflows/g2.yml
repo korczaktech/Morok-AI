@@ -105,3 +105,28 @@ jobs:
           test -s build/g2/tsukuyomi-dialogue-smoke.ckpt
           test -s build/g2/tsukuyomi-dialogue-smoke-output.txt
 
+          # Roteamento: cada pergunta resolve seu próprio checkpoint por hash UTF-8.
+          python3 - <<'PY'
+          import shutil
+          from pathlib import Path
+          directory = Path("build/g2/tsukuyomi-questoes-smoke")
+          directory.mkdir(parents=True, exist_ok=True)
+          for question in ("Você tem sentimentos?", "O que é Morok?"):
+              value = 14695981039346656037
+              for byte in question.encode("utf-8"):
+                  value = ((value ^ byte) * 1099511628211) & 0xFFFFFFFFFFFFFFFF
+              shutil.copyfile(
+                  "build/g2/tsukuyomi-dialogue-smoke.ckpt",
+                  directory / f"q_{value:016x}.ckpt",
+              )
+          PY
+          printf 'Você tem sentimentos?\nO que é Morok?\n' | \
+            build/g2/morok-g2-tsukuyomi-generate \
+              --batch-question-checkpoints build/g2/tsukuyomi-questoes-smoke 32 \
+              > build/g2/tsukuyomi-routed-batch.txt
+          test "$(wc -l < build/g2/tsukuyomi-routed-batch.txt)" -eq 2
+          build/g2/morok-g2-tsukuyomi-generate \
+            --question-checkpoints build/g2/tsukuyomi-questoes-smoke \
+            "Você tem sentimentos?" 32 > build/g2/tsukuyomi-routed-single.txt
+          test -s build/g2/tsukuyomi-routed-single.txt
+
