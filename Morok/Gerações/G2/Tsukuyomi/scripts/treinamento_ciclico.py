@@ -22,7 +22,7 @@ MAX_EPOCHS_PER_CYCLE = 1000
 MIN_LEARNING_RATE = 1e-5
 MAX_LEARNING_RATE = 1e-2
 # LR-base fixo e interno; a configuração externa do workflow é ignorada.
-INITIAL_LEARNING_RATE = MAX_LEARNING_RATE
+INITIAL_LEARNING_RATE = 1e-3
 LR_REDUCE_FACTOR = 0.9
 
 
@@ -47,16 +47,26 @@ def decay_learning_rate(current: float) -> float:
 
 
 def learning_rate_for_lexical_level(base_learning_rate: float, lexical_level: float) -> float:
-    """Mapeia 0% para o teto e 100% para o piso, sem depender do formulário."""
-    if (not math.isfinite(base_learning_rate) or
-            not MIN_LEARNING_RATE <= base_learning_rate <= MAX_LEARNING_RATE):
-        raise ValueError("Learning rate-base inválido.")
+    """Aplica a curva lexical fixa, independente do LR externo."""
+    del base_learning_rate  # Mantido apenas para compatibilidade da assinatura.
     if not math.isfinite(lexical_level) or not 0.0 <= lexical_level <= 1.0:
         raise ValueError("Nível lexical precisa estar entre 0 e 1.")
-    return max(MIN_LEARNING_RATE, min(
-        MAX_LEARNING_RATE,
-        MAX_LEARNING_RATE * ((MIN_LEARNING_RATE / MAX_LEARNING_RATE) ** lexical_level),
-    ))
+    anchors = (
+        (0.00, 1e-3),
+        (0.25, 7.5e-4),
+        (0.50, 5e-4),
+        (0.75, 2.5e-4),
+        (0.85, 1e-4),
+        (0.90, 1e-5),
+    )
+    if lexical_level >= anchors[-1][0]:
+        return MIN_LEARNING_RATE
+    for (left_level, left_rate), (right_level, right_rate) in zip(anchors, anchors[1:]):
+        if lexical_level <= right_level:
+            fraction = (lexical_level - left_level) / (right_level - left_level)
+            rate = left_rate + fraction * (right_rate - left_rate)
+            return max(MIN_LEARNING_RATE, min(1e-3, rate))
+    return MIN_LEARNING_RATE
 
 
 def write_question_learning_rates(corpus: Path, rates: dict[str, float], destination: Path) -> int:
@@ -680,7 +690,7 @@ def main() -> int:
             report.write("\n")
             command = [
                 str(trainer), str(combined_training), str(checkpoint),
-                str(epochs), "42", f"{MAX_LEARNING_RATE:.12g}", "--lr-map",
+                str(epochs), "42", f"{INITIAL_LEARNING_RATE:.12g}", "--lr-map",
                 str(question_learning_rate_path),
             ]
             if cycle > 1 or resume_previous_run or best_checkpoint.is_file():
