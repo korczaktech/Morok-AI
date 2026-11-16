@@ -277,7 +277,7 @@ def find_retention_regressions(previous_results, current_dialogues, current_resu
 
 
 def update_question_history(history: dict, dialogues, results, cycle: int,
-                            execution_id: str) -> tuple[int, int]:
+                            execution_id: str, dataset: str = "validation") -> tuple[int, int]:
     """Conta regressões e recuperações sem descartar respostas ou resultados anteriores."""
     if len(dialogues) != len(results):
         raise ValueError("Quantidade de diálogos e resultados do histórico não corresponde.")
@@ -287,14 +287,15 @@ def update_question_history(history: dict, dialogues, results, cycle: int,
     for (question, expected), (answer, correct, lexical_score) in zip(dialogues, results):
         entry = questions.setdefault(question, {
             "expected": expected,
+            "dataset": dataset,
             "observations": 0,
             "regressions": 0,
             "recoveries": 0,
             "ever_correct": False,
             "history": [],
         })
-        if entry.get("expected") != expected:
-            raise RuntimeError(f"Gabarito mudou para uma pergunta já monitorada: {question}")
+        if entry.get("expected") != expected or entry.get("dataset", dataset) != dataset:
+            raise RuntimeError(f"Gabarito ou conjunto mudou para uma pergunta já monitorada: {question}")
         previous = entry.get("last_correct")
         if previous is True and not correct:
             regressions += 1
@@ -310,6 +311,7 @@ def update_question_history(history: dict, dialogues, results, cycle: int,
             "correct": bool(correct),
             "answer": answer,
             "lexical_f1": float(lexical_score),
+            "dataset": dataset,
         })
         del observations[:-200]
         entry["ever_correct"] = bool(entry.get("ever_correct")) or bool(correct)
@@ -549,6 +551,11 @@ def main() -> int:
             save_best_state(
                 checkpoint, optimizer_state, best_checkpoint, best_optimizer_state
             )
+            baseline_feedback_results = evaluate_set(generator, checkpoint, feedback_questions)
+            feedback_regressions, feedback_recoveries = update_question_history(
+                question_history, feedback_questions, baseline_feedback_results, 0,
+                execution_id, dataset="feedback"
+            )
             regressions, recoveries = update_question_history(
                 question_history, validation_pool, best_validation_results, 0, execution_id
             )
@@ -606,6 +613,10 @@ def main() -> int:
                 feedback_memory, feedback_questions, feedback_results
             )
             write_feedback_memory(feedback_path, feedback_memory)
+            feedback_history_regressions, feedback_history_recoveries = update_question_history(
+                question_history, feedback_questions, feedback_results, cycle,
+                execution_id, dataset="feedback"
+            )
             regressions, recoveries = update_question_history(
                 question_history, validation_pool, candidate_all_results, cycle, execution_id
             )
@@ -618,7 +629,9 @@ def main() -> int:
             print(
                 f"Histórico da validação: {regressions} regressão(ões), "
                 f"{recoveries} recuperação(ões) neste ciclo; "
-                f"regressões contra o melhor checkpoint: {len(retention_regressions)}.",
+                f"regressões contra o melhor checkpoint: {len(retention_regressions)}; "
+                f"feedback regressões={feedback_history_regressions}, "
+                f"recuperações={feedback_history_recoveries}.",
                 flush=True,
             )
             total_questions = len(validation_results)
