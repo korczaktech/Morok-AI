@@ -379,7 +379,12 @@ Status validate_config(const Config& config) {
 
 Status audit_evaluator(const RewardEvaluator& evaluator,
                        std::string_view policy_identity,
-                       std::span<const RewardAuditCase> audit_cases) {
+                       std::span<const RewardAuditCase> audit_cases,
+                       const Config& config) {
+    const auto config_status = validate_config(config);
+    if (!config_status) {
+        return Status::failure(*config_status.error_if());
+    }
     const auto metadata = evaluator.metadata();
     if (metadata.identity.empty() || metadata.rubric_version.empty() ||
         metadata.label_origin.empty() || metadata.identity == policy_identity ||
@@ -387,8 +392,8 @@ Status audit_evaluator(const RewardEvaluator& evaluator,
         return failure(ErrorCode::invalid_argument, "evaluator.metadata",
                        "Evaluator must be identified, versioned, independently sourced and audited");
     }
-    const RewardWeights weights{};
-    const RewardPenalties penalties{};
+    const RewardWeights& weights = config.reward_weights;
+    const RewardPenalties& penalties = config.penalties;
     for (const auto& test_case : audit_cases) {
         if (test_case.id.empty() || !std::isfinite(test_case.minimum_score) ||
             !std::isfinite(test_case.maximum_score) ||
@@ -499,7 +504,8 @@ Status ReinforceTrainer::restore_state(
 
 Result<TrainingReport> ReinforceTrainer::train_batch(
     std::span<const Prompt> prompts, Policy& policy,
-    const InferencePolicy& frozen_sft_reference, const RewardEvaluator& evaluator) {
+    const InferencePolicy& frozen_sft_reference, const RewardEvaluator& evaluator,
+    std::span<const RewardAuditCase> evaluator_audit_cases) {
     const auto config_status = validate_config(config_);
     if (!config_status) {
         return Result<TrainingReport>::failure(*config_status.error_if());
@@ -511,15 +517,16 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
             ErrorCode::invalid_argument, "train.identity",
             "Training requires prompts, a policy and a distinct frozen SFT reference");
     }
+    const auto evaluator_status = audit_evaluator(
+        evaluator, policy.identity(), evaluator_audit_cases, config_);
+    if (!evaluator_status) {
+        return Result<TrainingReport>::failure(*evaluator_status.error_if());
+    }
     const auto evaluator_metadata = evaluator.metadata();
-    if (evaluator_metadata.identity.empty() ||
-        evaluator_metadata.rubric_version.empty() ||
-        evaluator_metadata.label_origin.empty() ||
-        evaluator_metadata.identity == policy.identity() ||
-        evaluator_metadata.identity == frozen_sft_reference.identity()) {
+    if (evaluator_metadata.identity == frozen_sft_reference.identity()) {
         return failure_result<TrainingReport>(
             ErrorCode::invalid_argument, "train.evaluator",
-            "Training requires an identified, versioned and independent evaluator");
+            "Reward evaluator identity must differ from the frozen SFT reference");
     }
 
     TrainingReport report;
