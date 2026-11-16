@@ -58,7 +58,7 @@ Esses testes verificam a derivada da função atual em pontos representativos; n
 
 - Até 1.000 épocas por tentativa.
 - Até 100 tentativas/ciclos por execução (máximo teórico de 100.000 épocas).
-- Até 20 perguntas de validação independente por ciclo, além de 20 perguntas exclusivas de feedback supervisionado.
+- Até 20 perguntas de validação independente por ciclo, além de 40 perguntas exclusivas de feedback supervisionado.
 - Treinamento contínuo desativado por padrão.
 - Limites independentes validados tanto no workflow quanto no executor: `épocas <= 1000` e `tentativas <= 100`.
 - O workflow de push só executa treinamento quando a mensagem do commit contém `[train-g2]`; os demais pushes apenas validam e compilam.
