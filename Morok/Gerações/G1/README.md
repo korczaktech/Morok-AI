@@ -13,3 +13,15 @@ A G1 possui somente um modelo: **Tsukuyomi Max**, a rede neural unificada da ger
 A G1 depende apenas das bibliotecas públicas neutras da raiz e de seu motor interno. Não importa código de outras gerações.
 
 Consulte [MODELOS.md](../MODELOS.md).
+
+## Contrato comum de execução
+
+O motor neural da G1 continua implementado nesta geração. A classe
+`morok::model::G1ModelBackend` adapta o forward pass existente ao contrato
+público `morok::model::ModelBackend`, definido em
+`Morok/include/morok/model/model_backend.hpp`.
+
+O adaptador não cria nem copia outro motor e não altera a arquitetura ou os
+parâmetros da G1. Ele permite que o runtime compartilhado invoque o motor por
+uma interface estável. O objeto `G1Parameters` é externo e deve permanecer
+vivo e imutável durante o uso do adaptador.
