@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Treinamento cíclico e relatório individual das 40 perguntas do Tsukuyomi G2 0.1."""
+"""Treinamento cíclico e relatório individual das 100 perguntas do Tsukuyomi G2 0.1."""
 
 from collections import Counter, defaultdict
 import difflib
@@ -17,7 +17,7 @@ import time
 import unicodedata
 
 MAX_RESPONSE_BYTES = 160
-TRAINING_QUESTIONS = 40
+TRAINING_QUESTIONS = 100
 MAX_CYCLES = 100
 MAX_EPOCHS_PER_CYCLE = 1000
 MIN_LEARNING_RATE = 1e-5
@@ -200,6 +200,16 @@ def read_dialogues(corpus: Path) -> list[tuple[str, str]]:
             question = None
     if not dialogues:
         raise RuntimeError(f"Nenhum par U:/IA: completo encontrado em {corpus}.")
+    def normalized(value: str) -> str:
+        decomposed = unicodedata.normalize("NFKD", value).casefold()
+        return "".join(char for char in decomposed if not unicodedata.combining(char)
+                       and (char.isalnum() or char.isspace())).strip()
+    questions = [normalized(question) for question, _ in dialogues]
+    answers = [normalized(answer) for _, answer in dialogues]
+    if len(set(questions)) != len(questions):
+        raise RuntimeError("O corpus contém perguntas duplicadas.")
+    if len(set(answers)) != len(answers):
+        raise RuntimeError("O corpus contém respostas-alvo duplicadas.")
     return dialogues
 
 
@@ -359,7 +369,7 @@ def write_feedback_memory(path: Path, memory: dict[str, str]) -> None:
 
 
 def build_training_corpus(base: Path, memory: dict[str, str], destination: Path) -> None:
-    """Mantém exatamente as 40 perguntas; a memória substitui gabaritos, não adiciona perguntas."""
+    """Mantém exatamente as 100 perguntas; a memória substitui gabaritos, não adiciona perguntas."""
     dialogues = read_dialogues(base)
     questions = {question for question, _ in dialogues}
     unknown = set(memory) - questions
@@ -521,7 +531,7 @@ def write_results(report, title: str, dialogues, results) -> tuple[int, int]:
 
 def main() -> int:
     if len(sys.argv) != 7:
-        print("Uso: treinamento_ciclico.py <treinador> <gerador> <corpus-40-perguntas> <epocas> <tentativas> <continuo:0|1>", file=sys.stderr)
+        print("Uso: treinamento_ciclico.py <treinador> <gerador> <corpus-100-perguntas> <epocas> <tentativas> <continuo:0|1>", file=sys.stderr)
         return 2
     trainer, generator, training_corpus = map(Path, sys.argv[1:4])
     epochs, attempts = int(sys.argv[4]), int(sys.argv[5])
@@ -551,7 +561,7 @@ def main() -> int:
     for entry in history["questions"].values():
         entry["dataset"] = "training"
 
-    # Migração segura: o checkpoint compartilhado anterior vira a origem dos 40
+    # Migração segura: o checkpoint compartilhado anterior vira a origem dos 100
     # estados independentes, preservando também os momentos Adam existentes.
     legacy_checkpoint = Path("build/g2/tsukuyomi-treinamento-ciclico.ckpt")
     legacy_adam = Path(str(legacy_checkpoint) + ".adam")
@@ -577,7 +587,7 @@ def main() -> int:
     best_correct = 0
     with output.open("w", encoding="utf-8") as report:
         report.write("# Treinamento — Tsukuyomi G2 0.1\n\n")
-        report.write("- Existem 40 checkpoints independentes, um por pergunta.\n")
+        report.write("- Existem 100 checkpoints independentes, um por pergunta.\n")
         report.write("- Cada pergunta mantém sua própria Loss mínima e seu próprio estado Adam.\n")
         report.write("- Uma regressão rejeita somente o checkpoint da pergunta afetada.\n")
         report.write("- Não existe validação independente nem conjunto reservado.\n")
@@ -590,7 +600,7 @@ def main() -> int:
         )
         if all_individual_exist:
             baseline = evaluate_set(generator, trainer, checkpoint_directory, training_dialogues)
-            best_correct, _ = write_results(report, "Estado retomado — 40 checkpoints individuais", training_dialogues, baseline)
+            best_correct, _ = write_results(report, "Estado retomado — 100 checkpoints individuais", training_dialogues, baseline)
             update_question_history(history, training_dialogues, baseline, 0, execution_id, dataset="training")
             write_question_history(history_path, history)
 
@@ -663,7 +673,7 @@ def main() -> int:
                     f"- Learning rate: {rate:.8g}; épocas: {epochs}\n"
                     f"- Checkpoint: {checkpoint.name}\n\n"
                 )
-                print(f"Pergunta {index:02d}/40: Loss "
+                print(f"Pergunta {index:02d}/100: Loss "
                       f"{'—' if old_loss is None else f'{old_loss:.6f}'} → "
                       f"{candidate_loss:.6f}; {state}.", flush=True)
 
@@ -676,14 +686,14 @@ def main() -> int:
             correct, total = write_results(
                 report, f"Resultado do ciclo {cycle} — 40 perguntas", training_dialogues, cycle_results)
             best_correct = correct
-            report.write(f"- Checkpoints individuais aceitos: {accepted_count}/40.\n")
-            report.write(f"- Checkpoints individuais rejeitados: {rejected_count}/40.\n")
+            report.write(f"- Checkpoints individuais aceitos: {accepted_count}/100.\n")
+            report.write(f"- Checkpoints individuais rejeitados: {rejected_count}/100.\n")
             report.write(f"- Novas correções armazenadas: {new_errors}.\n")
             report.write(f"- Regressões/recuperações de respostas: {regressions}/{recoveries}.\n\n")
             report.flush()
 
             if should_stop(continuous, best_correct, TRAINING_QUESTIONS):
-                report.write("Todas as 40 perguntas estão corretas; treinamento contínuo encerrado.\n")
+                report.write("Todas as 100 perguntas estão corretas; treinamento contínuo encerrado.\n")
                 break
 
         if continuous and best_correct < TRAINING_QUESTIONS:
@@ -694,8 +704,8 @@ def main() -> int:
         final_results = evaluate_set(generator, trainer, checkpoint_directory, training_dialogues)
         final_correct, final_total = write_results(
             report, "Resultado final — 40 checkpoints individuais", training_dialogues, final_results)
-        report.write(f"**Resultado final: {final_correct}/{final_total} respostas exatas nas 40 perguntas treinadas.**\n")
-        print(f"Resultado final nas 40 perguntas: {final_correct}/{final_total}.", flush=True)
+        report.write(f"**Resultado final: {final_correct}/{final_total} respostas exatas nas 100 perguntas treinadas.**\n")
+        print(f"Resultado final nas 100 perguntas: {final_correct}/{final_total}.", flush=True)
 
     print(f"Checkpoints individuais: {checkpoint_directory}")
     print("Cada pergunta atualiza e restaura exclusivamente seus próprios pesos e momentos Adam.")
