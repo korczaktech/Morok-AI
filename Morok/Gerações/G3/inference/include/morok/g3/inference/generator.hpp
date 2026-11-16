@@ -28,6 +28,9 @@ struct GenerationConfig final {
     std::size_t max_output_bytes{512};
     std::chrono::milliseconds timeout{5000}; // zero disables timeout
     EmptyResponsePolicy empty_response{EmptyResponsePolicy::reject};
+    std::size_t repetition_ngram_min{3};
+    std::size_t repetition_ngram_max{6};
+    bool reset_session_state{true};
     lang::TextCodecConfig text_codec{};
 };
 
@@ -38,6 +41,7 @@ struct GenerationResult final {
     std::size_t output_bytes{0};
     bool stopped_on_eos{false};
     bool reached_output_limit{false};
+    bool repetition_detected{false};
     bool replaced_invalid_utf8{false};
     std::chrono::nanoseconds elapsed{0};
 };
