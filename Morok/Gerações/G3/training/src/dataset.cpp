@@ -3,6 +3,7 @@
 #include <unicode/normalizer2.h>
 #include <unicode/unistr.h>
 #include <unicode/utf8.h>
+#include <unicode/utf16.h>
 #include <unicode/utypes.h>
 
 #include <algorithm>
@@ -224,10 +225,13 @@ Dataset load_jsonl(const std::filesystem::path& path) {
     }
     if (dataset.examples.empty()) throw std::runtime_error("dataset is empty");
     // FNV-1a fingerprint is deterministic and intentionally labelled as such.
-    std::uint64_t hash = 1469598103934665603ULL;
+    std::uint64_t hash = 14695981039346656037ULL;
     for (const auto& item : dataset.examples) {
-        const std::string material = item.example_id + "\0" + item.group_id + "\0" +
-            item.question + "\0" + item.answer + "\n";
+        std::string material = item.example_id;
+        material.push_back(static_cast<char>(0)); material += item.group_id;
+        material.push_back(static_cast<char>(0)); material += item.question;
+        material.push_back(static_cast<char>(0)); material += item.answer;
+        material.push_back(static_cast<char>(10));
         for (unsigned char byte : material) { hash ^= byte; hash *= 1099511628211ULL; }
     }
     std::ostringstream digest;
