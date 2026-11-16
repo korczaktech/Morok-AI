@@ -315,6 +315,12 @@ if(TARGET morok_g3_reinforce)
         LABELS "g3;reinforcement;cli" TIMEOUT 30)
 endif()
 
+if(TARGET morok_g3_generate)
+    add_test(NAME g3.inference_cli_usage COMMAND morok_g3_generate)
+    set_tests_properties(g3.inference_cli_usage PROPERTIES WILL_FAIL TRUE
+        LABELS "g3;inference;cli" TIMEOUT 30)
+endif()
+
 if(TARGET morok_g3_reinforce AND TARGET morok_g3_train)
     add_test(NAME g3.rl_pipeline
         COMMAND ${CMAKE_COMMAND}
