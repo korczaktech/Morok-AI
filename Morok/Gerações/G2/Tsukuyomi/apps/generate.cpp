@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    const std::string selected_prompt = individual ? prompt : std::string(argv[2]);
+    const std::string selected_prompt = individual ? "U: " + prompt : std::string(argv[2]);
     const std::vector<std::uint8_t> input(selected_prompt.begin(), selected_prompt.end());
     const auto result = morok::g2::tsukuyomi::generate(
         model, input, maximum, generation_config);
