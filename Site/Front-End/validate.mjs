@@ -43,9 +43,11 @@ const requiredContracts = [
   [html, "wasm/tsukuyomi.js", "frontend deve carregar o módulo WebAssembly"],
   [app, "getTsukuyomiRuntime", "frontend deve inicializar o motor G2 local"],
   [app, "runtime.hasCheckpoint(prompt)", "frontend deve selecionar checkpoint por pergunta"],
+  [app, "raw.githubusercontent.com/korczaktech/Morok-AI/tsukuyomi-state", "frontend deve baixar somente o checkpoint identificado pelo hash"],
   [app, "runtime.generate(prompt, 256)", "frontend deve executar inferência no navegador"],
   [app, "/v1/conversations/sync", "respostas devem continuar sincronizadas com o backend"],
   [wasmApi, "question_checkpoint_path", "WASM deve usar o hash de checkpoint compatível com o treinador"],
+  [wasmApi, "checkpointFilename", "WASM deve expor o nome estável do checkpoint para download"],
   [wasmApi, "load_checkpoint", "WASM deve validar e carregar os pesos do G2"]
 ];
 for (const [source, expected, description] of requiredContracts) {

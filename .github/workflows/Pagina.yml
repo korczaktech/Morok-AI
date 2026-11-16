@@ -5,8 +5,6 @@ on:
     branches:
       - Website
   workflow_dispatch:
-  schedule:
-    - cron: "17 */6 * * *"
 
 permissions:
   contents: read
@@ -119,10 +117,10 @@ jobs:
               -sEXPORT_NAME=createTsukuyomiModule \
               -sENVIRONMENT=web,worker,node \
               -sALLOW_MEMORY_GROWTH=1 \
-              -sFORCE_FILESYSTEM=1 \
-              --preload-file "$CHECKPOINT_DIR@/models"
+              -sFORCE_FILESYSTEM=1
           node --check Site/Front-End/wasm/tsukuyomi.js
-          SMOKE_QUESTION="Quem desenvolveu o projeto do qual você faz parte?" node <<'NODE'
+          SMOKE_QUESTION="Quem desenvolveu o projeto do qual você faz parte?" CHECKPOINT_DIR="$CHECKPOINT_DIR" node <<'NODE'
+          const fs = require("node:fs");
           const path = require("node:path");
           const factory = require("./Site/Front-End/wasm/tsukuyomi.js");
           (async () => {
@@ -131,6 +129,10 @@ jobs:
             });
             const runtime = new wasm.TsukuyomiRuntime();
             const question = process.env.SMOKE_QUESTION;
+            const filename = runtime.checkpointFilename(question);
+            const bytes = fs.readFileSync(path.join(process.env.CHECKPOINT_DIR, filename));
+            wasm.FS.mkdir("/models");
+            wasm.FS.writeFile("/models/" + filename, bytes);
             if (!runtime.hasCheckpoint(question)) throw new Error("Checkpoint de smoke test ausente.");
             const answer = runtime.generate(question, 128);
             if (typeof answer !== "string" || !answer.trim()) throw new Error("Tsukuyomi G2 não gerou uma resposta no smoke test.");

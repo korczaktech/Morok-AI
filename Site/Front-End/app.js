@@ -310,7 +310,7 @@
         const module = await window.createTsukuyomiModule({
           locateFile: file => new URL('./wasm/' + file, document.baseURI).href
         });
-        return new module.TsukuyomiRuntime();
+        return { module, runtime: new module.TsukuyomiRuntime() };
       })().catch(error => {
         tsukuyomiRuntimePromise = null;
         throw error;
@@ -324,16 +324,36 @@
     const pending = { id:'pending', role:'assistant', content:'Iniciando Tsukuyomi G2 localmente…', createdAt:now() };
     addMessage(pending); el.conversation.scrollTop = el.conversation.scrollHeight;
     try {
-      const runtime = await getTsukuyomiRuntime();
+      const engine = await getTsukuyomiRuntime();
       if (state.controller?.signal.aborted) {
         const aborted = new Error('Geração interrompida pelo usuário.');
         aborted.name = 'AbortError';
         throw aborted;
       }
-      if (!runtime.hasCheckpoint(prompt)) {
-        throw new Error('O Tsukuyomi G2 ainda não possui um checkpoint para esta pergunta. Esta versão contém 40 perguntas treinadas e não generaliza para perguntas inéditas. Tente uma das perguntas previstas no modelo.');
+      const checkpointName = engine.runtime.checkpointFilename(prompt);
+      if (!engine.runtime.hasCheckpoint(prompt)) {
+        const checkpointUrl = 'https://raw.githubusercontent.com/korczaktech/Morok-AI/tsukuyomi-state/state/tsukuyomi-g2-questions/' + encodeURIComponent(checkpointName);
+        const checkpointResponse = await fetch(checkpointUrl, {
+          method: 'GET', mode: 'cors', cache: 'no-cache',
+          signal: state.controller?.signal
+        });
+        if (!checkpointResponse.ok) {
+          if (checkpointResponse.status === 404) {
+            throw new Error('O Tsukuyomi G2 ainda não possui um checkpoint para esta pergunta. Esta versão contém 40 perguntas treinadas e não generaliza para perguntas inéditas. Tente uma das perguntas previstas no modelo.');
+          }
+          throw new Error('Não foi possível baixar o checkpoint individual do Tsukuyomi G2 (HTTP ' + checkpointResponse.status + ').');
+        }
+        const checkpointBytes = new Uint8Array(await checkpointResponse.arrayBuffer());
+        if (checkpointBytes.byteLength !== 40024) {
+          throw new Error('O checkpoint recebido tem tamanho inválido ou está incompleto.');
+        }
+        if (!engine.module.FS.analyzePath('/models').exists) engine.module.FS.mkdir('/models');
+        engine.module.FS.writeFile('/models/' + checkpointName, checkpointBytes);
       }
-      const answer = runtime.generate(prompt, 256);
+      if (!engine.runtime.hasCheckpoint(prompt)) {
+        throw new Error('O checkpoint individual não pôde ser carregado no WebAssembly.');
+      }
+      const answer = engine.runtime.generate(prompt, 256);
       if (typeof answer !== 'string' || !answer.trim()) {
         throw new Error('O Tsukuyomi G2 não produziu uma resposta válida para esta pergunta.');
       }

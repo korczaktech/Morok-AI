@@ -28,6 +28,11 @@ std::string question_checkpoint_path(const std::string& question) {
 
 class TsukuyomiRuntime {
 public:
+    std::string checkpointFilename(const std::string& question) const {
+        const auto path = question_checkpoint_path(question);
+        return path.substr(path.find_last_of('/') + 1);
+    }
+
     bool hasCheckpoint(const std::string& question) const {
         return std::filesystem::is_regular_file(
             question_checkpoint_path(question));
@@ -63,6 +68,7 @@ public:
 EMSCRIPTEN_BINDINGS(morok_tsukuyomi_web) {
     emscripten::class_<TsukuyomiRuntime>("TsukuyomiRuntime")
         .constructor<>()
+        .function("checkpointFilename", &TsukuyomiRuntime::checkpointFilename)
         .function("hasCheckpoint", &TsukuyomiRuntime::hasCheckpoint)
         .function("generate", &TsukuyomiRuntime::generate);
 }
