@@ -176,7 +176,7 @@ void gru_backward(const GruTape& t, std::size_t hidden,
     dprevious.assign(hidden, 0.0F);
     std::vector<float> dz(hidden), dr(hidden), dn(hidden), dq(hidden, 0.0F);
     for (std::size_t row = 0; row < hidden; ++row) {
-        const float z = t.z[row], r = t.r[row], n = t.candidate[row];
+        const float z = t.z[row], n = t.candidate[row];
         const float hp = t.previous[row];
         const float dn_pre = dh[row] * (1.0F - z) * (1.0F - n * n);
         const float dz_pre = dh[row] * (hp - n) * z * (1.0F - z);
@@ -401,7 +401,7 @@ double example_forward_backward(neural::G3Backend& backend,
     return total_loss / static_cast<double>(supervised_targets);
 }
 
-void adamw_update(neural::G3Backend& backend, const Gradients& gradients,
+double adamw_update(neural::G3Backend& backend, const Gradients& gradients,
                   AdamState& state, const TrainingConfig& config,
                   std::uint64_t total_steps, std::size_t step_index,
                   double& clipped_norm) {
@@ -453,6 +453,7 @@ void adamw_update(neural::G3Backend& backend, const Gradients& gradients,
             ++offset;
         }
     }
+    return lr;
 }
 
 std::string json_escape(std::string_view input) {
@@ -545,9 +546,13 @@ std::vector<UChar32> keyboard_substitute(std::vector<UChar32> cps,
 
 double causal_cross_entropy(const std::vector<float>& logits, std::uint16_t target,
                             double smoothing, std::vector<float>* gradient) {
-    if (logits.size() != V || target >= V || target == PAD ||
+    if (logits.size() != V || target >= V ||
         !std::isfinite(smoothing) || smoothing < 0.0 || smoothing >= 1.0)
         throw std::invalid_argument("invalid causal Cross-Entropy arguments");
+    if (target == PAD) {
+        if (gradient) gradient->assign(V, 0.0F);
+        return 0.0;
+    }
     float maximum = -std::numeric_limits<float>::infinity();
     for (float x : logits) {
         if (!std::isfinite(x)) throw std::domain_error("non-finite logit");
@@ -604,11 +609,24 @@ std::string perturb_question(const std::string& question,
         }
         case 2: cps = keyboard_substitute(std::move(cps), random); break;
         case 3: {
-            std::uniform_int_distribution<std::size_t> pick(0U, cps.size() - 1U);
-            auto& cp = cps[pick(random)];
-            const auto plain = strip_accent(cp);
-            cp = plain == cp ? (cp >= 'a' && cp <= 'z' ? cp - 32 :
-                                (cp >= 'A' && cp <= 'Z' ? cp + 32 : plain)) : plain;
+            std::uniform_int_distribution<int> kind(0, 2);
+            if (kind(random) == 0) {
+                std::uniform_int_distribution<std::size_t> pick(0U, cps.size() - 1U);
+                auto& cp = cps[pick(random)];
+                const auto plain = strip_accent(cp);
+                cp = plain == cp ? (cp >= 'a' && cp <= 'z' ? cp - 32 :
+                                    (cp >= 'A' && cp <= 'Z' ? cp + 32 : plain)) : plain;
+            } else if (kind(random) == 1) {
+                std::uniform_int_distribution<std::size_t> pick(0U, cps.size() - 1U);
+                auto& cp = cps[pick(random)];
+                cp = cp >= 'a' && cp <= 'z' ? cp - 32 :
+                     (cp >= 'A' && cp <= 'Z' ? cp + 32 : strip_accent(cp));
+            } else {
+                const auto punctuation = std::find_if(cps.begin(), cps.end(),
+                    [](UChar32 cp) { return cp == '?' || cp == '!' || cp == '.' || cp == ','; });
+                if (punctuation != cps.end()) cps.erase(punctuation);
+                else cps.push_back('?');
+            }
             break;
         }
         default: {
@@ -627,7 +645,7 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
                      const TrainingConfig& config) {
     if (backend.parameter_count() != neural::kTargetParameterCount)
         throw std::invalid_argument("G3 trainer requires the exact 100000-parameter backend");
-    if (config.epochs == 0U || config.bptt_steps == 0U ||
+    if (config.epochs == 0U || config.bptt_steps == 0U || config.bptt_steps > 512U ||
         config.maximum_variants_per_example == 0U ||
         config.learning_rate <= 0.0 || config.minimum_learning_rate <= 0.0 ||
         config.minimum_learning_rate > config.learning_rate ||
@@ -641,7 +659,9 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
     if (dataset.examples.empty()) throw std::invalid_argument("G3 dataset is empty");
 
     TrainingReport report;
-    report.run_id = "g3-sft-" + std::to_string(config.seed);
+    report.run_id = "g3-sft-" + std::to_string(config.seed) + "-" +
+        std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count());
     report.dataset_fingerprint = dataset.fingerprint;
     report.splits = split_by_group_id(dataset, SplitConfig{0.85, 0.10, 0.05, config.seed});
     std::mt19937_64 rng(config.seed);
@@ -655,14 +675,17 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
         }
     }
     report.augmented_examples = train_examples.size();
+    if (train_examples.empty())
+        throw std::runtime_error("group split produced an empty training set");
+    if (train_examples.size() > std::numeric_limits<std::size_t>::max() / config.epochs)
+        throw std::overflow_error("planned G3 optimizer step count overflow");
     const std::size_t planned_steps = config.epochs * train_examples.size();
     AdamState optimizer;
-    std::vector<double> epoch_losses;
     std::size_t global_step = 0U;
 
     for (std::size_t epoch = 1U; epoch <= config.epochs; ++epoch) {
         std::shuffle(train_examples.begin(), train_examples.end(), rng);
-        double train_loss = 0.0, last_norm = 0.0, max_norm = 0.0;
+        double train_loss = 0.0, last_norm = 0.0, max_norm = 0.0, last_lr = config.learning_rate;
         std::size_t seen = 0U;
         for (const auto& example : train_examples) {
             Gradients gradients(backend.weights());
@@ -671,8 +694,8 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
                 backend, example, config, rng, &gradients, raw_norm, true);
             ++global_step;
             double clipped_norm = 0.0;
-            adamw_update(backend, gradients, optimizer, config,
-                         planned_steps, global_step, clipped_norm);
+            last_lr = adamw_update(backend, gradients, optimizer, config,
+                                         planned_steps, global_step, clipped_norm);
             train_loss += loss;
             ++seen; ++report.examples_seen; ++report.optimizer_steps;
             last_norm = clipped_norm;
