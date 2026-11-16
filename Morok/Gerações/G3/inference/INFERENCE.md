@@ -40,7 +40,9 @@ Os kernels FP32 foram ajustados para usar buffers `std::array` de tamanho estát
 
 `morok-g3-generate <modelo.morok> [opções] [prompt]` carrega artefatos FP32 ou INT8. Opções: `--temperature=0.7`, `--top-k=10`, `--max-output=512` e `--benchmark`. Sem prompt posicional, lê linhas de stdin mantendo uma sessão interativa até `/sair`.
 
-Exemplo de benchmark: `morok-g3-generate modelo.morok --benchmark "Olá, tudo bem?"`.
+A conversão FP32 para INT8 é feita por `morok-g3-quantize modelo-fp32.morok modelo-int8.morok`. O gerador carrega os dois formatos sem desquantizar o modelo INT8 para FP32.
+
+Exemplo de benchmark: `morok-g3-generate modelo-int8.morok --benchmark "Olá, tudo bem?"`.
 
 ## Medição
 
