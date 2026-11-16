@@ -190,10 +190,12 @@ def main() -> int:
     generator, checkpoint, validation_path, test_path, output = map(Path, sys.argv[1:6])
     if not generator.is_file() or not checkpoint.is_file():
         raise FileNotFoundError("Gerador ou checkpoint final não encontrado.")
-    validation = read_dialogues(validation_path)
+    combined_validation = read_dialogues(validation_path)
     test = read_dialogues(test_path)
-    if len(validation) != 40 or len(test) != 12:
-        raise RuntimeError("Os conjuntos independentes devem conter 40 questões de validação e 12 de teste.")
+    if len(combined_validation) != 40 or len(test) != 12:
+        raise RuntimeError("O banco combinado deve conter 20 perguntas de feedback, 20 de validação independente e 12 de teste.")
+    feedback_questions = combined_validation[:20]
+    validation = combined_validation[20:]
     validation_result = evaluate_split(generator, checkpoint, validation)
     test_result = evaluate_split(generator, checkpoint, test)
     training_path = validation_path.with_name("treinamento.txt")
@@ -236,6 +238,8 @@ def main() -> int:
         "public_version": "0.1.0",
         "architecture_parameter_budget": 10000,
         "training_examples_preserved": 32,
+        "feedback_questions_excluded_from_validation": len(feedback_questions),
+        "validation_is_independent_of_feedback": True,
         "pretrained_weights": False,
         "validation": validation_result,
         "reserved_test": test_result,
@@ -263,7 +267,7 @@ def main() -> int:
         "# Avaliação final independente — Tsukuyomi G2 0.1\n\n"
         f"- Parâmetros: 10.000 (limite absoluto).\n"
         f"- Exemplos originais preservados: 32.\n"
-        f"- Validação: {validation_result['exact_matches']}/{validation_result['questions']} exatas; "
+        f"- Validação independente (20 perguntas; feedback excluído): {validation_result['exact_matches']}/{validation_result['questions']} exatas; "
         f"F1 {validation_result['mean_lexical_f1']:.1%}; similaridade {validation_result['mean_character_similarity']:.1%}.\n"
         f"- Teste reservado: {test_result['exact_matches']}/{test_result['questions']} exatas; "
         f"F1 {test_result['mean_lexical_f1']:.1%}; similaridade {test_result['mean_character_similarity']:.1%}.\n"
@@ -276,7 +280,7 @@ def main() -> int:
     if not deterministic:
         raise RuntimeError("A geração gulosa variou entre execuções idênticas.")
     print(f"Avaliação final salva: {output} e {markdown}")
-    print(f"Validação: {validation_result['exact_matches']}/40; teste: {test_result['exact_matches']}/12; determinístico: sim")
+    print(f"Validação independente: {validation_result['exact_matches']}/20; teste: {test_result['exact_matches']}/12; determinístico: sim")
     return 0
 
 
