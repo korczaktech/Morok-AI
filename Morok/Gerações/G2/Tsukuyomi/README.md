@@ -44,7 +44,7 @@ O corpus é um arquivo binário de 2 bytes a 512 MiB. O modelo não inclui corpu
 
 ## Treinamento cíclico pelo GitHub Actions
 
-O workflow manual **Treinamento — G2** fica disponível na aba Actions. O padrão executa 20 épocas por tentativa, até 10 tentativas (200 épocas no total), avalia 40 perguntas por tentativa e mantém o treinamento contínuo desativado. O limite de 200 épocas também é validado pelo executor. Ele oferece:
+O workflow manual **Treinamento — G2** fica disponível na aba Actions. O padrão executa até 1.000 épocas por tentativa e até 100 tentativas/ciclos (máximo teórico de 100.000 épocas por execução), avalia 40 perguntas por tentativa e mantém o treinamento contínuo desativado. O limite de 1.000 épocas por ciclo e 100 ciclos também é validado pelo executor. Ele oferece:
 
 - Checkbox para habilitar o Tsukuyomi.
 - **Épocas:** passagens completas pelo corpus em cada ciclo.
