@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { MongoClient } from "mongodb";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
+import webpush from "web-push";
 
 const PORT = Number(process.env.PORT || 10000);
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -59,6 +60,9 @@ await recoveryTokens.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name
 await sessions.createIndex({ jti: 1 }, { unique: true, name: "morok_sessions_jti_unique" });
 await sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "morok_sessions_expiry_ttl" });
 
+
+const pushReady = Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+if (pushReady) webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:admin@korczaktech.com.br", process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
 
 const mailer = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
   ? nodemailer.createTransport({
@@ -379,7 +383,23 @@ async function handle(req, res) {
           }
         });
       }
+      const newAssistantMessages = [];
+      for (const message of item.messages) {
+        if (message?.role === "assistant" && typeof message.id === "string") {
+          const exists = await messages.findOne({ accountId: token.sub, conversationId: item.id, messageId: message.id }, { projection: { _id: 1 } });
+          if (!exists) newAssistantMessages.push(message);
+        }
+      }
       if (operations.length) await messages.bulkWrite(operations, { ordered: false });
+      if (pushReady && newAssistantMessages.length) {
+        const subs = await pushSubscriptions.find({ accountId: token.sub }).toArray();
+        const newest = newAssistantMessages[newAssistantMessages.length - 1];
+        const payload = JSON.stringify({ title: "Morok", body: String(newest.content || "Sua resposta está pronta.").slice(0, 180), url: "/" });
+        await Promise.allSettled(subs.map(async entry => {
+          try { await webpush.sendNotification(entry.subscription, payload); }
+          catch (error) { if (error.statusCode === 404 || error.statusCode === 410) await pushSubscriptions.deleteOne({ _id: entry._id }); }
+        }));
+      }
       return send(res, 200, { success: true, savedMessages: operations.length }, req.allowedOrigin);
     } catch (error) {
       return send(res, error.status || 500, { error: error.status ? error.message : "Não foi possível salvar a conversa." }, req.allowedOrigin);
@@ -522,6 +542,10 @@ async function handle(req, res) {
     return send(res, 200, { tickets: docs.map(x => ({ id: x.ticketId, subject: x.subject, status: x.status, createdAt: x.createdAt, updatedAt: x.updatedAt })) }, req.allowedOrigin);
   }
 
+  if (req.method === "GET" && path === "/v1/push/config") {
+    return send(res, 200, { enabled: pushReady, publicKey: pushReady ? process.env.VAPID_PUBLIC_KEY : null }, req.allowedOrigin);
+  }
+
   if (req.method === "POST" && path === "/v1/push/subscribe") {
     const token = await verifyToken(bearer(req));
     if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
@@ -529,7 +553,7 @@ async function handle(req, res) {
     const sub = body.subscription;
     if (!sub || typeof sub.endpoint !== "string" || !sub.endpoint.startsWith("https://") || !sub.keys?.p256dh || !sub.keys?.auth) return send(res, 400, { error: "Inscrição push inválida." }, req.allowedOrigin);
     await pushSubscriptions.updateOne({ accountId: token.sub, endpoint: sub.endpoint }, { $set: { subscription: sub, updatedAt: new Date() }, $setOnInsert: { accountId: token.sub, endpoint: sub.endpoint, createdAt: new Date() } }, { upsert: true });
-    return send(res, 200, { success: true, pushConfigured: Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) }, req.allowedOrigin);
+    return send(res, 200, { success: true, pushConfigured: pushReady }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && path === "/v1/push/unsubscribe") {
