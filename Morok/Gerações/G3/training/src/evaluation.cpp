@@ -21,7 +21,6 @@ namespace morok::g3::training {
 namespace {
 
 using icu::UnicodeString;
-constexpr std::uint16_t kPad = 256U;
 constexpr std::uint16_t kBos = 257U;
 constexpr std::uint16_t kEos = 258U;
 constexpr std::uint16_t kUsr = 259U;
