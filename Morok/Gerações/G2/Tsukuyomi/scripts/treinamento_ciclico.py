@@ -455,7 +455,7 @@ def main() -> int:
     question_count = int(sys.argv[10])
     if not 1 <= epochs <= MAX_EPOCHS_PER_CYCLE or not 1 <= attempts <= MAX_CYCLES:
         raise ValueError(f"Épocas precisam estar entre 1 e {MAX_EPOCHS_PER_CYCLE}; tentativas entre 1 e {MAX_CYCLES}.")
-    if sys.argv[8] not in ("0", "1"):
+    if sys.argv[9] not in ("0", "1"):
         raise ValueError("O modo contínuo precisa ser 0 ou 1.")
     if not 1 <= question_count <= MAX_VALIDATION_QUESTIONS:
         raise ValueError("A quantidade de questões de validação precisa estar entre 1 e 20.")
