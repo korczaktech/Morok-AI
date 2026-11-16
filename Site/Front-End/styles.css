@@ -1013,3 +1013,14 @@ kbd [data-icon]{display:inline-flex;vertical-align:middle}
 .page-insight strong{font-size:13px;color:var(--text)}
 .page-insight p{margin:0;color:var(--muted);font-size:11px;line-height:1.65}
 :root[data-theme="light"] .page-insight{background:color-mix(in srgb,var(--accent) 5%,#fff)}
+
+
+/* Apresentação pública do Morok: poucos blocos, foco na identidade do projeto */
+.workspace-page-view .about-generation-track{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:18px 0 10px}
+.workspace-page-view .about-generation-track span{display:grid;place-items:center;min-height:42px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--muted);font-size:12px;font-weight:750;letter-spacing:.04em}
+.workspace-page-view .about-generation-track span:first-child{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.workspace-page-view .about-principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+.workspace-page-view .about-principles article{padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.workspace-page-view .about-principles strong{font-size:13px;color:var(--text)}
+.workspace-page-view .about-principles p{font-size:12px;line-height:1.6;color:var(--muted);margin:7px 0 0}
+@media(max-width:650px){.workspace-page-view .about-principles{grid-template-columns:1fr}.workspace-page-view .about-generation-track{gap:6px}.workspace-page-view .about-generation-track span{min-height:36px;font-size:11px}}
