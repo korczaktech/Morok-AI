@@ -138,11 +138,75 @@ void test_training_updates_model_and_logs_per_example() {
     std::filesystem::remove(metrics);
 }
 
+void test_epoch_boundary_checkpoint_resume_matches_uninterrupted_training() {
+    const auto dataset_path = temporary("morok-g3-resume-dataset.jsonl");
+    const auto baseline_metrics = temporary("morok-g3-resume-baseline.jsonl");
+    const auto split_metrics = temporary("morok-g3-resume-split.jsonl");
+    const auto checkpoint_path = temporary("morok-g3-resume.checkpoint");
+    {
+        std::ofstream out(dataset_path);
+        for (int i = 0; i < 12; ++i) {
+            out << "{\"example_id\":\"resume-" << i
+                << "\",\"group_id\":\"resume-family-" << i
+                << "\",\"category\":\"general\",\"question\":\"Pergunta " << i
+                << "\",\"answer\":\"Resposta " << i
+                << "\",\"source\":\"resume-test\",\"language\":\"pt-BR\","
+                   "\"dataset_version\":\"resume-v1\"}\n";
+        }
+    }
+    std::filesystem::remove(baseline_metrics);
+    std::filesystem::remove(split_metrics);
+    std::filesystem::remove(checkpoint_path);
+    const auto dataset = load_jsonl(dataset_path);
+
+    TrainingConfig baseline_config;
+    baseline_config.epochs = 2U;
+    baseline_config.seed = 551U;
+    baseline_config.maximum_variants_per_example = 1U;
+    baseline_config.variational_dropout = 0.0;
+    baseline_config.perturbation.probability = 0.0;
+    baseline_config.label_smoothing = 0.0;
+    baseline_config.metrics_jsonl = baseline_metrics;
+    morok::g3::neural::G3Backend uninterrupted(
+        morok::g3::neural::G3Config{551U, 1.0e-5F});
+    const auto baseline_report = train(uninterrupted, dataset, baseline_config);
+    assert(baseline_report.completed_epochs == 2U);
+    const auto baseline_weights = morok::g3::training::capture_g3_model_weights(uninterrupted);
+
+    auto first_part_config = baseline_config;
+    first_part_config.metrics_jsonl = split_metrics;
+    first_part_config.checkpoint_path = checkpoint_path;
+    first_part_config.max_epochs_this_run = 1U;
+    morok::g3::neural::G3Backend first_part(
+        morok::g3::neural::G3Config{551U, 1.0e-5F});
+    const auto first_report = train(first_part, dataset, first_part_config);
+    assert(first_report.completed_epochs == 1U);
+    assert(!first_report.resumed);
+    assert(std::filesystem::exists(checkpoint_path));
+
+    auto resumed_config = baseline_config;
+    resumed_config.metrics_jsonl = split_metrics;
+    resumed_config.resume_from_checkpoint = checkpoint_path;
+    morok::g3::neural::G3Backend resumed(
+        morok::g3::neural::G3Config{999U, 1.0e-5F});
+    const auto resumed_report = train(resumed, dataset, resumed_config);
+    assert(resumed_report.resumed);
+    assert(resumed_report.completed_epochs == 2U);
+    assert(resumed_report.epochs.size() == 1U);
+    assert(morok::g3::training::capture_g3_model_weights(resumed) == baseline_weights);
+
+    std::filesystem::remove(dataset_path);
+    std::filesystem::remove(baseline_metrics);
+    std::filesystem::remove(split_metrics);
+    std::filesystem::remove(checkpoint_path);
+}
+
 } // namespace
 
 int main() {
     test_dataset_loader_and_group_split();
     test_cross_entropy_and_perturbations();
     test_training_updates_model_and_logs_per_example();
+    test_epoch_boundary_checkpoint_resume_matches_uninterrupted_training();
     return 0;
 }
