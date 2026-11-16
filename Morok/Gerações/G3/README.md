@@ -31,7 +31,19 @@ arquitetura G3. Suas políticas e configurações podem variar sem duplicar o mo
 A Etapa 1 integrou o contrato comum e adaptou o motor G1 existente. A Etapa 2
 implementou a representação byte-level UTF-8 de 261 IDs, tokens de controle,
 normalização NFC configurável e validação de entrada/saída no Core compartilhado.
-A arquitetura neural GRU da G3, o treinamento e a inferência de produção
-permanecem para as etapas seguintes.
+
+A Etapa 3 implementa o algoritmo REINFORCE da G3 em
+`Gerações/G3/rl/`, ligado ao Core existente sem criar outro runtime. O módulo
+inclui referência SFT somente para inferência, amostragem Top-K/temperatura,
+baseline móvel por categoria, recompensas com pesos e penalidades explícitos,
+KL por distribuição, gradientes de logits em lote, auditoria independente do
+avaliador e comparação SFT/RL no mesmo conjunto fechado.
+
+O contrato de política recebe distribuições normalizadas de 261 IDs e delega
+a aplicação do gradiente ao backend treinável que possui os pesos e o
+otimizador. Como a rede GRU treinável da G3 ainda não existe, o algoritmo está
+implementado e testável com políticas de contrato, mas o treinamento de pesos
+reais da G3 só poderá ser executado depois da integração do backend neural.
+Nenhum peso da G1 é usado como substituto.
 
 Consulte [ARQUITETURA.md](ARQUITETURA.md) e [MODELOS.md](../MODELOS.md).
