@@ -52,7 +52,11 @@ template <typename T>
            left.penalties.repeated_token_ratio == right.penalties.repeated_token_ratio &&
            left.penalties.prompt_copy_ratio == right.penalties.prompt_copy_ratio &&
            left.penalties.max_response_tokens == right.penalties.max_response_tokens &&
-           left.penalties.over_length == right.penalties.over_length;
+           left.penalties.over_length == right.penalties.over_length &&
+           left.penalties.minimum_length_ratio == right.penalties.minimum_length_ratio &&
+           left.penalties.under_length == right.penalties.under_length &&
+           left.penalties.reward_hacking_copy_ratio == right.penalties.reward_hacking_copy_ratio &&
+           left.penalties.reward_hacking_repeat_ratio == right.penalties.reward_hacking_repeat_ratio;
 }
 
 [[nodiscard]] bool same_evaluator(const EvaluatorMetadata& left,
@@ -82,7 +86,16 @@ template <typename T>
            penalties.empty_response >= 0.0 &&
            penalties.repeated_token_ratio >= 0.0 &&
            penalties.prompt_copy_ratio >= 0.0 &&
-           penalties.over_length >= 0.0;
+           penalties.over_length >= 0.0 &&
+           std::isfinite(penalties.minimum_length_ratio) &&
+           penalties.minimum_length_ratio >= 0.0 && penalties.minimum_length_ratio <= 1.0 &&
+           std::isfinite(penalties.under_length) && penalties.under_length >= 0.0 &&
+           std::isfinite(penalties.reward_hacking_copy_ratio) &&
+           penalties.reward_hacking_copy_ratio >= 0.0 &&
+           penalties.reward_hacking_copy_ratio <= 1.0 &&
+           std::isfinite(penalties.reward_hacking_repeat_ratio) &&
+           penalties.reward_hacking_repeat_ratio >= 0.0 &&
+           penalties.reward_hacking_repeat_ratio <= 1.0;
 }
 
 [[nodiscard]] double reward_score(const RewardComponents& components,
@@ -337,7 +350,19 @@ struct ScoredReward final {
         score -= penalties.empty_response;
     }
     score -= penalties.repeated_token_ratio * repeated_ratio(response);
-    score -= penalties.prompt_copy_ratio * prompt_copy_ratio(prompt, response);
+    const double copied = prompt_copy_ratio(prompt, response);
+    const double repeated = repeated_ratio(response);
+    score -= penalties.prompt_copy_ratio * copied;
+    const std::size_t expected = evaluator.expected_response_tokens(prompt);
+    if (expected > 0U) {
+        const double length_ratio = static_cast<double>(response.size()) /
+                                    static_cast<double>(expected);
+        if (length_ratio < penalties.minimum_length_ratio) {
+            score -= penalties.under_length *
+                (penalties.minimum_length_ratio - length_ratio) /
+                std::max(penalties.minimum_length_ratio, 1.0e-12);
+        }
+    }
     if (penalties.max_response_tokens > 0U &&
         response.size() > penalties.max_response_tokens) {
         score -= penalties.over_length;
@@ -650,13 +675,27 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
                 sampled_log_probabilities.push_back(std::log(std::max(
                     generated.sampling[step][selected], config_.kl_epsilon)));
             }
+            const double copy_ratio = prompt_copy_ratio(prompt.tokens, visible);
+            const double repeat_ratio = repeated_ratio(visible);
+            const std::size_t expected_length =
+                evaluator.expected_response_tokens(prompt.tokens);
+            const double expected_ratio = expected_length == 0U ? 1.0 :
+                static_cast<double>(visible.size()) /
+                static_cast<double>(expected_length);
+            const bool hacking = reward > 0.0 &&
+                ((expected_length > 0U &&
+                  expected_ratio < config_.penalties.minimum_length_ratio) ||
+                 copy_ratio >= config_.penalties.reward_hacking_copy_ratio ||
+                 repeat_ratio >= config_.penalties.reward_hacking_repeat_ratio);
+            if (hacking) ++report.reward_hacking_suspicions;
             report.candidates_metrics.push_back(CandidateMetrics{
                 prompt.id, prompt.category, reward_result.value_if()->components,
                 generated.response, std::move(sampled_log_probabilities),
                 reward, advantage,
                 generated.kl / static_cast<double>(
                     std::max<std::size_t>(generated.response.size(), 1U)),
-                visible.size(), generated.ended_with_eos});
+                visible.size(), generated.ended_with_eos, copy_ratio,
+                repeat_ratio, expected_ratio, hacking});
             auto& category = category_rewards[prompt.category];
             category.first += reward;
             ++category.second;
@@ -696,6 +735,8 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
         report.empty_response_rate = static_cast<double>(empty_count) / count;
         report.repeated_response_rate =
             static_cast<double>(repeated_count) / count;
+        report.reward_hacking_suspicion_rate =
+            static_cast<double>(report.reward_hacking_suspicions) / count;
         report.optimizer_updates = 1U;
     }
     return Result<TrainingReport>::success(std::move(report));

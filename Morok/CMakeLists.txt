@@ -79,14 +79,14 @@ target_link_libraries(morok_g1_tsukuyomimax PUBLIC Morok::G1 PRIVATE morok_build
 morok_enable_sanitizers(morok_g1_tsukuyomimax)
 
 # G3 reinforcement learning is generation-owned and reuses the shared Core.
-add_library(morok_g3_rl STATIC Gerações/G3/rl/src/reinforce.cpp)
+add_library(morok_g3_rl STATIC Gerações/G3/rl/src/reinforce.cpp Gerações/G3/rl/src/g3_policy.cpp)
 add_library(Morok::G3::RL ALIAS morok_g3_rl)
 target_compile_features(morok_g3_rl PUBLIC cxx_std_20)
 target_include_directories(morok_g3_rl PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G3/rl/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
-target_link_libraries(morok_g3_rl PUBLIC Morok::Core PRIVATE morok_build_options)
+target_link_libraries(morok_g3_rl PUBLIC Morok::Core Morok::G3::Neural PRIVATE morok_build_options)
 morok_enable_sanitizers(morok_g3_rl)
 
 # G3 neural architecture is generation-owned and reuses the shared Core.

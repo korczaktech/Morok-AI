@@ -37,6 +37,10 @@ struct RewardPenalties final {
     // Zero disables a length penalty. A nonzero limit must be rubric-justified.
     std::size_t max_response_tokens{0};
     double over_length{0.20};
+    double minimum_length_ratio{0.50};
+    double under_length{0.40};
+    double reward_hacking_copy_ratio{0.65};
+    double reward_hacking_repeat_ratio{0.25};
 };
 
 struct Config final {
@@ -124,6 +128,10 @@ struct CandidateMetrics final {
     double kl{0.0};
     std::size_t response_tokens{0};
     bool ended_with_eos{false};
+    double prompt_copy_ratio{0.0};
+    double repetition_ratio{0.0};
+    double expected_length_ratio{1.0};
+    bool reward_hacking_suspected{false};
 };
 
 struct TrainingReport final {
@@ -137,6 +145,8 @@ struct TrainingReport final {
     double mean_response_tokens{0.0};
     double empty_response_rate{0.0};
     double repeated_response_rate{0.0};
+    std::size_t reward_hacking_suspicions{0};
+    double reward_hacking_suspicion_rate{0.0};
     std::vector<CandidateMetrics> candidates_metrics;
 };
 
