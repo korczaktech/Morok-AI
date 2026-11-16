@@ -467,7 +467,7 @@ def main() -> int:
                 report, f"Validação — ciclo {cycle}", validation, validation_results
             )
             report.write(
-                f"- Memória corretiva acumulada após o ciclo: {len(feedback_memory)} pergunta(s).\\n"
+                f"- Memória corretiva acumulada após o ciclo: {len(feedback_memory)} pergunta(s).\n"
             )
             mean_f1 = sum(result[2] for result in validation_results) / max(1, total)
             mean_char_similarity = sum(
