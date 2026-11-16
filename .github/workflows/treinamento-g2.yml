@@ -11,15 +11,15 @@ on:
         required: true
         default: true
       epocas:
-        description: "Épocas por tentativa (passagens completas pelo corpus)"
+        description: "Máximo de épocas por tentativa (passagens completas pelo corpus)"
         type: number
         required: true
-        default: 20
+        default: 1000
       tentativas:
         description: "Número máximo de ciclos de treinamento"
         type: number
         required: true
-        default: 10
+        default: 100
       questoes:
         description: "Quantidade de perguntas de validação (1 a 40)"
         type: number
@@ -54,8 +54,8 @@ jobs:
 
       - name: Validar parâmetros
         env:
-          EPOCAS: ${{ github.event_name == 'push' && 20 || inputs.epocas || 20 }}
-          TENTATIVAS: ${{ github.event_name == 'push' && 10 || inputs.tentativas || 10 }}
+          EPOCAS: ${{ github.event_name == 'push' && 1000 || inputs.epocas || 1000 }}
+          TENTATIVAS: ${{ github.event_name == 'push' && 100 || inputs.tentativas || 100 }}
           QUESTOES: ${{ github.event_name == 'push' && 40 || inputs.questoes || 40 }}
           LEARNING_RATE: ${{ github.event_name == 'push' && '0.001' || inputs.learning_rate || '0.001' }}
         run: |
@@ -67,8 +67,6 @@ jobs:
               raise SystemExit("EPOCAS precisa estar entre 1 e 100.")
           if not 1 <= tentativas <= 10:
               raise SystemExit("TENTATIVAS precisa estar entre 1 e 10.")
-          if epocas * tentativas > 200:
-              raise SystemExit("O treinamento está limitado a 200 épocas totais por execução.")
           questoes = int(os.environ["QUESTOES"])
           if not 1 <= questoes <= 40:
               raise SystemExit("QUESTOES precisa estar entre 1 e 40.")
@@ -131,8 +129,8 @@ jobs:
         if: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi) }}
         working-directory: Morok
         env:
-          EPOCAS: ${{ inputs.epocas || 20 }}
-          TENTATIVAS: ${{ inputs.tentativas || 10 }}
+          EPOCAS: ${{ github.event_name == 'push' && 1000 || inputs.epocas || 1000 }}
+          TENTATIVAS: ${{ github.event_name == 'push' && 100 || inputs.tentativas || 100 }}
           QUESTOES: ${{ inputs.questoes || 40 }}
           TSUKUYOMI_LEARNING_RATE: ${{ inputs.learning_rate || '0.001' }}
           TREINAMENTO_CONTINUO: ${{ github.event_name == 'workflow_dispatch' && inputs.treinamento_continuo || false }}
