@@ -3,6 +3,7 @@
 
 from collections import Counter, defaultdict
 import difflib
+import hashlib
 import json
 import math
 import os
@@ -275,16 +276,41 @@ def record_feedback_errors(memory: dict[str, str],
 
 
 def load_question_history(path: Path) -> dict:
-    """Carrega histórico auditável de acertos, regressões e recuperações por pergunta."""
+    """Carrega histórico auditável e contador global persistente de ciclos."""
     if not path.exists():
-        return {"version": 1, "questions": {}}
+        return {"version": 1, "global_cycles": 0, "questions": {}}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise RuntimeError("Histórico persistente de perguntas inválido.") from error
     if not isinstance(data, dict) or data.get("version") != 1 or not isinstance(data.get("questions"), dict):
         raise RuntimeError("Formato do histórico persistente de perguntas incompatível.")
+    # Compatibilidade com históricos anteriores à introdução do contador global.
+    data.setdefault("global_cycles", 0)
+    if (not isinstance(data["global_cycles"], int) or
+            isinstance(data["global_cycles"], bool) or data["global_cycles"] < 0):
+        raise RuntimeError("Contador global de ciclos inválido.")
     return data
+
+
+def next_global_cycle(history: dict) -> int:
+    """Avança e devolve o número global do ciclo, persistido entre execuções."""
+    current = history.get("global_cycles", 0)
+    if not isinstance(current, int) or isinstance(current, bool) or current < 0:
+        raise RuntimeError("Contador global de ciclos inválido.")
+    history["global_cycles"] = current + 1
+    return history["global_cycles"]
+
+
+def checkpoint_sha256(path: Path) -> str | None:
+    """Calcula SHA-256 de um arquivo de estado sem carregá-lo inteiro na memória."""
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def find_retention_regressions(previous_results, current_dialogues, current_results) -> list[str]:
@@ -552,6 +578,9 @@ def main() -> int:
     with output.open("w", encoding="utf-8") as report:
         report.write("# Treinamento e avaliação — Tsukuyomi G2 0.1\n\n")
         report.write(f"- Diálogos de treinamento originais: {len(train_dialogues)}\n")
+        report.write(f"- Ciclos globais já concluídos antes desta execução: {question_history['global_cycles']}\n")
+        report.write("- Cada ciclo usa seed de embaralhamento global exclusiva e persistida; o melhor checkpoint continua sendo restaurado quando um candidato é rejeitado.\n")
+        report.write("- SHA-256 de pesos e estado Adam é registrado antes/depois de cada ciclo.\n")
         report.write(f"- Correções persistidas antes desta execução: {len(feedback_memory)}\n")
         report.write("- Os conjuntos são arquivos separados: 40 perguntas de feedback supervisionado, 20 perguntas novas de validação independente e 12 perguntas de teste reservado.\n")
         report.write(f"- Perguntas de feedback: {len(feedback_questions)}\n")
@@ -605,6 +634,11 @@ def main() -> int:
 
         while cycle < maximum_cycles:
             cycle += 1
+            global_cycle = next_global_cycle(question_history)
+            # O contador é persistido antes do treino: mesmo uma execução interrompida
+            # não reutiliza a mesma seed no próximo ciclo.
+            write_question_history(question_history_path, question_history)
+            cycle_seed = 42 + global_cycle
             if best_checkpoint.is_file() and best_optimizer_state.is_file():
                 restore_best_state(
                     best_checkpoint, best_optimizer_state, checkpoint, optimizer_state
@@ -652,9 +686,11 @@ def main() -> int:
                     f"{question_rates[question]:.8g} |\n"
                 )
             report.write("\n")
+            weights_before_hash = checkpoint_sha256(checkpoint)
+            adam_before_hash = checkpoint_sha256(optimizer_state)
             command = [
                 str(trainer), str(combined_training), str(checkpoint),
-                str(epochs), "42", f"{INITIAL_LEARNING_RATE:.12g}", "--lr-map",
+                str(epochs), str(cycle_seed), f"{INITIAL_LEARNING_RATE:.12g}", "--lr-map",
                 str(question_learning_rate_path),
             ]
             if cycle > 1 or resume_previous_run or best_checkpoint.is_file():
@@ -672,6 +708,12 @@ def main() -> int:
             print(training_process.stdout, end="", flush=True)
             initial_bpb = extract_training_metric(training_process.stdout, "train_bpb inicial")
             final_bpb = extract_training_metric(training_process.stdout, "train_bpb final")
+            weights_after_hash = checkpoint_sha256(checkpoint)
+            adam_after_hash = checkpoint_sha256(optimizer_state)
+            if weights_after_hash is None or adam_after_hash is None:
+                raise RuntimeError("Não foi possível calcular os hashes do checkpoint e do Adam.")
+            weights_changed = weights_before_hash is None or weights_before_hash != weights_after_hash
+            adam_changed = adam_before_hash is None or adam_before_hash != adam_after_hash
             target_bytes = extract_training_metric(training_process.stdout, "Bytes-alvo")
             completed_epochs = extract_training_metric(training_process.stdout, "Épocas")
             if target_bytes <= 0 or completed_epochs != epochs:
@@ -690,11 +732,11 @@ def main() -> int:
             )
             write_feedback_memory(feedback_path, feedback_memory)
             feedback_history_regressions, feedback_history_recoveries = update_question_history(
-                question_history, feedback_questions, feedback_results, cycle,
+                question_history, feedback_questions, feedback_results, global_cycle,
                 execution_id, dataset="feedback"
             )
             regressions, recoveries = update_question_history(
-                question_history, validation_pool, candidate_all_results, cycle, execution_id
+                question_history, validation_pool, candidate_all_results, global_cycle, execution_id
             )
             write_question_history(question_history_path, question_history)
             print(
@@ -750,6 +792,16 @@ def main() -> int:
             )
             elapsed = time.perf_counter() - started
             report.write(
+                f"### Integridade e diversidade — ciclo global {global_cycle}\n\n"
+                f"- Seed de embaralhamento: {cycle_seed}.\n"
+                f"- SHA-256 dos pesos antes: {weights_before_hash or 'inexistente'}.\n"
+                f"- SHA-256 dos pesos depois: {weights_after_hash}.\n"
+                f"- Pesos modificados: {'sim' if weights_changed else 'não'}.\n"
+                f"- SHA-256 do Adam antes: {adam_before_hash or 'inexistente'}.\n"
+                f"- SHA-256 do Adam depois: {adam_after_hash}.\n"
+                f"- Estado Adam modificado: {'sim' if adam_changed else 'não'}.\n\n"
+            )
+            report.write(
                 f"**Treino: {completed_epochs:.0f} época(s), {target_bytes:.0f} bytes-alvo, "
                 f"train_bpb {initial_bpb:.4f} → {final_bpb:.4f}.**\n"
                 f"**Validação independente: {correct_count}/{total}; F1 médio: {mean_f1:.3f}; "
@@ -761,7 +813,15 @@ def main() -> int:
             )
             report.flush()
             print(
-                f"Validação independente do ciclo {cycle}: {correct_count}/{total}; "
+                f"Integridade ciclo global {global_cycle}: seed={cycle_seed}; "
+                f"pesos alterados={'sim' if weights_changed else 'não'} "
+                f"(SHA-256 {weights_before_hash or 'inexistente'} → {weights_after_hash}); "
+                f"Adam alterado={'sim' if adam_changed else 'não'} "
+                f"(SHA-256 {adam_before_hash or 'inexistente'} → {adam_after_hash}).",
+                flush=True,
+            )
+            print(
+                f"Validação independente do ciclo {cycle} (global {global_cycle}): {correct_count}/{total}; "
                 f"F1={mean_f1:.3f}; char={mean_char_similarity:.3f}; "
                 f"regressões históricas={regressions}; "
                 f"regressões contra melhor={len(retention_regressions)}; recuperações={recoveries}; "
