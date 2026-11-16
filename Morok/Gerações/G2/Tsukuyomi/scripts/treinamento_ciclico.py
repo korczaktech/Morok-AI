@@ -573,9 +573,15 @@ def main() -> int:
             write_question_learning_rates(combined_training, rates, rate_path)
             individual_rates = list(rates.values())
             report.write(f"### LR individual — ciclo {cycle}\n\n")
-            report.write("| Pergunta | Nível lexical | LR |\n|---|---:|---:|\n")
+            report.write("| Pergunta | Resposta atual | Nível lexical | Loss individual | BPB individual | LR individual |\n|---|---|---:|---:|---:|---:|\n")
             for (question, _), result in zip(current_dialogues, probe):
-                report.write(f"| {question.replace('|', '&#124;')} | {result[2]:.1%} | {rates[question]:.8g} |\n")
+                current_answer = result[0] or "sem checkpoint"
+                current_loss = f"{result[3]:.8f}" if checkpoint.is_file() else "—"
+                current_bpb = f"{result[4]:.8f}" if checkpoint.is_file() else "—"
+                report.write(
+                    f"| {question.replace('|', '&#124;')} | {current_answer.replace('|', '&#124;')} | "
+                    f"{result[2]:.1%} | {current_loss} | {current_bpb} | {rates[question]:.8g} |\n"
+                )
             report.write("\n")
 
             weights_before = checkpoint_sha256(checkpoint)
@@ -616,7 +622,7 @@ def main() -> int:
                 best_correct = correct
             else:
                 restore_best_state(best_checkpoint, best_optimizer_state, checkpoint, optimizer_state)
-                restored_results = evaluate_set(generator, checkpoint, training_dialogues)
+                restored_results = evaluate_set(generator, trainer, checkpoint, training_dialogues)
                 best_correct = sum(1 for result in restored_results if result[1])
 
             print(f"Loss de treino: {initial_loss:.6f} → {final_loss:.6f}; checkpoint {'ACEITO' if accepted else 'REJEITADO'}.", flush=True)
