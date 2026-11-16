@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "Morok/Gerações/G3/inference/**"\n      - "Morok/Gerações/G3/rl/**"
+      - "Morok/Gerações/G3/inference/**"
+      - "Morok/Gerações/G3/rl/**"
       - "Morok/Gerações/G3/neural/**"
       - "Morok/Gerações/G3/training/**"
       - "Morok/CMakeLists.txt"
