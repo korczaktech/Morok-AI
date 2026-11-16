@@ -190,12 +190,10 @@ def main() -> int:
     generator, checkpoint, validation_path, test_path, output = map(Path, sys.argv[1:6])
     if not generator.is_file() or not checkpoint.is_file():
         raise FileNotFoundError("Gerador ou checkpoint final não encontrado.")
-    combined_validation = read_dialogues(validation_path)
+    validation = read_dialogues(validation_path)
     test = read_dialogues(test_path)
-    if len(combined_validation) != 40 or len(test) != 12:
-        raise RuntimeError("O banco combinado deve conter 20 perguntas de feedback, 20 de validação independente e 12 de teste.")
-    feedback_questions = combined_validation[:20]
-    validation = combined_validation[20:]
+    if len(validation) != 20 or len(test) != 12:
+        raise RuntimeError("A validação independente deve conter 20 perguntas e o teste reservado, 12.")
     validation_result = evaluate_split(generator, checkpoint, validation)
     test_result = evaluate_split(generator, checkpoint, test)
     training_path = validation_path.with_name("treinamento.txt")
@@ -238,7 +236,7 @@ def main() -> int:
         "public_version": "0.1.0",
         "architecture_parameter_budget": 10000,
         "training_examples_preserved": 32,
-        "feedback_questions_excluded_from_validation": len(feedback_questions),
+        "feedback_questions_excluded_from_validation": True,
         "validation_is_independent_of_feedback": True,
         "pretrained_weights": False,
         "validation": validation_result,
