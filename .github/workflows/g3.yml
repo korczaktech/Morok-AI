@@ -1,16 +1,28 @@
-name: G3
+name: G3 — shared motor integration
 
 on:
   push:
     branches: [main]
     paths:
       - "Morok/Gerações/G3/**"
-      - "Morok/MODELOS.md"
+      - "Morok/include/morok/model/**"
+      - "Morok/Gerações/G1/shared/include/morok/model/g1_backend.hpp"
+      - "Morok/Gerações/G1/shared/src/model/g1_backend.cpp"
+      - "Morok/Gerações/G1/shared/tests/unit/model/test_g1_backend.cpp"
+      - "Morok/CMakeLists.txt"
+      - "Morok/tests/CMakeLists.txt"
+      - "Morok/tests/scripts/test_generation_isolation.py"
       - ".github/workflows/g3.yml"
   pull_request:
     paths:
       - "Morok/Gerações/G3/**"
-      - "Morok/MODELOS.md"
+      - "Morok/include/morok/model/**"
+      - "Morok/Gerações/G1/shared/include/morok/model/g1_backend.hpp"
+      - "Morok/Gerações/G1/shared/src/model/g1_backend.cpp"
+      - "Morok/Gerações/G1/shared/tests/unit/model/test_g1_backend.cpp"
+      - "Morok/CMakeLists.txt"
+      - "Morok/tests/CMakeLists.txt"
+      - "Morok/tests/scripts/test_generation_isolation.py"
       - ".github/workflows/g3.yml"
   workflow_dispatch:
 
@@ -18,50 +30,52 @@ permissions:
   contents: read
 
 concurrency:
-  group: g3-${{ github.ref }}
+  group: g3-shared-backend-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  g3-structure-and-isolation:
-    name: Validate reserved G3 structure
+  shared-backend-contract:
+    name: Validate shared Morok backend contract
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate G3 profile reservations
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build libsqlite3-dev
+
+      - name: Configure existing Morok motor
+        working-directory: Morok
+        run: >-
+          cmake -S . -B build/g3-contract -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DMOROK_BUILD_TESTS=ON
+          -DMOROK_BUILD_APPS=ON
+
+      - name: Build shared contract adapters and regression targets
+        working-directory: Morok
+        run: >-
+          cmake --build build/g3-contract --parallel 2
+          --target morok_test_g1_backend
+          morok_test_g1_forward
+          morok_test_g2_tsukuyomi
+
+      - name: Test backend contract, existing G1 motor, G2 and isolation
+        working-directory: Morok
+        run: >-
+          ctest --test-dir build/g3-contract
+          -R "model.g1_backend|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
+          --output-on-failure
+
+      - name: Verify public contract and architecture documentation
         working-directory: Morok
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          import sys
-
-          root = Path("Gerações/G3")
-          profiles = ("Mokosh", "Tsukuyomi", "Artemis", "Apollo")
-          errors = []
-
-          if not (root / "README.md").is_file():
-              errors.append("Gerações/G3/README.md is missing")
-
-          for profile in profiles:
-              readme = root / profile / "README.md"
-              if not readme.is_file():
-                  errors.append(f"{readme} is missing")
-
-          source_files = [
-              path for path in root.rglob("*")
-              if path.is_file() and path.suffix in {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"}
-          ]
-          forbidden = re.compile(r"morok::g[12]::|morok/g[12]/|G[12]/")
-          for path in source_files:
-              if forbidden.search(path.read_text(encoding="utf-8")):
-                  errors.append(f"{path} imports or references a private Gerações/G1/G2 API")
-
-          if errors:
-              print("\n".join(f"- {error}" for error in errors), file=sys.stderr)
-              raise SystemExit(1)
-
-          print("G3 reservation and generation-isolation checks passed.")
-          print("No G3 executable engine is claimed by this workflow.")
-          PY
+          test -f include/morok/model/model_backend.hpp
+          test -f "Gerações/G1/shared/include/morok/model/g1_backend.hpp"
+          test -f "Gerações/G3/ARQUITETURA.md"
+          test ! -d "Gerações/G3/shared"
+          grep -q "ModelBackend" "Gerações/G3/README.md"
+          grep -q "Morok::Core" "Gerações/G3/README.md"
