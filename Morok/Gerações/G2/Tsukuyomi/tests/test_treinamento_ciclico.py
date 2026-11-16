@@ -91,9 +91,9 @@ class TrainingDataTests(unittest.TestCase):
             ("resposta errada", False, 0.2),
             ("gabarito 2", True, 1.0),
         ]
-        self.assertEqual(training.record_validation_errors(memory, dialogues, results), 1)
+        self.assertEqual(training.record_feedback_errors(memory, dialogues, results), 1)
         self.assertEqual(memory, {"pergunta 1": "gabarito 1"})
-        self.assertEqual(training.record_validation_errors(memory, dialogues, results), 0)
+        self.assertEqual(training.record_feedback_errors(memory, dialogues, results), 0)
 
     def test_feedback_memory_round_trip_and_combined_corpus_preserve_original(self):
         with tempfile.TemporaryDirectory() as directory:
