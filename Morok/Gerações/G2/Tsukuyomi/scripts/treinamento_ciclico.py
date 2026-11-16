@@ -351,6 +351,17 @@ def main() -> int:
                     not optimizer_state.is_file() or optimizer_state.stat().st_size == 0):
                 raise RuntimeError("O treinador não publicou checkpoint e estado Adam válidos.")
             validation_results = evaluate_set(generator, checkpoint, validation)
+            total_questions = len(validation_results)
+            for question_index, ((_, expected_answer), (generated_answer, is_correct, lexical_score)) in enumerate(
+                zip(validation, validation_results), start=1
+            ):
+                status = "Success" if is_correct else "Error"
+                verdict = "CORRETA" if is_correct else "INCORRETA"
+                print(
+                    f"{status}: Questão {question_index}/{total_questions} | "
+                    f"Resposta {verdict} | Nivel lexical: {lexical_score * 100:.1f}%",
+                    flush=True,
+                )
             correct_count, total = write_results(
                 report, f"Validação — ciclo {cycle}", validation, validation_results
             )
