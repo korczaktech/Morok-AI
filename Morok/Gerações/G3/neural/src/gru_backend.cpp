@@ -229,6 +229,15 @@ common::Status G3Backend::reset_state(std::span<std::byte> state) const {
 
 common::Status G3Backend::consume_byte(std::span<std::byte> state,
                                        std::uint8_t byte) const {
+    return consume_token(state, static_cast<std::uint16_t>(byte));
+}
+
+common::Status G3Backend::consume_token(std::span<std::byte> state,
+                                        std::uint16_t token_id) const {
+    if (token_id >= kVocabularySize) {
+        return fail(common::ErrorCode::invalid_argument, "consume_token",
+                    "G3 token ID is outside the 261-entry vocabulary");
+    }
     if (state.size() != kStateBytes) {
         return fail(common::ErrorCode::invalid_argument, "consume_byte",
                     "G3 state has an invalid size");
@@ -248,7 +257,7 @@ common::Status G3Backend::consume_byte(std::span<std::byte> state,
     std::array<float, kStateFloats> previous{};
     std::memcpy(previous.data(), state.data(), kStateBytes);
     const std::span<const float> input_embedding(
-        weights_.embedding.data() + static_cast<std::size_t>(byte) * kEmbeddingDim,
+        weights_.embedding.data() + static_cast<std::size_t>(token_id) * kEmbeddingDim,
         kEmbeddingDim);
     std::array<float, kHiddenDim> layer1{};
     std::array<float, kHiddenDim> normalized{};
