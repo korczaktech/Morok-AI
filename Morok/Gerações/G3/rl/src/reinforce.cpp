@@ -191,7 +191,7 @@ struct Generated final {
 };
 
 [[nodiscard]] Result<Generated> generate_candidate(
-    const Config& config, Policy& policy, const Policy& reference,
+    const Config& config, Policy& policy, const InferencePolicy& reference,
     std::span<const TokenId> prompt, std::mt19937_64& random) {
     Generated generated;
     generated.response.reserve(config.max_response_tokens);
@@ -393,7 +393,7 @@ double ReinforceTrainer::baseline(std::string_view category) const {
 
 Result<TrainingReport> ReinforceTrainer::train_batch(
     std::span<const Prompt> prompts, Policy& policy,
-    const Policy& frozen_sft_reference, const RewardEvaluator& evaluator) {
+    const InferencePolicy& frozen_sft_reference, const RewardEvaluator& evaluator) {
     const auto config_status = validate_config(config_);
     if (!config_status) {
         return Result<TrainingReport>::failure(*config_status.error_if());
@@ -548,7 +548,7 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
 }
 
 Result<EvaluationReport> evaluate_policy(
-    const Policy& policy, const RewardEvaluator& evaluator,
+    const InferencePolicy& policy, const RewardEvaluator& evaluator,
     std::span<const Prompt> examples, std::size_t max_response_tokens) {
     if (examples.empty() || max_response_tokens == 0U ||
         policy.identity().empty()) {
@@ -598,7 +598,7 @@ Result<EvaluationReport> evaluate_policy(
 }
 
 Result<ComparisonReport> compare_sft_and_rl(
-    const Policy& frozen_sft_reference, const Policy& reinforcement_policy,
+    const InferencePolicy& frozen_sft_reference, const InferencePolicy& reinforcement_policy,
     const RewardEvaluator& evaluator, std::span<const Prompt> closed_set,
     std::size_t max_response_tokens) {
     if (frozen_sft_reference.identity() == reinforcement_policy.identity()) {
