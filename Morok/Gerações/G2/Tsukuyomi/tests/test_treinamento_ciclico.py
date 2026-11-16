@@ -104,6 +104,23 @@ class TrainingDataTests(unittest.TestCase):
             loaded = training.load_question_history(path)
             self.assertEqual(training.next_global_cycle(loaded), 2)
 
+    def test_each_question_has_an_independent_checkpoint_and_adam_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = training.question_checkpoint_paths(root, "pergunta 1?")
+            second = training.question_checkpoint_paths(root, "pergunta 2?")
+            self.assertNotEqual(first[0], second[0])
+            self.assertTrue(first[0].name.startswith("q_"))
+            self.assertEqual(first[1].name, first[0].name + ".adam")
+
+    def test_loss_acceptance_is_independent_for_each_question(self):
+        # A questão 1 piora e é rejeitada; a questão 2 melhora e é aceita.
+        self.assertFalse(training.accept_question_checkpoint(10.0, 11.0))
+        self.assertTrue(training.accept_question_checkpoint(20.0, 19.0))
+        self.assertTrue(training.accept_question_checkpoint(None, 30.0))
+        with self.assertRaises(ValueError):
+            training.accept_question_checkpoint(10.0, float("nan"))
+
     def test_checkpoint_hash_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "model.ckpt"
