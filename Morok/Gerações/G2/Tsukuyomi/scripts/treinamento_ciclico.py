@@ -643,7 +643,7 @@ def main() -> int:
                 report.write(
                     f"### Pergunta {index:02d}: {state}\n"
                     f"- Loss anterior: {'—' if old_loss is None else f'{old_loss:.8f}'}\n"
-                    f"- Loss candidata: {candidate[3]:.8f}\n"
+                    f"- Loss candidata: {candidate_loss:.8f}\n"
                     f"- Loss individual mínima mantida: {candidate[3]:.8f}\n"
                     f"- Learning rate: {rate:.8g}; épocas: {epochs}\n"
                     f"- Checkpoint: {checkpoint.name}\n\n"
