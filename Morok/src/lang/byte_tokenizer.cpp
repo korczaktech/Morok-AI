@@ -139,12 +139,12 @@ template <typename T>
     int32_t written = 0;
     u_strToUTF8(output.data(), static_cast<int32_t>(output.size()), &written,
                 output_data, output_length, &status);
-    output.resize(static_cast<std::size_t>(written));
     if (U_FAILURE(status)) {
         return fail_result<NormalizedText>(
             ErrorCode::internal_error, "byte_tokenizer.utf8",
             "Unable to encode normalized UTF-8 output");
     }
+    output.resize(static_cast<std::size_t>(written));
 
     return Result<NormalizedText>::success(
         NormalizedText{std::move(output), substitutions > 0});
