@@ -61,6 +61,26 @@ def main() -> int:
     if "Gerações/G2/" in core:
         errors.append("Morok::Core contains G2-private sources")
 
+    # G3 byte-level representation is shared Core infrastructure, not a new engine.
+    tokenizer_header = ROOT / "include" / "morok" / "lang" / "byte_tokenizer.hpp"
+    tokenizer_source = ROOT / "src" / "lang" / "byte_tokenizer.cpp"
+    tokenizer_test = ROOT / "tests" / "unit" / "lang" / "test_byte_tokenizer.cpp"
+    if not tokenizer_header.is_file() or not tokenizer_source.is_file():
+        errors.append("G3 shared byte tokenizer implementation is incomplete")
+    if not tokenizer_test.is_file():
+        errors.append("G3 byte tokenizer regression tests are missing")
+    if tokenizer_header.is_file():
+        tokenizer_text = tokenizer_header.read_text(encoding="utf-8")
+        for token_id in ("kPadToken = 256", "kBosToken = 257",
+                         "kEosToken = 258", "kUsrToken = 259",
+                         "kBotToken = 260"):
+            if token_id not in tokenizer_text:
+                errors.append(f"G3 vocabulary contract is missing {token_id}")
+    if "src/lang/byte_tokenizer.cpp" not in core:
+        errors.append("shared byte tokenizer is not compiled into Morok::Core")
+    if "find_package(ICU REQUIRED COMPONENTS uc)" not in cmake or "ICU::uc" not in cmake:
+        errors.append("Morok::Core does not link ICU for complete NFC normalization")
+
     # The public backend contract belongs to the existing Core include surface.
     backend_contract = ROOT / "include" / "morok" / "model" / "model_backend.hpp"
     if not backend_contract.is_file():
