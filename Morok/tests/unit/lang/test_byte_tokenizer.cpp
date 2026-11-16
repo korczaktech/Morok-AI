@@ -52,8 +52,10 @@ void test_byte_encoding_and_message_roles() {
         const std::vector<TokenId> expected{0x4FU, 0x6CU, 0xC3U, 0xA1U};
         check(value.byte_tokens == expected,
               "text is represented as its exact UTF-8 byte sequence");
+        check(value.original_text == "Olá",
+              "original input is retained for diagnostics");
         check(value.normalized_text == "Olá",
-              "normalized text is retained for diagnostics");
+              "normalized text is retained for downstream processing");
         check(!value.replaced_invalid_utf8,
               "valid UTF-8 does not report replacement");
     }
@@ -121,6 +123,8 @@ void test_invalid_utf8_policies() {
     const auto replaced = ByteTokenizer::encode_text(malformed);
     check(replaced.has_value(), "default policy replaces malformed UTF-8");
     if (replaced) {
+        check(replaced.value_if()->original_text == malformed,
+              "malformed original bytes remain available for diagnostics");
         check(replaced.value_if()->replaced_invalid_utf8,
               "replacement occurrence is exposed to diagnostics");
         check(replaced.value_if()->normalized_text.find("\xEF\xBF\xBD") !=
