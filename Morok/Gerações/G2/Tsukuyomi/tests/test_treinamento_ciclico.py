@@ -90,6 +90,21 @@ class TrainingDataTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             training.extract_training_metric("", "train_bpb final")
 
+    def test_persistent_resume_requires_checkpoint_and_adam_pair(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkpoint = root / "model.ckpt"
+            optimizer = root / "model.ckpt.adam"
+            self.assertFalse(training.resumable_state_exists(checkpoint, optimizer))
+            checkpoint.write_bytes(b"weights")
+            with self.assertRaises(RuntimeError):
+                training.resumable_state_exists(checkpoint, optimizer)
+            optimizer.write_bytes(b"adam")
+            self.assertTrue(training.resumable_state_exists(checkpoint, optimizer))
+            optimizer.write_bytes(b"")
+            with self.assertRaises(RuntimeError):
+                training.resumable_state_exists(checkpoint, optimizer)
+
     def test_best_checkpoint_and_adam_state_are_saved_and_restored_together(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
