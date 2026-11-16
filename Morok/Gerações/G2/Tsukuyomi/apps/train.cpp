@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
         std::size_t ranges = 0;
         while (rate_map >> begin >> end >> rate) {
             if (begin >= end || end > bytes.size() || !std::isfinite(rate) ||
-                rate <= 0.0 || rate > 0.1) {
+                rate < 1.0e-7 || rate > 0.1) {
                 std::cerr << "Intervalo ou learning rate inválido no mapa por questão.\n";
                 return 2;
             }
