@@ -21,12 +21,16 @@ class TrainingDataTests(unittest.TestCase):
 
     def test_lexical_learning_rate_is_adaptive_for_each_question(self):
         base = 0.001
-        self.assertEqual(training.learning_rate_for_lexical_level(base, 0.0), 1e-2)
-        self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 0.5), (1e-2 * 1e-5) ** 0.5)
-        self.assertEqual(training.learning_rate_for_lexical_level(base, 1.0), 1e-5)
-        self.assertLess(training.learning_rate_for_lexical_level(base, 0.9),
-                        training.learning_rate_for_lexical_level(base, 0.0))
-        self.assertEqual(training.learning_rate_for_lexical_level(1e-5, 1.0), 1e-5)
+        expected = {
+            0.00: 1e-3, 0.10: 9e-4, 0.20: 8e-4, 0.25: 7.5e-4,
+            0.30: 7e-4, 0.40: 6e-4, 0.50: 5e-4, 0.60: 4e-4,
+            0.70: 3e-4, 0.75: 2.5e-4, 0.80: 1.75e-4,
+            0.85: 1e-4, 0.90: 1e-5, 1.00: 1e-5,
+        }
+        for level, rate in expected.items():
+            self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, level), rate, places=12)
+        for external_lr in (1e-5, 1e-3, 1e-2):
+            self.assertAlmostEqual(training.learning_rate_for_lexical_level(external_lr, 0.5), 5e-4)
         for level in (-0.1, 1.1, float("nan")):
             with self.assertRaises(ValueError):
                 training.learning_rate_for_lexical_level(base, level)
@@ -55,9 +59,9 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(training.MAX_LEARNING_RATE, 1e-2)
         self.assertEqual(training.decay_learning_rate(1.01e-5), 1e-5)
         self.assertEqual(training.learning_rate_for_lexical_level(1e-5, 1.0), 1e-5)
-        self.assertEqual(training.learning_rate_for_lexical_level(1e-2, 0.0), 1e-2)
+        self.assertEqual(training.learning_rate_for_lexical_level(1e-2, 0.0), 1e-3)
         self.assertEqual(training.learning_rate_for_lexical_level(1e-2, 1.0), 1e-5)
-        self.assertEqual(training.INITIAL_LEARNING_RATE, 1e-2)
+        self.assertEqual(training.INITIAL_LEARNING_RATE, 1e-3)
 
     def test_learning_rate_rejects_values_below_floor_or_non_finite(self):
         for value in (0.0, 0.5e-5, 1.01e-2, float("nan"), float("inf")):
