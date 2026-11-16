@@ -9,6 +9,7 @@
 #include <string>
 
 namespace morok::g3::rl {
+using morok::lang::TokenId;
 
 // Connects REINFORCE to the real 100k-parameter G3 model. Sampled-token
 // logit gradients are propagated through both GRU layers with truncated BPTT;
