@@ -102,7 +102,8 @@ common::Result<BenchmarkReport> benchmark_inference(
 
     report.measured_runs = benchmark.measured_runs;
     report.resident_bytes_after = resident_bytes();
-    report.peak_resident_bytes = peak_resident_bytes();
+    report.peak_resident_bytes = std::max(
+        peak_resident_bytes(), report.resident_bytes_after);
     report.median_latency_ns = percentile(report.latency_samples_ns, 0.50);
     report.p95_latency_ns = percentile(report.latency_samples_ns, 0.95);
     if (total_elapsed_ns > 0U) {
