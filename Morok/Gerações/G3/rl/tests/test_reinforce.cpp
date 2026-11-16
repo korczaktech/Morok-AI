@@ -382,6 +382,7 @@ void test_real_g3_policy_adapter_and_independent_evaluator() {
     assert(std::abs(probability_sum-1.0)<1.0e-5);
 
     const float original_bias=backend.weights().output_bias[static_cast<std::size_t>('A')];
+    const auto original_recurrent=backend.weights().layer1_recurrent;
     SequenceGradient gradient;
     gradient.context.assign(prompt.begin(),prompt.end());
     gradient.response={static_cast<TokenId>('A'),morok::lang::kEosToken};
@@ -392,6 +393,7 @@ void test_real_g3_policy_adapter_and_independent_evaluator() {
     assert(policy.apply_batch_gradients(batch).has_value());
     assert(backend.parameter_count()==100000U);
     assert(backend.weights().output_bias[static_cast<std::size_t>('A')]!=original_bias);
+    assert(backend.weights().layer1_recurrent!=original_recurrent);
 
     ReferenceRewardEvaluator evaluator({
         ReferenceAnswer{std::vector<TokenId>(prompt.begin(),prompt.end()),
