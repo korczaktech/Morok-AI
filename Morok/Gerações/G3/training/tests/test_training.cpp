@@ -67,6 +67,9 @@ void test_cross_entropy_and_perturbations() {
     const double special_loss = causal_cross_entropy(logits, 258U, 0.05, &gradient);
     assert(std::isfinite(special_loss));
     assert(gradient[258U] < 0.0F);
+    const double pad_loss = causal_cross_entropy(logits, 256U, 0.05, &gradient);
+    assert(pad_loss == 0.0);
+    for (float value : gradient) assert(value == 0.0F);
     PerturbationConfig config;
     config.probability = 1.0;
     std::mt19937_64 random(99U);
