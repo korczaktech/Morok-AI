@@ -33,7 +33,7 @@ O workflow **Treinamento — G2** utiliza exclusivamente `data/feedback.txt`, qu
 
 O padrão executa até 1.000 épocas por ciclo e até 100 ciclos por execução. O treinamento contínuo é opcional e, quando ativado, encerra quando as 40 respostas atingem correspondência lexical exata com os gabaritos.
 
-A seleção do checkpoint usa a própria Loss de treinamento: um candidato é aceito quando a Loss final do ciclo é menor que a Loss inicial. Caso contrário, os pesos e o estado Adam anteriores são restaurados juntos. Isso evita que um ciclo que piorou o ajuste substitua o melhor checkpoint disponível. A Loss é calculada sobre os bytes das respostas IA:, enquanto as perguntas são fornecidas como contexto.
+Cada pergunta possui seu próprio checkpoint e seu próprio estado Adam, armazenados em `build/g2/tsukuyomi-questoes/`. A Loss é calculada individualmente sobre os bytes da resposta daquela pergunta. O candidato da pergunta é aceito somente se sua Loss ficar menor que a Loss anterior. Se a Loss passar de 10 para 11, por exemplo, somente o checkpoint e o Adam daquela pergunta são restaurados; os outros 39 estados não são alterados. Cada pergunta mantém, portanto, sua própria Loss mínima. Não existe decisão de aceitação por Loss global.
 
 A memória corretiva não cria perguntas adicionais. Ela atualiza o gabarito correspondente dentro das mesmas 40 entradas. O script verifica que o corpus combinado continua contendo exatamente 40 perguntas.
 
@@ -43,10 +43,12 @@ Pesos, momentos Adam, memória corretiva e histórico das 40 perguntas são pers
 
 ## Inferência
 
-A geração é autoregressiva e greedy. As 13 regiões posicionais da pergunta inicializam o estado recorrente; cada byte gerado atualiza esse estado. A CLI batch carrega o checkpoint uma vez e atende várias perguntas recebidas por stdin.
+A geração é autoregressiva e greedy. A CLI seleciona o checkpoint pelo texto exato da pergunta usando `--question-checkpoints`; no modo batch roteado, carrega o checkpoint correspondente a cada pergunta recebida por stdin. Cada pergunta é atendida pelo seu próprio estado especializado.
 
 ```sh
-build/g2/morok-g2-tsukuyomi-generate tsukuyomi-g2-v0.1.ckpt "Olá" 120
+build/g2/morok-g2-tsukuyomi-generate --question-checkpoints build/g2/tsukuyomi-questoes "Olá" 120
+# Para várias perguntas, uma por linha:
+build/g2/morok-g2-tsukuyomi-generate --batch-question-checkpoints build/g2/tsukuyomi-questoes 120
 ```
 
 ## Limitações
