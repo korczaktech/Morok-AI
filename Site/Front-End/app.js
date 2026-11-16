@@ -69,7 +69,7 @@
     const conversation = { id: id(), title: 'Nova conversa', createdAt: now(), updatedAt: now(), messages: [] };
     state.conversations.unshift(conversation);
     state.activeId = conversation.id;
-    persist(); renderHistory(); renderConversation(); closeSidebar(); el.input.focus();
+    persist(); renderHistory(); renderConversation(); closeSidebar(); returnToChat(); el.input.focus();
     return conversation;
   }
   function ensureConversation() { return activeConversation() || createConversation(); }
@@ -160,7 +160,7 @@
   }
   function openConversation(conversationId) {
     if (!state.conversations.some(c => c.id === conversationId)) return;
-    state.activeId = conversationId; persist(); renderHistory(); renderConversation(); closeSidebar();
+    state.activeId = conversationId; persist(); renderHistory(); renderConversation(); closeSidebar(); returnToChat();
   }
   function updateProfile() {
     const user = state.authSession?.user;
@@ -174,6 +174,7 @@
     $('#profile-local-action').hidden = signedIn;
     $('#profile-menu-logout').hidden = !signedIn;
     $('#profile-menu-insight').textContent = signedIn ? 'Gerencie sua conta e as preferências deste dispositivo.' : 'Você está usando o Morok como visitante. Entre para ativar os recursos vinculados à conta.';
+    $('#auth-open').textContent = signedIn ? 'Gerenciar sessão' : 'Entrar ou criar conta';
     $('#profile-button').classList.toggle('signed-in', signedIn);
   }
   function toast(message) {
@@ -546,7 +547,7 @@
     for (const file of files) {
       if (state.attachments.length >= 4) { toast('Limite de quatro arquivos por mensagem.'); break; }
       if (file.size > 48 * 1024) { toast(file.name + ' excede o limite de 48 KB.'); continue; }
-      if (!/\.(txt|md|csv|json|log)$/i.test(file.name) && !file.type.startsWith('image/')) { toast('Formato não suportado: ' + file.name); continue; }
+      if (!/\.(txt|md|csv|json|log)$/i.test(file.name) && !file.type.startsWith('text/')) { toast('A conversa aceita apenas arquivos de texto: ' + file.name); continue; }
       state.attachments.push(file);
     }
     renderAttachments(); el.file.value = '';
