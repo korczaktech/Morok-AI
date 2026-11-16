@@ -1,4 +1,5 @@
 #include "morok/g3/training/trainer.hpp"
+#include "morok/g3/training/checkpoint.hpp"
 #include "morok/g3/rl/reinforce.hpp"
 
 #include <unicode/unistr.h>
@@ -543,6 +544,54 @@ std::vector<UChar32> keyboard_substitute(std::vector<UChar32> cps,
     return cps;
 }
 
+std::string training_config_snapshot(const TrainingConfig& c) {
+    std::ostringstream out;
+    out << std::setprecision(17)
+        << c.epochs << '|' << c.bptt_steps << '|' << c.maximum_variants_per_example
+        << '|' << c.learning_rate << '|' << c.minimum_learning_rate
+        << '|' << c.warmup_fraction << '|' << c.weight_decay << '|' << c.beta1
+        << '|' << c.beta2 << '|' << c.adam_epsilon << '|' << c.label_smoothing
+        << '|' << c.variational_dropout << '|' << c.maximum_gradient_norm
+        << '|' << c.seed << '|' << c.allow_sensitive_examples
+        << '|' << c.perturbation.probability
+        << '|' << c.perturbation.swap_adjacent_weight
+        << '|' << c.perturbation.omission_weight
+        << '|' << c.perturbation.nearby_key_weight
+        << '|' << c.perturbation.accent_case_punctuation_weight
+        << '|' << c.perturbation.repetition_spacing_weight;
+    return out.str();
+}
+
+std::string fingerprint_text(std::string_view value) {
+    std::uint64_t hash = 14695981039346656037ULL;
+    for (const unsigned char byte : value) {
+        hash ^= byte;
+        hash *= 1099511628211ULL;
+    }
+    std::ostringstream out;
+    out << std::hex << hash;
+    return out.str();
+}
+
+std::vector<std::uint64_t> widen_indices(const std::vector<std::size_t>& indices) {
+    std::vector<std::uint64_t> result;
+    result.reserve(indices.size());
+    for (const auto index : indices) result.push_back(static_cast<std::uint64_t>(index));
+    return result;
+}
+
+std::string serialize_rng(const std::mt19937_64& rng) {
+    std::ostringstream out;
+    out << rng;
+    return out.str();
+}
+
+bool restore_rng(std::string_view state, std::mt19937_64& rng) {
+    std::istringstream in{std::string(state)};
+    in >> rng;
+    return !in.fail();
+}
+
 } // namespace
 
 double causal_cross_entropy(const std::vector<float>& logits, std::uint16_t target,
@@ -665,18 +714,19 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
             "dataset contains sensitive examples; explicit training opt-in is required");
 
     TrainingReport report;
-    report.run_id = "g3-sft-" + std::to_string(config.seed) + "-" +
-        std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count());
     report.dataset_fingerprint = dataset.fingerprint;
     report.splits = split_by_group_id(dataset, SplitConfig{0.85, 0.10, 0.05, config.seed});
+
+    // Expansion has its own deterministic stream so reconstructing the same
+    // expanded corpus does not consume the resumed training RNG.
+    std::mt19937_64 expansion_rng(config.seed);
     std::mt19937_64 rng(config.seed);
     std::vector<DatasetExample> train_examples;
     for (const auto index : report.splits.train) {
         const auto expanded = expand_controlled(dataset.examples[index],
-            config.maximum_variants_per_example, rng());
+            config.maximum_variants_per_example, expansion_rng());
         for (auto item : expanded) {
-            item.question = perturb_question(item.question, config.perturbation, rng);
+            item.question = perturb_question(item.question, config.perturbation, expansion_rng);
             train_examples.push_back(std::move(item));
         }
     }
@@ -686,10 +736,57 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
     if (train_examples.size() > std::numeric_limits<std::size_t>::max() / config.epochs)
         throw std::overflow_error("planned G3 optimizer step count overflow");
     const std::size_t planned_steps = config.epochs * train_examples.size();
+
     AdamState optimizer;
     std::size_t global_step = 0U;
+    std::size_t first_epoch = 1U;
+    const auto config_snapshot = training_config_snapshot(config);
+    const auto config_fingerprint = fingerprint_text(config_snapshot);
 
-    for (std::size_t epoch = 1U; epoch <= config.epochs; ++epoch) {
+    if (!config.resume_from_checkpoint.empty()) {
+        CheckpointCompatibility expected;
+        expected.code_version = "g3-sft-2";
+        expected.dataset_fingerprint = dataset.fingerprint;
+        expected.optimizer_id = "AdamW";
+        expected.configuration_fingerprint = config_fingerprint;
+        const auto loaded = read_training_checkpoint(config.resume_from_checkpoint, &expected);
+        if (!loaded)
+            throw std::runtime_error("G3 checkpoint is incompatible or corrupt");
+        const auto& checkpoint = *loaded.value_if();
+        if (checkpoint.configuration_snapshot != config_snapshot ||
+            checkpoint.train_split != widen_indices(report.splits.train) ||
+            checkpoint.validation_split != widen_indices(report.splits.validation) ||
+            checkpoint.test_split != widen_indices(report.splits.test) ||
+            checkpoint.completed_epochs >= config.epochs ||
+            checkpoint.optimizer_first_moment.size() != neural::kTargetParameterCount ||
+            checkpoint.optimizer_second_moment.size() != neural::kTargetParameterCount ||
+            checkpoint.optimizer_step != checkpoint.scheduler_step ||
+            !restore_rng(checkpoint.cpp_rng_state, rng))
+            throw std::runtime_error("G3 checkpoint resume state does not match this training run");
+        const auto restored = restore_g3_model_weights(checkpoint.model_weights, backend);
+        if (!restored) throw std::runtime_error("G3 checkpoint model weights could not be restored");
+        optimizer.first = checkpoint.optimizer_first_moment;
+        optimizer.second = checkpoint.optimizer_second_moment;
+        optimizer.step = checkpoint.optimizer_step;
+        global_step = static_cast<std::size_t>(checkpoint.optimizer_step);
+        first_epoch = static_cast<std::size_t>(checkpoint.completed_epochs + 1U);
+        report.run_id = checkpoint.run_id;
+        report.resumed = true;
+        report.completed_epochs = static_cast<std::size_t>(checkpoint.completed_epochs);
+    } else {
+        report.run_id = "g3-sft-" + std::to_string(config.seed) + "-" +
+            std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count());
+    }
+
+    const std::size_t remaining_epochs = config.epochs - first_epoch + 1U;
+    const std::size_t epochs_this_run = config.max_epochs_this_run == 0U
+        ? remaining_epochs : std::min(remaining_epochs, config.max_epochs_this_run);
+    const std::size_t last_epoch = first_epoch + epochs_this_run - 1U;
+    const auto checkpoint_destination = !config.checkpoint_path.empty()
+        ? config.checkpoint_path : config.resume_from_checkpoint;
+
+    for (std::size_t epoch = first_epoch; epoch <= last_epoch; ++epoch) {
         std::shuffle(train_examples.begin(), train_examples.end(), rng);
         double train_loss = 0.0, last_norm = 0.0, max_norm = 0.0, last_lr = config.learning_rate;
         std::size_t seen = 0U;
@@ -754,6 +851,30 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
               << ",\"gradient_norm_max\":" << max_norm
               << ",\"seed\":" << config.seed << "}";
         append_jsonl(config.metrics_jsonl, event.str());
+
+        report.completed_epochs = epoch;
+        if (!checkpoint_destination.empty()) {
+            G3TrainingCheckpoint checkpoint;
+            checkpoint.compatibility.code_version = "g3-sft-2";
+            checkpoint.compatibility.dataset_fingerprint = dataset.fingerprint;
+            checkpoint.compatibility.optimizer_id = "AdamW";
+            checkpoint.compatibility.configuration_fingerprint = config_fingerprint;
+            checkpoint.run_id = report.run_id;
+            checkpoint.configuration_snapshot = config_snapshot;
+            checkpoint.model_weights = capture_g3_model_weights(backend);
+            checkpoint.optimizer_first_moment = optimizer.first;
+            checkpoint.optimizer_second_moment = optimizer.second;
+            checkpoint.optimizer_step = optimizer.step;
+            checkpoint.scheduler_step = global_step;
+            checkpoint.scheduler_learning_rate = std::max(last_lr, config.minimum_learning_rate);
+            checkpoint.completed_epochs = epoch;
+            checkpoint.train_split = widen_indices(report.splits.train);
+            checkpoint.validation_split = widen_indices(report.splits.validation);
+            checkpoint.test_split = widen_indices(report.splits.test);
+            checkpoint.cpp_rng_state = serialize_rng(rng);
+            const auto saved = save_training_checkpoint_atomic(checkpoint_destination, checkpoint);
+            if (!saved) throw std::runtime_error("failed to persist G3 epoch checkpoint");
+        }
     }
     return report;
 }
