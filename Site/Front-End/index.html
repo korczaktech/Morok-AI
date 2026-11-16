@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=20261116-02">
-  <script src="./app.js?v=20261116-03" defer></script>
+  <script src="./app.js?v=20261116-04" defer></script>
 </head>
 <body>
   <div class="app" id="app">
@@ -26,7 +26,7 @@
       </div>
       <div class="sidebar-scroll" id="sidebar-scroll">
       <label class="sidebar-search" for="sidebar-search-input"><span data-icon="search" aria-hidden="true"></span><input id="sidebar-search-input" type="search" placeholder="Buscar conversas..." autocomplete="off" aria-label="Buscar conversas"></label>
-      <button class="new-chat" id="new-chat"><span class="plus" data-icon="new-chat"></span><span>Novo chat</span><kbd><span data-icon="command"></span> K</kbd></button>
+      <button class="new-chat" id="new-chat"><span class="plus" data-icon="new-chat"></span><span>Novo chat</span><kbd><span data-icon="command"></span> ⇧ O</kbd></button>
       <div class="sidebar-section-title">Seu espaço</div>
       <div class="sidebar-tools">
         <button class="side-action" data-workspace-page="images"><span class="line-icon" data-icon="images"></span>Imagens</button>
@@ -103,8 +103,8 @@
             <textarea id="message-input" rows="1" maxlength="12000" placeholder="Envie uma mensagem ao Morok..." aria-label="Escreva uma mensagem"></textarea>
             <div class="composer-bottom">
               <div class="composer-actions">
-                <button class="tool-button" type="button" id="attach-button" title="Anexar arquivo"><span data-icon="attach"></span><span class="tool-label">Anexar</span></button>
-                <input id="file-input" type="file" hidden multiple accept=".txt,.md,.csv,.json,.log,image/png,image/jpeg,image/webp">
+                <button class="tool-button" type="button" id="attach-button" title="Anexar arquivo de texto"><span data-icon="attach"></span><span class="tool-label">Anexar texto</span></button>
+                <input id="file-input" type="file" hidden multiple accept=".txt,.md,.csv,.json,.log,text/plain,text/csv,application/json">
                 <span class="composer-divider"></span><span class="composer-hint">Enter para enviar · Shift + Enter para quebrar linha</span>
               </div>
               <button class="send-button" id="send-button" type="submit" aria-label="Enviar mensagem" disabled><span data-icon="send"></span></button>
