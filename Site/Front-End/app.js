@@ -802,7 +802,9 @@
       target.innerHTML = tickets.map(ticket => {
         const created = new Date(ticket.createdAt);
         const createdLabel = Number.isNaN(created.getTime()) ? "Data indisponível" : created.toLocaleString("pt-BR");
-        return '<div class="task-row"><span><strong>' + escapeHtml(ticket.subject) + '</strong><small>' + escapeHtml(ticket.status || "open") + ' · ' + escapeHtml(createdLabel) + '</small></span></div>';
+        const status = ticket.status || "open";
+        const closeButton = status === "open" ? '<button class="secondary-button" type="button" data-close-ticket="' + escapeHtml(ticket.id) + '">Encerrar</button>' : '';
+        return '<div class="task-row"><span><strong>' + escapeHtml(ticket.subject) + '</strong><small>' + escapeHtml(status === "closed" ? "Encerrado" : "Aberto") + ' · ' + escapeHtml(createdLabel) + '</small></span>' + closeButton + '</div>';
       }).join("") || '<div class="workspace-empty">Nenhum chamado enviado.</div>';
     } catch(error) {
       target.innerHTML = '<div class="workspace-empty">' + escapeHtml(error.message) + '</div><button class="secondary-button" id="support-tickets-retry" type="button">Tentar novamente</button>';
@@ -948,6 +950,14 @@
     if(event.target.id==='library-file-input'){void (async()=>{for(const file of event.target.files){if(file.size>MAX_LIBRARY_FILE_BYTES){toast(file.name+' excede 48 KB.');continue;}try{state.libraryItems.unshift({name:file.name,size:Math.max(1,Math.round(file.size/1024))+' KB',type:file.type||'text/plain',content:await file.text()});}catch{toast('Não foi possível ler '+file.name+'.');}}state.libraryItems=state.libraryItems.slice(0,100);persist();openWorkspacePage('library');})();}
   });
   $('#workspace-page').addEventListener('click',async event=>{
+    const closeTicket=event.target.closest('[data-close-ticket]');
+    if(closeTicket){
+      try {
+        await authRequest('/v1/support/tickets/close',{token:state.authSession.access_token,body:{id:closeTicket.dataset.closeTicket}});
+        await loadSupportTickets();
+        toast('Chamado encerrado.');
+      } catch(error){toast(error.message);}
+    }
     if (event.target.id === 'account-profile-save') { const name=$('#account-name-input').value.trim(); if(!name)return toast('Informe seu nome.'); try { const data=await authRequest('/v1/account/profile',{token:state.authSession.access_token,body:{name,preferences:{theme:state.theme}}}); state.authSession.user.name=data.profile.name; saveAuthSession(state.authSession); toast('Perfil atualizado.'); updateProfile(); } catch(error){toast(error.message);} }
     if (event.target.id === 'toggle-2fa') { if(state.authSession.user?.twoFactorEnabled){const password=prompt('Confirme sua senha atual:');const code=prompt('Digite o código atual do aplicativo autenticador:');if(password&&code){try{await authRequest('/v1/account/2fa/disable',{token:state.authSession.access_token,body:{password,code}});state.authSession.user.twoFactorEnabled=false;saveAuthSession(state.authSession);openWorkspacePage('security');toast('Autenticação em dois fatores desativada.');}catch(error){toast(error.message);}}}else { void (async()=>{try{const setup=await authRequest('/v1/account/2fa/setup',{token:state.authSession.access_token,body:{}});alert('Adicione esta chave ao seu aplicativo autenticador:\n\n'+setup.secret+'\n\nURI: '+setup.otpauth);const code=prompt('Digite o código de 6 dígitos gerado pelo aplicativo:');if(!code)return;await authRequest('/v1/account/2fa/enable',{token:state.authSession.access_token,body:{code:code.trim()}});state.authSession.user.twoFactorEnabled=true;saveAuthSession(state.authSession);openWorkspacePage('security');toast('Autenticação em dois fatores ativada.');}catch(error){toast(error.message);}})();} }
     if (event.target.id === 'change-password') { const currentPassword=$('#current-password').value, newPassword=$('#new-password').value; if(newPassword.length<10)return toast('A nova senha deve ter pelo menos 10 caracteres.'); try { await authRequest('/v1/account/password',{token:state.authSession.access_token,body:{currentPassword,newPassword}}); $('#current-password').value=''; $('#new-password').value=''; toast('Senha alterada. Outras sessões foram encerradas.'); } catch(error){toast(error.message);} }
