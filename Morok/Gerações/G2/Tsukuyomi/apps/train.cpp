@@ -117,6 +117,53 @@ double evaluate_dialogue_corpus_loss(
     return weighted_loss / static_cast<double>(total_targets);
 }
 
+
+struct DialogueLoss { double loss = 0.0; std::uint64_t targets = 0; };
+
+std::vector<DialogueLoss> evaluate_each_dialogue(
+    const morok::g2::tsukuyomi::Model& model,
+    const std::vector<std::uint8_t>& bytes) {
+    std::vector<DialogueLoss> results;
+    std::vector<std::uint8_t> dialogue;
+    std::size_t line_start = 0;
+    bool has_dialogue = false;
+    const auto finish = [&]() -> bool {
+        if (dialogue.empty()) return true;
+        const auto mask = make_dialogue_target_mask(dialogue);
+        const auto targets = static_cast<std::uint64_t>(std::count_if(
+            mask.begin(), mask.end(), [](std::uint8_t value) { return value != 0; }));
+        if (targets == 0) return false;
+        const double loss = morok::g2::tsukuyomi::evaluate_loss(model, dialogue, mask);
+        if (!std::isfinite(loss)) return false;
+        results.push_back({loss, targets});
+        dialogue.clear();
+        return true;
+    };
+    while (line_start < bytes.size()) {
+        std::size_t line_end = line_start;
+        while (line_end < bytes.size() && bytes[line_end] != '\n' && bytes[line_end] != '\r')
+            ++line_end;
+        std::size_t marker = line_start;
+        while (marker < line_end && (bytes[marker] == ' ' || bytes[marker] == '\t')) ++marker;
+        const bool starts_question = line_end - marker >= 2 &&
+            bytes[marker] == 'U' && bytes[marker + 1] == ':';
+        if (starts_question) {
+            if (has_dialogue && !finish()) return {};
+            has_dialogue = true;
+        }
+        std::size_t line_after = line_end;
+        if (line_after < bytes.size() && bytes[line_after] == '\r') ++line_after;
+        if (line_after < bytes.size() && bytes[line_after] == '\n') ++line_after;
+        if (has_dialogue)
+            dialogue.insert(dialogue.end(),
+                bytes.begin() + static_cast<std::ptrdiff_t>(line_start),
+                bytes.begin() + static_cast<std::ptrdiff_t>(line_after));
+        line_start = line_after;
+    }
+    if (!has_dialogue || !finish()) return {};
+    return results;
+}
+
 bool parse_size(const char* text, std::size_t& value) {
     const std::string input(text ? text : "");
     const auto result = std::from_chars(input.data(),
@@ -126,6 +173,29 @@ bool parse_size(const char* text, std::size_t& value) {
 }
 
 int main(int argc, char** argv) {
+    if (argc == 4 && std::string(argv[1]) == "--evaluate-each") {
+        std::error_code error;
+        const auto size = std::filesystem::file_size(argv[2], error);
+        if (error || size < 2 || size > 512ULL * 1024ULL * 1024ULL) return 2;
+        std::ifstream input(argv[2], std::ios::binary);
+        if (!input) return 2;
+        std::vector<std::uint8_t> bytes;
+        bytes.reserve(static_cast<std::size_t>(size));
+        char value = 0;
+        while (input.get(value))
+            bytes.push_back(static_cast<std::uint8_t>(static_cast<unsigned char>(value)));
+        if (bytes.size() != size) return 2;
+        morok::g2::tsukuyomi::Model model;
+        if (!morok::g2::tsukuyomi::load_checkpoint(model, argv[3])) return 1;
+        const auto results = evaluate_each_dialogue(model, bytes);
+        if (results.empty()) return 1;
+        for (std::size_t i = 0; i < results.size(); ++i)
+            std::cout << i + 1 << '\t' << results[i].loss << '\t'
+                      << results[i].loss / std::log(2.0) << '\t'
+                      << results[i].targets << '\n';
+        return 0;
+    }
+
     // Modo de avaliação: calcula entropia cruzada no holdout sem atualizar pesos.
     if (argc == 4 && std::string(argv[1]) == "--evaluate") {
         std::error_code eval_error;
@@ -169,7 +239,7 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (argc < 3 || argc > 9) {
-        std::cerr << "Uso: morok-g2-tsukuyomi-train <corpus.bin> <checkpoint> [epocas] [seed] [learning_rate] [--resume] [--lr-map arquivo]\n";
+        std::cerr << "Uso: morok-g2-tsukuyomi-train <corpus.bin> <checkpoint> [epocas] [seed] [learning_rate] [--resume] [--lr-map arquivo]\nOu: --evaluate-each <corpus> <checkpoint>\n";
         return 2;
     }
 
