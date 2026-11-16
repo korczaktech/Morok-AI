@@ -58,6 +58,7 @@ jobs:
           grep -q 'state.tasks = merged.slice(0, 100);' Site/Front-End/app.js
           grep -q 'path === "/v1/support/tickets/close"' Site/Back-End/server.js
           grep -q 'data-close-ticket' Site/Front-End/app.js
+          grep -q 'async function clearLocalPushSubscription()' Site/Front-End/app.js
 
       - name: Testar API e preflight CORS
         env:
