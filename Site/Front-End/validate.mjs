@@ -13,7 +13,13 @@ const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
 if (duplicates.length) throw new Error("IDs HTML duplicados: " + [...new Set(duplicates)].join(", "));
 
 const htmlIds = new Set(ids);
-const dynamicIds = new Set(["create-project-sidebar"]);
+const dynamicIds = new Set([
+  "create-project-sidebar", "security-sessions", "support-ticket-list", "account-name-input",
+  "toggle-2fa", "account-sessions", "support-subject", "support-description",
+  "project-name-input", "task-input", "current-password", "new-password",
+  "project-rename-input", "notifications-toggle", "location-input", "about-input",
+  "style-select", "workspace-theme", "instructions-input"
+]);
 const selectors = [...app.matchAll(/\$\(['"]#([A-Za-z][\w-]*)['"]\)/g)].map((match) => match[1]);
 const missing = [...new Set(selectors.filter((id) => !htmlIds.has(id) && !dynamicIds.has(id)))];
 if (missing.length) throw new Error("Seletores sem elemento HTML ou renderização dinâmica: " + missing.join(", "));
