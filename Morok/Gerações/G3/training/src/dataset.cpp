@@ -18,13 +18,14 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 namespace morok::g3::training {
 namespace {
 
 class JsonObject final {
 public:
-    explicit JsonObject(const std::string& line) : text_(line) {}
+    explicit JsonObject(std::string line) : text_(std::move(line)) {}
 
     std::string string(const std::string& key, bool required = true) const {
         const auto value = find_value(key);
@@ -155,7 +156,7 @@ private:
         return value;
     }
 
-    const std::string& text_;
+    std::string text_;
 };
 
 std::string normalize_nfc(const std::string& input) {
