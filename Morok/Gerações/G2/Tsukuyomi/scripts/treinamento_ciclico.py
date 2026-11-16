@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Treinamento cíclico com validação e teste independentes do Tsukuyomi G2 0.1."""
+"""Treinamento cíclico e relatório individual das 40 perguntas do Tsukuyomi G2 0.1."""
 
 from collections import Counter, defaultdict
 import difflib
@@ -91,7 +91,7 @@ def write_question_learning_rates(corpus: Path, rates: dict[str, float], destina
 
 def save_best_state(checkpoint: Path, optimizer_state: Path,
                     best_checkpoint: Path, best_optimizer_state: Path) -> None:
-    """Salva pesos e momentos Adam como um único estado lógico de melhor validação."""
+    """Salva pesos e momentos Adam do melhor estado pela Loss de treinamento."""
     if not checkpoint.is_file() or not optimizer_state.is_file():
         raise RuntimeError("Checkpoint ou estado Adam ausente após treinamento.")
     checkpoint_tmp = best_checkpoint.with_name(best_checkpoint.name + ".tmp")
@@ -601,7 +601,7 @@ def main() -> int:
 
             weights_after = checkpoint_sha256(checkpoint)
             adam_after = checkpoint_sha256(optimizer_state)
-            candidate_results = evaluate_set(generator, checkpoint, training_dialogues)
+            candidate_results = evaluate_set(generator, trainer, checkpoint, training_dialogues)
             new_errors = record_feedback_errors(memory, training_dialogues, candidate_results)
             write_feedback_memory(feedback_path, memory)
             regressions, recoveries = update_question_history(history, training_dialogues, candidate_results, global_cycle, execution_id, dataset="training")
