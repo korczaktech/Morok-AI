@@ -59,6 +59,54 @@ std::vector<std::uint8_t> make_dialogue_target_mask(
     return mask;
 }
 
+double evaluate_dialogue_corpus_loss(
+    const morok::g2::tsukuyomi::Model& model,
+    const std::vector<std::uint8_t>& bytes) {
+    double weighted_loss = 0.0;
+    std::uint64_t total_targets = 0;
+    std::vector<std::uint8_t> dialogue;
+    std::size_t line_start = 0;
+
+    const auto evaluate_dialogue = [&]() -> bool {
+        if (dialogue.empty()) return true;
+        const auto mask = make_dialogue_target_mask(dialogue);
+        const auto targets = static_cast<std::uint64_t>(std::count_if(
+            mask.begin(), mask.end(), [](std::uint8_t value) { return value != 0; }));
+        if (targets == 0) return false;
+        const double loss = morok::g2::tsukuyomi::evaluate_loss(model, dialogue, mask);
+        if (!std::isfinite(loss)) return false;
+        weighted_loss += loss * static_cast<double>(targets);
+        total_targets += targets;
+        dialogue.clear();
+        return true;
+    };
+
+    while (line_start < bytes.size()) {
+        std::size_t line_end = line_start;
+        while (line_end < bytes.size() && bytes[line_end] != '\n' &&
+               bytes[line_end] != '\r')
+            ++line_end;
+        std::size_t marker = line_start;
+        while (marker < line_end && (bytes[marker] == ' ' || bytes[marker] == '\t'))
+            ++marker;
+        const bool starts_question =
+            line_end - marker >= 2 && bytes[marker] == 'U' && bytes[marker + 1] == ':';
+        if (starts_question && !dialogue.empty() && !evaluate_dialogue())
+            return std::numeric_limits<double>::infinity();
+
+        std::size_t line_after = line_end;
+        if (line_after < bytes.size() && bytes[line_after] == '\r') ++line_after;
+        if (line_after < bytes.size() && bytes[line_after] == '\n') ++line_after;
+        dialogue.insert(dialogue.end(), bytes.begin() + static_cast<std::ptrdiff_t>(line_start),
+                        bytes.begin() + static_cast<std::ptrdiff_t>(line_after));
+        line_start = line_after;
+    }
+
+    if (!evaluate_dialogue() || total_targets == 0)
+        return std::numeric_limits<double>::infinity();
+    return weighted_loss / static_cast<double>(total_targets);
+}
+
 bool parse_size(const char* text, std::size_t& value) {
     const std::string input(text ? text : "");
     const auto result = std::from_chars(input.data(),
@@ -102,8 +150,7 @@ int main(int argc, char** argv) {
             std::cerr << "Checkpoint ausente ou inválido para avaliação.\n";
             return 1;
         }
-        const double loss = morok::g2::tsukuyomi::evaluate_loss(
-            eval_model, eval_bytes, eval_mask);
+        const double loss = evaluate_dialogue_corpus_loss(eval_model, eval_bytes);
         if (!std::isfinite(loss)) {
             std::cerr << "Loss de validação não finito.\n";
             return 1;
