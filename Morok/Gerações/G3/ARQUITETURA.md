@@ -103,3 +103,42 @@ Mokosh, Tsukuyomi, Artemis e Apollo serão políticas/perfis construídos sobre 
 - [x] CI da G3 valida contrato, adaptador G1, G2 e isolamento arquitetural.
 
 A Etapa 1 não implementa a GRU G3, treinamento SFT/RL ou inferência final. Essas entregas pertencem às etapas posteriores.
+
+
+## 8. Representação linguística G3 — Etapa 2
+
+A representação byte-level foi integrada à superfície compartilhada do Core,
+sem criar um subsistema de tokenização paralelo dentro da G3:
+
+- Cabeçalho público: `include/morok/lang/byte_tokenizer.hpp`.
+- Implementação: `src/lang/byte_tokenizer.cpp`.
+- API: `morok::lang::ByteTokenizer`.
+- Vocabulário: 261 IDs estáveis — bytes 0–255, PAD 256, BOS 257, EOS 258,
+  USR 259 e BOT 260.
+- Mensagens: `[BOS?][USR|BOT][bytes UTF-8][EOS?]`; o método de append permite
+  compor vários turnos sem inserir BOS/EOS adicionais.
+- Entrada inválida: substituição por U+FFFD por padrão, com opção estrita de
+  rejeição. A ocorrência de substituição é devolvida para diagnóstico.
+- Normalização: Unicode NFC por padrão, configurável para desativação. Não há
+  remoção automática de acentos, pontuação, caixa ou espaços.
+- Saída: IDs de byte são reconstruídos e validados como UTF-8 antes da entrega;
+  EOS encerra a decodificação e outros tokens de controle são rejeitados.
+- NFC é implementada pela biblioteca ICU (componente uc), não por uma tabela
+  Unicode parcial ou uma normalização artesanal.
+
+O Core continua responsável apenas por contratos e infraestrutura genéricos.
+O tokenizer é um utilitário compartilhado de representação textual, não um
+novo motor de inferência. Treinamento, dataset, SFT, RL e a arquitetura neural
+G3 permanecem fora do escopo desta etapa.
+
+### Critérios de conclusão da Etapa 2
+
+- [x] IDs byte-level e cinco tokens especiais distintos e estáveis.
+- [x] Conversão de UTF-8 em IDs de byte, preservando os bytes do texto normalizado.
+- [x] Marcadores BOS, EOS, USR e BOT e composição de múltiplas mensagens.
+- [x] Validação estrita ou substituição configurável de UTF-8 inválido.
+- [x] NFC configurável, habilitada por padrão, via ICU.
+- [x] Validação de UTF-8 na decodificação antes de entregar texto.
+- [x] Testes de vocabulário, português acentuado, NFC, dados inválidos,
+      políticas de rejeição, tokens de controle e round-trip.
+- [x] CMake e workflow G3 integrados ao Core existente.
