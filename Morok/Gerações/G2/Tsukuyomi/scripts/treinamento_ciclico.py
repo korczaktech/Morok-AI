@@ -642,13 +642,13 @@ def main() -> int:
              validation_score, observed_rank) = validation_metrics(
                 validation, validation_results
             )
-            previous_best_rank = best_validation_rank
-            if (observed_rank[0] > best_validation_rank[0] or (
-                observed_rank[0] == best_validation_rank[0]
-                and observed_rank[1] > best_validation_rank[1] + 0.005
-            )):
+            if not retention_regressions and (
+                observed_rank[0] > best_validation_rank[0] or (
+                    observed_rank[0] == best_validation_rank[0]
+                    and observed_rank[1] > best_validation_rank[1] + 0.005
+                )
+            ):
                 best_validation_rank = observed_rank
-            if not retention_regressions and best_validation_rank != previous_best_rank:
                 save_best_state(checkpoint, optimizer_state,
                                 best_checkpoint, best_optimizer_state)
                 best_validation_correct = correct_count
