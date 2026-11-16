@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 #include <random>
 #include <span>
@@ -140,6 +141,19 @@ void test_artifact_round_trip_and_corruption() {
     assert(!deserialize_model_artifact(truncated).has_value());
 }
 
+void test_atomic_artifact_file_round_trip() {
+    const auto path = std::filesystem::temp_directory_path() /
+        "morok_g3_inference_test.morok";
+    std::error_code ignored;
+    std::filesystem::remove(path, ignored);
+    const auto artifact = valid_fp32_artifact();
+    assert(save_model_artifact_atomic(path, artifact));
+    const auto loaded = read_model_artifact(path);
+    assert(loaded.has_value());
+    assert(loaded.value_if()->payload == artifact.payload);
+    std::filesystem::remove(path, ignored);
+}
+
 void test_int8_artifact_layout() {
     ModelArtifact artifact;
     artifact.metadata.precision = PrecisionMode::int8_symmetric_per_row;
@@ -256,6 +270,7 @@ void test_benchmark_harness() {
 int main() {
     test_quantization_round_trip_and_validation();
     test_artifact_round_trip_and_corruption();
+    test_atomic_artifact_file_round_trip();
     test_int8_artifact_layout();
     test_generation_and_control_tokens();
     test_cancellation();

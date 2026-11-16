@@ -3,6 +3,7 @@
 #include "morok/common/result.hpp"
 
 #include <cstddef>
+#include <filesystem>
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -42,6 +43,12 @@ struct ModelArtifact final {
 
 [[nodiscard]] common::Result<ModelArtifact> deserialize_model_artifact(
     std::span<const std::byte> bytes);
+
+[[nodiscard]] common::Status save_model_artifact_atomic(
+    const std::filesystem::path& destination, const ModelArtifact& artifact);
+
+[[nodiscard]] common::Result<ModelArtifact> read_model_artifact(
+    const std::filesystem::path& source);
 
 [[nodiscard]] std::uint32_t crc32(std::span<const std::byte> bytes) noexcept;
 

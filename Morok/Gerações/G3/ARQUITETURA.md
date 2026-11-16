@@ -282,6 +282,9 @@ outro runtime nem altera os fontes das gerações anteriores.
 - `model_artifact.hpp/.cpp` define cabeçalho versionado de 64 bytes, campos
   little-endian explícitos, identidade G3/arquitetura, precisão, dimensões,
   estado, contagem real de parâmetros, tamanho do payload, escalas e CRC32.
+- `save_model_artifact_atomic` grava em arquivo temporário, relê e valida o
+  artefato antes do rename final; falha de escrita/validação/rename preserva o
+  destino anterior. `read_model_artifact` limita o tamanho antes de alocar.
 - O carregador rejeita magic/versão/arquitetura incompatíveis, dimensões fora
   dos limites, payload truncado/excessivo, layout de precisão incorreto,
   bytes reservados não nulos e checksum inválido.

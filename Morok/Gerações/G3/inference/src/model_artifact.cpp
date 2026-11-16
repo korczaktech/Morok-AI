@@ -5,6 +5,10 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <chrono>
+#include <fstream>
+#include <string>
+#include <system_error>
 #include <limits>
 
 namespace morok::g3::inference {
@@ -118,6 +122,97 @@ bool valid_metadata(const ModelArtifactMetadata& metadata,
 }
 
 } // namespace
+
+common::Status save_model_artifact_atomic(
+    const std::filesystem::path& destination, const ModelArtifact& artifact) {
+    if (destination.empty()) {
+        return common::Status::failure(common::Error::make(
+            common::ErrorCode::invalid_argument,
+            "Model artifact destination path is empty",
+            "g3.artifact", "save.path"));
+    }
+    const auto serialized = serialize_model_artifact(artifact);
+    if (!serialized) {
+        return common::Status::failure(*serialized.error_if());
+    }
+
+    auto temporary = destination;
+    temporary += ".tmp." + std::to_string(
+        std::chrono::steady_clock::now().time_since_epoch().count());
+    {
+        std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
+        if (!output) {
+            return common::Status::failure(common::Error::make(
+                common::ErrorCode::internal_error,
+                "Unable to create temporary model artifact",
+                "g3.artifact", "save.open"));
+        }
+        output.write(reinterpret_cast<const char*>(serialized.value_if()->data()),
+                     static_cast<std::streamsize>(serialized.value_if()->size()));
+        output.flush();
+        if (!output) {
+            output.close();
+            std::error_code ignored;
+            std::filesystem::remove(temporary, ignored);
+            return common::Status::failure(common::Error::make(
+                common::ErrorCode::internal_error,
+                "Unable to write complete temporary model artifact",
+                "g3.artifact", "save.write"));
+        }
+    }
+
+    const auto verified = read_model_artifact(temporary);
+    if (!verified) {
+        std::error_code ignored;
+        std::filesystem::remove(temporary, ignored);
+        return common::Status::failure(*verified.error_if());
+    }
+
+    std::error_code rename_error;
+    std::filesystem::rename(temporary, destination, rename_error);
+    if (rename_error) {
+        std::error_code ignored;
+        std::filesystem::remove(temporary, ignored);
+        return common::Status::failure(common::Error::make(
+            common::ErrorCode::internal_error,
+            "Atomic model artifact rename failed; existing destination was preserved",
+            "g3.artifact", "save.rename"));
+    }
+    return common::Status::success();
+}
+
+common::Result<ModelArtifact> read_model_artifact(
+    const std::filesystem::path& source) {
+    std::error_code size_error;
+    const auto file_size = std::filesystem::file_size(source, size_error);
+    if (size_error) {
+        return failure<ModelArtifact>(
+            common::ErrorCode::model_not_loaded, "load.open",
+            "Unable to inspect model artifact file");
+    }
+    if (file_size < kModelHeaderBytes ||
+        file_size > kModelHeaderBytes + kMaximumModelPayloadBytes) {
+        return failure<ModelArtifact>(
+            common::ErrorCode::resource_limit, "load.file_size",
+            "Model artifact file size is outside supported limits");
+    }
+
+    std::vector<std::byte> bytes(static_cast<std::size_t>(file_size));
+    std::ifstream input(source, std::ios::binary);
+    if (!input) {
+        return failure<ModelArtifact>(
+            common::ErrorCode::model_not_loaded, "load.open",
+            "Unable to open model artifact file");
+    }
+    input.read(reinterpret_cast<char*>(bytes.data()),
+               static_cast<std::streamsize>(bytes.size()));
+    if (!input || static_cast<std::size_t>(input.gcount()) != bytes.size()) {
+        return failure<ModelArtifact>(
+            common::ErrorCode::checkpoint_corrupt, "load.read",
+            "Model artifact file is truncated or could not be read completely");
+    }
+    return deserialize_model_artifact(bytes);
+}
 
 std::uint32_t crc32(std::span<const std::byte> bytes) noexcept {
     std::uint32_t crc = 0xffffffffU;
