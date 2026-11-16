@@ -1,4 +1,6 @@
 #include "morok/g3/rl/reinforce.hpp"
+#include "morok/g3/rl/g3_policy.hpp"
+#include "morok/g3/rl/reference_evaluator.hpp"
 
 #include <algorithm>
 #include <array>
@@ -365,6 +367,43 @@ void test_closed_set_comparison() {
     assert(comparison.value_if()->reward_delta > 0.0);
 }
 
+
+void test_real_g3_policy_adapter_and_independent_evaluator() {
+    morok::g3::neural::G3Backend backend(
+        morok::g3::neural::G3Config{91U, 1.0e-5F});
+    G3PolicyAdapter policy(backend, "g3-rl-trainable");
+    const std::array<TokenId,4> prompt{{
+        morok::lang::kBosToken,morok::lang::kUsrToken,
+        static_cast<TokenId>('H'),morok::lang::kBotToken}};
+    std::array<float,kVocabularySize> probabilities{};
+    assert(policy.next_token_probabilities(prompt,{},probabilities).has_value());
+    double probability_sum=0.0;
+    for(float p:probabilities) { assert(std::isfinite(p) && p>=0.0F); probability_sum+=p; }
+    assert(std::abs(probability_sum-1.0)<1.0e-5);
+
+    const float original_bias=backend.weights().output_bias[static_cast<std::size_t>('A')];
+    SequenceGradient gradient;
+    gradient.context.assign(prompt.begin(),prompt.end());
+    gradient.response={static_cast<TokenId>('A'),morok::lang::kEosToken};
+    gradient.logit_gradients.assign(2U*kVocabularySize,0.0F);
+    gradient.logit_gradients[static_cast<std::size_t>('A')]=-0.5F;
+    gradient.logit_gradients[kVocabularySize+static_cast<std::size_t>('B')]=0.5F;
+    const std::array<SequenceGradient,1> batch{{gradient}};
+    assert(policy.apply_batch_gradients(batch).has_value());
+    assert(backend.parameter_count()==100000U);
+    assert(backend.weights().output_bias[static_cast<std::size_t>('A')]!=original_bias);
+
+    ReferenceRewardEvaluator evaluator({
+        ReferenceAnswer{{prompt.begin(),prompt.end()},
+                        {static_cast<TokenId>('O'),static_cast<TokenId>('K')}}});
+    const std::array<TokenId,2> answer{{static_cast<TokenId>('O'),static_cast<TokenId>('K')}};
+    const auto reward=evaluator.evaluate(prompt,answer);
+    assert(reward.has_value());
+    assert(reward.value_if()->correctness==1.0);
+    assert(evaluator.expected_response_tokens(prompt)==2U);
+    assert(evaluator.metadata().identity!="g3-rl-trainable");
+}
+
 } // namespace
 
 int main() {
@@ -375,6 +414,7 @@ int main() {
     test_reinforce_and_reference_kl();
     test_copy_and_justified_length_penalties();
     test_closed_set_comparison();
+    test_real_g3_policy_adapter_and_independent_evaluator();
     std::cout << "G3 REINFORCE tests passed.\n";
     return 0;
 }
