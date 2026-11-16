@@ -505,6 +505,9 @@ def main() -> int:
         for stale_best in (best_checkpoint, best_optimizer_state):
             if stale_best.exists():
                 stale_best.unlink()
+        if learning_rate_path.exists():
+            learning_rate_path.unlink()
+        question_history = {"version": 1, "questions": {}}
     learning_rate = load_learning_rate(learning_rate_path, INITIAL_LEARNING_RATE)
     execution_id = os.environ.get("GITHUB_RUN_ID", "local")
     if resume_previous_run:
