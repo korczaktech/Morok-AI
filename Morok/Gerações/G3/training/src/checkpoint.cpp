@@ -408,7 +408,11 @@ Result<std::vector<std::byte>> serialize_training_checkpoint(
         put_u32(header, 16U, 1U); // FP32 master weights; extensible flags.
         put_u64(header, 20U, static_cast<std::uint64_t>(payload.data.size()));
         output.insert(output.end(), payload.data.begin(), payload.data.end());
-        put_u32(header, kChecksumOffset, crc32_impl(output));
+        // insert() may reallocate the vector; reacquire the header span before
+        // writing the checksum instead of using the invalidated pre-insert view.
+        auto final_header =
+            std::span<std::byte>(output).first(kTrainingCheckpointHeaderBytes);
+        put_u32(final_header, kChecksumOffset, crc32_impl(output));
         return Result<std::vector<std::byte>>::success(std::move(output));
     } catch (const std::exception&) {
         return fail_result<std::vector<std::byte>>(ErrorCode::resource_limit,
