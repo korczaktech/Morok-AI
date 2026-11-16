@@ -43,11 +43,11 @@ jobs:
           cmake -S . -B build/g3-inference -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DMOROK_BUILD_TESTS=ON
-          -DMOROK_BUILD_APPS=OFF
+          -DMOROK_BUILD_APPS=ON
 
-      - name: Build only G3 inference target
+      - name: Build G3 neural, training and inference targets
         working-directory: Morok
-        run: cmake --build build/g3-inference --parallel 2 --target morok_test_g3_neural morok_test_g3_inference morok_test_g3_training
+        run: cmake --build build/g3-inference --parallel 2 --target morok_g3_train morok_test_g3_neural morok_test_g3_inference morok_test_g3_training
 
       - name: Test G3 inference and export
         working-directory: Morok
