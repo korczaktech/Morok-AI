@@ -1,13 +1,5 @@
 # Tsukuyomi — G3
 
-Identidade escura/preta, operando com exatamente um agente.
+Perfil de identidade escura (`presentation_theme=dark`) e exatamente um agente por requisição. Usa o backend G3 compartilhado de 100.000 parâmetros, temperatura 0,70, Top-K 10, entrada máxima de 4.096 bytes e saída máxima de 512 bytes.
 
-Este perfil utiliza a infraestrutura compartilhada de Morok e o backend comum
-definido em [ARQUITETURA.md](../ARQUITETURA.md). Não cria Core, runtime ou motor
-neural independente. A implementação específica do perfil fica limitada às
-suas políticas, configurações e integrações próprias.
-
-**Estado:** perfil reservado; implementação posterior à integração do contrato
-comum e à construção da arquitetura neural G3.
-
-Especificação: [MODELOS.md](../../MODELOS.md).
+Implementação executável: `morok::g3::profiles::ProfileId::tsukuyomi`. Detalhes: [Perfis G3](../profiles/README.md).
