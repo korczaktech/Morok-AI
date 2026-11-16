@@ -26,7 +26,7 @@ on:
         required: true
         default: 40
       learning_rate:
-        description: "Learning rate inicial (maior que 0 e até 0.1; padrão: 0.001)"
+        description: "Learning rate inicial (mínimo: 1e-7; máximo: 0.1; padrão: 0.001)"
         type: number
         required: true
         default: 0.001
@@ -72,8 +72,8 @@ jobs:
               raise SystemExit("QUESTOES precisa estar entre 1 e 40.")
           learning_rate = float(os.environ["LEARNING_RATE"])
           import math
-          if not math.isfinite(learning_rate) or not 0.0 < learning_rate <= 0.1:
-              raise SystemExit("LEARNING_RATE precisa estar entre 0 e 0.1.")
+          if not math.isfinite(learning_rate) or not 1e-7 <= learning_rate <= 0.1:
+              raise SystemExit("LEARNING_RATE precisa estar entre 1e-7 e 0.1.")
           PY
 
       - name: Validar conjuntos e avaliador
