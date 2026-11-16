@@ -61,6 +61,32 @@ def main() -> int:
     if "Gerações/G2/" in core:
         errors.append("Morok::Core contains G2-private sources")
 
+    # The public backend contract belongs to the existing Core include surface.
+    backend_contract = ROOT / "include" / "morok" / "model" / "model_backend.hpp"
+    if not backend_contract.is_file():
+        errors.append("shared model backend contract is missing from Morok::Core")
+
+    g1_backend_header = g1 / "shared" / "include" / "morok" / "model" / "g1_backend.hpp"
+    g1_backend_source = g1 / "shared" / "src" / "model" / "g1_backend.cpp"
+    if not g1_backend_header.is_file() or not g1_backend_source.is_file():
+        errors.append("G1 adapter for the shared model backend contract is incomplete")
+    if "g1_backend.cpp" not in g1_block:
+        errors.append("Morok::G1 does not compile its shared backend adapter")
+
+    g3 = ROOT / "Gerações" / "G3"
+    g3_readme = g3 / "README.md"
+    g3_architecture = g3 / "ARQUITETURA.md"
+    if not g3_architecture.is_file():
+        errors.append("G3 shared motor integration architecture document is missing")
+    if (g3 / "shared").exists():
+        errors.append("G3 must not create a duplicate shared motor directory")
+    if g3_readme.is_file():
+        g3_text = g3_readme.read_text(encoding="utf-8").lower()
+        if "morok::core" not in g3_text or "modelbackend" not in g3_text:
+            errors.append("G3 README must point to the existing Core and ModelBackend contract")
+        if "próprio motor" in g3_text or "own engine" in g3_text:
+            errors.append("G3 README still prescribes a separate engine")
+
     model_directories = sorted(p.name for p in g1.iterdir()
                                 if p.is_dir() and (p / "src" / "profile.cpp").is_file())
     if model_directories != ["TsukuyomiMax"]:
