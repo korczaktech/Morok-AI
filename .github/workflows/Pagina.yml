@@ -117,7 +117,8 @@ jobs:
               -sEXPORT_NAME=createTsukuyomiModule \
               -sENVIRONMENT=web,worker,node \
               -sALLOW_MEMORY_GROWTH=1 \
-              -sFORCE_FILESYSTEM=1
+              -sFORCE_FILESYSTEM=1 \
+              -sEXPORTED_RUNTIME_METHODS=FS
           node --check Site/Front-End/wasm/tsukuyomi.js
           SMOKE_QUESTION="Quem desenvolveu o projeto do qual você faz parte?" CHECKPOINT_DIR="$CHECKPOINT_DIR" node <<'NODE'
           const fs = require("node:fs");

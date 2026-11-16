@@ -44,6 +44,7 @@ const requiredContracts = [
   [app, "getTsukuyomiRuntime", "frontend deve inicializar o motor G2 local"],
   [app, "runtime.hasCheckpoint(prompt)", "frontend deve selecionar checkpoint por pergunta"],
   [app, "raw.githubusercontent.com/korczaktech/Morok-AI/tsukuyomi-state", "frontend deve baixar somente o checkpoint identificado pelo hash"],
+  [wf, "-sEXPORTED_RUNTIME_METHODS=FS", "build WASM deve expor o filesystem para carregar o checkpoint"],
   [app, "runtime.generate(prompt, 256)", "frontend deve executar inferência no navegador"],
   [app, "/v1/conversations/sync", "respostas devem continuar sincronizadas com o backend"],
   [wasmApi, "question_checkpoint_path", "WASM deve usar o hash de checkpoint compatível com o treinador"],

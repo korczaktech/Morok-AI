@@ -331,25 +331,23 @@
         throw aborted;
       }
       const checkpointName = engine.runtime.checkpointFilename(prompt);
-      if (!engine.runtime.hasCheckpoint(prompt)) {
-        const checkpointUrl = 'https://raw.githubusercontent.com/korczaktech/Morok-AI/tsukuyomi-state/state/tsukuyomi-g2-questions/' + encodeURIComponent(checkpointName);
-        const checkpointResponse = await fetch(checkpointUrl, {
-          method: 'GET', mode: 'cors', cache: 'no-cache',
-          signal: state.controller?.signal
-        });
-        if (!checkpointResponse.ok) {
-          if (checkpointResponse.status === 404) {
-            throw new Error('O Tsukuyomi G2 ainda não possui um checkpoint para esta pergunta. Esta versão contém 40 perguntas treinadas e não generaliza para perguntas inéditas. Tente uma das perguntas previstas no modelo.');
-          }
-          throw new Error('Não foi possível baixar o checkpoint individual do Tsukuyomi G2 (HTTP ' + checkpointResponse.status + ').');
+      const checkpointUrl = 'https://raw.githubusercontent.com/korczaktech/Morok-AI/tsukuyomi-state/state/tsukuyomi-g2-questions/' + encodeURIComponent(checkpointName);
+      const checkpointResponse = await fetch(checkpointUrl, {
+        method: 'GET', mode: 'cors', cache: 'no-cache',
+        signal: state.controller?.signal
+      });
+      if (!checkpointResponse.ok) {
+        if (checkpointResponse.status === 404) {
+          throw new Error('O Tsukuyomi G2 ainda não possui um checkpoint para esta pergunta. Esta versão contém 40 perguntas treinadas e não generaliza para perguntas inéditas. Tente uma das perguntas previstas no modelo.');
         }
-        const checkpointBytes = new Uint8Array(await checkpointResponse.arrayBuffer());
-        if (checkpointBytes.byteLength !== 40024) {
-          throw new Error('O checkpoint recebido tem tamanho inválido ou está incompleto.');
-        }
-        if (!engine.module.FS.analyzePath('/models').exists) engine.module.FS.mkdir('/models');
-        engine.module.FS.writeFile('/models/' + checkpointName, checkpointBytes);
+        throw new Error('Não foi possível baixar o checkpoint individual do Tsukuyomi G2 (HTTP ' + checkpointResponse.status + ').');
       }
+      const checkpointBytes = new Uint8Array(await checkpointResponse.arrayBuffer());
+      if (checkpointBytes.byteLength !== 40024) {
+        throw new Error('O checkpoint recebido tem tamanho inválido ou está incompleto.');
+      }
+      if (!engine.module.FS.analyzePath('/models').exists) engine.module.FS.mkdir('/models');
+      engine.module.FS.writeFile('/models/' + checkpointName, checkpointBytes);
       if (!engine.runtime.hasCheckpoint(prompt)) {
         throw new Error('O checkpoint individual não pôde ser carregado no WebAssembly.');
       }

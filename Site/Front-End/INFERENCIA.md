@@ -14,7 +14,7 @@ A inferência não envia prompts ao backend. O backend continua responsável por
 
 O workflow `.github/workflows/Pagina.yml` compila `wasm_api.cpp` junto ao código oficial de G2 presente na branch `main`, baixa os 40 checkpoints da branch `tsukuyomi-state` e publica `tsukuyomi.js`, `tsukuyomi.wasm` e `tsukuyomi.data` como parte do site.
 
-Os pesos não são empacotados no site. Ao receber uma pergunta, o frontend calcula o nome do checkpoint no runtime C++/WASM e baixa somente o arquivo correspondente da branch pública `tsukuyomi-state`. A URL contém apenas o hash FNV-1a da pergunta, não o texto da mensagem. Assim, cada atualização de treinamento fica disponível sem precisar republicar o frontend.
+Os pesos não são empacotados no site. Ao receber uma pergunta, o frontend calcula o nome do checkpoint no runtime C++/WASM e baixa somente o arquivo correspondente da branch pública `tsukuyomi-state`. O arquivo é revalidado em cada geração para incorporar checkpoints atualizados. A URL contém apenas o hash FNV-1a da pergunta, não o texto da mensagem. Assim, cada atualização de treinamento fica disponível sem precisar republicar o frontend.
 
 ## Limitação atual do modelo
 
