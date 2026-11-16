@@ -14,10 +14,10 @@ import treinamento_ciclico as training
 
 
 class TrainingDataTests(unittest.TestCase):
-    def test_only_the_40_training_questions_exist_in_the_training_flow(self):
+    def test_only_the_100_training_questions_exist_in_the_training_flow(self):
         dialogues = training.read_dialogues(DATA_DIR / "feedback.txt")
-        self.assertEqual(training.TRAINING_QUESTIONS, 40)
-        self.assertEqual(len(dialogues), 40)
+        self.assertEqual(training.TRAINING_QUESTIONS, 100)
+        self.assertEqual(len(dialogues), 100)
         self.assertFalse(hasattr(training, "MAX_VALIDATION_QUESTIONS"))
         self.assertFalse(hasattr(training, "evaluate_validation_loss"))
         self.assertFalse(hasattr(training, "improves_validation_loss"))
@@ -43,7 +43,7 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(training.MAX_CYCLES, 100)
         self.assertEqual(training.MAX_EPOCHS_PER_CYCLE, 1000)
 
-    def test_training_corpus_keeps_exactly_40_questions_and_overrides_answers(self):
+    def test_training_corpus_keeps_exactly_100_questions_and_overrides_answers(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             base = root / "base.txt"
@@ -59,7 +59,7 @@ class TrainingDataTests(unittest.TestCase):
                 [("primeira?", "resposta corrigida"), ("segunda?", "resposta original 2")],
             )
 
-    def test_training_corpus_rejects_questions_outside_the_40(self):
+    def test_training_corpus_rejects_questions_outside_the_100(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             base = root / "base.txt"
@@ -170,10 +170,10 @@ class TrainingDataTests(unittest.TestCase):
             adam.write_bytes(b"adam")
             self.assertTrue(training.resumable_state_exists(checkpoint, adam))
 
-    def test_continuous_training_stops_only_when_all_40_are_correct(self):
-        self.assertTrue(training.should_stop(True, 40, 40))
-        self.assertFalse(training.should_stop(True, 39, 40))
-        self.assertFalse(training.should_stop(False, 40, 40))
+    def test_continuous_training_stops_only_when_all_100_are_correct(self):
+        self.assertTrue(training.should_stop(True, 100, 100))
+        self.assertFalse(training.should_stop(True, 99, 100))
+        self.assertFalse(training.should_stop(False, 100, 100))
 
     def test_metrics_are_parsed_and_finite(self):
         output = "Épocas: 1\nBytes-alvo: 512\ntrain_bpb inicial: 7.5\ntrain_bpb final: 6.9\nLoss inicial: 5.0\nLoss final: 4.0\n"
