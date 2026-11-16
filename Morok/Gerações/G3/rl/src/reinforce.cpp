@@ -7,6 +7,7 @@
 #include <cmath>
 #include <limits>
 #include <numeric>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -32,6 +33,33 @@ template <typename T>
 [[nodiscard]] Result<T> failure_result(ErrorCode code, const char* stage,
                                         const char* message) {
     return Result<T>::failure(Error::make(code, message, "g3.rl", stage));
+}
+
+[[nodiscard]] bool same_config(const Config& left,
+                                 const Config& right) noexcept {
+    return left.candidates_per_prompt == right.candidates_per_prompt &&
+           left.max_response_tokens == right.max_response_tokens &&
+           left.top_k == right.top_k &&
+           left.temperature == right.temperature &&
+           left.gamma == right.gamma && left.kl_beta == right.kl_beta &&
+           left.baseline_ema == right.baseline_ema &&
+           left.kl_epsilon == right.kl_epsilon && left.seed == right.seed &&
+           left.reward_weights.correctness == right.reward_weights.correctness &&
+           left.reward_weights.intent == right.reward_weights.intent &&
+           left.reward_weights.coherence == right.reward_weights.coherence &&
+           left.reward_weights.format == right.reward_weights.format &&
+           left.penalties.empty_response == right.penalties.empty_response &&
+           left.penalties.repeated_token_ratio == right.penalties.repeated_token_ratio &&
+           left.penalties.prompt_copy_ratio == right.penalties.prompt_copy_ratio &&
+           left.penalties.max_response_tokens == right.penalties.max_response_tokens &&
+           left.penalties.over_length == right.penalties.over_length;
+}
+
+[[nodiscard]] bool same_evaluator(const EvaluatorMetadata& left,
+                                  const EvaluatorMetadata& right) noexcept {
+    return left.identity == right.identity &&
+           left.rubric_version == right.rubric_version &&
+           left.label_origin == right.label_origin;
 }
 
 [[nodiscard]] bool valid_component(double value) noexcept {
@@ -389,6 +417,84 @@ ReinforceTrainer::ReinforceTrainer(Config config)
 double ReinforceTrainer::baseline(std::string_view category) const {
     const auto found = baselines_.find(std::string(category));
     return found == baselines_.end() ? 0.0 : found->second;
+}
+
+Result<TrainerState> ReinforceTrainer::capture_state(
+    std::string_view policy_identity, std::string_view reference_identity,
+    const EvaluatorMetadata& evaluator) const {
+    if (policy_identity.empty() || reference_identity.empty() ||
+        policy_identity == reference_identity || evaluator.identity.empty() ||
+        evaluator.rubric_version.empty() || evaluator.label_origin.empty() ||
+        evaluator.identity == policy_identity ||
+        evaluator.identity == reference_identity) {
+        return failure_result<TrainerState>(
+            ErrorCode::invalid_argument, "checkpoint.identity",
+            "Trainer state requires distinct policy, reference and evaluator identities");
+    }
+    std::ostringstream random_state;
+    random_state << random_;
+    if (!random_state.good()) {
+        return failure_result<TrainerState>(
+            ErrorCode::internal_error, "checkpoint.random",
+            "Unable to serialize REINFORCE random engine state");
+    }
+    for (const auto& [category, value] : baselines_) {
+        if (category.empty() || !std::isfinite(value) ||
+            value < kScoreMinimum || value > kScoreMaximum) {
+            return failure_result<TrainerState>(
+                ErrorCode::internal_error, "checkpoint.baseline",
+                "REINFORCE baseline state contains an invalid value");
+        }
+    }
+    TrainerState state;
+    state.config = config_;
+    state.category_baselines = baselines_;
+    state.random_engine_state = random_state.str();
+    state.policy_identity = std::string(policy_identity);
+    state.reference_identity = std::string(reference_identity);
+    state.evaluator = evaluator;
+    return Result<TrainerState>::success(std::move(state));
+}
+
+Status ReinforceTrainer::restore_state(
+    const TrainerState& state, std::string_view expected_policy_identity,
+    std::string_view expected_reference_identity,
+    const EvaluatorMetadata& expected_evaluator) {
+    if (state.version != 1U || !validate_config(state.config) ||
+        !same_config(state.config, config_) ||
+        state.policy_identity != expected_policy_identity ||
+        state.reference_identity != expected_reference_identity ||
+        !same_evaluator(state.evaluator, expected_evaluator) ||
+        state.policy_identity.empty() || state.reference_identity.empty() ||
+        state.policy_identity == state.reference_identity ||
+        state.evaluator.identity.empty() ||
+        state.evaluator.rubric_version.empty() ||
+        state.evaluator.label_origin.empty()) {
+        return failure(ErrorCode::model_version_mismatch, "checkpoint.metadata",
+                       "REINFORCE checkpoint does not match the active policy, reference, evaluator or config");
+    }
+    for (const auto& [category, value] : state.category_baselines) {
+        if (category.empty() || !std::isfinite(value) ||
+            value < kScoreMinimum || value > kScoreMaximum) {
+            return failure(ErrorCode::checkpoint_corrupt, "checkpoint.baseline",
+                           "REINFORCE checkpoint contains an invalid category baseline");
+        }
+    }
+    std::mt19937_64 restored_random;
+    std::istringstream random_state(state.random_engine_state);
+    random_state >> restored_random;
+    if (random_state.fail()) {
+        return failure(ErrorCode::checkpoint_corrupt, "checkpoint.random",
+                       "REINFORCE checkpoint random engine state is malformed");
+    }
+    random_state >> std::ws;
+    if (!random_state.eof()) {
+        return failure(ErrorCode::checkpoint_corrupt, "checkpoint.random",
+                       "REINFORCE checkpoint random engine state has trailing data");
+    }
+    baselines_ = state.category_baselines;
+    random_ = restored_random;
+    return Status::success();
 }
 
 Result<TrainingReport> ReinforceTrainer::train_batch(
