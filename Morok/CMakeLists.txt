@@ -89,6 +89,17 @@ target_include_directories(morok_g3_rl PUBLIC
 target_link_libraries(morok_g3_rl PUBLIC Morok::Core PRIVATE morok_build_options)
 morok_enable_sanitizers(morok_g3_rl)
 
+# G3 neural architecture is generation-owned and reuses the shared Core.
+add_library(morok_g3_neural STATIC Gerações/G3/neural/src/gru_backend.cpp)
+add_library(Morok::G3::Neural ALIAS morok_g3_neural)
+target_compile_features(morok_g3_neural PUBLIC cxx_std_20)
+target_include_directories(morok_g3_neural PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G3/neural/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+target_link_libraries(morok_g3_neural PUBLIC Morok::Core PRIVATE morok_build_options)
+morok_enable_sanitizers(morok_g3_neural)
+
 # G3 inference/export utilities reuse the public Morok Core contracts.
 add_library(morok_g3_inference STATIC
     Gerações/G3/inference/src/quantization.cpp
@@ -217,6 +228,7 @@ if(MOROK_BUILD_APPS)
         morok_g1_tsukuyomimax
         morok_g2_tsukuyomi
         morok_g3_rl
+        morok_g3_neural
         morok_g3_inference
         ARCHIVE DESTINATION lib)
     install(DIRECTORY
@@ -225,6 +237,7 @@ if(MOROK_BUILD_APPS)
         Gerações/G1/TsukuyomiMax/include/
         Gerações/G2/Tsukuyomi/include/
         Gerações/G3/rl/include/
+        Gerações/G3/neural/include/
         Gerações/G3/inference/include/
         DESTINATION include)
 endif()
