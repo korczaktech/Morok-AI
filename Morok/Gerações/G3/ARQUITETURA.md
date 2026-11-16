@@ -147,7 +147,7 @@ G3 permanecem fora do escopo desta etapa.
 - [x] CMake e workflow G3 integrados ao Core existente.
 
 
-## 9. Aprendizado por reforço — Etapa 3
+## 9. Módulo de aprendizado por reforço — integração de treinamento pendente
 
 A implementação de RL pertence a `Gerações/G3/rl/` e reutiliza
 `Morok::Core`. Não cria Core, runtime de inferência, estado de modelo ou
@@ -232,7 +232,7 @@ diferença de recompensa RL menos SFT. O relatório retém configuração, ident
   do gerador aleatório e identidades da política, referência e avaliador; pesos
   e estado do otimizador continuam no checkpoint do backend.
 
-### Critérios de conclusão da Etapa 3
+### Estado de implementação do módulo RL
 
 - [x] Contrato de política treinável e referência somente de inferência.
 - [x] REINFORCE com baseline EMA por categoria.
@@ -244,8 +244,8 @@ diferença de recompensa RL menos SFT. O relatório retém configuração, ident
 - [x] Comparação SFT/RL no mesmo conjunto fechado.
 - [x] Captura e restauração de baseline, RNG, configuração e proveniência do treino.
 - [x] Biblioteca, testes CTest e workflow G3 integrados.
-- [ ] Integração com pesos reais e BPTT da GRU G3: depende da implementação
-      do backend neural treinável, ainda não entregue nas etapas anteriores.
+- [ ] Integração com pesos reais, BPTT e otimizador da GRU G3: depende da camada
+      de treinamento neural, ainda não entregue.
 
 
 ## 10. Inferência e exportação — Fase 4
