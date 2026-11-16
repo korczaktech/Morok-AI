@@ -252,7 +252,9 @@
       if (!accepted) return;
       state.conversations = state.conversations.filter(c => c.id !== conversationId);
       if (state.activeId === conversationId) state.activeId = state.conversations[0]?.id || null;
-      persist(); renderHistory(); renderConversation(); toast('Conversa excluída.');
+      persist(); renderHistory(); renderConversation();
+      void deleteRemoteConversation(conversationId);
+      toast('Conversa excluída deste dispositivo.');
     });
   }
   function resizeInput() {
@@ -611,6 +613,12 @@
       console.warn('Não foi possível sincronizar a conversa:', error.message);
     }
   }
+  async function deleteRemoteConversation(conversationId) {
+    const token = state.authSession?.access_token;
+    if (!token || !conversationId) return;
+    try { await authRequest('/v1/conversations/delete', { token, body: { ids: [conversationId] } }); }
+    catch (error) { console.warn('Não foi possível excluir a conversa na nuvem:', error.message); toast('A conversa foi removida deste dispositivo, mas a exclusão na nuvem não foi confirmada.'); }
+  }
   async function loadRemoteConversations() {
     const token = state.authSession?.access_token;
     if (!token) return;
@@ -618,6 +626,12 @@
       const data = await authRequest('/v1/conversations', { method: 'GET', token });
       if (!Array.isArray(data.conversations)) return;
       const localById = new Map(state.conversations.map(item => [item.id, item]));
+      const deletedAtById = new Map((Array.isArray(data.deleted) ? data.deleted : []).map(item => [item.id, Date.parse(item.deletedAt) || 0]));
+      for (const [conversationId, local] of localById) {
+        const deletedAt = deletedAtById.get(conversationId);
+        const localTime = Date.parse(local.updatedAt || local.createdAt || 0) || 0;
+        if (deletedAt !== undefined && localTime <= deletedAt) localById.delete(conversationId);
+      }
       const merged = [];
       for (const remote of data.conversations) {
         const local = localById.get(remote.id);
