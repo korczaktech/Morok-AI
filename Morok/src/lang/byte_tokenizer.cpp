@@ -135,9 +135,11 @@ template <typename T>
     }
 
     status = U_ZERO_ERROR;
-    std::string output(static_cast<std::size_t>(utf8_length), '\0');
-    u_strToUTF8(output.data(), utf8_length, &utf8_length, output_data,
-                output_length, &status);
+    std::string output(static_cast<std::size_t>(utf8_length) + 1U, '\0');
+    int32_t written = 0;
+    u_strToUTF8(output.data(), static_cast<int32_t>(output.size()), &written,
+                output_data, output_length, &status);
+    output.resize(static_cast<std::size_t>(written));
     if (U_FAILURE(status)) {
         return fail_result<NormalizedText>(
             ErrorCode::internal_error, "byte_tokenizer.utf8",
@@ -172,7 +174,9 @@ Result<EncodedText> ByteTokenizer::encode_text(
     }
 
     EncodedText encoded;
-    encoded.original_text.assign(text.data(), text.size());
+    if (!text.empty()) {
+        encoded.original_text.assign(text.data(), text.size());
+    }
     encoded.normalized_text = normalized.value_if()->text;
     encoded.replaced_invalid_utf8 = normalized.value_if()->replaced_invalid_utf8;
     encoded.byte_tokens.reserve(encoded.normalized_text.size());
