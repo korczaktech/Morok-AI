@@ -456,6 +456,25 @@
     if (page === 'personalization') root.innerHTML = '<p class="field-help">Preferências de personalização salvas neste navegador.</p><label class="field-label" for="about-input">O que o Morok deve saber sobre você?</label><textarea class="text-field settings-textarea" id="about-input" maxlength="1000" placeholder="Interesses, contexto e objetivos...">'+escapeHTML(state.aboutMe)+'</textarea><label class="field-label" for="style-select">Estilo de resposta</label><select id="style-select" class="text-field"><option value="conciso" '+(state.responseStyle==='conciso'?'selected':'')+'>Conciso</option><option value="equilibrado" '+(state.responseStyle==='equilibrado'?'selected':'')+'>Equilibrado</option><option value="detalhado" '+(state.responseStyle==='detalhado'?'selected':'')+'>Detalhado</option></select><label class="field-label" for="workspace-theme">Tema</label><select id="workspace-theme" class="text-field"><option value="dark" '+(state.theme==='dark'?'selected':'')+'>Escuro</option><option value="light" '+(state.theme==='light'?'selected':'')+'>Claro</option><option value="system" '+(state.theme==='system'?'selected':'')+'>Sistema</option></select><div class="dialog-footer"><button class="primary-button" id="save-personalization" type="button">Salvar personalização</button></div>';
     if (page === 'instructions') root.innerHTML = '<p class="field-help">Defina orientações que deseja aplicar ao conversar. Por enquanto, elas ficam salvas localmente e ainda não são enviadas ao motor de inferência.</p><label class="field-label" for="instructions-input">Suas instruções</label><textarea class="text-field settings-textarea tall" id="instructions-input" maxlength="4000" placeholder="Como você gostaria que o Morok respondesse?">'+escapeHTML(state.instructions)+'</textarea><div class="dialog-footer"><button class="primary-button" id="save-instructions" type="button">Salvar instruções</button></div>';
     if (page === 'help') root.innerHTML = '<p class="field-help">Consulte a documentação e os canais oficiais do projeto Morok para obter suporte.</p><a class="secondary-button" href="https://github.com/korczaktech/Morok-AI" target="_blank" rel="noopener noreferrer">Abrir repositório do projeto</a>';
+    const pageInsights = {
+      about: ['Visão do projeto','Esta página reúne especificações públicas e limites conhecidos. Diferencie sempre funcionalidades implementadas, hipóteses de pesquisa e metas ainda não medidas.'],
+      account: ['Identidade e sessão','O perfil de conta representa sua autenticação no serviço. Alterar o nome local não modifica o cadastro remoto nem concede permissões adicionais.'],
+      privacy: ['Controle dos seus dados','Exportar cria uma cópia dos dados locais disponíveis. A exclusão local não deve ser confundida com remoção de dados mantidos por serviços de conta.'],
+      security: ['Estado de proteção','Esta área informa o estado visível da sessão; não substitui controles do servidor, autenticação multifator ou auditoria de dispositivos.'],
+      notifications: ['Preferências de aviso','As opções desta tela controlam avisos da interface. Elas não configuram notificações por e-mail, push ou serviços externos.'],
+      images: ['Acervo visual da sessão','Os itens adicionados aqui servem para consulta durante esta sessão. A inclusão de um arquivo não significa que ele foi enviado para um gerador de imagens.'],
+      tasks: ['Acompanhamento pessoal','Use tarefas para registrar ações concretas e acompanhar sua conclusão. A lista é local e não funciona como agenda sincronizada.'],
+      library: ['Referências armazenadas','A biblioteca registra os arquivos selecionados e seus metadados básicos. Ela não indexa o conteúdo nem disponibiliza os arquivos ao modelo.'],
+      plugins: ['Extensões e integrações','Um recurso só deve ser considerado conectado quando houver autorização, credenciais e comunicação verificável com o serviço correspondente.'],
+      locations: ['Contexto geográfico','A localização salva é uma referência informada por você. Ela não ativa rastreamento contínuo nem representa sua posição em tempo real.'],
+      personalization: ['Preferências de comunicação','As preferências descrevem como a interface deve adaptar respostas. Elas não alteram os parâmetros treináveis nem o comportamento interno do modelo.'],
+      instructions: ['Orientações de conversa','Escreva instruções claras, específicas e compatíveis entre si. Nesta versão, o texto é guardado localmente e ainda não é injetado no motor de inferência.'],
+      help: ['Suporte e diagnóstico','Ao relatar um problema, informe a página afetada, a ação realizada e a mensagem de erro. Não inclua senhas, tokens ou dados privados.']
+    };
+    if (pageInsights[page]) {
+      const [heading, detail] = pageInsights[page];
+      root.insertAdjacentHTML('beforeend', '<aside class="page-insight"><span>NOTA DE CONTEXTO</span><strong>'+heading+'</strong><p>'+detail+'</p></aside>');
+    }
     enhanceSelects(root);
     $('#workspace-page-view').hidden = false;
     $('#workspace').hidden = true;
