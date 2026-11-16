@@ -26,7 +26,7 @@ class TrainingDataTests(unittest.TestCase):
         self.assertLess(training.learning_rate_for_lexical_level(base, 0.9),
                         training.learning_rate_for_lexical_level(base, 0.0))
         self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 1.0), base * 0.1)
-        self.assertEqual(training.learning_rate_for_lexical_level(1e-7, 1.0), 1e-7)
+        self.assertEqual(training.learning_rate_for_lexical_level(1e-5, 1.0), 1e-5)
         for level in (-0.1, 1.1, float("nan")):
             with self.assertRaises(ValueError):
                 training.learning_rate_for_lexical_level(base, level)
