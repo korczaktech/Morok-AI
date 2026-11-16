@@ -285,6 +285,8 @@ def update_question_history(history: dict, dialogues, results, cycle: int,
     questions = history.setdefault("questions", {})
     for (question, expected), result in zip(dialogues, results):
         answer, correct, lexical_score = result[:3]
+        loss = float(result[3]) if len(result) > 3 else None
+        bpb = float(result[4]) if len(result) > 4 else None
         entry = questions.setdefault(question, {
             "expected": expected,
             "dataset": dataset,
@@ -311,6 +313,8 @@ def update_question_history(history: dict, dialogues, results, cycle: int,
             "correct": bool(correct),
             "answer": answer,
             "lexical_f1": float(lexical_score),
+            "loss": loss,
+            "bpb": bpb,
             "dataset": dataset,
         })
         del observations[:-200]
@@ -318,6 +322,12 @@ def update_question_history(history: dict, dialogues, results, cycle: int,
         entry["last_correct"] = bool(correct)
         entry["last_answer"] = answer
         entry["last_f1"] = float(lexical_score)
+        entry["last_loss"] = loss
+        entry["last_bpb"] = bpb
+        if loss is not None:
+            best_loss = entry.get("best_loss")
+            if best_loss is None or loss < float(best_loss):
+                entry["best_loss"] = loss
         entry["last_cycle"] = int(cycle)
         entry["last_execution"] = execution_id
     return regressions, recoveries
