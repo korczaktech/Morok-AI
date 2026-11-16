@@ -90,6 +90,36 @@ class TrainingDataTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             training.extract_training_metric("", "train_bpb final")
 
+    def test_incorrect_validation_answers_enter_deduplicated_feedback_memory(self):
+        memory = {}
+        dialogues = [
+            ("pergunta 1", "gabarito 1"),
+            ("pergunta 2", "gabarito 2"),
+        ]
+        results = [
+            ("resposta errada", False, 0.2),
+            ("gabarito 2", True, 1.0),
+        ]
+        self.assertEqual(training.record_validation_errors(memory, dialogues, results), 1)
+        self.assertEqual(memory, {"pergunta 1": "gabarito 1"})
+        self.assertEqual(training.record_validation_errors(memory, dialogues, results), 0)
+
+    def test_feedback_memory_round_trip_and_combined_corpus_preserve_original(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / "base.txt"
+            memory_file = root / "feedback.txt"
+            combined = root / "combined.txt"
+            base.write_text("U: original\\nIA: exemplo\\n", encoding="utf-8")
+            memory = {"pergunta errada": "resposta corrigida"}
+            training.write_feedback_memory(memory_file, memory)
+            self.assertEqual(training.load_feedback_memory(memory_file), memory)
+            training.build_training_corpus(base, memory, combined)
+            dialogues = training.read_dialogues(combined)
+            self.assertIn(("original", "exemplo"), dialogues)
+            self.assertIn(("pergunta errada", "resposta corrigida"), dialogues)
+            self.assertEqual(base.read_text(encoding="utf-8"), "U: original\\nIA: exemplo\\n")
+
     def test_persistent_resume_requires_checkpoint_and_adam_pair(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
