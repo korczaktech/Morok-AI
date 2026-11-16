@@ -1,6 +1,7 @@
 #include "morok/g3/inference/model_artifact.hpp"
 
 #include "morok/common/error.hpp"
+#include "morok/g3/neural/gru_backend.hpp"
 
 #include <algorithm>
 #include <array>
@@ -106,15 +107,24 @@ bool valid_metadata(const ModelArtifactMetadata& metadata,
             payload_size == metadata.parameter_count * sizeof(float);
     }
     if (metadata.precision == PrecisionMode::int8_symmetric_per_row) {
-        if (metadata.scale_count == 0U ||
-            metadata.scale_count > metadata.parameter_count ||
-            metadata.parameter_count >
-                std::numeric_limits<std::size_t>::max() -
-                    static_cast<std::size_t>(metadata.scale_count) * sizeof(float)) {
-            return false;
-        }
-        const auto expected = static_cast<std::size_t>(metadata.parameter_count) +
-            static_cast<std::size_t>(metadata.scale_count) * sizeof(float);
+        constexpr std::size_t matrix_parameters =
+            neural::kVocabularySize * neural::kEmbeddingDim +
+            neural::kGateCount * neural::kLayer1HiddenDim * neural::kEmbeddingDim +
+            neural::kGateCount * neural::kLayer1HiddenDim * neural::kLayer1HiddenDim +
+            neural::kGateCount * neural::kLayer2HiddenDim * neural::kLayer1HiddenDim +
+            neural::kGateCount * neural::kLayer2HiddenDim * neural::kLayer2HiddenDim +
+            neural::kEmbeddingDim * neural::kLayer2HiddenDim;
+        constexpr std::size_t auxiliary_parameters =
+            neural::kTargetParameterCount - matrix_parameters;
+        constexpr std::size_t expected_scales =
+            neural::kVocabularySize +
+            2U * neural::kGateCount * neural::kLayer1HiddenDim +
+            2U * neural::kGateCount * neural::kLayer2HiddenDim +
+            neural::kEmbeddingDim;
+        if (metadata.scale_count != expected_scales) return false;
+        const std::size_t expected = matrix_parameters +
+            expected_scales * sizeof(float) +
+            auxiliary_parameters * sizeof(float);
         return payload_size == expected;
     }
     return false;
