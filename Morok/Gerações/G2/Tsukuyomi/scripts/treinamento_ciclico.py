@@ -397,7 +397,7 @@ def main() -> int:
         report.write("- Critério de aprovação: igualdade lexical normalizada; não mede semântica\n")
         report.write("- F1 lexical, similaridade de caracteres, repetição e diversidade são diagnósticos; não aprovam respostas.\n")
         report.write("- Scheduler: ranking lexicográfico; exatidão primeiro, F1 e similaridade apenas em empate (delta 0,005).\n")
-        report.write(f"- Learning rate inicial: {learning_rate:.8g}; redução fixa de 10% após cada ciclo, com piso de {MIN_LEARNING_RATE:.1e}.\\n")
+        report.write(f"- Learning rate inicial: {learning_rate:.8g}; redução fixa de 10% após cada ciclo, com piso de {MIN_LEARNING_RATE:.1e}.\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
         while cycle < maximum_cycles:
