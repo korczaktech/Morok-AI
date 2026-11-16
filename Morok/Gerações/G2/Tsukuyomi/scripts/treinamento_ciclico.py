@@ -815,7 +815,7 @@ def main() -> int:
 
     print(f"\nRelatório salvo em: {output}")
     print(f"Checkpoint final: {checkpoint}")
-    print(f"Learning rate persistido: {learning_rate:.8g}")
+    print("Learning rate: curva individual por nível lexical; sem redução global por ciclo.")
     print(f"Histórico de perguntas: {question_history_path}")
     return 0
 
