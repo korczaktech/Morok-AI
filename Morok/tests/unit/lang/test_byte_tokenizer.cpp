@@ -172,6 +172,16 @@ void test_decoding_and_control_validation() {
     const auto stopped = ByteTokenizer::decode_text(after_eos);
     check(stopped.has_value() && stopped.value_if()->text.empty(),
           "decoder stops at EOS without consuming later tokens");
+
+    const std::array<TokenId, 4> multibyte{0x41U, 0xC3U, 0xA9U, 0x42U};
+    const auto cut_inside = ByteTokenizer::decode_text(multibyte, {}, 2U);
+    check(cut_inside.has_value() && cut_inside.value_if()->text == "A" &&
+              cut_inside.value_if()->truncated_at_utf8_boundary,
+          "output limit backs up rather than splitting a multibyte character");
+    const auto cut_after = ByteTokenizer::decode_text(multibyte, {}, 3U);
+    check(cut_after.has_value() && cut_after.value_if()->text == "Aé" &&
+              cut_after.value_if()->truncated_at_utf8_boundary,
+          "output limit preserves complete characters at the boundary");
 }
 
 } // namespace
