@@ -53,6 +53,11 @@ struct EncodedText final {
     bool replaced_invalid_utf8{false};
 };
 
+struct DecodedText final {
+    std::string text;
+    bool replaced_invalid_utf8{false};
+};
+
 class ByteTokenizer final {
 public:
     [[nodiscard]] static constexpr std::size_t vocabulary_size() noexcept {
@@ -94,7 +99,7 @@ public:
         const TextCodecConfig& config = {});
 
     // Decodes byte IDs and stops at EOS. PAD/BOS/USR/BOT are rejected.
-    [[nodiscard]] static common::Result<std::string> decode_text(
+    [[nodiscard]] static common::Result<DecodedText> decode_text(
         std::span<const TokenId> tokens,
         const TextCodecConfig& config = {});
 };
