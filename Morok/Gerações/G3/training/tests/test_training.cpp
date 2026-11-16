@@ -53,6 +53,18 @@ void test_dataset_loader_and_group_split() {
     assert(expanded.size() == 2U);
     assert(expanded[0].group_id == expanded[1].group_id);
     assert(expanded[0].example_id != expanded[1].example_id);
+    DatasetExample combinatorial;
+    combinatorial.example_id = "template-1";
+    combinatorial.group_id = "same-family";
+    combinatorial.question = "Como {0} {1}?";
+    combinatorial.answer = "Resposta";
+    combinatorial.expansion_axes = {{"fazer", "realizar"}, {"isso", "isto"}};
+    const auto combinations = expand_controlled(combinatorial, 4U, 123U);
+    assert(combinations.size() == 4U);
+    for (const auto& item : combinations) {
+        assert(item.question.find('{') == std::string::npos);
+        assert(item.group_id == "same-family");
+    }
     std::filesystem::remove(path);
 }
 
