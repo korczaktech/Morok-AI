@@ -105,7 +105,13 @@ jobs:
             fi
             test -s Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
             test -s Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
-            echo "Memória persistente recuperada: pesos + estado Adam."
+            if git cat-file -e origin/tsukuyomi-state:state/tsukuyomi-g2-questions 2>/dev/null; then
+              git archive origin/tsukuyomi-state state/tsukuyomi-g2-questions | tar -x -C "$RUNNER_TEMP"
+              mkdir -p Morok/build/g2/tsukuyomi-questoes
+              cp -a "$RUNNER_TEMP/state/tsukuyomi-g2-questions/." Morok/build/g2/tsukuyomi-questoes/
+              echo "40 checkpoints individuais e seus estados Adam recuperados."
+            fi
+            echo "Memória persistente recuperada: estados e memória."
           else
             echo "Primeira execução: ainda não existe memória persistente."
           fi
@@ -142,8 +148,11 @@ jobs:
             git -C "$STATE_DIR" rm -rf .
           fi
           mkdir -p "$STATE_DIR/state"
-          install -m 0644 build/g2/tsukuyomi-treinamento-ciclico.ckpt "$STATE_DIR/state/tsukuyomi-g2.ckpt"
-          install -m 0644 build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam "$STATE_DIR/state/tsukuyomi-g2.ckpt.adam"
+          test -d build/g2/tsukuyomi-questoes
+          rm -rf "$STATE_DIR/state/tsukuyomi-g2-questions"
+          mkdir -p "$STATE_DIR/state/tsukuyomi-g2-questions"
+          cp -a build/g2/tsukuyomi-questoes/. "$STATE_DIR/state/tsukuyomi-g2-questions/"
+          rm -f "$STATE_DIR/state/tsukuyomi-g2.ckpt" "$STATE_DIR/state/tsukuyomi-g2.ckpt.adam"
           if [ -f build/g2/tsukuyomi-memoria-erros.txt ]; then
             install -m 0644 build/g2/tsukuyomi-memoria-erros.txt "$STATE_DIR/state/tsukuyomi-g2-feedback.txt"
           else
@@ -154,7 +163,7 @@ jobs:
           install -m 0644 build/g2/tsukuyomi-historico-perguntas.json "$STATE_DIR/state/tsukuyomi-g2-question-history.json"
           cat > "$STATE_DIR/state/README.txt" <<'EOF'
           Tsukuyomi G2 persistent training state.
-          Keep the .ckpt and .adam files together; both are required for exact optimizer continuation.
+          Each question has its own .ckpt and matching .ckpt.adam file; never mix or separate these pairs.
           This branch is machine state, not source code. Do not merge it into main.
           EOF
           git -C "$STATE_DIR" add state/
@@ -190,8 +199,7 @@ jobs:
         with:
           name: tsukuyomi-g2-treinamento-${{ github.run_id }}
           path: |
-            Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
-            Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
+            Morok/build/g2/tsukuyomi-questoes/
             Morok/build/g2/tsukuyomi-memoria-erros.txt
             Morok/build/g2/tsukuyomi-historico-perguntas.json
             Morok/build/g2/tsukuyomi-learning-rates-by-question.txt
