@@ -86,7 +86,7 @@ target_include_directories(morok_g3_rl PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G3/rl/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
-target_link_libraries(morok_g3_rl PUBLIC Morok::Core Morok::G3::Neural PRIVATE morok_build_options)
+target_link_libraries(morok_g3_rl PUBLIC Morok::Core PRIVATE morok_build_options)
 morok_enable_sanitizers(morok_g3_rl)
 
 # G3 neural architecture is generation-owned and reuses the shared Core.
@@ -99,6 +99,7 @@ target_include_directories(morok_g3_neural PUBLIC
     $<INSTALL_INTERFACE:include>)
 target_link_libraries(morok_g3_neural PUBLIC Morok::Core PRIVATE morok_build_options)
 morok_enable_sanitizers(morok_g3_neural)
+target_link_libraries(morok_g3_rl PUBLIC Morok::G3::Neural)
 
 # G3 supervised training extends the generation-owned neural backend.
 add_library(morok_g3_training STATIC
