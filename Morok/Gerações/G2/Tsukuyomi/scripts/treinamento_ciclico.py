@@ -23,11 +23,12 @@ try:
     INITIAL_LEARNING_RATE = float(os.environ.get("TSUKUYOMI_LEARNING_RATE", "0.001"))
 except ValueError as error:
     raise SystemExit("TSUKUYOMI_LEARNING_RATE precisa ser um número válido.") from error
-MIN_LEARNING_RATE = 1e-7
+MIN_LEARNING_RATE = 1e-5
+MAX_LEARNING_RATE = 1e-2
 LR_REDUCE_FACTOR = 0.9
 if (not math.isfinite(INITIAL_LEARNING_RATE)
-        or not MIN_LEARNING_RATE <= INITIAL_LEARNING_RATE <= 0.1):
-    raise SystemExit("TSUKUYOMI_LEARNING_RATE precisa estar entre 1e-7 e 0.1.")
+        or not MIN_LEARNING_RATE <= INITIAL_LEARNING_RATE <= MAX_LEARNING_RATE):
+    raise SystemExit("TSUKUYOMI_LEARNING_RATE precisa estar entre 1e-5 e 1e-2.")
 
 
 def validation_rank(correct_count: int, total: int, mean_f1: float,
@@ -43,7 +44,7 @@ def validation_rank(correct_count: int, total: int, mean_f1: float,
 
 
 def decay_learning_rate(current: float) -> float:
-    """Reduz 10% a cada ciclo, respeitando o piso absoluto de 1e-7."""
+    """Reduz 10% a cada ciclo, respeitando o piso absoluto de 1e-5."""
     if not math.isfinite(current) or current < MIN_LEARNING_RATE:
         raise ValueError("Learning rate atual inválido.")
     return max(MIN_LEARNING_RATE, current * LR_REDUCE_FACTOR)
@@ -52,7 +53,7 @@ def decay_learning_rate(current: float) -> float:
 def learning_rate_for_lexical_level(base_learning_rate: float, lexical_level: float) -> float:
     """Curva exponencial: 0% usa o LR-base; 100% usa 10% dele."""
     if (not math.isfinite(base_learning_rate) or
-            not MIN_LEARNING_RATE <= base_learning_rate <= 0.1):
+            not MIN_LEARNING_RATE <= base_learning_rate <= MAX_LEARNING_RATE):
         raise ValueError("Learning rate-base inválido.")
     if not math.isfinite(lexical_level) or not 0.0 <= lexical_level <= 1.0:
         raise ValueError("Nível lexical precisa estar entre 0 e 1.")
@@ -79,7 +80,7 @@ def write_question_learning_rates(corpus: Path, rates: dict[str, float], destina
             if current_question not in rates:
                 raise RuntimeError(f"Learning rate ausente para a pergunta: {current_question}")
             rate = rates[current_question]
-            if not math.isfinite(rate) or not MIN_LEARNING_RATE <= rate <= 0.1:
+            if not math.isfinite(rate) or not MIN_LEARNING_RATE <= rate <= MAX_LEARNING_RATE:
                 raise ValueError(f"Learning rate inválido para a pergunta: {current_question}")
             begin = offset + leading + 3
             end = offset + len(line)
@@ -107,14 +108,15 @@ def load_learning_rate(path: Path, fallback: float) -> float:
         value = float(path.read_text(encoding="utf-8").strip())
     except (OSError, ValueError) as error:
         raise RuntimeError("Estado persistente do learning rate inválido.") from error
-    if not math.isfinite(value) or not MIN_LEARNING_RATE <= value <= 0.1:
-        raise RuntimeError("Learning rate persistido fora do intervalo permitido.")
-    return value
+    if not math.isfinite(value) or value <= 0.0:
+        raise RuntimeError("Learning rate persistido inválido.")
+    # Normaliza schedulers antigos para os novos limites sem perder a retomada.
+    return min(MAX_LEARNING_RATE, max(MIN_LEARNING_RATE, value))
 
 
 def write_learning_rate(path: Path, value: float) -> None:
     """Persiste atomicamente o próximo learning rate."""
-    if not math.isfinite(value) or not MIN_LEARNING_RATE <= value <= 0.1:
+    if not math.isfinite(value) or not MIN_LEARNING_RATE <= value <= MAX_LEARNING_RATE:
         raise ValueError("Learning rate a persistir inválido.")
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
@@ -768,7 +770,7 @@ def main() -> int:
             write_learning_rate(learning_rate_path, learning_rate)
             print(
                 f"Scheduler: LR {previous_learning_rate:.8g} -> {learning_rate:.8g} "
-                "(redução de 10% após este ciclo; piso 1e-7).",
+                "(redução de 10% após este ciclo; piso 1e-5).",
                 flush=True,
             )
             elapsed = time.perf_counter() - started
