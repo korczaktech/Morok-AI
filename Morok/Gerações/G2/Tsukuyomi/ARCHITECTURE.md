@@ -84,6 +84,10 @@ A geração restringe transições para manter UTF-8 válido quando o prompt é 
 
 Formato binário MOROKG2T, versão 8, contagem explícita de 10.000 floats e checksum FNV-1a de 64 bits. O carregamento ocorre em estrutura temporária e só substitui o modelo ativo depois de validar o arquivo integral.
 
+## Persistência entre execuções
+
+O workflow mantém os arquivos `tsukuyomi-g2.ckpt` e `tsukuyomi-g2.ckpt.adam` na branch técnica `tsukuyomi-state`, fora da branch de código `main`. Antes do treinamento, recupera os dois arquivos; o primeiro ciclo usa `--resume` quando a memória existe. Ao terminar com sucesso, publica o par atualizado. As execuções são serializadas para evitar concorrência na gravação. A ausência simultânea dos dois arquivos significa primeira execução; a presença de apenas um ou de arquivos vazios é erro fatal, nunca motivo para reinicializar silenciosamente.
+
 ## Limitações conhecidas do v0.1
 
 - A pergunta é agregada em 13 regiões posicionais contíguas; a média ainda perde a ordem interna dos bytes dentro de cada região.
