@@ -140,6 +140,16 @@ struct TrainingReport final {
     std::vector<CandidateMetrics> candidates_metrics;
 };
 
+struct TrainerState final {
+    std::uint32_t version{1};
+    Config config{};
+    std::unordered_map<std::string, double> category_baselines;
+    std::string random_engine_state;
+    std::string policy_identity;
+    std::string reference_identity;
+    EvaluatorMetadata evaluator{};
+};
+
 struct EvaluationReport final {
     std::size_t examples{0};
     double mean_reward{0.0};
@@ -171,6 +181,15 @@ public:
         const RewardEvaluator& evaluator);
 
     [[nodiscard]] double baseline(std::string_view category) const;
+    [[nodiscard]] morok::common::Result<TrainerState> capture_state(
+        std::string_view policy_identity,
+        std::string_view reference_identity,
+        const EvaluatorMetadata& evaluator) const;
+    [[nodiscard]] morok::common::Status restore_state(
+        const TrainerState& state,
+        std::string_view expected_policy_identity,
+        std::string_view expected_reference_identity,
+        const EvaluatorMetadata& expected_evaluator);
     [[nodiscard]] const Config& config() const noexcept { return config_; }
 
 private:
