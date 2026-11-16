@@ -2,6 +2,7 @@
 
 #include "morok/g3/rl/reinforce.hpp"
 #include "morok/g3/neural/gru_backend.hpp"
+#include "morok/g3/training/trainer.hpp"
 
 #include <cstdint>
 #include <span>
@@ -31,9 +32,8 @@ private:
     std::string identity_;
     double learning_rate_;
     double weight_decay_;
-    std::uint64_t optimizer_step_{0};
-    std::vector<float> first_moment_;
-    std::vector<float> second_moment_;
+    training::ReinforceOptimizerState optimizer_state_;
+    training::TrainingConfig optimizer_config_;
 };
 
 } // namespace morok::g3::rl
