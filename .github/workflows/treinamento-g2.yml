@@ -115,6 +115,11 @@ jobs:
           if git fetch origin refs/heads/tsukuyomi-state:refs/remotes/origin/tsukuyomi-state 2>/dev/null; then
             git show origin/tsukuyomi-state:state/tsukuyomi-g2.ckpt > Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
             git show origin/tsukuyomi-state:state/tsukuyomi-g2.ckpt.adam > Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
+            if git cat-file -e origin/tsukuyomi-state:state/tsukuyomi-g2-feedback.txt 2>/dev/null; then
+              git show origin/tsukuyomi-state:state/tsukuyomi-g2-feedback.txt > Morok/build/g2/tsukuyomi-memoria-erros.txt
+            else
+              : > Morok/build/g2/tsukuyomi-memoria-erros.txt
+            fi
             test -s Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
             test -s Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
             echo "Memória persistente recuperada: pesos + estado Adam."
@@ -170,6 +175,11 @@ jobs:
           mkdir -p "$STATE_DIR/state"
           install -m 0644 build/g2/tsukuyomi-treinamento-ciclico.ckpt "$STATE_DIR/state/tsukuyomi-g2.ckpt"
           install -m 0644 build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam "$STATE_DIR/state/tsukuyomi-g2.ckpt.adam"
+          if [ -f build/g2/tsukuyomi-memoria-erros.txt ]; then
+            install -m 0644 build/g2/tsukuyomi-memoria-erros.txt "$STATE_DIR/state/tsukuyomi-g2-feedback.txt"
+          else
+            : > "$STATE_DIR/state/tsukuyomi-g2-feedback.txt"
+          fi
           cat > "$STATE_DIR/state/README.txt" <<'EOF'
           Tsukuyomi G2 persistent training state.
           Keep the .ckpt and .adam files together; both are required for exact optimizer continuation.
