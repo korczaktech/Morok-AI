@@ -496,7 +496,7 @@
     if (page === 'help') root.innerHTML = '<p class="field-help">Abra um chamado vinculado à sua conta. A equipe poderá acompanhar o status quando o atendimento estiver disponível.</p>'+(state.authSession ? '<form class="inline-create" id="support-ticket-form"><input class="text-field" id="support-subject" maxlength="120" placeholder="Assunto" required><textarea class="text-field settings-textarea" id="support-description" maxlength="8000" placeholder="Descreva o problema (mínimo 10 caracteres)" required></textarea><button class="primary-button" type="submit">Enviar chamado</button></form><div id="support-ticket-list" class="task-list">Carregando chamados…</div>' : '<button class="primary-button" id="support-login" type="button">Entrar para abrir chamado</button>');
     if (page === 'projects') root.innerHTML = renderProjectsPage();
     if (page === 'account' && state.authSession) { void loadAccountProfile(); void loadAccountSessions(); }
-    if (page === 'security' && state.authSession) { const target = $('#security-sessions'); if (target) { target.id = 'account-sessions'; void loadAccountSessions(); } }
+    if (page === 'security' && state.authSession) { const target = $('#security-sessions'); if (target) { target.id = 'account-sessions'; void loadAccountSessions(); } void loadAccountProfile(); }
     if (page === 'help' && state.authSession) void loadSupportTickets();
     const pageInsights = {
       about: ['Visão do projeto','Esta página reúne especificações públicas e limites conhecidos. Diferencie sempre funcionalidades implementadas, hipóteses de pesquisa e metas ainda não medidas.'],
