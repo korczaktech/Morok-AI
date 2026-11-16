@@ -602,7 +602,7 @@
       await authRequest('/v1/conversations/sync', {
         token,
         body: { conversation: {
-          id: conversation.id, title: conversation.title,
+          id: conversation.id, title: conversation.title, projectId: conversation.projectId || null,
           createdAt: conversation.createdAt, updatedAt: conversation.updatedAt,
           messages: conversation.messages || []
         } }
@@ -679,6 +679,12 @@
     updateProfile(); persist();
   }
 
+  async function deleteRemoteResource(type, resourceId) {
+    const token = state.authSession?.access_token;
+    if (!token || !resourceId) return;
+    try { await authRequest("/v1/resources/delete", { token, body: { type, ids: [resourceId] } }); }
+    catch (error) { console.warn("Não foi possível remover o recurso remoto:", error.message); }
+  }
   async function syncAccountResources() {
     const token = state.authSession?.access_token;
     if (!token) return;
@@ -866,7 +872,7 @@
     if(event.target.id==='support-login')openAuth('login');
     if(event.target.id==='support-ticket-form'){} 
 
-    const taskDelete=event.target.closest('[data-task-delete]');if(taskDelete){state.tasks.splice(Number(taskDelete.dataset.taskDelete),1);persist();void syncAccountResources();openWorkspacePage('tasks');}
+    const taskDelete=event.target.closest('[data-task-delete]');if(taskDelete){const removed=state.tasks.splice(Number(taskDelete.dataset.taskDelete),1)[0];persist();if(removed?.id)void deleteRemoteResource('tasks',removed.id);void syncAccountResources();openWorkspacePage('tasks');}
     const libraryDelete=event.target.closest('[data-library-delete]');if(libraryDelete){state.libraryItems.splice(Number(libraryDelete.dataset.libraryDelete),1);persist();openWorkspacePage('library');}
     const libraryDownload=event.target.closest('[data-library-download]');if(libraryDownload){const item=state.libraryItems[Number(libraryDownload.dataset.libraryDownload)];if(item&&typeof item.content==='string'){const url=URL.createObjectURL(new Blob([item.content],{type:item.type||'text/plain'}));const link=document.createElement('a');link.href=url;link.download=item.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}
     const imageDelete=event.target.closest('[data-image-delete]');if(imageDelete){const image=state.images.splice(Number(imageDelete.dataset.imageDelete),1)[0];if(image?.url)URL.revokeObjectURL(image.url);openWorkspacePage('images');}
@@ -875,12 +881,12 @@
     if(event.target.id==='edit-local-profile'){$('#display-name').value=state.displayName;el.profile.showModal();}
     if(event.target.id==='security-auth')openAuth('login');
     if(event.target.id==='project-rename'){const p=state.projects.find(item=>item.id===state.activeProjectId);const name=$('#project-rename-input').value.trim();if(p&&name){p.name=name;p.updatedAt=now();persist();void syncAccountResources();renderProjectsSidebar();openWorkspacePage('projects');}}
-    if(event.target.id==='project-delete'){const p=state.projects.find(item=>item.id===state.activeProjectId);if(p){void askConfirmation('Excluir o projeto "'+p.name+'"? As conversas serão mantidas.','Excluir projeto').then(ok=>{if(!ok)return;state.projects=state.projects.filter(item=>item.id!==p.id);state.conversations.forEach(c=>{if(c.projectId===p.id)delete c.projectId;});state.activeProjectId=null;persist();void syncAccountResources();renderProjectsSidebar();openWorkspacePage('projects');});}}
-    if(event.target.id==='project-add-current'){const c=activeConversation(),p=state.projects.find(item=>item.id===state.activeProjectId);if(!c)toast('Abra uma conversa antes de adicioná-la ao projeto.');else if(p){c.projectId=p.id;persist();openWorkspacePage('projects');}}
+    if(event.target.id==='project-delete'){const p=state.projects.find(item=>item.id===state.activeProjectId);if(p){void askConfirmation('Excluir o projeto "'+p.name+'"? As conversas serão mantidas.','Excluir projeto').then(ok=>{if(!ok)return;state.projects=state.projects.filter(item=>item.id!==p.id);state.conversations.forEach(c=>{if(c.projectId===p.id){delete c.projectId;void syncConversation(c);}});state.activeProjectId=null;persist();void deleteRemoteResource('projects',p.id);void syncAccountResources();renderProjectsSidebar();openWorkspacePage('projects');});}}
+    if(event.target.id==='project-add-current'){const c=activeConversation(),p=state.projects.find(item=>item.id===state.activeProjectId);if(!c)toast('Abra uma conversa antes de adicioná-la ao projeto.');else if(p){c.projectId=p.id;persist();void syncConversation(c);openWorkspacePage('projects');}}
     if(event.target.id==='project-back'){state.activeProjectId=null;openWorkspacePage('projects');}
     const projectOpen=event.target.closest('[data-project-open]');if(projectOpen){state.activeProjectId=projectOpen.dataset.projectOpen;openWorkspacePage('projects');return;}
     const projectConversation=event.target.closest('[data-project-conversation-open]');if(projectConversation){openConversation(projectConversation.dataset.projectConversationOpen);return;}
-    const projectRemove=event.target.closest('[data-project-remove-conversation]');if(projectRemove){const c=state.conversations.find(item=>item.id===projectRemove.dataset.projectRemoveConversation);if(c)delete c.projectId;persist();openWorkspacePage('projects');}
+    const projectRemove=event.target.closest('[data-project-remove-conversation]');if(projectRemove){const c=state.conversations.find(item=>item.id===projectRemove.dataset.projectRemoveConversation);if(c){delete c.projectId;void syncConversation(c);}persist();openWorkspacePage('projects');}
     if(event.target.id==='export-local-data'){const payload={conversations:state.conversations,tasks:state.tasks,projects:state.projects,theme:state.theme,displayName:state.displayName,instructions:state.instructions,location:state.location,aboutMe:state.aboutMe,responseStyle:state.responseStyle,libraryItems:state.libraryItems};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='morok-dados-locais.json';link.click();URL.revokeObjectURL(url);toast('Exportação preparada.');}
     if(event.target.id==='delete-local-data'){void askConfirmation('Apagar conversas, tarefas, projetos, instruções, localização, biblioteca e preferências deste navegador? Esta ação não pode ser desfeita.','Apagar dados locais').then(accepted=>{if(!accepted)return;state.conversations=[];state.activeId=null;state.tasks=[];state.projects=[];state.activeProjectId=null;state.instructions='';state.location='';state.aboutMe='';state.libraryItems=[];state.notifications=false;state.displayName='Visitante';state.images.forEach(i=>{if(i.url)URL.revokeObjectURL(i.url);});state.images=[];persist();renderProjectsSidebar();renderHistory();renderConversation();updateProfile();returnToChat();toast('Dados locais apagados.');});}
     if(event.target.id==='save-notifications'){void (async()=>{const requested=$('#notifications-toggle').checked;try{state.notifications=await configurePush(requested);persist();openWorkspacePage('notifications');toast(state.notifications?'Notificações push ativadas.':'Notificações desativadas.');}catch(error){state.notifications=false;persist();toast(error.message);openWorkspacePage('notifications');}})();}
