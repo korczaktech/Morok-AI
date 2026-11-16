@@ -33,7 +33,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Testar separação de dados e avaliador
+      - name: Validar corpus e testes das 40 perguntas
         working-directory: Morok
         run: python3 -m unittest discover -s "Gerações/G2/Tsukuyomi/tests" -p "test_*.py" -v
 
@@ -86,7 +86,7 @@ jobs:
           build/g2/morok-g2-tsukuyomi-train build/g2/dialogue-parser-smoke.txt build/g2/dialogue-parser-smoke.ckpt 1 42 > build/g2/dialogue-parser-smoke.log
           grep -q 'Bytes-alvo: 11' build/g2/dialogue-parser-smoke.log
           build/g2/morok-g2-tsukuyomi-train \
-            "Gerações/G2/Tsukuyomi/data/treinamento.txt" \
+            "Gerações/G2/Tsukuyomi/data/feedback.txt" \
             build/g2/tsukuyomi-dialogue-smoke.ckpt 1 42 > build/g2/tsukuyomi-dialogue-smoke.log
           grep -F "Objetivo: somente respostas IA:" build/g2/tsukuyomi-dialogue-smoke.log
           grep -E "Bytes-alvo: [1-9][0-9]*" build/g2/tsukuyomi-dialogue-smoke.log
