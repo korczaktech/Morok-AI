@@ -19,7 +19,8 @@ common::Error session_error(common::ErrorCode code, const char* stage,
 
 SessionManager::Entry::Entry(const model::ModelDescriptor& descriptor,
                              std::uint64_t seed)
-    : state(descriptor.state_size_bytes),
+    : descriptor(descriptor),
+      state(descriptor.state_size_bytes),
       random(seed),
       last_access(std::chrono::steady_clock::now()) {}
 
@@ -79,10 +80,15 @@ common::Result<GenerationResult> SessionManager::generate(
             sessions_.emplace(std::string(session_id), entry);
         } else {
             entry = found->second;
-            if (entry->state.size() != descriptor.state_size_bytes)
+            const auto& prior = entry->descriptor;
+            if (prior.generation_id != descriptor.generation_id ||
+                prior.architecture_id != descriptor.architecture_id ||
+                prior.vocabulary_size != descriptor.vocabulary_size ||
+                prior.parameter_count != descriptor.parameter_count ||
+                prior.state_size_bytes != descriptor.state_size_bytes)
                 return common::Result<GenerationResult>::failure(session_error(
                     common::ErrorCode::model_version_mismatch, "session.architecture",
-                    "Session state belongs to a backend with a different state size"));
+                    "Session state belongs to an incompatible model generation or architecture"));
         }
         entry->last_access = now;
         entry->active_calls.fetch_add(1U, std::memory_order_acq_rel);
@@ -123,7 +129,12 @@ common::Status SessionManager::reset(const model::ModelBackend& backend,
         entry->active_calls.fetch_add(1U, std::memory_order_acq_rel);
     }
     const auto descriptor = backend.descriptor();
-    if (!descriptor.valid() || entry->state.size() != descriptor.state_size_bytes) {
+    const auto& prior = entry->descriptor;
+    if (!descriptor.valid() || prior.generation_id != descriptor.generation_id ||
+        prior.architecture_id != descriptor.architecture_id ||
+        prior.vocabulary_size != descriptor.vocabulary_size ||
+        prior.parameter_count != descriptor.parameter_count ||
+        prior.state_size_bytes != descriptor.state_size_bytes) {
         entry->active_calls.fetch_sub(1U, std::memory_order_acq_rel);
         return common::Status::failure(session_error(
             common::ErrorCode::model_version_mismatch, "session.architecture",
