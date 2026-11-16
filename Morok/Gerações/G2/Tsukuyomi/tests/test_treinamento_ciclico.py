@@ -19,6 +19,37 @@ class TrainingDataTests(unittest.TestCase):
             lr = training.decay_learning_rate(lr)
             self.assertAlmostEqual(lr, expected, places=12)
 
+    def test_lexical_learning_rate_is_adaptive_for_each_question(self):
+        base = 0.001
+        self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 0.0), base)
+        self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 0.9), base * (0.1 ** 0.9))
+        self.assertLess(training.learning_rate_for_lexical_level(base, 0.9),
+                        training.learning_rate_for_lexical_level(base, 0.0))
+        self.assertAlmostEqual(training.learning_rate_for_lexical_level(base, 1.0), base * 0.1)
+        self.assertEqual(training.learning_rate_for_lexical_level(1e-7, 1.0), 1e-7)
+        for level in (-0.1, 1.1, float("nan")):
+            with self.assertRaises(ValueError):
+                training.learning_rate_for_lexical_level(base, level)
+
+    def test_question_learning_rate_map_assigns_each_answer_byte(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            corpus = root / "training.txt"
+            rate_map = root / "rates.txt"
+            corpus.write_text("U: primeira?\nIA: resposta A\n\nU: segunda?\nIA: resposta B\n",
+                              encoding="utf-8")
+            count = training.write_question_learning_rates(
+                corpus, {"primeira?": 0.001, "segunda?": 0.0001}, rate_map
+            )
+            self.assertEqual(count, 2)
+            ranges = [line.split() for line in rate_map.read_text(encoding="ascii").splitlines()]
+            self.assertEqual(len(ranges), 2)
+            self.assertEqual(float(ranges[0][2]), 0.001)
+            self.assertEqual(float(ranges[1][2]), 0.0001)
+            raw = corpus.read_bytes()
+            self.assertEqual(raw[int(ranges[0][0]):int(ranges[0][1])], b"resposta A\n")
+            self.assertEqual(raw[int(ranges[1][0]):int(ranges[1][1])], b"resposta B\n")
+
     def test_learning_rate_floor_is_one_e_minus_seven(self):
         self.assertEqual(training.MIN_LEARNING_RATE, 1e-7)
         self.assertEqual(training.decay_learning_rate(1.01e-7), 1e-7)
