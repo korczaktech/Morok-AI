@@ -2,6 +2,7 @@
 
 #include "morok/g3/inference/generator.hpp"
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -45,6 +46,7 @@ private:
         std::mutex mutex;
         std::chrono::steady_clock::time_point last_access;
         bool initialized{false};
+        std::atomic<std::size_t> active_calls{0U};
     };
 
     void prune_expired_locked(std::chrono::steady_clock::time_point now);
