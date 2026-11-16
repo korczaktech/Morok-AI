@@ -63,7 +63,7 @@ morok::common::Result<RewardComponents> ReferenceRewardEvaluator::evaluate(
     const auto found=references_.find(key(prompt));
     if(found==references_.end())
         return morok::common::Result<RewardComponents>::failure(
-            morok::common::Error::make(morok::common::ErrorCode::not_found,
+            morok::common::Error::make(morok::common::ErrorCode::invalid_argument,
                 "No reference answer exists for this prompt","g3.rl.evaluator","lookup"));
     const auto& target=found->second;
     const std::size_t denominator=std::max(target.size(),response.size());
