@@ -971,3 +971,30 @@ kbd [data-icon]{display:inline-flex;vertical-align:middle}
 }
 
 .workspace[hidden]{display:none!important}
+
+/* Página pública Sobre o Morok */
+.profile-menu-about{margin-top:8px!important;border-top:1px solid var(--line)!important;padding-top:13px!important;color:var(--accent)!important;font-weight:700}
+.workspace-page-view .about-hero{padding:clamp(22px,4vw,34px);background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 13%,var(--panel)),var(--panel))}
+.workspace-page-view .about-kicker{display:block;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.14em;margin-bottom:12px}
+.workspace-page-view .about-hero h2{font-size:clamp(24px,4vw,34px);line-height:1.12;letter-spacing:-.04em;margin:0 0 12px;color:var(--text)}
+.workspace-page-view .about-section h2{font-size:18px;letter-spacing:-.02em;margin:0 0 12px;color:var(--text)}
+.workspace-page-view .about-section p{line-height:1.7}
+.workspace-page-view .about-section ul{padding-left:20px;display:grid;gap:8px;line-height:1.65;color:var(--muted)}
+.workspace-page-view .about-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.workspace-page-view .about-tags span{padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:11px;color:var(--muted)}
+.workspace-page-view .about-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.workspace-page-view .about-grid article{padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--surface)}
+.workspace-page-view .about-grid article strong{color:var(--text)}
+.workspace-page-view .about-grid article p{font-size:13px;margin:7px 0 0;color:var(--muted)}
+.workspace-page-view .about-module-list{display:grid;gap:8px}
+.workspace-page-view .about-module-list p{margin:0;padding:10px 12px;border-left:2px solid var(--accent);background:var(--surface);border-radius:0 9px 9px 0;font-size:13px}
+.workspace-page-view .about-module-list strong{color:var(--text)}
+.workspace-page-view .about-note{font-size:12px;color:var(--muted);margin-top:12px}
+.workspace-page-view .about-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.workspace-page-view .about-stat-grid div{display:flex;flex-direction:column;gap:5px;padding:14px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.workspace-page-view .about-stat-grid strong{font-size:21px;color:var(--accent)}
+.workspace-page-view .about-stat-grid span{font-size:11px;color:var(--muted)}
+.workspace-page-view .about-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 2px 18px;color:var(--muted);font-size:12px}
+.workspace-page-view .about-footer a{color:var(--accent);text-decoration:none}
+.workspace-page-view .about-footer a:hover{text-decoration:underline}
+@media(max-width:560px){.workspace-page-view .about-grid{grid-template-columns:1fr}.workspace-page-view .about-stat-grid{grid-template-columns:1fr}.workspace-page-view .about-footer{flex-direction:column}}
