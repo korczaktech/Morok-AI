@@ -45,7 +45,8 @@ def validation_rank(correct_count: int, total: int, mean_f1: float,
 
 def decay_learning_rate(current: float) -> float:
     """Reduz 10% a cada ciclo, respeitando o piso absoluto de 1e-5."""
-    if not math.isfinite(current) or current < MIN_LEARNING_RATE:
+    if (not math.isfinite(current) or current < MIN_LEARNING_RATE
+            or current > MAX_LEARNING_RATE):
         raise ValueError("Learning rate atual inválido.")
     return max(MIN_LEARNING_RATE, current * LR_REDUCE_FACTOR)
 
