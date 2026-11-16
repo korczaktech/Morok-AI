@@ -48,8 +48,10 @@ const accountResourceDeletions = appDb.collection("account_resource_deletions");
 const supportTickets = appDb.collection("support_tickets");
 const pushSubscriptions = appDb.collection("push_subscriptions");
 const recoveryTokens = appDb.collection("password_recovery_tokens");
+const conversationDeletions = appDb.collection("conversation_deletions");
 
 await conversations.createIndex({ accountId: 1, updatedAt: -1 }, { name: "morok_conversations_account_updated" });
+await conversationDeletions.createIndex({ accountId: 1, conversationId: 1 }, { unique: true, name: "morok_conversation_deletions_unique" });
 await conversations.createIndex({ accountId: 1, conversationId: 1 }, { name: "morok_conversations_account_id_unique" });
 await messages.createIndex({ accountId: 1, conversationId: 1, createdAt: 1 }, { name: "morok_messages_conversation_time" });
 await messages.createIndex({ accountId: 1, conversationId: 1, messageId: 1 }, { name: "morok_messages_id_unique" });
@@ -245,7 +247,7 @@ async function handle(req, res) {
     "/auth/signup", "/auth/login", "/auth/recover", "/auth/reset",
     "/v1/account/2fa/setup", "/v1/account/2fa/enable", "/v1/account/2fa/disable",
     "/v1/account/password", "/v1/account/delete", "/v1/account/sessions/revoke",
-    "/v1/support/tickets"
+    "/v1/conversations/delete", "/v1/support/tickets"
   ].includes(path)) {
     if (!rateLimit(req)) return send(res, 429, { error: "Muitas tentativas. Aguarde 15 minutos." }, req.allowedOrigin);
   }
@@ -369,7 +371,15 @@ async function handle(req, res) {
   if (req.method === "GET" && path === "/v1/conversations") {
     const token = await verifyToken(bearer(req));
     if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
-    const docs = await conversations.find({ accountId: token.sub }).sort({ updatedAt: -1 }).limit(100).toArray();
+    const [allDocs, deletedDocs] = await Promise.all([
+      conversations.find({ accountId: token.sub }).sort({ updatedAt: -1 }).limit(200).toArray(),
+      conversationDeletions.find({ accountId: token.sub }).toArray()
+    ]);
+    const deletedAtById = new Map(deletedDocs.map(item => [item.conversationId, new Date(item.deletedAt).getTime()]));
+    const docs = allDocs.filter(item => {
+      const deletedAt = deletedAtById.get(item.conversationId);
+      return deletedAt === undefined || new Date(item.updatedAt).getTime() > deletedAt;
+    }).slice(0, 100);
     const ids = docs.map((item) => item.conversationId);
     const storedMessages = ids.length
       ? await messages.find({ accountId: token.sub, conversationId: { $in: ids } }).sort({ createdAt: 1 }).toArray()
@@ -386,8 +396,28 @@ async function handle(req, res) {
       conversations: docs.map((item) => ({
         id: item.conversationId, title: item.title, createdAt: item.createdAt,
         updatedAt: item.updatedAt, projectId: item.projectId || null, messages: grouped.get(item.conversationId) || []
-      }))
+      })),
+      deleted: deletedDocs.map(item => ({ id: item.conversationId, deletedAt: item.deletedAt }))
     }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/conversations/delete") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req, 32_768);
+    if (!Array.isArray(body.ids) || body.ids.length > 200) return send(res, 400, { error: "Lista de conversas inválida." }, req.allowedOrigin);
+    const ids = [...new Set(body.ids.filter(value => typeof value === "string" && value.length > 0 && value.length <= 128))];
+    const deletedAt = new Date();
+    if (ids.length) {
+      await conversationDeletions.bulkWrite(ids.map(conversationId => ({
+        updateOne: { filter: { accountId: token.sub, conversationId }, update: { $set: { accountId: token.sub, conversationId, deletedAt } }, upsert: true }
+      })), { ordered: false });
+      await Promise.all([
+        conversations.deleteMany({ accountId: token.sub, conversationId: { $in: ids } }),
+        messages.deleteMany({ accountId: token.sub, conversationId: { $in: ids } })
+      ]);
+    }
+    return send(res, 200, { success: true, deleted: ids.length }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && path === "/v1/conversations/sync") {
@@ -406,12 +436,18 @@ async function handle(req, res) {
       };
       const createdAt = toDate(item.createdAt);
       const updatedAt = toDate(item.updatedAt);
-      await conversations.updateOne(
-        { accountId: token.sub, conversationId: item.id },
-        { $set: { title: String(item.title || "Nova conversa").slice(0, 160), projectId: typeof item.projectId === 'string' ? item.projectId.slice(0, 128) : null, updatedAt },
-          $setOnInsert: { accountId: token.sub, conversationId: item.id, createdAt } },
-        { upsert: true }
-      );
+      const deletion = await conversationDeletions.findOne({ accountId: token.sub, conversationId: item.id });
+      if (deletion && updatedAt <= new Date(deletion.deletedAt)) return send(res, 200, { success: true, skipped: "conversation_deleted" }, req.allowedOrigin);
+      if (deletion) await conversationDeletions.deleteOne({ _id: deletion._id });
+      const existingConversation = await conversations.findOne({ accountId: token.sub, conversationId: item.id }, { projection: { updatedAt: 1 } });
+      if (!existingConversation || updatedAt >= new Date(existingConversation.updatedAt)) {
+        await conversations.updateOne(
+          { accountId: token.sub, conversationId: item.id },
+          { $set: { title: String(item.title || "Nova conversa").slice(0, 160), projectId: typeof item.projectId === 'string' ? item.projectId.slice(0, 128) : null, updatedAt },
+            $setOnInsert: { accountId: token.sub, conversationId: item.id, createdAt } },
+          { upsert: true }
+        );
+      }
       const operations = [];
       for (const message of item.messages) {
         if (!message || typeof message.id !== "string" || !message.id || message.id.length > 128 ||
@@ -420,7 +456,7 @@ async function handle(req, res) {
         operations.push({
           updateOne: {
             filter: { accountId: token.sub, conversationId: item.id, messageId: message.id },
-            update: { $set: {
+            update: { $setOnInsert: {
               accountId: token.sub, conversationId: item.id, messageId: message.id,
               role: message.role, content: message.content, createdAt: toDate(message.createdAt),
               attachments: Array.isArray(message.attachments) ? message.attachments.slice(0, 8) : []
@@ -654,6 +690,7 @@ async function handle(req, res) {
       messages.deleteMany({ accountId: token.sub }),
       accountResources.deleteMany({ accountId: token.sub }),
       accountResourceDeletions.deleteMany({ accountId: token.sub }),
+      conversationDeletions.deleteMany({ accountId: token.sub }),
       supportTickets.deleteMany({ accountId: token.sub }),
       pushSubscriptions.deleteMany({ accountId: token.sub }),
       recoveryTokens.deleteMany({ accountId: token.sub })
