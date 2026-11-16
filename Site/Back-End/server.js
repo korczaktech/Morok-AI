@@ -41,10 +41,20 @@ const sessions = db.collection("morok_sessions");
 const appDb = client.db(APP_DATABASE);
 const conversations = appDb.collection("conversations");
 const messages = appDb.collection("messages");
+const accountResources = appDb.collection("account_resources");
+const supportTickets = appDb.collection("support_tickets");
+const pushSubscriptions = appDb.collection("push_subscriptions");
+const recoveryTokens = appDb.collection("password_recovery_tokens");
+
 await conversations.createIndex({ accountId: 1, updatedAt: -1 }, { name: "morok_conversations_account_updated" });
 await conversations.createIndex({ accountId: 1, conversationId: 1 }, { name: "morok_conversations_account_id_unique" });
 await messages.createIndex({ accountId: 1, conversationId: 1, createdAt: 1 }, { name: "morok_messages_conversation_time" });
 await messages.createIndex({ accountId: 1, conversationId: 1, messageId: 1 }, { name: "morok_messages_id_unique" });
+await accountResources.createIndex({ accountId: 1, type: 1, resourceId: 1 }, { unique: true, name: "morok_account_resource_unique" });
+await supportTickets.createIndex({ accountId: 1, createdAt: -1 }, { name: "morok_support_tickets_account_date" });
+await pushSubscriptions.createIndex({ accountId: 1, endpoint: 1 }, { unique: true, name: "morok_push_subscription_unique" });
+await recoveryTokens.createIndex({ tokenHash: 1 }, { unique: true, name: "morok_recovery_token_unique" });
+await recoveryTokens.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "morok_recovery_expiry_ttl" });
 await sessions.createIndex({ jti: 1 }, { unique: true, name: "morok_sessions_jti_unique" });
 await sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "morok_sessions_expiry_ttl" });
 
@@ -334,6 +344,147 @@ async function handle(req, res) {
     } catch (error) {
       return send(res, error.status || 500, { error: error.status ? error.message : "Não foi possível salvar a conversa." }, req.allowedOrigin);
     }
+  }
+
+
+  if (req.method === "GET" && path === "/v1/account/profile") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const account = await accounts.findOne({ id: token.sub }, { projection: { id: 1, Email: 1, Nome: 1, Preferencias: 1 } });
+    if (!account) return send(res, 404, { error: "Conta não encontrada." }, req.allowedOrigin);
+    return send(res, 200, { profile: { id: account.id, name: account.Nome || "", email: account.Email, preferences: account.Preferencias || {} } }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/account/profile") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req);
+    const name = typeof body.name === "string" ? body.name.trim().slice(0, 64) : "";
+    const preferences = body.preferences && typeof body.preferences === "object" && !Array.isArray(body.preferences) ? body.preferences : {};
+    if (!name) return send(res, 400, { error: "O nome não pode ficar vazio." }, req.allowedOrigin);
+    const safePreferences = {
+      Idioma: typeof preferences.language === "string" ? preferences.language.slice(0, 12) : "pt-BR",
+      Tema: ["dark", "light", "system"].includes(preferences.theme) ? preferences.theme : "system"
+    };
+    await accounts.updateOne({ id: token.sub }, { $set: { Nome: name, Preferencias: safePreferences, "Conta.AtualizadaEm": new Date() } });
+    return send(res, 200, { success: true, profile: { name, preferences: safePreferences } }, req.allowedOrigin);
+  }
+
+  if (req.method === "GET" && path === "/v1/account/sessions") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const docs = await sessions.find({ accountId: token.sub, expiresAt: { $gt: new Date() } }, { projection: { jti: 1, createdAt: 1, expiresAt: 1, current: 1 } }).sort({ createdAt: -1 }).limit(50).toArray();
+    return send(res, 200, { sessions: docs.map(x => ({ id: x.jti, createdAt: x.createdAt, expiresAt: x.expiresAt, current: x.jti === token.jti })) }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/account/sessions/revoke") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req);
+    if (body.all === true) {
+      await sessions.deleteMany({ accountId: token.sub, jti: { $ne: token.jti } });
+      return send(res, 200, { success: true, revoked: "others" }, req.allowedOrigin);
+    }
+    if (typeof body.sessionId !== "string" || body.sessionId === token.jti) return send(res, 400, { error: "Selecione outra sessão válida." }, req.allowedOrigin);
+    const result = await sessions.deleteOne({ accountId: token.sub, jti: body.sessionId });
+    return send(res, 200, { success: true, revoked: result.deletedCount === 1 }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/account/password") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req);
+    const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
+    const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
+    const account = await accounts.findOne({ id: token.sub });
+    if (!account || !(await bcrypt.compare(currentPassword, account.Autenticacao?.SenhaHash || ""))) return send(res, 401, { error: "Senha atual incorreta." }, req.allowedOrigin);
+    if (newPassword.length < 10 || newPassword.length > 128) return send(res, 400, { error: "A nova senha deve ter entre 10 e 128 caracteres." }, req.allowedOrigin);
+    await accounts.updateOne({ id: token.sub }, { $set: { "Autenticacao.SenhaHash": await bcrypt.hash(newPassword, 12), PasswordChangedAt: new Date(), "Conta.AtualizadaEm": new Date() } });
+    await sessions.deleteMany({ accountId: token.sub, jti: { $ne: token.jti } });
+    return send(res, 200, { success: true, otherSessionsRevoked: true }, req.allowedOrigin);
+  }
+
+  if (req.method === "GET" && path === "/v1/resources") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const type = url.searchParams.get("type");
+    if (!["projects", "tasks"].includes(type)) return send(res, 400, { error: "Tipo de recurso inválido." }, req.allowedOrigin);
+    const docs = await accountResources.find({ accountId: token.sub, type }).sort({ updatedAt: -1 }).limit(500).toArray();
+    return send(res, 200, { items: docs.map(x => ({ id: x.resourceId, data: x.data, updatedAt: x.updatedAt })) }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/resources/sync") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req, 512_000);
+    const type = body.type;
+    const items = body.items;
+    if (!["projects", "tasks"].includes(type) || !Array.isArray(items) || items.length > 500) return send(res, 400, { error: "Lote de sincronização inválido." }, req.allowedOrigin);
+    const ops = [];
+    for (const item of items) {
+      if (!item || typeof item.id !== "string" || !item.id || item.id.length > 128 || !item.data || typeof item.data !== "object") continue;
+      const data = JSON.parse(JSON.stringify(item.data));
+      if (JSON.stringify(data).length > 20_000) continue;
+      ops.push({ updateOne: { filter: { accountId: token.sub, type, resourceId: item.id }, update: { $set: { data, updatedAt: new Date() }, $setOnInsert: { accountId: token.sub, type, resourceId: item.id, createdAt: new Date() } }, upsert: true } });
+    }
+    if (ops.length) await accountResources.bulkWrite(ops, { ordered: false });
+    return send(res, 200, { success: true, saved: ops.length }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/support/tickets") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Entre na conta para abrir um chamado." }, req.allowedOrigin);
+    const body = await readBody(req, 32_768);
+    const subject = typeof body.subject === "string" ? body.subject.trim().slice(0, 120) : "";
+    const description = typeof body.description === "string" ? body.description.trim().slice(0, 8000) : "";
+    if (subject.length < 4 || description.length < 10) return send(res, 400, { error: "Informe assunto e descrição suficientes." }, req.allowedOrigin);
+    const ticket = { ticketId: crypto.randomUUID(), accountId: token.sub, subject, description, status: "open", createdAt: new Date(), updatedAt: new Date() };
+    await supportTickets.insertOne(ticket);
+    return send(res, 201, { success: true, ticket: { id: ticket.ticketId, subject, status: ticket.status, createdAt: ticket.createdAt } }, req.allowedOrigin);
+  }
+
+  if (req.method === "GET" && path === "/v1/support/tickets") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const docs = await supportTickets.find({ accountId: token.sub }, { projection: { ticketId: 1, subject: 1, status: 1, createdAt: 1, updatedAt: 1 } }).sort({ createdAt: -1 }).limit(100).toArray();
+    return send(res, 200, { tickets: docs.map(x => ({ id: x.ticketId, subject: x.subject, status: x.status, createdAt: x.createdAt, updatedAt: x.updatedAt })) }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/push/subscribe") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req, 16_384);
+    const sub = body.subscription;
+    if (!sub || typeof sub.endpoint !== "string" || !sub.endpoint.startsWith("https://") || !sub.keys?.p256dh || !sub.keys?.auth) return send(res, 400, { error: "Inscrição push inválida." }, req.allowedOrigin);
+    await pushSubscriptions.updateOne({ accountId: token.sub, endpoint: sub.endpoint }, { $set: { subscription: sub, updatedAt: new Date() }, $setOnInsert: { accountId: token.sub, endpoint: sub.endpoint, createdAt: new Date() } }, { upsert: true });
+    return send(res, 200, { success: true, pushConfigured: Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/push/unsubscribe") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req, 16_384);
+    if (typeof body.endpoint === "string") await pushSubscriptions.deleteOne({ accountId: token.sub, endpoint: body.endpoint });
+    return send(res, 200, { success: true }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/account/delete") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req);
+    const account = await accounts.findOne({ id: token.sub });
+    if (!account || !(await bcrypt.compare(String(body.password || ""), account.Autenticacao?.SenhaHash || ""))) return send(res, 401, { error: "Confirme sua senha para excluir a conta." }, req.allowedOrigin);
+    await Promise.all([
+      sessions.deleteMany({ accountId: token.sub }),
+      conversations.deleteMany({ accountId: token.sub }),
+      messages.deleteMany({ accountId: token.sub }),
+      accountResources.deleteMany({ accountId: token.sub }),
+      supportTickets.deleteMany({ accountId: token.sub }),
+      pushSubscriptions.deleteMany({ accountId: token.sub }),
+      recoveryTokens.deleteMany({ accountId: token.sub })
+    ]);
+    await accounts.deleteOne({ _id: account._id });
+    return send(res, 200, { success: true, accountDeleted: true }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && path === "/v1/chat") {
