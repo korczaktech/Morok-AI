@@ -48,7 +48,7 @@ jobs:
             echo "- Estado: checkpoint, Adam e memória persistidos entre as rodadas"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Validar conjuntos e avaliador
+      - name: Validar corpus de 40 perguntas e testes
         working-directory: Morok
         run: python3 -m unittest discover -s "Gerações/G2/Tsukuyomi/tests" -p "test_*.py" -v
 
