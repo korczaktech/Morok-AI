@@ -175,6 +175,24 @@ class TrainingDataTests(unittest.TestCase):
         training.update_question_history(history, dialogues, result, 1, "run-1", dataset="training")
         self.assertEqual(history["questions"]["pergunta"]["dataset"], "training")
 
+    def test_history_keeps_a_separate_best_loss_for_each_question(self):
+        history = {"version": 1, "global_cycles": 0, "questions": {}}
+        dialogues = [("pergunta 1", "resposta 1"), ("pergunta 2", "resposta 2")]
+        first = [
+            ("r1", False, 0.2, 10.0, 14.4, 8),
+            ("r2", False, 0.3, 20.0, 28.8, 8),
+        ]
+        training.update_question_history(history, dialogues, first, 1, "run-1")
+        second = [
+            ("r1", False, 0.4, 11.0, 15.8, 8),
+            ("r2", True, 1.0, 19.0, 27.4, 8),
+        ]
+        training.update_question_history(history, dialogues, second, 2, "run-2")
+        self.assertEqual(history["questions"]["pergunta 1"]["best_loss"], 10.0)
+        self.assertEqual(history["questions"]["pergunta 2"]["best_loss"], 19.0)
+        self.assertEqual(history["questions"]["pergunta 1"]["last_loss"], 11.0)
+        self.assertEqual(history["questions"]["pergunta 2"]["last_loss"], 19.0)
+
     def test_each_question_report_contains_individual_metrics_and_colored_status(self):
         dialogues = [
             ("pergunta correta?", "resposta certa"),
