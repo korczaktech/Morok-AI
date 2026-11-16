@@ -25,6 +25,7 @@ ProfileConfig profile_config(ProfileId id) {
         break;
     case ProfileId::tsukuyomi:
         result.name = "Tsukuyomi";
+        result.presentation_theme = "dark";
         result.agent_count = 1U;
         result.recommended_session_capacity = 16U;
         result.generation.temperature = 0.7;
