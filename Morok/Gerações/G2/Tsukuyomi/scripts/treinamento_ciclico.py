@@ -408,6 +408,11 @@ def question_checkpoint_paths(directory: Path, question: str) -> tuple[Path, Pat
     return checkpoint, Path(str(checkpoint) + ".adam")
 
 
+def write_evaluation_corpus(path: Path, question: str, expected: str) -> None:
+    """Grava um único diálogo com separadores reais de linha para o avaliador C++."""
+    path.write_text(f"U: {question}\nIA: {expected}\n", encoding="utf-8")
+
+
 def evaluate_one(generator: Path, trainer: Path, checkpoint: Path,
                  dialogue: tuple[str, str]) -> tuple[str, bool, float, float, float, int]:
     question, expected = dialogue
@@ -418,7 +423,7 @@ def evaluate_one(generator: Path, trainer: Path, checkpoint: Path,
     answer = process.stdout.rstrip("\r\n")
     with tempfile.TemporaryDirectory(prefix="tsukuyomi-loss-") as directory:
         corpus = Path(directory) / "pergunta.txt"
-        corpus.write_text(f"U: {question}\nIA: {expected}\n", encoding="utf-8")
+        write_evaluation_corpus(corpus, question, expected)
         evaluated = subprocess.run(
             [str(trainer), "--evaluate-each", str(corpus), str(checkpoint)],
             check=True, capture_output=True, text=True, encoding="utf-8",
