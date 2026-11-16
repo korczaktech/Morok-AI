@@ -42,6 +42,10 @@ struct TrainingConfig final {
     bool allow_sensitive_examples{false};
     PerturbationConfig perturbation{};
     std::filesystem::path metrics_jsonl;
+    std::filesystem::path checkpoint_path;
+    std::filesystem::path resume_from_checkpoint;
+    // Zero runs all remaining epochs; non-zero permits bounded, resumable invocations.
+    std::size_t max_epochs_this_run{0U};
 };
 
 struct EpochMetrics final {
@@ -69,6 +73,8 @@ struct TrainingReport final {
     std::size_t examples_seen{0};
     std::size_t augmented_examples{0};
     std::size_t optimizer_steps{0};
+    std::size_t completed_epochs{0};
+    bool resumed{false};
 };
 
 [[nodiscard]] std::string perturb_question(
