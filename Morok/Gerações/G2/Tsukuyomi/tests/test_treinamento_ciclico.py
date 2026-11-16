@@ -47,8 +47,8 @@ class TrainingDataTests(unittest.TestCase):
             self.assertEqual(float(ranges[0][2]), 0.001)
             self.assertEqual(float(ranges[1][2]), 0.0001)
             raw = corpus.read_bytes()
-            self.assertEqual(raw[int(ranges[0][0]):int(ranges[0][1])], b"resposta A\n")
-            self.assertEqual(raw[int(ranges[1][0]):int(ranges[1][1])], b"resposta B\n")
+            self.assertEqual(raw[int(ranges[0][0]):int(ranges[0][1])], b" resposta A\n")
+            self.assertEqual(raw[int(ranges[1][0]):int(ranges[1][1])], b" resposta B\n")
 
     def test_learning_rate_floor_is_one_e_minus_seven(self):
         self.assertEqual(training.MIN_LEARNING_RATE, 1e-7)
