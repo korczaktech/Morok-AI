@@ -147,7 +147,7 @@ jobs:
             "Gerações/G2/Tsukuyomi/data/teste.txt" \
             "$EPOCAS" "$TENTATIVAS" "$CONTINUO" "$QUESTOES"
 
-      - name: Avaliação final independente do checkpoint vencedor
+      - name: Avaliação final do melhor checkpoint e do teste reservado
         if: ${{ ((github.event_name == 'push' && contains(github.event.head_commit.message, '[train-g2]')) || (github.event_name == 'workflow_dispatch' && inputs.tsukuyomi)) && (github.event_name == 'push' || inputs.questoes != 1) }}
         working-directory: Morok
         run: |
