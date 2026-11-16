@@ -107,6 +107,8 @@ public:
     [[nodiscard]] virtual morok::common::Result<RewardComponents> evaluate(
         std::span<const morok::lang::TokenId> prompt,
         std::span<const morok::lang::TokenId> response) const = 0;
+    [[nodiscard]] virtual std::size_t expected_response_tokens(
+        std::span<const morok::lang::TokenId>) const { return 0U; }
 };
 
 struct RewardAuditCase final {
