@@ -1069,3 +1069,33 @@ kbd [data-icon]{display:inline-flex;vertical-align:middle}
   .sidebar-scroll{min-height:0}
   .sidebar-bottom{padding-bottom:env(safe-area-inset-bottom)}
 }
+
+
+/* Readability and contrast correction */
+:root{--dim:#aaa7b5}
+:root[data-theme="light"]{--dim:#716d7b}
+.task-row small{color:var(--dim)}
+.sidebar-section-title,
+.history-heading,
+.history-heading-meta,
+.profile-text small,
+.service-status,
+.popover-label,
+.dialog-eyebrow,
+.model-popover p,
+.suggestion small,
+.welcome-note,
+.message-meta,
+.message-time,
+.message-action,
+.composer-hint,
+.disclaimer,
+.dialog-footer>span,
+.nav-copy small,
+.workspace-image-item small,
+.model-notice,
+.generation-back,
+.task-row small{font-size:10px}
+@media(max-width:760px){
+  .welcome-note,.disclaimer{font-size:10px}
+}
