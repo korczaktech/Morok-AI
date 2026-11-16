@@ -8,13 +8,13 @@ const worker = read("./sw.js");
 const backend = read("../Back-End/server.js");
 const packageJson = JSON.parse(read("../Back-End/package.json"));
 
-const ids = [...html.matchAll(/\\bid="([^"]+)"/g)].map((match) => match[1]);
+const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
 const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
 if (duplicates.length) throw new Error("IDs HTML duplicados: " + [...new Set(duplicates)].join(", "));
 
 const htmlIds = new Set(ids);
 const dynamicIds = new Set(["create-project-sidebar"]);
-const selectors = [...app.matchAll(/\\$\\(['"]#([A-Za-z][\\w-]*)['"]\\)/g)].map((match) => match[1]);
+const selectors = [...app.matchAll(/\$\(['"]#([A-Za-z][\w-]*)['"]\)/g)].map((match) => match[1]);
 const missing = [...new Set(selectors.filter((id) => !htmlIds.has(id) && !dynamicIds.has(id)))];
 if (missing.length) throw new Error("Seletores sem elemento HTML ou renderização dinâmica: " + missing.join(", "));
 
@@ -36,8 +36,8 @@ if (!packageJson.dependencies?.mongodb || !packageJson.dependencies?.bcryptjs) {
   throw new Error("Dependências essenciais do backend ausentes.");
 }
 if (!/@media/.test(styles)) throw new Error("CSS sem regras responsivas.");
-if (!/app\\.js\\?v=/.test(html) || !/styles\\.css\\?v=/.test(html)) {
+if (!/app\.js\?v=/.test(html) || !/styles\.css\?v=/.test(html)) {
   throw new Error("Frontend sem versionamento de cache dos assets.");
 }
 
-process.stdout.write("Validação estrutural do Morok concluída.\\n");
+process.stdout.write("Validação estrutural do Morok concluída.\n");
