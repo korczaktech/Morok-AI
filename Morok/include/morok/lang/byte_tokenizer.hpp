@@ -46,6 +46,8 @@ struct TextCodecConfig final {
 struct EncodedText final {
     // One token per UTF-8 byte. Control tokens are added by encode_message().
     std::vector<TokenId> byte_tokens;
+    // Exact caller input, retained for privacy-aware diagnostics and auditing.
+    std::string original_text;
     // The exact normalized UTF-8 text represented by byte_tokens.
     std::string normalized_text;
     bool replaced_invalid_utf8{false};
