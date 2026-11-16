@@ -85,11 +85,29 @@ Métricas emitidas:
 - latência mediana e P95;
 - throughput em bytes por segundo.
 
-O payload INT8 esperado é 107.983 bytes, contra 400.000 bytes de pesos FP32.
-O estado recorrente é 660 bytes por sessão. O RSS é medição do processo inteiro,
-não somente dos pesos; varia com sistema, alocador, bibliotecas e runner. Os
-números da CI caracterizam o runner Linux da CI e não devem ser tratados como
-benchmark de hardware de produção.
+Medição real da CI (Ubuntu 24.04, artefato de teste sintético, 30 execuções,
+prompt "Morok G3", saída limitada a 8 bytes):
+
+| Métrica | Resultado |
+|---|---:|
+| Payload FP32 | 400.000 bytes |
+| Payload INT8 | 107.983 bytes |
+| Escalas FP32 | 1.311 |
+| Estado por sessão | 660 bytes |
+| RSS antes da geração | 4.931.584 bytes |
+| RSS depois da geração | 5.672.960 bytes |
+| Pico RSS reportado | 5.672.960 bytes |
+| Latência mediana | 829.242 ns (0,829 ms) |
+| Latência P95 | 840.286 ns (0,840 ms) |
+| Throughput | 8.746,47 bytes/s |
+
+O payload INT8 é 72,999% menor que o payload FP32. O RSS é medição do processo
+inteiro, não somente dos pesos; varia com sistema, alocador, bibliotecas e
+runner. A medição de latência é para geração curta, sobre pesos de um treino
+sintético de smoke test; não representa desempenho de produção ou de conversas
+longas. Os números caracterizam o runner Linux da CI e não devem ser tratados
+como benchmark de hardware de produção. O artefato JSON com a medição está
+publicado na execução [G3 Stage 9 benchmark](https://github.com/korczaktech/Morok-AI/actions/runs/43924662542).
 
 ## Limitações e resultados
 
@@ -134,7 +152,14 @@ morok-g3-generate modelo.morok --profile=apollo "pergunta"
 
 ## Status de aprovação
 
-A aprovação final depende do resultado verde do workflow G3 executado sobre o
-commit final desta etapa. O relatório deve ser atualizado com o SHA e o número
-real de testes após a CI concluir; não considerar runs cancelados ou anteriores
-ao commit final como validação final.
+<badge>APROVADA</badge>
+
+- Commit de código validado: `9534d1d50f959878630e24245736d92c8812a77f`.
+- Workflow G3: [43924662542](https://github.com/korczaktech/Morok-AI/actions/runs/43924662542) — sucesso.
+- Testes G3: 12/12 aprovados, 0 falhas, 1,05 s.
+- CI geral: [43924662643](https://github.com/korczaktech/Morok-AI/actions/runs/43924662643) — sucesso nos quatro ambientes: GCC Release, GCC Debug, Clang Release e Clang Debug.
+- Artefato de benchmark: `g3-stage9-benchmark`, publicado na execução G3 acima.
+
+A aprovação é de implementação, compatibilidade e regressão automatizada. Não
+é certificação de qualidade semântica do modelo: isso depende de treinamento
+com corpus de produção e avaliação independente.
