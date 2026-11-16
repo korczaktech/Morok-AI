@@ -6,12 +6,14 @@
 #include "morok/g3/training/checkpoint.hpp"
 
 #include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <memory>
 #include <random>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
