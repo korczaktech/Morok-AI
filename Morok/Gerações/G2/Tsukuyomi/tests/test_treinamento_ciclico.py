@@ -110,7 +110,7 @@ class TrainingDataTests(unittest.TestCase):
             base = root / "base.txt"
             memory_file = root / "feedback.txt"
             combined = root / "combined.txt"
-            base.write_text("U: original\\nIA: exemplo\\n", encoding="utf-8")
+            base.write_text("U: original\nIA: exemplo\n", encoding="utf-8")
             memory = {"pergunta errada": "resposta corrigida"}
             training.write_feedback_memory(memory_file, memory)
             self.assertEqual(training.load_feedback_memory(memory_file), memory)
@@ -118,7 +118,7 @@ class TrainingDataTests(unittest.TestCase):
             dialogues = training.read_dialogues(combined)
             self.assertIn(("original", "exemplo"), dialogues)
             self.assertIn(("pergunta errada", "resposta corrigida"), dialogues)
-            self.assertEqual(base.read_text(encoding="utf-8"), "U: original\\nIA: exemplo\\n")
+            self.assertEqual(base.read_text(encoding="utf-8"), "U: original\nIA: exemplo\n")
 
     def test_persistent_resume_requires_checkpoint_and_adam_pair(self):
         with tempfile.TemporaryDirectory() as directory:
