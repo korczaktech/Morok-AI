@@ -55,3 +55,11 @@ jobs:
       - name: Test G3 inference and export
         working-directory: Morok
         run: ctest --test-dir build/g3-inference -R "^g3.(reinforcement|neural|inference|profiles|training|checkpoint|evaluation|training_cli|reinforcement_cli|inference_cli_usage|int8_deployment|rl_pipeline)$" --output-on-failure
+
+      - name: Publish G3 benchmark measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g3-stage9-benchmark
+          path: Morok/build/g3-inference/tests/g3-int8-deployment/benchmark-summary.json
+          if-no-files-found: warn
