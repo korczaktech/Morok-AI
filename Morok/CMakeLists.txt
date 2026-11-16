@@ -13,6 +13,7 @@ include(MorokCompilerOptions)
 include(MorokSanitizers)
 
 find_package(SQLite3 REQUIRED)
+find_package(ICU REQUIRED COMPONENTS uc)
 
 add_library(morok_build_options INTERFACE)
 morok_configure_compiler_options(morok_build_options)
@@ -24,6 +25,7 @@ add_library(morok_core STATIC
     src/common/model_version.cpp
     src/common/timestamp.cpp
     src/common/utf8_text.cpp
+    src/lang/byte_tokenizer.cpp
     src/memory/memory_store.cpp
     src/lang/rlah/segmenter.cpp
     src/reason/reasoning_subsystem.cpp
@@ -38,7 +40,7 @@ target_include_directories(morok_core
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(morok_core PRIVATE morok_build_options SQLite::SQLite3)
+target_link_libraries(morok_core PRIVATE morok_build_options SQLite::SQLite3 ICU::uc)
 target_compile_definitions(morok_core PUBLIC MOROK_VERSION_STRING="${PROJECT_VERSION}")
 morok_enable_sanitizers(morok_core)
 
