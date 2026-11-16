@@ -98,6 +98,7 @@ int main(int argc, char** argv) {
     }
 
     morok::g2::tsukuyomi::TrainingConfig config;
+    config.weight_decay = 0.0; // Weight decay desativado no Tsukuyomi G2 0.1.
     if (argc >= 4 && !parse_size(argv[3], config.epochs)) {
         std::cerr << "Número de épocas inválido.\n";
         return 2;
@@ -224,7 +225,7 @@ int main(int argc, char** argv) {
               << " dimensões" << '\n'
               << "Learning rate: " << config.learning_rate << " ("
               << config.learning_rate * 100.0 << "%)" << '\n'
-              << "Weight decay: " << config.weight_decay << " (seletivo)" << '\n'
+              << "Weight decay: desativado (0)" << '\n'
               << "Dropout: não utilizado" << '\n'
               << "Gradient clipping: " << config.gradient_clip << '\n'
               << "Atualizações Adam: " << optimizer_state.step << '\n'
