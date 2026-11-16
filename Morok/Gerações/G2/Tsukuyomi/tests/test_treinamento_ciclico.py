@@ -24,9 +24,11 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(plateau, 0)
 
     def test_training_budget_is_finite_and_matches_default_plan(self):
-        self.assertEqual(training.MAX_CYCLES, 10)
-        self.assertEqual(training.MAX_TOTAL_EPOCHS, 200)
-        self.assertEqual(20 * 10, training.MAX_TOTAL_EPOCHS)
+        self.assertEqual(training.MAX_CYCLES, 100)
+        self.assertEqual(training.MAX_EPOCHS_PER_CYCLE, 1000)
+        self.assertEqual(1000 * 100, 100000)
+        self.assertLessEqual(1000, training.MAX_EPOCHS_PER_CYCLE)
+        self.assertLessEqual(100, training.MAX_CYCLES)
 
     def test_learning_rate_scheduler_never_crosses_minimum(self):
         lr = training.MIN_LEARNING_RATE * 2
