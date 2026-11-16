@@ -53,4 +53,6 @@ if(NOT generate_output MATCHES "\"peak_rss_bytes\":[0-9]+")
     message(FATAL_ERROR "G3 benchmark did not report process memory: ${generate_output}")
 endif()
 
+message(STATUS "G3 INT8 quantization report: ${quantize_output}")
+message(STATUS "G3 INT8 inference benchmark: ${generate_output}")
 message(STATUS "G3 INT8 deployment smoke test passed")
