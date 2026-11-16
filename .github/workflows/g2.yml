@@ -96,7 +96,7 @@ jobs:
             "Gerações/G2/Tsukuyomi/data/feedback.txt" \
             build/g2/tsukuyomi-dialogue-smoke.ckpt \
             > build/g2/tsukuyomi-question-metrics.tsv
-          test "$(wc -l < build/g2/tsukuyomi-question-metrics.tsv)" -eq 40
+          test "$(wc -l < build/g2/tsukuyomi-question-metrics.tsv)" -eq 100
           awk -F '\t' 'NF != 4 { exit 1 } END { if (NR != 100) exit 1 }' \
             build/g2/tsukuyomi-question-metrics.tsv
           build/g2/morok-g2-tsukuyomi-generate \
