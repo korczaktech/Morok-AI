@@ -57,6 +57,7 @@ void test_profile_policy_contracts() {
     assert(mokosh.agent_count == 1U && mokosh.generation.top_k == 4U);
     assert(mokosh.generation.max_output_bytes < tsukuyomi.generation.max_output_bytes);
     assert(tsukuyomi.agent_count == 1U);
+    assert(tsukuyomi.presentation_theme == "dark");
     assert(artemis.agent_count >= 3U);
     assert(apollo.agent_count == 1U);
     assert(apollo.generation.temperature == 0.0);
