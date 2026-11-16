@@ -42,8 +42,10 @@ jobs:
         run: |
           node --check Site/Front-End/app.js
           node --check Site/Front-End/sw.js
+          node --check Site/Front-End/validate.mjs
           node --check Site/Back-End/server.js
           node -e "JSON.parse(require('node:fs').readFileSync('Site/Back-End/package.json', 'utf8'))"
+          node Site/Front-End/validate.mjs
       - name: Validar contratos de sincronização
         run: |
           grep -q 'path === "/v1/conversations/delete"' Site/Back-End/server.js
