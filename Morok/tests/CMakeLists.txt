@@ -269,3 +269,13 @@ target_link_libraries(morok_test_g3_inference
 morok_enable_sanitizers(morok_test_g3_inference)
 add_test(NAME g3.inference COMMAND morok_test_g3_inference)
 set_tests_properties(g3.inference PROPERTIES LABELS "g3;inference;export" TIMEOUT 60)
+
+
+# G3 supervised dataset pipeline, causal loss, truncated BPTT and AdamW.
+add_executable(morok_test_g3_training
+    ../Gerações/G3/training/tests/test_training.cpp)
+target_link_libraries(morok_test_g3_training
+    PRIVATE Morok::G3::Training morok_build_options)
+morok_enable_sanitizers(morok_test_g3_training)
+add_test(NAME g3.training COMMAND morok_test_g3_training)
+set_tests_properties(g3.training PROPERTIES LABELS "g3;training;dataset" TIMEOUT 180)
