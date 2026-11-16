@@ -485,6 +485,15 @@ def main() -> int:
     history_path = Path("build/g2/tsukuyomi-historico-perguntas.json")
     memory = load_feedback_memory(feedback_path)
     history = load_question_history(history_path)
+    # Migra o histórico antigo: preserva apenas as 40 perguntas que agora são treinadas.
+    active_questions = {question for question, _ in training_dialogues}
+    history_questions = history.setdefault("questions", {})
+    history["questions"] = {
+        question: entry for question, entry in history_questions.items()
+        if question in active_questions
+    }
+    for entry in history["questions"].values():
+        entry["dataset"] = "training"
     resumed = resumable_state_exists(checkpoint, optimizer_state)
     if not resumed:
         for stale in (best_checkpoint, best_optimizer_state):
