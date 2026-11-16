@@ -21,10 +21,10 @@ on:
         required: true
         default: 100
       questoes:
-        description: "Quantidade de perguntas de validação (1 a 40)"
+        description: "Quantidade de perguntas da validação independente (1 a 20)"
         type: number
         required: true
-        default: 40
+        default: 20
       learning_rate:
         description: "Learning rate inicial (mínimo: 1e-7; máximo: 0.1; padrão: 0.001)"
         type: number
@@ -56,7 +56,7 @@ jobs:
         env:
           EPOCAS: ${{ github.event_name == 'push' && 1000 || inputs.epocas || 1000 }}
           TENTATIVAS: ${{ github.event_name == 'push' && 100 || inputs.tentativas || 100 }}
-          QUESTOES: ${{ github.event_name == 'push' && 40 || inputs.questoes || 40 }}
+          QUESTOES: ${{ github.event_name == 'push' && 20 || inputs.questoes || 20 }}
           LEARNING_RATE: ${{ github.event_name == 'push' && '0.001' || inputs.learning_rate || '0.001' }}
         run: |
           python3 - <<'PY'
@@ -68,8 +68,8 @@ jobs:
           if not 1 <= tentativas <= 100:
               raise SystemExit("TENTATIVAS precisa estar entre 1 e 100.")
           questoes = int(os.environ["QUESTOES"])
-          if not 1 <= questoes <= 40:
-              raise SystemExit("QUESTOES precisa estar entre 1 e 40.")
+          if not 1 <= questoes <= 20:
+              raise SystemExit("QUESTOES precisa estar entre 1 e 20.")
           learning_rate = float(os.environ["LEARNING_RATE"])
           import math
           if not math.isfinite(learning_rate) or not 1e-7 <= learning_rate <= 0.1:
@@ -118,6 +118,12 @@ jobs:
             else
               : > Morok/build/g2/tsukuyomi-memoria-erros.txt
             fi
+            if git cat-file -e origin/tsukuyomi-state:state/tsukuyomi-g2-learning-rate.txt 2>/dev/null; then
+              git show origin/tsukuyomi-state:state/tsukuyomi-g2-learning-rate.txt > Morok/build/g2/tsukuyomi-learning-rate.txt
+            fi
+            if git cat-file -e origin/tsukuyomi-state:state/tsukuyomi-g2-question-history.json 2>/dev/null; then
+              git show origin/tsukuyomi-state:state/tsukuyomi-g2-question-history.json > Morok/build/g2/tsukuyomi-historico-perguntas.json
+            fi
             test -s Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
             test -s Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
             echo "Memória persistente recuperada: pesos + estado Adam."
@@ -131,7 +137,7 @@ jobs:
         env:
           EPOCAS: ${{ github.event_name == 'push' && 1000 || inputs.epocas || 1000 }}
           TENTATIVAS: ${{ github.event_name == 'push' && 100 || inputs.tentativas || 100 }}
-          QUESTOES: ${{ inputs.questoes || 40 }}
+          QUESTOES: ${{ inputs.questoes || 20 }}
           TSUKUYOMI_LEARNING_RATE: ${{ inputs.learning_rate || '0.001' }}
           TREINAMENTO_CONTINUO: ${{ github.event_name == 'workflow_dispatch' && inputs.treinamento_continuo || false }}
         run: |
@@ -178,6 +184,10 @@ jobs:
           else
             : > "$STATE_DIR/state/tsukuyomi-g2-feedback.txt"
           fi
+          test -s build/g2/tsukuyomi-learning-rate.txt
+          test -s build/g2/tsukuyomi-historico-perguntas.json
+          install -m 0644 build/g2/tsukuyomi-learning-rate.txt "$STATE_DIR/state/tsukuyomi-g2-learning-rate.txt"
+          install -m 0644 build/g2/tsukuyomi-historico-perguntas.json "$STATE_DIR/state/tsukuyomi-g2-question-history.json"
           cat > "$STATE_DIR/state/README.txt" <<'EOF'
           Tsukuyomi G2 persistent training state.
           Keep the .ckpt and .adam files together; both are required for exact optimizer continuation.
@@ -210,6 +220,8 @@ jobs:
             Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt
             Morok/build/g2/tsukuyomi-treinamento-ciclico.ckpt.adam
             Morok/build/g2/tsukuyomi-memoria-erros.txt
+            Morok/build/g2/tsukuyomi-learning-rate.txt
+            Morok/build/g2/tsukuyomi-historico-perguntas.json
             Morok/build/g2/respostas-tsukuyomi.md
             Morok/build/g2/avaliacao-final-tsukuyomi.json
             Morok/build/g2/avaliacao-final-tsukuyomi.md
