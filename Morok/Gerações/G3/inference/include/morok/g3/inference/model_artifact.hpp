@@ -10,7 +10,7 @@
 
 namespace morok::g3::inference {
 
-inline constexpr std::uint16_t kG3ArchitectureGruRmsNormTied = 0x0301;
+inline constexpr std::uint16_t kG3ArchitectureGruRmsNormTied = 0x0302;
 inline constexpr std::uint16_t kModelFormatVersion = 1;
 inline constexpr std::size_t kModelHeaderBytes = 64;
 inline constexpr std::size_t kMaximumModelPayloadBytes = 512U * 1024U * 1024U;
@@ -25,8 +25,9 @@ struct ModelArtifactMetadata final {
     std::uint16_t architecture_id{kG3ArchitectureGruRmsNormTied};
     PrecisionMode precision{PrecisionMode::fp32};
     std::uint32_t vocabulary_size{261};
-    std::uint16_t embedding_dim{64};
-    std::uint16_t hidden_dim{128};
+    std::uint16_t embedding_dim{60};
+    std::uint16_t hidden_dim{97};
+    std::uint16_t hidden_dim_second{68};
     std::uint16_t recurrent_layers{2};
     std::uint32_t state_size_bytes{0};
     std::uint64_t parameter_count{0};
