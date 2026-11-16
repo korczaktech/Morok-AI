@@ -67,9 +67,9 @@ struct EvaluatorMetadata final {
 
 struct SequenceGradient;
 
-class Policy {
+class InferencePolicy {
 public:
-    virtual ~Policy() = default;
+    virtual ~InferencePolicy() = default;
     [[nodiscard]] virtual std::string_view identity() const noexcept = 0;
 
     // Returns a normalized probability distribution over all 261 IDs.
@@ -77,10 +77,13 @@ public:
         std::span<const morok::lang::TokenId> context,
         std::span<const morok::lang::TokenId> generated_prefix,
         std::span<float> probabilities) const = 0;
+};
 
+class Policy : public InferencePolicy {
+public:
     // Applies one accumulated batch of d(loss)/d(logits), row-major [time, 261].
-    // The policy owns its weights and optimizer; this method must perform one
-    // optimizer update for the whole batch, not one update per sequence.
+    // The trainable policy owns its weights and optimizer; this method must
+    // perform one optimizer update for the whole batch, not per sequence.
     [[nodiscard]] virtual morok::common::Status apply_batch_gradients(
         std::span<const SequenceGradient> gradients) = 0;
 };
@@ -164,7 +167,7 @@ public:
     [[nodiscard]] morok::common::Result<TrainingReport> train_batch(
         std::span<const Prompt> prompts,
         Policy& policy,
-        const Policy& frozen_sft_reference,
+        const InferencePolicy& frozen_sft_reference,
         const RewardEvaluator& evaluator);
 
     [[nodiscard]] double baseline(std::string_view category) const;
@@ -177,14 +180,14 @@ private:
 };
 
 [[nodiscard]] morok::common::Result<EvaluationReport> evaluate_policy(
-    const Policy& policy,
+    const InferencePolicy& policy,
     const RewardEvaluator& evaluator,
     std::span<const Prompt> examples,
     std::size_t max_response_tokens = 128);
 
 [[nodiscard]] morok::common::Result<ComparisonReport> compare_sft_and_rl(
-    const Policy& frozen_sft_reference,
-    const Policy& reinforcement_policy,
+    const InferencePolicy& frozen_sft_reference,
+    const InferencePolicy& reinforcement_policy,
     const RewardEvaluator& evaluator,
     std::span<const Prompt> closed_set,
     std::size_t max_response_tokens = 128);
