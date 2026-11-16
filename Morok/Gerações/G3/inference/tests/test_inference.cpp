@@ -33,7 +33,7 @@ public:
         : immediate_eos_(immediate_eos), delay_(delay) {}
 
     model::ModelDescriptor descriptor() const noexcept override {
-        return {3U, kG3ArchitectureGruRmsNormTied, 261U, 198149U,
+        return {3U, kG3ArchitectureGruRmsNormTied, 261U, 100000U,
                 sizeof(std::uint32_t), alignof(std::uint32_t), true};
     }
 
