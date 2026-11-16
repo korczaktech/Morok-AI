@@ -100,6 +100,22 @@ target_include_directories(morok_g3_neural PUBLIC
 target_link_libraries(morok_g3_neural PUBLIC Morok::Core PRIVATE morok_build_options)
 morok_enable_sanitizers(morok_g3_neural)
 
+# G3 supervised training extends the generation-owned neural backend.
+add_library(morok_g3_training STATIC
+    Gerações/G3/training/src/dataset.cpp
+    Gerações/G3/training/src/trainer.cpp
+)
+add_library(Morok::G3::Training ALIAS morok_g3_training)
+target_compile_features(morok_g3_training PUBLIC cxx_std_20)
+target_include_directories(morok_g3_training PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Gerações/G3/training/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+target_link_libraries(morok_g3_training
+    PUBLIC Morok::G3::Neural Morok::Core
+    PRIVATE ICU::uc morok_build_options)
+morok_enable_sanitizers(morok_g3_training)
+
 # G3 inference/export utilities reuse the public Morok Core contracts.
 add_library(morok_g3_inference STATIC
     Gerações/G3/inference/src/quantization.cpp
@@ -169,6 +185,11 @@ if(MOROK_BUILD_APPS)
     set_target_properties(morok_g2_tsukuyomi_generate PROPERTIES OUTPUT_NAME "morok-g2-tsukuyomi-generate")
     morok_enable_sanitizers(morok_g2_tsukuyomi_generate)
 
+    add_executable(morok_g3_train Gerações/G3/training/apps/train.cpp)
+    target_link_libraries(morok_g3_train PRIVATE Morok::G3::Training morok_build_options)
+    set_target_properties(morok_g3_train PROPERTIES OUTPUT_NAME "morok-g3-train")
+    morok_enable_sanitizers(morok_g3_train)
+
 endif()
 
 if(MOROK_BUILD_TESTS)
@@ -218,7 +239,7 @@ endif()
 if(MOROK_BUILD_APPS)
     install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
         morok_train morok_benchmark morok_generate morok_reinforce morok_complete morok_g1_profile_evaluate
-        morok_g2_tsukuyomi_train morok_g2_tsukuyomi_generate RUNTIME DESTINATION bin)
+        morok_g2_tsukuyomi_train morok_g2_tsukuyomi_generate morok_g3_train RUNTIME DESTINATION bin)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
     endif()
@@ -229,6 +250,7 @@ if(MOROK_BUILD_APPS)
         morok_g2_tsukuyomi
         morok_g3_rl
         morok_g3_neural
+        morok_g3_training
         morok_g3_inference
         ARCHIVE DESTINATION lib)
     install(DIRECTORY
@@ -238,6 +260,7 @@ if(MOROK_BUILD_APPS)
         Gerações/G2/Tsukuyomi/include/
         Gerações/G3/rl/include/
         Gerações/G3/neural/include/
+        Gerações/G3/training/include/
         Gerações/G3/inference/include/
         DESTINATION include)
 endif()
