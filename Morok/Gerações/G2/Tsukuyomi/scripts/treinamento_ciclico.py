@@ -19,16 +19,11 @@ MAX_VALIDATION_QUESTIONS = 20
 MAX_FEEDBACK_QUESTIONS = 40
 MAX_CYCLES = 100
 MAX_EPOCHS_PER_CYCLE = 1000
-try:
-    INITIAL_LEARNING_RATE = float(os.environ.get("TSUKUYOMI_LEARNING_RATE", "0.001"))
-except ValueError as error:
-    raise SystemExit("TSUKUYOMI_LEARNING_RATE precisa ser um número válido.") from error
 MIN_LEARNING_RATE = 1e-5
 MAX_LEARNING_RATE = 1e-2
+# LR-base fixo e interno; a configuração externa do workflow é ignorada.
+INITIAL_LEARNING_RATE = MAX_LEARNING_RATE
 LR_REDUCE_FACTOR = 0.9
-if (not math.isfinite(INITIAL_LEARNING_RATE)
-        or not MIN_LEARNING_RATE <= INITIAL_LEARNING_RATE <= MAX_LEARNING_RATE):
-    raise SystemExit("TSUKUYOMI_LEARNING_RATE precisa estar entre 1e-5 e 1e-2.")
 
 
 def validation_rank(correct_count: int, total: int, mean_f1: float,
