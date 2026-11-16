@@ -2,6 +2,7 @@ import http from "node:http";
 import crypto from "node:crypto";
 import { MongoClient } from "mongodb";
 import bcrypt from "bcryptjs";
+import nodemailer from "nodemailer";
 
 const PORT = Number(process.env.PORT || 10000);
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -57,6 +58,16 @@ await recoveryTokens.createIndex({ tokenHash: 1 }, { unique: true, name: "morok_
 await recoveryTokens.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "morok_recovery_expiry_ttl" });
 await sessions.createIndex({ jti: 1 }, { unique: true, name: "morok_sessions_jti_unique" });
 await sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, name: "morok_sessions_expiry_ttl" });
+
+
+const mailer = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    })
+  : null;
 
 const attempts = new Map();
 const WINDOW_MS = 15 * 60 * 1000;
