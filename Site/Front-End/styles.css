@@ -998,3 +998,18 @@ kbd [data-icon]{display:inline-flex;vertical-align:middle}
 .workspace-page-view .about-footer a{color:var(--accent);text-decoration:none}
 .workspace-page-view .about-footer a:hover{text-decoration:underline}
 @media(max-width:560px){.workspace-page-view .about-grid{grid-template-columns:1fr}.workspace-page-view .about-stat-grid{grid-template-columns:1fr}.workspace-page-view .about-footer{flex-direction:column}}
+
+
+/* Camadas informativas específicas de navegação e páginas */
+.menu-insight{margin:7px 0 2px;color:var(--muted);font-size:10px;line-height:1.55;font-weight:400;max-width:38em}
+.generation-insight{padding:0 10px 10px;margin:0 0 5px;border-bottom:1px solid var(--line)}
+.nav-copy{display:grid;gap:2px;text-align:left}
+.nav-copy small{font-size:9px;font-weight:400;color:var(--dim);line-height:1.2}
+.sidebar .side-action{align-items:center}
+.profile-menu-head .menu-insight{margin:3px 0 2px}
+.dialog-heading>div{min-width:0}
+.page-insight{display:grid;gap:6px;padding:15px 17px;border:1px solid color-mix(in srgb,var(--accent) 34%,var(--line));border-left:3px solid var(--accent);border-radius:11px;background:color-mix(in srgb,var(--accent) 6%,var(--panel))}
+.page-insight>span{font-size:9px;font-weight:800;letter-spacing:.13em;color:var(--accent)}
+.page-insight strong{font-size:13px;color:var(--text)}
+.page-insight p{margin:0;color:var(--muted);font-size:11px;line-height:1.65}
+:root[data-theme="light"] .page-insight{background:color-mix(in srgb,var(--accent) 5%,#fff)}
