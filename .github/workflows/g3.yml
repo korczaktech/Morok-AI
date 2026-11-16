@@ -1,4 +1,4 @@
-name: G3 — shared motor integration
+name: G3 — reinforcement learning integration
 
 on:
   push:
@@ -38,12 +38,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: g3-shared-backend-${{ github.ref }}
+  group: g3-reinforcement-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   shared-backend-contract:
-    name: Validate shared Morok backend contract
+    name: Validate G3 reinforcement learning
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -72,12 +72,13 @@ jobs:
           morok_test_byte_tokenizer
           morok_test_g1_forward
           morok_test_g2_tsukuyomi
+          morok_test_g3_reinforcement
 
       - name: Test backend contract, existing G1 motor, G2 and isolation
         working-directory: Morok
         run: >-
           ctest --test-dir build/g3-contract
-          -R "model.g1_backend|model.session|lang.byte_tokenizer|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
+          -R "g3.reinforcement|model.g1_backend|model.session|lang.byte_tokenizer|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
           --output-on-failure
 
       - name: Verify public contract and architecture documentation
@@ -89,6 +90,10 @@ jobs:
           test -f src/lang/byte_tokenizer.cpp
           test -f "Gerações/G1/shared/include/morok/model/g1_backend.hpp"
           test -f "Gerações/G3/ARQUITETURA.md"
+          test -f "Gerações/G3/rl/include/morok/g3/rl/reinforce.hpp"
+          test -f "Gerações/G3/rl/src/reinforce.cpp"
+          test -f "Gerações/G3/rl/tests/test_reinforce.cpp"
+          test ! -d "Gerações/G3/shared"
           test ! -d "Gerações/G3/shared"
           grep -q "ModelBackend" "Gerações/G3/README.md"
           grep -q "Morok::Core" "Gerações/G3/README.md"
