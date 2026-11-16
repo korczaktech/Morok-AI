@@ -144,6 +144,13 @@ class TrainingDataTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             training.extract_training_metric("", "train_bpb final")
 
+    def test_checkpoint_selection_uses_lower_independent_validation_loss(self):
+        self.assertTrue(training.improves_validation_loss(4.9, 5.0))
+        self.assertFalse(training.improves_validation_loss(5.1, 5.0))
+        self.assertFalse(training.improves_validation_loss(5.0, 5.0))
+        with self.assertRaises(ValueError):
+            training.improves_validation_loss(float("nan"), 5.0)
+
     def test_incorrect_validation_answers_enter_deduplicated_feedback_memory(self):
         memory = {}
         dialogues = [
