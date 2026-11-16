@@ -11,13 +11,10 @@ import treinamento_ciclico as training
 
 
 class TrainingDataTests(unittest.TestCase):
-    def test_learning_rate_drops_ten_percent_after_every_cycle(self):
-        lr = training.INITIAL_LEARNING_RATE
-        expected = lr
-        for _ in range(5):
-            expected *= 0.9
-            lr = training.decay_learning_rate(lr)
-            self.assertAlmostEqual(lr, expected, places=12)
+    def test_learning_rate_has_no_cycle_based_decay_scheduler(self):
+        self.assertFalse(hasattr(training, "decay_learning_rate"))
+        self.assertFalse(hasattr(training, "LR_REDUCE_FACTOR"))
+        self.assertEqual(training.INITIAL_LEARNING_RATE, 1e-3)
 
     def test_lexical_learning_rate_is_adaptive_for_each_question(self):
         base = 0.001
@@ -57,16 +54,10 @@ class TrainingDataTests(unittest.TestCase):
     def test_learning_rate_bounds_are_one_e_minus_five_and_one_e_minus_two(self):
         self.assertEqual(training.MIN_LEARNING_RATE, 1e-5)
         self.assertEqual(training.MAX_LEARNING_RATE, 1e-2)
-        self.assertEqual(training.decay_learning_rate(1.01e-5), 1e-5)
         self.assertEqual(training.learning_rate_for_lexical_level(1e-5, 1.0), 1e-5)
         self.assertEqual(training.learning_rate_for_lexical_level(1e-2, 0.0), 1e-3)
         self.assertEqual(training.learning_rate_for_lexical_level(1e-2, 1.0), 1e-5)
         self.assertEqual(training.INITIAL_LEARNING_RATE, 1e-3)
-
-    def test_learning_rate_rejects_values_below_floor_or_non_finite(self):
-        for value in (0.0, 0.5e-5, 1.01e-2, float("nan"), float("inf")):
-            with self.assertRaises(ValueError):
-                training.decay_learning_rate(value)
 
     def test_training_budget_is_finite_and_matches_default_plan(self):
         self.assertEqual(training.MAX_CYCLES, 100)
@@ -323,16 +314,6 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(training.MAX_FEEDBACK_QUESTIONS, 40)
         with self.assertRaises(ValueError):
             training.select_validation_questions([], [("q", "a")], 21)
-
-    def test_learning_rate_is_persisted_and_invalid_state_is_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "learning-rate.txt"
-            self.assertEqual(training.load_learning_rate(path, 0.001), 0.001)
-            training.write_learning_rate(path, 0.00081)
-            self.assertAlmostEqual(training.load_learning_rate(path, 0.001), 0.00081)
-            path.write_text("nan", encoding="utf-8")
-            with self.assertRaises(RuntimeError):
-                training.load_learning_rate(path, 0.001)
 
     def test_checkpoint_retention_rejects_losing_previously_correct_answers(self):
         dialogues = [("q1", "a1"), ("q2", "a2"), ("q3", "a3")]
