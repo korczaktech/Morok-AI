@@ -226,7 +226,7 @@ if(MOROK_BUILD_APPS)
     morok_enable_sanitizers(morok_g3_reinforce)
 
     add_executable(morok_g3_generate Gerações/G3/inference/apps/generate.cpp)
-    target_link_libraries(morok_g3_generate PRIVATE Morok::G3::Inference Morok::G3::Neural Morok::G3::Training morok_build_options)
+    target_link_libraries(morok_g3_generate PRIVATE Morok::G3::Inference Morok::G3::Neural Morok::G3::Training Morok::G3::Profiles morok_build_options)
     set_target_properties(morok_g3_generate PROPERTIES OUTPUT_NAME "morok-g3-generate")
     morok_enable_sanitizers(morok_g3_generate)
 
