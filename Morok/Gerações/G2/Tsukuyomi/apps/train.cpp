@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
             if (end != option.c_str() + option.size() ||
                 !std::isfinite(learning_rate) || learning_rate < 1.0e-5 ||
                 learning_rate > 1.0e-2) {
-                std::cerr << "Learning rate inválido (0 < valor <= 0,1).\n";
+                std::cerr << "Learning rate inválido (1e-5 <= valor <= 1e-2).\n";
                 return 2;
             }
             config.learning_rate = learning_rate;
