@@ -776,6 +776,7 @@
     try {
       const data = await authRequest("/v1/account/profile", { method: "GET", token });
       if (data.profile) {
+        state.authSession.user ||= {};
         if (data.profile.name) {
           state.authSession.user.name = data.profile.name;
           const nameInput = $("#account-name-input"); if (nameInput) nameInput.value = data.profile.name;
@@ -805,7 +806,9 @@
         const device = String(item.userAgent || "Dispositivo não identificado").slice(0, 250);
         return '<div class="task-row"><span><strong>' + (item.current ? "Este dispositivo" : "Sessão ativa") + '</strong><small>' + escapeHTML(device) + ' · Criada em ' + escapeHTML(createdLabel) + '</small></span>' + (item.current ? '<span class="feature-status">Atual</span>' : '<button class="secondary-button" type="button" data-revoke-session="' + escapeHTML(item.id) + '">Encerrar</button>') + '</div>';
       }).join("") || '<div class="workspace-empty">Nenhuma sessão ativa.</div>';
-    } catch (error) { target.textContent = error.message; }
+    } catch (error) {
+      target.innerHTML = '<div class="workspace-empty">' + escapeHTML(error.message) + '</div><button class="secondary-button" id="account-sessions-retry" type="button">Tentar novamente</button>';
+    }
   }
   async function refreshAuthSession() {
     const session=state.authSession;
@@ -915,6 +918,7 @@
     if(event.target.id==='delete-account-open'){void askConfirmation('Excluir permanentemente sua conta e os dados vinculados no servidor? Esta ação não pode ser desfeita.','Excluir conta').then(async ok=>{if(!ok)return;const password=prompt('Confirme sua senha para excluir a conta:');if(password===null)return;try{await authRequest('/v1/account/delete',{token:state.authSession.access_token,body:{password}});saveAuthSession(null);state.conversations=[];state.projects=[];state.tasks=[];persist();renderHistory();renderConversation();openWorkspacePage('account');toast('Conta e dados remotos excluídos.');}catch(error){toast(error.message);}});}
     if(event.target.id==='support-login')openAuth('login');
     if(event.target.id==='support-tickets-retry')void loadSupportTickets();
+    if(event.target.id==='account-sessions-retry')void loadAccountSessions();
 
     const taskDelete=event.target.closest('[data-task-delete]');if(taskDelete){const removed=state.tasks.splice(Number(taskDelete.dataset.taskDelete),1)[0];persist();if(removed?.id)await deleteRemoteResource('tasks',removed.id);await syncAccountResources();openWorkspacePage('tasks');}
     const libraryDelete=event.target.closest('[data-library-delete]');if(libraryDelete){state.libraryItems.splice(Number(libraryDelete.dataset.libraryDelete),1);persist();openWorkspacePage('library');}
