@@ -117,6 +117,7 @@ jobs:
               -sEXPORT_NAME=createTsukuyomiModule \
               -sENVIRONMENT=web,worker,node \
               -sALLOW_MEMORY_GROWTH=1 \
+              -sSTACK_SIZE=2097152 \
               -sFORCE_FILESYSTEM=1 \
               -sEXPORTED_RUNTIME_METHODS=FS
           node --check Site/Front-End/wasm/tsukuyomi.js
@@ -128,6 +129,7 @@ jobs:
             const wasm = await factory({
               locateFile: file => path.join(process.cwd(), "Site/Front-End/wasm", file)
             });
+            process.stdout.write("WASM carregado.\\n");
             const runtime = new wasm.TsukuyomiRuntime();
             const question = process.env.SMOKE_QUESTION;
             const filename = runtime.checkpointFilename(question);
@@ -135,6 +137,7 @@ jobs:
             wasm.FS.mkdir("/models");
             wasm.FS.writeFile("/models/" + filename, bytes);
             if (!runtime.hasCheckpoint(question)) throw new Error("Checkpoint de smoke test ausente.");
+            process.stdout.write("Checkpoint validado.\\n");
             const answer = runtime.generate(question, 128);
             if (typeof answer !== "string" || !answer.trim()) throw new Error("Tsukuyomi G2 não gerou uma resposta no smoke test.");
             process.stdout.write("Inferência WebAssembly validada: " + answer + "\\n");
