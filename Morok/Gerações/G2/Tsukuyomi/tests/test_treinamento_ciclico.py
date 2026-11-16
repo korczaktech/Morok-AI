@@ -294,6 +294,26 @@ class TrainingDataTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 training.load_learning_rate(path, 0.001)
 
+    def test_checkpoint_retention_rejects_losing_previously_correct_answers(self):
+        dialogues = [("q1", "a1"), ("q2", "a2"), ("q3", "a3")]
+        previous = [
+            ("a1", True, 1.0),
+            ("errado", False, 0.0),
+            ("a3", True, 1.0),
+        ]
+        candidate = [
+            ("a1", True, 1.0),
+            ("a2", True, 1.0),
+            ("errado", False, 0.0),
+        ]
+        self.assertEqual(
+            training.find_retention_regressions(previous, dialogues, candidate),
+            ["q3"],
+        )
+        self.assertEqual(
+            training.find_retention_regressions(None, dialogues, candidate), []
+        )
+
     def test_question_history_detects_regressions_and_recoveries(self):
         history = {"version": 1, "questions": {}}
         dialogue = [("Qual é a resposta?", "Resposta correta")]
