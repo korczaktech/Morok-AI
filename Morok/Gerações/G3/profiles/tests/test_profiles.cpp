@@ -34,13 +34,16 @@ public:
         return morok::common::Status::success();
     }
     morok::common::Status next_token_log_probabilities(
-        std::span<const std::byte>, std::span<float> output) const override {
-        if (output.size() != 261U)
+        std::span<const std::byte> state, std::span<float> output) const override {
+        if (output.size() != 261U || state.size() != sizeof(std::uint32_t))
             return morok::common::Status::failure(morok::common::Error::make(
                 morok::common::ErrorCode::invalid_argument, "invalid output"));
+        std::uint32_t count = 0U;
+        std::memcpy(&count, state.data(), sizeof(count));
         std::fill(output.begin(), output.end(),
                   -std::numeric_limits<float>::infinity());
-        output[static_cast<std::uint8_t>('A')] = 0.0F;
+        output[count > 1U ? morok::lang::kEosToken
+                          : static_cast<std::uint8_t>('A')] = 0.0F;
         return morok::common::Status::success();
     }
 };
