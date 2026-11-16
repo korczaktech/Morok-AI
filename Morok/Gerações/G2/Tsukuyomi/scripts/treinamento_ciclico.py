@@ -667,13 +667,13 @@ def main() -> int:
                 f"nível lexical médio={sum(lexical_levels) / max(1, len(lexical_levels)):.1%}; "
                 f"LR calculado observado mínimo={min(individual_rates):.8g}; "
                 f"máximo observado={max(individual_rates):.8g}; "
-                f"limites configurados: mínimo={MIN_LEARNING_RATE:.8g}, "
-                f"máximo={MAX_LEARNING_RATE:.8g}.", flush=True
+                f"faixa definida pela curva: mínimo={MIN_LEARNING_RATE:.8g}, "
+                f"máximo={1e-3:.8g}.", flush=True
             )
             report.write(f"### Learning rate adaptativo — ciclo {cycle}\n\n")
             report.write(
-                f"- Limites individuais configurados: mínimo={MIN_LEARNING_RATE:.8g}; "
-                f"máximo={MAX_LEARNING_RATE:.8g}.\n"
+                f"- Faixa da curva individual: mínimo={MIN_LEARNING_RATE:.8g}; "
+                f"máximo={1e-3:.8g}.\n"
             )
             report.write(
                 f"- Faixa observada neste ciclo: mínimo={min(individual_rates):.8g}; "
