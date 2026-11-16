@@ -48,6 +48,12 @@ reais da G3 só poderá ser executado depois da integração do backend neural.
 Nenhum peso da G1 é usado como substituto.
 
 Consulte [ARQUITETURA.md](ARQUITETURA.md) e [MODELOS.md](../MODELOS.md).
+A arquitetura neural da G3 também está implementada em neural/ como
+Morok::G3::Neural: embedding 261x64, GRU de duas camadas com hidden 128,
+RMSNorm entre camadas, projeção 128→64, weight tying por matriz compartilhada,
+inicialização determinística configurável e contagem calculada dos tensores.
+O forward incremental implementa ModelBackend e mantém estados independentes
+por sessão. BPTT, otimizador e treinamento SFT não fazem parte desta entrega.
 
 
 A Fase 4 adiciona utilitários G3 de inferência e exportação em
