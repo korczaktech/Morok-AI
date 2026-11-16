@@ -37,6 +37,14 @@ template <typename T>
 
 [[nodiscard]] Result<NormalizedText> normalize_utf8(
     std::string_view input, const TextCodecConfig& config) {
+    if ((config.invalid_utf8 != InvalidUtf8Policy::replace &&
+         config.invalid_utf8 != InvalidUtf8Policy::reject) ||
+        (config.normalization != UnicodeNormalization::none &&
+         config.normalization != UnicodeNormalization::nfc)) {
+        return fail_result<NormalizedText>(
+            ErrorCode::invalid_argument, "byte_tokenizer.config",
+            "Unknown UTF-8 or Unicode normalization policy");
+    }
     if (input.size() > static_cast<std::size_t>(
                            std::numeric_limits<int32_t>::max())) {
         return fail_result<NormalizedText>(
@@ -54,10 +62,11 @@ template <typename T>
     }
 
     const auto input_length = static_cast<int32_t>(input.size());
+    const char* input_data = input.empty() ? "" : input.data();
     UErrorCode status = U_ZERO_ERROR;
     int32_t utf16_length = 0;
     int32_t substitutions = 0;
-    u_strFromUTF8WithSub(nullptr, 0, &utf16_length, input.data(),
+    u_strFromUTF8WithSub(nullptr, 0, &utf16_length, input_data,
                          input_length, 0xFFFD, &substitutions, &status);
     if (status != U_BUFFER_OVERFLOW_ERROR && U_FAILURE(status)) {
         return fail_result<NormalizedText>(
@@ -70,7 +79,7 @@ template <typename T>
     substitutions = 0;
     u_strFromUTF8WithSub(utf16.data(),
                          static_cast<int32_t>(utf16.size()), &utf16_length,
-                         input.data(), input_length, 0xFFFD, &substitutions,
+                         input_data, input_length, 0xFFFD, &substitutions,
                          &status);
     if (U_FAILURE(status)) {
         return fail_result<NormalizedText>(
@@ -163,6 +172,7 @@ Result<EncodedText> ByteTokenizer::encode_text(
     }
 
     EncodedText encoded;
+    encoded.original_text.assign(text.data(), text.size());
     encoded.normalized_text = normalized.value_if()->text;
     encoded.replaced_invalid_utf8 = normalized.value_if()->replaced_invalid_utf8;
     encoded.byte_tokens.reserve(encoded.normalized_text.size());
