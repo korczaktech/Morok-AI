@@ -636,9 +636,6 @@
     try { if(state.authSession?.access_token) await authRequest('/auth/logout',{token:state.authSession.access_token}); } catch {}
     saveAuthSession(null); state.displayName='Visitante'; updateProfile(); persist(); openAuth('login'); $('#auth-message').className='auth-message success'; $('#auth-message').textContent='Sessão encerrada neste dispositivo.';
   }
-  // Start API health check before optional UI bindings.
-  hydrateIcons(); restore(); applyTheme(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); enhanceSelects(); checkHealth(); refreshAuthSession();
-
   $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
   $('#auth-form').addEventListener('submit',event=>{if(event.submitter && event.submitter.id!=='auth-submit')return;event.preventDefault();submitAuth();});
   // Keep dialog dismissal independent from form submission handlers.
