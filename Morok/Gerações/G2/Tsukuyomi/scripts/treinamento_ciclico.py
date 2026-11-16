@@ -52,13 +52,16 @@ def decay_learning_rate(current: float) -> float:
 
 
 def learning_rate_for_lexical_level(base_learning_rate: float, lexical_level: float) -> float:
-    """Curva exponencial: 0% usa o LR-base; 100% usa 10% dele."""
+    """Mapeia 0% para o teto e 100% para o piso, sem depender do formulário."""
     if (not math.isfinite(base_learning_rate) or
             not MIN_LEARNING_RATE <= base_learning_rate <= MAX_LEARNING_RATE):
         raise ValueError("Learning rate-base inválido.")
     if not math.isfinite(lexical_level) or not 0.0 <= lexical_level <= 1.0:
         raise ValueError("Nível lexical precisa estar entre 0 e 1.")
-    return max(MIN_LEARNING_RATE, base_learning_rate * (0.1 ** lexical_level))
+    return max(MIN_LEARNING_RATE, min(
+        MAX_LEARNING_RATE,
+        MAX_LEARNING_RATE * ((MIN_LEARNING_RATE / MAX_LEARNING_RATE) ** lexical_level),
+    ))
 
 
 def write_question_learning_rates(corpus: Path, rates: dict[str, float], destination: Path) -> int:
@@ -646,7 +649,7 @@ def main() -> int:
             else:
                 lexical_probe_results = [("", False, 0.0)] * len(current_training_dialogues)
             question_rates = {
-                question: learning_rate_for_lexical_level(learning_rate, result[2])
+                question: learning_rate_for_lexical_level(MAX_LEARNING_RATE, result[2])
                 for (question, _), result in zip(current_training_dialogues, lexical_probe_results)
             }
             rate_ranges = write_question_learning_rates(
@@ -672,7 +675,7 @@ def main() -> int:
             report.write("\n")
             command = [
                 str(trainer), str(combined_training), str(checkpoint),
-                str(epochs), "42", f"{learning_rate:.12g}", "--lr-map",
+                str(epochs), "42", f"{MAX_LEARNING_RATE:.12g}", "--lr-map",
                 str(question_learning_rate_path),
             ]
             if cycle > 1 or resume_previous_run or best_checkpoint.is_file():
@@ -680,7 +683,7 @@ def main() -> int:
 
             print(
                 f"\n=== Ciclo {cycle}: {epochs} época(s), validação "
-                f"{len(validation)} pergunta(s), LR={learning_rate:.8g} ===",
+                f"{len(validation)} pergunta(s), LR máximo interno={MAX_LEARNING_RATE:.8g} ===",
                 flush=True,
             )
             started = time.perf_counter()
