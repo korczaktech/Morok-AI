@@ -200,8 +200,10 @@ void test_int8_artifact_layout() {
     artifact.metadata.precision = PrecisionMode::int8_symmetric_per_row;
     artifact.metadata.state_size_bytes = 660U;
     artifact.metadata.parameter_count = 100000U;
-    artifact.metadata.scale_count = 1U;
-    artifact.payload.resize(100000U + sizeof(float), std::byte{0});
+    artifact.metadata.scale_count = 1311U;
+    // 99,087 INT8 matrix values + 1,311 FP32 row scales +
+    // 913 FP32 bias/RMSNorm values.
+    artifact.payload.resize(107983U, std::byte{0});
     const auto serialized = serialize_model_artifact(artifact);
     assert(serialized.has_value());
     const auto loaded = deserialize_model_artifact(*serialized.value_if());
