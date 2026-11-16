@@ -114,6 +114,8 @@ struct CandidateMetrics final {
     std::string prompt_id;
     std::string category;
     RewardComponents components{};
+    std::vector<morok::lang::TokenId> response_tokens_data;
+    std::vector<double> sampled_token_log_probabilities;
     double reward{0.0};
     double advantage{0.0};
     double kl{0.0};
