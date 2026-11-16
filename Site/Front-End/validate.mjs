@@ -43,7 +43,7 @@ for (const [source, expected, description] of requiredContracts) {
 if (!packageJson.dependencies?.mongodb || !packageJson.dependencies?.bcryptjs) {
   throw new Error("Dependências essenciais do backend ausentes.");
 }
-if (!/^\\^10\\.6\\.0$/.test(packageJson.dependencies?.nodemailer || "")) {
+if (!/^\^10\.6\.0$/.test(packageJson.dependencies?.nodemailer || "")) {
   throw new Error("Nodemailer precisa permanecer na linha corrigida 10.6.0.");
 }
 if (!/@media/.test(styles)) throw new Error("CSS sem regras responsivas.");
