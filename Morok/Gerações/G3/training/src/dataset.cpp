@@ -228,10 +228,18 @@ Dataset load_jsonl(const std::filesystem::path& path) {
     // FNV-1a fingerprint is deterministic and intentionally labelled as such.
     std::uint64_t hash = 14695981039346656037ULL;
     for (const auto& item : dataset.examples) {
-        std::string material = item.example_id;
-        material.push_back(static_cast<char>(0)); material += item.group_id;
-        material.push_back(static_cast<char>(0)); material += item.question;
-        material.push_back(static_cast<char>(0)); material += item.answer;
+        std::string material;
+        const auto append_field = [&material](const std::string& field) {
+            material += field;
+            material.push_back(static_cast<char>(0));
+        };
+        append_field(item.example_id); append_field(item.group_id);
+        append_field(item.category); append_field(item.question);
+        append_field(item.answer); append_field(item.source);
+        append_field(item.language); append_field(item.dataset_version);
+        append_field(std::to_string(item.quality));
+        append_field(item.sensitive ? "true" : "false");
+        for (const auto& variant : item.question_variants) append_field(variant);
         material.push_back(static_cast<char>(10));
         for (unsigned char byte : material) { hash ^= byte; hash *= 1099511628211ULL; }
     }
