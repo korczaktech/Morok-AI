@@ -68,7 +68,7 @@ morok::g3::profiles::ProfileId parse_profile(std::string_view value) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cerr << "Uso: morok-g3-generate <modelo.morok> [--benchmark] [prompt]\n";
+        std::cerr << "Uso: morok-g3-generate <modelo.morok> [--profile=mokosh|tsukuyomi|artemis|apollo] [--benchmark] [prompt]\n";
         return 2;
     }
     try {
