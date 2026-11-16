@@ -279,3 +279,14 @@ target_link_libraries(morok_test_g3_training
 morok_enable_sanitizers(morok_test_g3_training)
 add_test(NAME g3.training COMMAND morok_test_g3_training)
 set_tests_properties(g3.training PROPERTIES LABELS "g3;training;dataset" TIMEOUT 180)
+
+if(TARGET morok_g3_train)
+    add_test(NAME g3.training_cli
+        COMMAND morok_g3_train
+            ${CMAKE_CURRENT_SOURCE_DIR}/../Gerações/G3/training/tests/fixtures/smoke.jsonl
+            ${CMAKE_CURRENT_BINARY_DIR}/g3-training-smoke-metrics.jsonl
+            ${CMAKE_CURRENT_BINARY_DIR}/g3-training-smoke.morok
+            1 17)
+    set_tests_properties(g3.training_cli PROPERTIES
+        LABELS "g3;training;artifact" TIMEOUT 180)
+endif()
