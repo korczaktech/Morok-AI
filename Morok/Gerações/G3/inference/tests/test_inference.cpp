@@ -82,9 +82,9 @@ private:
 
 ModelArtifact valid_fp32_artifact() {
     ModelArtifact artifact;
-    artifact.metadata.state_size_bytes = 1024U;
-    artifact.metadata.parameter_count = 2U;
-    artifact.payload.resize(2U * sizeof(float), std::byte{0});
+    artifact.metadata.state_size_bytes = 660U;
+    artifact.metadata.parameter_count = 100000U;
+    artifact.payload.resize(100000U * sizeof(float), std::byte{0});
     return artifact;
 }
 
@@ -119,7 +119,7 @@ void test_artifact_round_trip_and_corruption() {
            kModelHeaderBytes + artifact.payload.size());
     const auto loaded = deserialize_model_artifact(*serialized.value_if());
     assert(loaded.has_value());
-    assert(loaded.value_if()->metadata.parameter_count == 2U);
+    assert(loaded.value_if()->metadata.parameter_count == 100000U);
     assert(loaded.value_if()->payload == artifact.payload);
 
     auto corrupted = *serialized.value_if();
@@ -130,7 +130,7 @@ void test_artifact_round_trip_and_corruption() {
     invalid_metadata.metadata.architecture_id = 0x0401U;
     assert(!serialize_model_artifact(invalid_metadata).has_value());
     invalid_metadata = artifact;
-    invalid_metadata.metadata.embedding_dim = 65U;
+    invalid_metadata.metadata.embedding_dim = 61U;
     assert(!serialize_model_artifact(invalid_metadata).has_value());
 
     auto corrupted_header = *serialized.value_if();
@@ -157,10 +157,10 @@ void test_atomic_artifact_file_round_trip() {
 void test_int8_artifact_layout() {
     ModelArtifact artifact;
     artifact.metadata.precision = PrecisionMode::int8_symmetric_per_row;
-    artifact.metadata.state_size_bytes = 1024U;
-    artifact.metadata.parameter_count = 4U;
-    artifact.metadata.scale_count = 2U;
-    artifact.payload.resize(4U + 2U * sizeof(float), std::byte{0});
+    artifact.metadata.state_size_bytes = 660U;
+    artifact.metadata.parameter_count = 100000U;
+    artifact.metadata.scale_count = 1U;
+    artifact.payload.resize(100000U + sizeof(float), std::byte{0});
     const auto serialized = serialize_model_artifact(artifact);
     assert(serialized.has_value());
     const auto loaded = deserialize_model_artifact(*serialized.value_if());
