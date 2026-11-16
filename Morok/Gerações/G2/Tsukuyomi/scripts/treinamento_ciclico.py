@@ -68,7 +68,7 @@ def write_learning_rate(path: Path, value: float) -> None:
         raise ValueError("Learning rate a persistir inválido.")
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(f"{value:.12g}\\n", encoding="utf-8")
+    temporary.write_text(f"{value:.12g}\n", encoding="utf-8")
     os.replace(temporary, path)
 
 
@@ -441,7 +441,7 @@ def main() -> int:
     if len(sys.argv) != 10:
         print(
             "Uso: treinamento_ciclico.py <treinador> <gerador> <treino> "
-            "<validacao> <teste> <epocas> <tentativas> <continuo:0|1> <questoes:1..40>",
+            "<validacao> <teste> <epocas> <tentativas> <continuo:0|1> <questoes:1..20>",
             file=sys.stderr,
         )
         return 2
@@ -461,9 +461,9 @@ def main() -> int:
 
     train_dialogues = read_dialogues(train_corpus)
     validation_pool = read_dialogues(validation_corpus)
-    if len(validation_pool) != MAX_VALIDATION_QUESTIONS:
+    if len(validation_pool) != MAX_FEEDBACK_QUESTIONS + MAX_VALIDATION_QUESTIONS:
         raise RuntimeError(
-            f"O banco de validação precisa conter exatamente 40 questões; "
+            f"O banco combinado precisa conter exatamente 40 questões; "
             f"foram encontradas {len(validation_pool)}."
         )
     feedback_questions, independent_validation_pool = split_feedback_and_validation(validation_pool)
@@ -552,7 +552,6 @@ def main() -> int:
                 restore_best_state(
                     best_checkpoint, best_optimizer_state, checkpoint, optimizer_state
                 )
-            cycle += 1
             build_training_corpus(train_corpus, feedback_memory, combined_training)
             command = [
                 str(trainer), str(combined_training), str(checkpoint),
