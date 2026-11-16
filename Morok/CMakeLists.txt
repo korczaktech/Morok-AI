@@ -203,6 +203,11 @@ if(MOROK_BUILD_APPS)
     set_target_properties(morok_g3_evaluate PROPERTIES OUTPUT_NAME "morok-g3-evaluate")
     morok_enable_sanitizers(morok_g3_evaluate)
 
+    add_executable(morok_g3_reinforce Gerações/G3/rl/apps/reinforce.cpp)
+    target_link_libraries(morok_g3_reinforce PRIVATE Morok::G3::RL Morok::G3::Training Morok::G3::Inference morok_build_options)
+    set_target_properties(morok_g3_reinforce PROPERTIES OUTPUT_NAME "morok-g3-reinforce")
+    morok_enable_sanitizers(morok_g3_reinforce)
+
 endif()
 
 if(MOROK_BUILD_TESTS)
@@ -252,7 +257,7 @@ endif()
 if(MOROK_BUILD_APPS)
     install(TARGETS morok_cli morok_convert morok_evaluate morok_train_cli
         morok_train morok_benchmark morok_generate morok_reinforce morok_complete morok_g1_profile_evaluate
-        morok_g2_tsukuyomi_train morok_g2_tsukuyomi_generate morok_g3_train morok_g3_evaluate RUNTIME DESTINATION bin)
+        morok_g2_tsukuyomi_train morok_g2_tsukuyomi_generate morok_g3_train morok_g3_evaluate morok_g3_reinforce RUNTIME DESTINATION bin)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         install(TARGETS morok_server RUNTIME DESTINATION bin)
     endif()

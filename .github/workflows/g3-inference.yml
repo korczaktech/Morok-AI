@@ -48,8 +48,8 @@ jobs:
 
       - name: Build G3 neural, training and inference targets
         working-directory: Morok
-        run: cmake --build build/g3-inference --parallel 2 --target morok_g3_train morok_g3_evaluate morok_test_g3_reinforcement morok_test_g3_neural morok_test_g3_inference morok_test_g3_training morok_test_g3_evaluation
+        run: cmake --build build/g3-inference --parallel 2 --target morok_g3_train morok_g3_evaluate morok_g3_reinforce morok_test_g3_reinforcement morok_test_g3_neural morok_test_g3_inference morok_test_g3_training morok_test_g3_evaluation
 
       - name: Test G3 inference and export
         working-directory: Morok
-        run: ctest --test-dir build/g3-inference -R "^g3.(reinforcement|neural|inference|training|evaluation|training_cli)$" --output-on-failure
+        run: ctest --test-dir build/g3-inference -R "^g3.(reinforcement|neural|inference|training|evaluation|training_cli|reinforcement_cli)$" --output-on-failure

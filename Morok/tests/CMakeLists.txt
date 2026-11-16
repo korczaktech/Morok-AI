@@ -298,3 +298,9 @@ if(TARGET morok_g3_train)
     set_tests_properties(g3.training_cli PROPERTIES
         LABELS "g3;training;artifact" TIMEOUT 180)
 endif()
+
+if(TARGET morok_g3_reinforce)
+    add_test(NAME g3.reinforcement_cli COMMAND morok_g3_reinforce)
+    set_tests_properties(g3.reinforcement_cli PROPERTIES WILL_FAIL TRUE
+        LABELS "g3;reinforcement;cli" TIMEOUT 30)
+endif()
