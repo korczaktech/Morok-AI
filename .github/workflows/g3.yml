@@ -6,6 +6,9 @@ on:
     paths:
       - "Morok/Gerações/G3/**"
       - "Morok/include/morok/model/**"
+      - "Morok/include/morok/lang/byte_tokenizer.hpp"
+      - "Morok/src/lang/byte_tokenizer.cpp"
+      - "Morok/tests/unit/lang/test_byte_tokenizer.cpp"
       - "Morok/tests/unit/model/test_model_session.cpp"
       - "Morok/Gerações/G1/shared/include/morok/model/g1_backend.hpp"
       - "Morok/Gerações/G1/shared/src/model/g1_backend.cpp"
@@ -47,7 +50,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes ninja-build libsqlite3-dev
+          sudo apt-get install --yes ninja-build libsqlite3-dev libicu-dev
 
       - name: Configure existing Morok motor
         working-directory: Morok
@@ -63,6 +66,7 @@ jobs:
           cmake --build build/g3-contract --parallel 2
           --target morok_test_g1_backend
           morok_test_model_session
+          morok_test_byte_tokenizer
           morok_test_g1_forward
           morok_test_g2_tsukuyomi
 
@@ -70,7 +74,7 @@ jobs:
         working-directory: Morok
         run: >-
           ctest --test-dir build/g3-contract
-          -R "model.g1_backend|model.session|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
+          -R "model.g1_backend|model.session|lang.byte_tokenizer|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
           --output-on-failure
 
       - name: Verify public contract and architecture documentation
@@ -78,6 +82,8 @@ jobs:
         run: |
           test -f include/morok/model/model_backend.hpp
           test -f include/morok/model/model_session.hpp
+          test -f include/morok/lang/byte_tokenizer.hpp
+          test -f src/lang/byte_tokenizer.cpp
           test -f "Gerações/G1/shared/include/morok/model/g1_backend.hpp"
           test -f "Gerações/G3/ARQUITETURA.md"
           test ! -d "Gerações/G3/shared"
