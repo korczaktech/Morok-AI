@@ -29,6 +29,8 @@ const requiredContracts = [
   [backend, 'path === "/v1/conversations/delete"', "backend deve aceitar exclusão de conversas"],
   [backend, "conversationDeletions.deleteMany", "exclusão de conta deve limpar tombstones"],
   [app, "state.tasks = merged.slice(0, 100);", "sincronização deve preservar IDs de tarefas"],
+  [app, "pendingResourceDeletions", "falhas de exclusão remota devem ficar pendentes"],
+  [app, "pendingConversationDeletions", "exclusões de conversa devem sobreviver a falhas de rede"],
   [backend, "createToken(account, req)", "sessão deve registrar user-agent"],
   [backend, "/v1/account/2fa/enable", "backend deve oferecer ativação de 2FA"],
   [backend, "/v1/support/tickets", "backend deve oferecer chamados"],
@@ -40,6 +42,9 @@ for (const [source, expected, description] of requiredContracts) {
 
 if (!packageJson.dependencies?.mongodb || !packageJson.dependencies?.bcryptjs) {
   throw new Error("Dependências essenciais do backend ausentes.");
+}
+if (!/^\\^10\\.6\\.0$/.test(packageJson.dependencies?.nodemailer || "")) {
+  throw new Error("Nodemailer precisa permanecer na linha corrigida 10.6.0.");
 }
 if (!/@media/.test(styles)) throw new Error("CSS sem regras responsivas.");
 if (!/app\.js\?v=/.test(html) || !/styles\.css\?v=/.test(html)) {
