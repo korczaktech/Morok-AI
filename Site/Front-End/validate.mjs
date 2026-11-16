@@ -45,7 +45,7 @@ const requiredContracts = [
   [app, "runtime.hasCheckpoint(prompt)", "frontend deve selecionar checkpoint por pergunta"],
   [app, "runtime.generate(prompt, 256)", "frontend deve executar inferência no navegador"],
   [app, "/v1/conversations/sync", "respostas devem continuar sincronizadas com o backend"],
-  [wasmApi, "question_checkpoint_name", "WASM deve usar o hash de checkpoint compatível com o treinador"],
+  [wasmApi, "question_checkpoint_path", "WASM deve usar o hash de checkpoint compatível com o treinador"],
   [wasmApi, "load_checkpoint", "WASM deve validar e carregar os pesos do G2"]
 ];
 for (const [source, expected, description] of requiredContracts) {
