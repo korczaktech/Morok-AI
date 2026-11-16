@@ -106,6 +106,7 @@ target_link_libraries(morok_g3_rl PUBLIC Morok::G3::Neural)
 add_library(morok_g3_training STATIC
     Gerações/G3/training/src/dataset.cpp
     Gerações/G3/training/src/trainer.cpp
+    Gerações/G3/training/src/checkpoint.cpp
     Gerações/G3/training/src/evaluation.cpp
 )
 add_library(Morok::G3::Training ALIAS morok_g3_training)
