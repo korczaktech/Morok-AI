@@ -385,6 +385,9 @@ def build_training_corpus(base: Path, memory: dict[str, str], destination: Path)
             if not q or not a:
                 raise RuntimeError("Corpus contém pergunta ou resposta vazia.")
             output.write(f"U: {q}\nIA: {a}\n\n")
+    # Valida o corpus combinado antes de publicar: overrides não podem
+    # introduzir respostas repetidas nem perguntas duplicadas.
+    read_dialogues(temporary)
     os.replace(temporary, destination)
 
 def extract_training_metric(output: str, name: str) -> float:
@@ -552,6 +555,11 @@ def main() -> int:
     feedback_path = Path("build/g2/tsukuyomi-memoria-erros.txt")
     history_path = Path("build/g2/tsukuyomi-historico-perguntas.json")
     memory = load_feedback_memory(feedback_path)
+    # Aplica correções persistidas e valida a unicidade do conjunto final de 100
+    # respostas antes de avaliar ou modificar qualquer checkpoint.
+    validated_corpus = Path("build/g2/tsukuyomi-corpus-validado.txt")
+    build_training_corpus(training_corpus, memory, validated_corpus)
+    training_dialogues = read_dialogues(validated_corpus)
     history = load_question_history(history_path)
     active_questions = {question for question, _ in training_dialogues}
     history["questions"] = {
