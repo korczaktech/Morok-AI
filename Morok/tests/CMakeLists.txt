@@ -38,6 +38,13 @@ target_link_libraries(morok_test_g1_forward PRIVATE Morok::G1 morok_build_option
 morok_enable_sanitizers(morok_test_g1_forward)
 add_test(NAME model.g1_forward COMMAND morok_test_g1_forward)
 
+add_executable(morok_test_g1_backend
+    ../Gerações/G1/shared/tests/unit/model/test_g1_backend.cpp
+)
+target_link_libraries(morok_test_g1_backend PRIVATE Morok::G1 morok_build_options)
+morok_enable_sanitizers(morok_test_g1_backend)
+add_test(NAME model.g1_backend COMMAND morok_test_g1_backend)
+
 add_executable(morok_test_g1_bptt
     ../Gerações/G1/shared/tests/unit/model/test_g1_bptt.cpp
 )
