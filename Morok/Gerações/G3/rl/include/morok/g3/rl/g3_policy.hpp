@@ -35,6 +35,10 @@ private:
     double weight_decay_;
     training::ReinforceOptimizerState optimizer_state_;
     training::TrainingConfig optimizer_config_;
+    mutable bool cache_valid_{false};
+    mutable std::vector<TokenId> cached_context_;
+    mutable std::vector<TokenId> cached_prefix_;
+    mutable std::vector<std::byte> cached_state_;
 };
 
 } // namespace morok::g3::rl
