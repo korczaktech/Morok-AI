@@ -3,9 +3,9 @@
 **Geração:** Segunda Geração (G2)  
 **Modelo:** Tsukuyomi  
 **Versão:** 0.1.0  
-**Orçamento:** exatamente 10.000 parâmetros treináveis
+**Orçamento:** 10.000 parâmetros por checkpoint; 40 checkpoints independentes (até 400.000 parâmetros no conjunto especializado)
 
-O Tsukuyomi é um modelo neural autoregressivo byte-level, treinado do zero. Usa embeddings compartilhados, canais linguísticos auxiliares, uma célula recorrente com retenção aprendida, estado oculto de 32 dimensões e BPTT truncado em até 64 etapas. Não utiliza pesos pré-treinados nem dependências de modelos externos.
+O Tsukuyomi é um conjunto de 40 modelos neurais autoregressivos byte-level independentes, treinados do zero, um para cada pergunta. Cada modelo usa 10.000 parâmetros, embeddings compartilhados internamente, canais linguísticos auxiliares, uma célula recorrente com retenção aprendida, estado oculto de 32 dimensões e BPTT truncado em até 64 etapas. Não utiliza pesos pré-treinados nem dependências de modelos externos.
 
 ## Estrutura
 
