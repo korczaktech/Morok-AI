@@ -177,7 +177,7 @@ function base64url(value) {
   return Buffer.from(value).toString("base64url");
 }
 
-async function createToken(account) {
+async function createToken(account, req) {
   const issuedAt = Math.floor(Date.now() / 1000);
   const expiresAt = new Date((issuedAt + TOKEN_TTL_SECONDS) * 1000);
   const jti = crypto.randomUUID();
@@ -191,7 +191,7 @@ async function createToken(account) {
   }));
   const unsigned = header + "." + payload;
   const signature = crypto.createHmac("sha256", JWT_SECRET).update(unsigned).digest("base64url");
-  await sessions.insertOne({ jti, accountId: account.id, createdAt: new Date(), expiresAt });
+  await sessions.insertOne({ jti, accountId: account.id, userAgent: String(req?.headers?.['user-agent'] || '').slice(0, 250), createdAt: new Date(), expiresAt });
   return unsigned + "." + signature;
 }
 
@@ -266,7 +266,7 @@ async function handle(req, res) {
       };
       await accounts.insertOne(account);
       return send(res, 201, {
-        access_token: await createToken(account),
+        access_token: await createToken(account, req),
         token_type: "Bearer",
         expires_in: TOKEN_TTL_SECONDS,
         user: publicAccount(account)
@@ -339,7 +339,7 @@ async function handle(req, res) {
     return send(res, 200, {
       conversations: docs.map((item) => ({
         id: item.conversationId, title: item.title, createdAt: item.createdAt,
-        updatedAt: item.updatedAt, messages: grouped.get(item.conversationId) || []
+        updatedAt: item.updatedAt, projectId: item.projectId || null, messages: grouped.get(item.conversationId) || []
       }))
     }, req.allowedOrigin);
   }
@@ -362,7 +362,7 @@ async function handle(req, res) {
       const updatedAt = toDate(item.updatedAt);
       await conversations.updateOne(
         { accountId: token.sub, conversationId: item.id },
-        { $set: { title: String(item.title || "Nova conversa").slice(0, 160), updatedAt },
+        { $set: { title: String(item.title || "Nova conversa").slice(0, 160), projectId: typeof item.projectId === 'string' ? item.projectId.slice(0, 128) : null, updatedAt },
           $setOnInsert: { accountId: token.sub, conversationId: item.id, createdAt } },
         { upsert: true }
       );
@@ -433,8 +433,8 @@ async function handle(req, res) {
   if (req.method === "GET" && path === "/v1/account/sessions") {
     const token = await verifyToken(bearer(req));
     if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
-    const docs = await sessions.find({ accountId: token.sub, expiresAt: { $gt: new Date() } }, { projection: { jti: 1, createdAt: 1, expiresAt: 1, current: 1 } }).sort({ createdAt: -1 }).limit(50).toArray();
-    return send(res, 200, { sessions: docs.map(x => ({ id: x.jti, createdAt: x.createdAt, expiresAt: x.expiresAt, current: x.jti === token.jti })) }, req.allowedOrigin);
+    const docs = await sessions.find({ accountId: token.sub, expiresAt: { $gt: new Date() } }, { projection: { jti: 1, userAgent: 1, createdAt: 1, expiresAt: 1 } }).sort({ createdAt: -1 }).limit(50).toArray();
+    return send(res, 200, { sessions: docs.map(x => ({ id: x.jti, createdAt: x.createdAt, expiresAt: x.expiresAt, userAgent: x.userAgent || 'Dispositivo não identificado', current: x.jti === token.jti })) }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && path === "/v1/account/sessions/revoke") {
@@ -503,6 +503,16 @@ async function handle(req, res) {
     if (!["projects", "tasks"].includes(type)) return send(res, 400, { error: "Tipo de recurso inválido." }, req.allowedOrigin);
     const docs = await accountResources.find({ accountId: token.sub, type }).sort({ updatedAt: -1 }).limit(500).toArray();
     return send(res, 200, { items: docs.map(x => ({ id: x.resourceId, data: x.data, updatedAt: x.updatedAt })) }, req.allowedOrigin);
+  }
+
+  if (req.method === "POST" && path === "/v1/resources/delete") {
+    const token = await verifyToken(bearer(req));
+    if (!token) return send(res, 401, { error: "Autenticação necessária." }, req.allowedOrigin);
+    const body = await readBody(req);
+    if (!["projects", "tasks"].includes(body.type) || !Array.isArray(body.ids) || body.ids.length > 500) return send(res, 400, { error: "Solicitação de exclusão inválida." }, req.allowedOrigin);
+    const ids = body.ids.filter(value => typeof value === "string" && value.length > 0 && value.length <= 128);
+    const result = ids.length ? await accountResources.deleteMany({ accountId: token.sub, type: body.type, resourceId: { $in: ids } }) : { deletedCount: 0 };
+    return send(res, 200, { success: true, deleted: result.deletedCount }, req.allowedOrigin);
   }
 
   if (req.method === "POST" && path === "/v1/resources/sync") {
