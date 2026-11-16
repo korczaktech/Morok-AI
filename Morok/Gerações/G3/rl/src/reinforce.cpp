@@ -93,18 +93,43 @@ template <typename T>
            weights.format * components.format;
 }
 
-[[nodiscard]] double repeated_ratio(std::span<const TokenId> tokens) noexcept {
+[[nodiscard]] double repeated_ratio(std::span<const TokenId> tokens) {
     if (tokens.size() < 2U) {
         return 0.0;
     }
-    std::size_t repeated = 0;
-    for (std::size_t i = 1; i < tokens.size(); ++i) {
+    std::size_t repeated_adjacent = 0U;
+    for (std::size_t i = 1U; i < tokens.size(); ++i) {
         if (tokens[i] == tokens[i - 1U]) {
-            ++repeated;
+            ++repeated_adjacent;
         }
     }
-    return static_cast<double>(repeated) /
-           static_cast<double>(tokens.size() - 1U);
+    std::size_t longest_repeated_ngram = 0U;
+    const std::size_t max_ngram =
+        std::min<std::size_t>(tokens.size() / 2U, 32U);
+    for (std::size_t length = 2U; length <= max_ngram; ++length) {
+        std::unordered_map<std::string, std::size_t> last_position;
+        for (std::size_t start = 0U; start + length <= tokens.size(); ++start) {
+            std::string key;
+            key.reserve(length);
+            for (std::size_t offset = 0U; offset < length; ++offset) {
+                key.push_back(static_cast<char>(tokens[start + offset]));
+            }
+            const auto found = last_position.find(key);
+            if (found != last_position.end() &&
+                start - found->second >= length) {
+                longest_repeated_ngram =
+                    std::max(longest_repeated_ngram, length);
+            }
+            last_position[key] = start;
+        }
+    }
+    const double adjacent_ratio =
+        static_cast<double>(repeated_adjacent) /
+        static_cast<double>(tokens.size() - 1U);
+    const double repeated_phrase_ratio =
+        static_cast<double>(2U * longest_repeated_ngram) /
+        static_cast<double>(tokens.size());
+    return std::max(adjacent_ratio, repeated_phrase_ratio);
 }
 
 [[nodiscard]] double prompt_copy_ratio(std::span<const TokenId> prompt,
