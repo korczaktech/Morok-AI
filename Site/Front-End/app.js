@@ -8,7 +8,7 @@
   const MAX_LIBRARY_FILE_BYTES = 48 * 1024;
   const INTEGRATION_CONTRACTS = Object.freeze({chat:{status:'local-wasm',method:'WebAssembly',path:'/v1/conversations/sync',request:['prompt'],response:['response'],persistence:'MongoDB via Render API'},imageGeneration:{status:'pending',request:['prompt','model','size'],response:['image_url','request_id']},modelContext:{status:'pending',fields:['aboutMe','responseStyle','instructions','location','libraryFiles']},externalPlugins:{status:'pending',requirements:['authorization','permissions','server-side connector']}});
   window.MorokIntegrationContracts = INTEGRATION_CONTRACTS;
-  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G2', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], images: [], tasks: [], projects: [], activeProjectId: null, instructions: '', location: '', aboutMe: '', responseStyle: 'equilibrado', notifications: false, libraryItems: [], pendingResourceDeletions: [], pendingConversationDeletions: [], busy: false, controller: null, contextId: null, renameId: null, confirmResolve: null, toastTimer: null };
+  const state = { conversations: [], activeId: null, theme: 'dark', apiUrl: AUTH_API_URL, authSession: null, authMode: 'login', generation: 'G2', model: 'Tsukuyomi', displayName: 'Visitante', attachments: [], images: [], tasks: [], projects: [], activeProjectId: null, instructions: '', location: '', aboutMe: '', responseStyle: 'equilibrado', displayStreaming: true, notifications: false, libraryItems: [], pendingResourceDeletions: [], pendingConversationDeletions: [], busy: false, controller: null, contextId: null, renameId: null, confirmResolve: null, toastTimer: null };
   const el = {
     app: $('#app'), sidebar: $('#sidebar'), backdrop: $('#backdrop'), history: $('#history-list'),
     welcome: $('#welcome'), conversation: $('#conversation'), input: $('#message-input'), composer: $('#composer'),
@@ -37,7 +37,7 @@
   function titleFrom(text) { const clean = text.replace(/\s+/g, ' ').trim(); return clean.length > 34 ? clean.slice(0, 34).trimEnd() + '…' : clean || 'Nova conversa'; }
   function persist() {
     try {
-      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, displayName: state.displayName, generation: state.generation, model: state.model, tasks: state.tasks, projects: state.projects, instructions: state.instructions, location: state.location, aboutMe: state.aboutMe, responseStyle: state.responseStyle, notifications: state.notifications, libraryItems: state.libraryItems, pendingResourceDeletions: state.pendingResourceDeletions, pendingConversationDeletions: state.pendingConversationDeletions });
+      const payload = JSON.stringify({ conversations: state.conversations, activeId: state.activeId, theme: state.theme, displayName: state.displayName, generation: state.generation, model: state.model, tasks: state.tasks, projects: state.projects, instructions: state.instructions, location: state.location, aboutMe: state.aboutMe, responseStyle: state.responseStyle, displayStreaming: state.displayStreaming, notifications: state.notifications, libraryItems: state.libraryItems, pendingResourceDeletions: state.pendingResourceDeletions, pendingConversationDeletions: state.pendingConversationDeletions });
       if (payload.length > MAX_LOCAL_BYTES) { toast('O histórico local está cheio. Exclua conversas antigas.'); return; }
       localStorage.setItem(STORAGE_KEY, payload);
     } catch (error) { toast('Não foi possível salvar no navegador. Verifique o espaço disponível.'); }
@@ -58,6 +58,7 @@
       state.location = typeof saved.location === 'string' ? saved.location.slice(0,120) : '';
       state.aboutMe = typeof saved.aboutMe === 'string' ? saved.aboutMe.slice(0,1000) : '';
       state.responseStyle = ['conciso','equilibrado','detalhado'].includes(saved.responseStyle) ? saved.responseStyle : 'equilibrado';
+      state.displayStreaming = saved.displayStreaming !== false;
       state.notifications = saved.notifications === true && typeof Notification !== 'undefined' && Notification.permission === 'granted';
       state.libraryItems = Array.isArray(saved.libraryItems) ? saved.libraryItems.slice(0,100) : [];
       state.pendingResourceDeletions = Array.isArray(saved.pendingResourceDeletions) ? saved.pendingResourceDeletions.filter(x => x && typeof x.id === 'string' && typeof x.type === 'string' && typeof x.accountId === 'string') : [];
@@ -319,6 +320,30 @@
     return tsukuyomiRuntimePromise;
   }
 
+  async function displayAssistantProgressively(article, answer, signal) {
+    if (!article?.isConnected) return;
+    const textNode = article.querySelector('.message-text');
+    if (!textNode) return;
+    textNode.textContent = '';
+    const chunkSize = Math.max(3, Math.ceil(answer.length / 140));
+    for (let end = chunkSize; end < answer.length; end += chunkSize) {
+      if (signal.aborted) {
+        const aborted = new Error('Exibição interrompida pelo usuário.');
+        aborted.name = 'AbortError';
+        throw aborted;
+      }
+      textNode.innerHTML = renderMarkdown(answer.slice(0, end));
+      if (state.activeId && article.isConnected) el.conversation.scrollTop = el.conversation.scrollHeight;
+      await new Promise(resolve => setTimeout(resolve, 18));
+    }
+    if (signal.aborted) {
+      const aborted = new Error('Exibição interrompida pelo usuário.');
+      aborted.name = 'AbortError';
+      throw aborted;
+    }
+    textNode.innerHTML = renderMarkdown(answer);
+  }
+
   async function requestAnswer(conversation, prompt) {
     state.busy = true; state.controller = new AbortController(); setBusy(true);
     const pending = { id:'pending', role:'assistant', content:'Iniciando Tsukuyomi G2 localmente…', createdAt:now() };
@@ -354,6 +379,10 @@
       const answer = engine.runtime.generate(prompt, 256);
       if (typeof answer !== 'string' || !answer.trim()) {
         throw new Error('O Tsukuyomi G2 não produziu uma resposta válida para esta pergunta.');
+      }
+      if (state.displayStreaming) {
+        const pendingElement = el.conversation.querySelector('[data-message-id="pending"]');
+        await displayAssistantProgressively(pendingElement, answer, state.controller.signal);
       }
       conversation.messages.push({ id:id(), role:'assistant', content:answer, model:'Tsukuyomi G2', createdAt:now() });
       if(state.notifications && document.hidden && typeof Notification!=='undefined' && Notification.permission==='granted') new Notification('Morok',{body:'Sua resposta está pronta.'});
@@ -473,10 +502,12 @@
   function openSettings() {
     $('#theme-select').value = state.theme;
     $('#theme-select').dispatchEvent(new Event('change', { bubbles: true }));
+    $('#stream-display-select').value = state.displayStreaming ? 'enabled' : 'disabled';
     el.settings.showModal();
   }
   async function saveSettings() {
     state.theme = $('#theme-select').value;
+    state.displayStreaming = $('#stream-display-select').value === 'enabled';
     applyTheme(); persist(); el.settings.close();
     if (state.authSession?.access_token) {
       try {
