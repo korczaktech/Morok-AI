@@ -44,7 +44,7 @@ jobs:
             echo "- Rodada: **${RODADA}/10**"
             echo "- Épocas: **10**"
             echo "- Tentativas: **1**"
-            echo "- Questões de validação: **20**"
+            echo "- Perguntas treinadas: **40**"
             echo "- Estado: checkpoint, Adam e memória persistidos entre as rodadas"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -99,7 +99,7 @@ jobs:
             echo "Primeira execução: ainda não existe memória persistente."
           fi
 
-      - name: Treinar Tsukuyomi — 10 épocas, 1 tentativa, 20 questões
+      - name: Treinar Tsukuyomi — 10 épocas, 1 tentativa, 40 perguntas
         working-directory: Morok
         env:
           RODADA: ${{ inputs.rodada }}
@@ -107,24 +107,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "Iniciando rodada $RODADA de 10."
-          python3 "Gerações/G2/Tsukuyomi/scripts/treinamento_ciclico.py" \
-            build/g2/morok-g2-tsukuyomi-train \
-            build/g2/morok-g2-tsukuyomi-generate \
-            "Gerações/G2/Tsukuyomi/data/treinamento.txt" \
-            "Gerações/G2/Tsukuyomi/data/feedback.txt" \
-            "Gerações/G2/Tsukuyomi/data/validacao.txt" \
-            "Gerações/G2/Tsukuyomi/data/teste.txt" \
-            10 1 0 20
-
-      - name: Avaliação final do melhor checkpoint e do teste reservado
-        working-directory: Morok
-        run: |
-          python3 "Gerações/G2/Tsukuyomi/scripts/avaliacao_final.py" \
-            build/g2/morok-g2-tsukuyomi-generate \
-            build/g2/tsukuyomi-treinamento-ciclico.ckpt \
-            "Gerações/G2/Tsukuyomi/data/validacao.txt" \
-            "Gerações/G2/Tsukuyomi/data/teste.txt" \
-            build/g2/avaliacao-final-tsukuyomi.json
+          python3 "Gerações/G2/Tsukuyomi/scripts/treinamento_ciclico.py" \\
+            build/g2/morok-g2-tsukuyomi-train \\
+            build/g2/morok-g2-tsukuyomi-generate \\
+            "Gerações/G2/Tsukuyomi/data/feedback.txt" \\
+            10 1 0
 
       - name: Persistir pesos e memória de treinamento
         working-directory: Morok
@@ -196,8 +183,6 @@ jobs:
             Morok/build/g2/tsukuyomi-historico-perguntas.json
             Morok/build/g2/tsukuyomi-learning-rates-by-question.txt
             Morok/build/g2/respostas-tsukuyomi.md
-            Morok/build/g2/avaliacao-final-tsukuyomi.json
-            Morok/build/g2/avaliacao-final-tsukuyomi.md
           if-no-files-found: warn
           retention-days: 30
 
