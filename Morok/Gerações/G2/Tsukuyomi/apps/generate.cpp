@@ -6,6 +6,9 @@
 #include <cstdlib>
 #include <cstdint>
 #include <iostream>
+#include <filesystem>
+#include <iomanip>
+#include <sstream>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -52,34 +55,44 @@ std::string answer_for(const morok::g2::tsukuyomi::Model& model,
 
 int main(int argc, char** argv) {
     const bool batch = argc >= 2 && std::string(argv[1]) == "--batch";
-    if ((batch && argc != 4) || (!batch && (argc < 4 || argc > 18))) {
-        std::cerr << "Uso: morok-g2-tsukuyomi-generate <checkpoint> <prompt> <max_bytes> "
-                  << "[--sample] [--temperature N] [--top-k N] [--top-p N] "
-                  << "[--repetition-penalty N] [--repetition-window N] [--seed N]\n"
-                  << "Ou: morok-g2-tsukuyomi-generate --batch <checkpoint> <max_bytes>\n";
+    const bool batch_individual = argc >= 2 && std::string(argv[1]) == "--batch-question-checkpoints";
+    const bool individual = argc >= 2 && std::string(argv[1]) == "--question-checkpoints";
+    if ((batch && argc != 4) || (batch_individual && argc != 4) ||
+        (individual && (argc < 5 || argc > 19)) ||
+        (!batch && !batch_individual && !individual && (argc < 4 || argc > 18))) {
+        std::cerr << "Uso: morok-g2-tsukuyomi-generate <checkpoint> <prompt> <max_bytes> [opções]\n"
+                  << "Ou: --batch <checkpoint> <max_bytes>\n"
+                  << "Ou: --question-checkpoints <diretório> <pergunta> <max_bytes> [opções]\n"
+                  << "Ou: --batch-question-checkpoints <diretório> <max_bytes>\n";
         return 2;
     }
 
-    const char* checkpoint = batch ? argv[2] : argv[1];
-    const char* limit_text = argv[3];
+    const std::filesystem::path checkpoint_directory =
+        (individual || batch_individual) ? argv[2] : std::filesystem::path{};
+    const std::string prompt = individual ? argv[3] : "";
+    const char* checkpoint = batch ? argv[2] : (individual ? nullptr : argv[1]);
+    const char* limit_text = (batch || batch_individual) ? argv[3] :
+                             (individual ? argv[4] : argv[3]);
     std::size_t maximum = 0;
     if (!parse_limit(limit_text, maximum)) {
         std::cerr << "Limite de geração inválido (1 a 4096 bytes).\n";
         return 2;
     }
 
-    morok::g2::tsukuyomi::Model model;
-    if (!morok::g2::tsukuyomi::load_checkpoint(model, checkpoint)) {
-        std::cerr << "Checkpoint inválido ou incompatível.\n";
-        return 1;
-    }
-
-    if (batch) {
+    if (batch || batch_individual) {
         std::string question;
         while (std::getline(std::cin, question)) {
             if (question.empty()) {
                 std::cout << '\n';
                 continue;
+            }
+            morok::g2::tsukuyomi::Model model;
+            const auto path = batch_individual
+                ? checkpoint_directory / question_checkpoint_name(question)
+                : std::filesystem::path(checkpoint);
+            if (!morok::g2::tsukuyomi::load_checkpoint(model, path)) {
+                std::cerr << "Checkpoint inválido ou ausente para a pergunta: " << question << '\n';
+                return 1;
             }
             std::cout << answer_for(model, question, maximum) << '\n';
             if (!std::cout.good()) return 1;
@@ -87,8 +100,17 @@ int main(int argc, char** argv) {
         return std::cin.eof() ? 0 : 1;
     }
 
+    const auto selected_checkpoint = individual
+        ? checkpoint_directory / question_checkpoint_name(prompt)
+        : std::filesystem::path(checkpoint);
+    morok::g2::tsukuyomi::Model model;
+    if (!morok::g2::tsukuyomi::load_checkpoint(model, selected_checkpoint)) {
+        std::cerr << "Checkpoint inválido ou incompatível para a pergunta selecionada.\n";
+        return 1;
+    }
+
     morok::g2::tsukuyomi::GenerationConfig generation_config;
-    for (int index = 4; index < argc; ++index) {
+    for (int index = individual ? 5 : 4; index < argc; ++index) {
         const std::string option(argv[index]);
         if (option == "--sample") {
             generation_config.sample = true;
@@ -117,8 +139,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    const std::string prompt(argv[2]);
-    const std::vector<std::uint8_t> input(prompt.begin(), prompt.end());
+    const std::vector<std::uint8_t> input(prompt.empty() ? std::string(argv[2]).begin() : prompt.begin(), prompt.empty() ? std::string(argv[2]).end() : prompt.end());
     const auto result = morok::g2::tsukuyomi::generate(
         model, input, maximum, generation_config);
     for (std::size_t i = input.size(); i < result.size(); ++i) {
