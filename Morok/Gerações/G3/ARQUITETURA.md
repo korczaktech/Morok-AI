@@ -165,7 +165,7 @@ armazenamento de pesos paralelo.
 - A referência SFT é recebida como `const InferencePolicy&`, uma interface sem
   método de atualização: pode executar inferência, mas não recebe gradientes.
 - A política treinável recebe gradientes de logits acumulados para o lote e
-  aplica uma única atualização de otimizador. Os pesos e o otimizador continuam
+  aplica uma única atualização de otimizador com gradientes médios sobre as candidatas do lote. Os pesos e o otimizador continuam
   pertencendo ao backend neural da geração.
 
 ### 9.2 REINFORCE e amostragem
