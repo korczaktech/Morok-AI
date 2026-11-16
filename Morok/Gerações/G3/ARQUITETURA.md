@@ -405,3 +405,48 @@ Total calculado: **100.000 parâmetros exatos**. O estado por sessão contém 97
 O backend calcula o total a partir dos tamanhos reais dos tensores e rejeita no construtor qualquer total diferente de 100.000. O descritor também informa a contagem dinâmica. O identificador 0x0302 torna os artefatos anteriores 0x0301 incompatíveis; não se deve reinterpretar checkpoints antigos com as novas dimensões.
 
 A especificação detalhada e os critérios de teste estão em [PARAMETROS-100K.md](PARAMETROS-100K.md).
+
+
+---
+
+## Revisão SFT — Etapa de dataset e treinamento supervisionado
+
+O pipeline supervisionado da G3 está em `Gerações/G3/training/` e atualiza diretamente os tensores do backend `Morok::G3::Neural`. Não existe um segundo motor de inferência.
+
+### Dataset e split
+
+- Loader JSONL com `example_id`, `group_id`, `category`, `question`, `answer`, `source`, `language` e `dataset_version`.
+- Campos opcionais: `quality`, `sensitive`, `question_variants` e `expansion_axes`.
+- UTF-8 é validado e texto normalizado em NFC via ICU.
+- IDs duplicados, registros incompletos e qualidade fora de [0,1] são rejeitados.
+- Fingerprint determinístico FNV-1a de 64 bits inclui conteúdo e metadados; não é checksum criptográfico.
+- Split 85/10/5 por grupos completos, seed configurável; exige pelo menos três grupos.
+- Expansão/ruído só são aplicados no split de treino. Validação e teste permanecem sem perturbação; o split de teste não participa do ajuste.
+
+### Expansão e perturbação
+
+- Variantes curadas em `question_variants`.
+- Eixos combinatórios em `expansion_axes`, associados a placeholders `{0}`, `{1}` etc.
+- Amostragem determinística e deduplicação, com máximo padrão de quatro variantes por exemplo.
+- Perturbação apenas no treino, com probabilidade padrão 45% e pesos condicionais 20/20/20/25/15 para swap, omissão, tecla próxima, acento/caixa/pontuação e repetição/espaçamento.
+- Mutações são feitas sobre caracteres Unicode e preservam UTF-8 válido.
+- Exemplos `sensitive=true` bloqueiam o treino por padrão; o opt-in é explícito na configuração.
+
+### Objetivo e otimização
+
+- Sequência: BOS, USR, pergunta em bytes, BOT, resposta em bytes, EOS.
+- Cross-Entropy causal aplicada aos bytes da resposta e EOS. Tokens de prompt não recebem loss auxiliar por padrão; PAD retorna loss zero e gradiente zero.
+- Label smoothing 0,05 somente para alvos byte-level comuns; tokens especiais não recebem smoothing.
+- BPTT truncado em 128 passos por padrão, configurável até 512. Estado numérico continua entre segmentos; gradiente é destacado na fronteira.
+- Dropout variacional padrão 0,10, com máscara fixa dentro de cada segmento e desativado na validação.
+- AdamW: LR 1e-3, warmup 3%, cosine decay até 1e-5, beta1 0,9, beta2 0,999, weight decay 1e-3 somente em matrizes e clipping global L2 1,0.
+- Weight tying é preservado: gradientes do embedding somam contribuições da entrada e da cabeça de saída, sem matriz duplicada.
+
+### Telemetria e execução
+
+- JSONL append-only com loss por pergunta e por exemplo, loss agregada de treino/validação, normas de gradiente, learning rate, run_id, seed, versão de código/configuração, versão do dataset, example_id e group_id.
+- CLI: `morok-g3-train <dataset.jsonl> <metrics.jsonl> [epocas] [seed]`.
+- Biblioteca: `Morok::G3::Training`.
+- Testes: `g3.training`, incluindo loader, matriz de expansão, isolamento de grupos, Cross-Entropy, PAD, perturbação, update de pesos e telemetria.
+
+A implementação do pipeline não equivale a um treino de produção. Nenhum corpus real foi incluído ou treinado nesta entrega; a qualidade do modelo depende de dataset com origem, licença e rótulos revisados. O CLI atual ainda não retoma checkpoints com estado AdamW/RNG, requisito de recuperação de treinamento descrito nos critérios gerais do documento.
