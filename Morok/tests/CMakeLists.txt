@@ -255,6 +255,8 @@ add_executable(morok_test_g3_neural
     ../Gerações/G3/neural/tests/test_gru_backend.cpp)
 target_link_libraries(morok_test_g3_neural
     PRIVATE Morok::G3::Neural morok_build_options)
+target_compile_options(morok_test_g3_neural PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang>:-UNDEBUG>)
 morok_enable_sanitizers(morok_test_g3_neural)
 add_test(NAME g3.neural COMMAND morok_test_g3_neural)
 set_tests_properties(g3.neural PROPERTIES LABELS "g3;neural;architecture" TIMEOUT 60)
