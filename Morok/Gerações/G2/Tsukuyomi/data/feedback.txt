@@ -1,5 +1,5 @@
-# Tsukuyomi G2 0.1 — banco de validação (40 questões)
-# Perguntas alternativas para avaliar respostas a partir de conhecimento do corpus.
+# Tsukuyomi G2 0.1 — conjunto dedicado de feedback supervisionado (40 questões)
+# Perguntas históricas de correção supervisionada; não selecionar checkpoints com este conjunto.
 # Pares U:/IA: em português; UTF-8.
 
 U: Quem desenvolveu o projeto do qual você faz parte?
