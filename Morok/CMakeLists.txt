@@ -128,6 +128,8 @@ add_library(morok_g3_inference STATIC
     Gerações/G3/inference/src/quantization.cpp
     Gerações/G3/inference/src/model_artifact.cpp
     Gerações/G3/inference/src/generator.cpp
+    Gerações/G3/inference/src/session_manager.cpp
+    Gerações/G3/inference/src/int8_backend.cpp
     Gerações/G3/inference/src/benchmark.cpp
 )
 add_library(Morok::G3::Inference ALIAS morok_g3_inference)
