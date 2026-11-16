@@ -206,7 +206,8 @@ std::uint64_t count_parameters(const G3Weights& weights) noexcept {
 
 G3Backend::G3Backend(G3Config config)
     : weights_(initialize_weights(config.seed)),
-      rms_epsilon_(config.rms_epsilon) {
+      rms_epsilon_(config.rms_epsilon),
+      seed_(config.seed) {
     if (!std::isfinite(rms_epsilon_) || rms_epsilon_ <= 0.0F) {
         throw std::invalid_argument("G3 RMSNorm epsilon must be finite and positive");
     }
@@ -239,7 +240,7 @@ common::Status G3Backend::consume_token(std::span<std::byte> state,
                     "G3 token ID is outside the 261-entry vocabulary");
     }
     if (state.size() != kStateBytes) {
-        return fail(common::ErrorCode::invalid_argument, "consume_byte",
+        return fail(common::ErrorCode::invalid_argument, "consume_token",
                     "G3 state has an invalid size");
     }
     if (weights_.embedding.size() != kVocabularySize * kEmbeddingDim ||
@@ -250,7 +251,7 @@ common::Status G3Backend::consume_token(std::span<std::byte> state,
         weights_.layer2_recurrent.size() != kGateCount * kHiddenDim * kHiddenDim ||
         weights_.layer2_bias.size() != kGateCount * kHiddenDim ||
         weights_.rms_scale.size() != kHiddenDim) {
-        return fail(common::ErrorCode::invalid_argument, "consume_byte",
+        return fail(common::ErrorCode::invalid_argument, "consume_token",
                     "G3 weight tensor dimensions are invalid");
     }
 
@@ -274,13 +275,13 @@ common::Status G3Backend::consume_token(std::span<std::byte> state,
 
     for (float value : layer1) {
         if (!std::isfinite(value)) {
-            return fail(common::ErrorCode::internal_error, "consume_byte",
+            return fail(common::ErrorCode::internal_error, "consume_token",
                         "G3 first recurrent layer produced a non-finite state");
         }
     }
     for (float value : layer2) {
         if (!std::isfinite(value)) {
-            return fail(common::ErrorCode::internal_error, "consume_byte",
+            return fail(common::ErrorCode::internal_error, "consume_token",
                         "G3 second recurrent layer produced a non-finite state");
         }
     }
