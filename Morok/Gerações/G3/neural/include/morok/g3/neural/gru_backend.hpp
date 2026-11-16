@@ -17,6 +17,19 @@ inline constexpr std::size_t kLayer2HiddenDim = 68U;
 inline constexpr std::size_t kRecurrentLayers = 2U;
 inline constexpr std::size_t kGateCount = 3U;
 inline constexpr std::size_t kTargetParameterCount = 100000U;
+inline constexpr std::size_t kConfiguredParameterCount =
+    kVocabularySize * kEmbeddingDim +
+    kGateCount * kLayer1HiddenDim * kEmbeddingDim +
+    kGateCount * kLayer1HiddenDim * kLayer1HiddenDim +
+    kGateCount * kLayer1HiddenDim +
+    kGateCount * kLayer2HiddenDim * kLayer1HiddenDim +
+    kGateCount * kLayer2HiddenDim * kLayer2HiddenDim +
+    kGateCount * kLayer2HiddenDim +
+    kLayer1HiddenDim +
+    kEmbeddingDim * kLayer2HiddenDim +
+    kEmbeddingDim + kVocabularySize;
+static_assert(kConfiguredParameterCount == kTargetParameterCount,
+              "G3 architecture must remain exactly 100,000 parameters");
 inline constexpr std::uint16_t kArchitectureId = 0x0302U;
 
 struct G3Config final {
