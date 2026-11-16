@@ -37,7 +37,8 @@ A Etapa 3 implementa o algoritmo REINFORCE da G3 em
 inclui referência SFT somente para inferência, amostragem Top-K/temperatura,
 baseline móvel por categoria, recompensas com pesos e penalidades explícitos,
 KL por distribuição, gradientes de logits em lote, auditoria independente do
-avaliador e comparação SFT/RL no mesmo conjunto fechado.
+avaliador, comparação SFT/RL no mesmo conjunto fechado e estado recuperável do
+treinador (baseline, RNG, configuração e proveniência).
 
 O contrato de política recebe distribuições normalizadas de 261 IDs e delega
 a aplicação do gradiente ao backend treinável que possui os pesos e o
