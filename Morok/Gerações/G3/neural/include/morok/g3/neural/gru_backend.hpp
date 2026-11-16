@@ -40,6 +40,20 @@ struct G3Weights final {
     std::vector<float> output_bias;        // [V]
 };
 
+struct G3MutableWeightsView final {
+    std::span<float> embedding;
+    std::span<float> layer1_input;
+    std::span<float> layer1_recurrent;
+    std::span<float> layer1_bias;
+    std::span<float> layer2_input;
+    std::span<float> layer2_recurrent;
+    std::span<float> layer2_bias;
+    std::span<float> rms_scale;
+    std::span<float> projection;
+    std::span<float> projection_bias;
+    std::span<float> output_bias;
+};
+
 [[nodiscard]] std::uint64_t count_parameters(
     const G3Weights& weights) noexcept;
 
@@ -59,7 +73,16 @@ public:
         std::span<float> log_probabilities) const override;
 
     [[nodiscard]] const G3Weights& weights() const noexcept { return weights_; }
-    [[nodiscard]] G3Weights& mutable_weights() noexcept { return weights_; }
+    // Trainers may update tensor values but cannot resize tensors or change
+    // the fixed 100,000-parameter architecture through this view.
+    [[nodiscard]] G3MutableWeightsView mutable_weights() noexcept {
+        return {weights_.embedding, weights_.layer1_input,
+                weights_.layer1_recurrent, weights_.layer1_bias,
+                weights_.layer2_input, weights_.layer2_recurrent,
+                weights_.layer2_bias, weights_.rms_scale,
+                weights_.projection, weights_.projection_bias,
+                weights_.output_bias};
+    }
     [[nodiscard]] std::uint64_t parameter_count() const noexcept {
         return count_parameters(weights_);
     }
