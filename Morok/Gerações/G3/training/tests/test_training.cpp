@@ -1,5 +1,6 @@
 #include "morok/g3/training/trainer.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <filesystem>
@@ -88,7 +89,7 @@ void test_training_updates_model_and_logs_per_example() {
     }
     std::filesystem::remove(metrics);
     auto dataset = load_jsonl(path);
-    neural::G3Backend backend(neural::G3Config{123U, 1.0e-5F});
+    morok::g3::neural::G3Backend backend(morok::g3::neural::G3Config{123U, 1.0e-5F});
     const auto before = backend.weights().embedding;
     TrainingConfig config;
     config.epochs = 1U;
