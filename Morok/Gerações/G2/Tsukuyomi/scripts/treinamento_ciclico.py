@@ -402,7 +402,7 @@ def evaluate_one(generator: Path, trainer: Path, checkpoint: Path,
                  dialogue: tuple[str, str]) -> tuple[str, bool, float, float, float, int]:
     question, expected = dialogue
     process = subprocess.run(
-        [str(generator), str(checkpoint), question, str(MAX_RESPONSE_BYTES)],
+        [str(generator), str(checkpoint), f"U: {question}", str(MAX_RESPONSE_BYTES)],
         check=True, capture_output=True, text=True, encoding="utf-8",
     )
     answer = process.stdout.rstrip("\\r\\n")
