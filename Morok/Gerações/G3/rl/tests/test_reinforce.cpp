@@ -154,6 +154,16 @@ void test_evaluator_audit_and_reward_hacking() {
     assert(repeated.value_if()->repeated_response_rate == 1.0);
     assert(repeated.value_if()->mean_reward < 1.0);
 
+    const std::string repeated_phrase = "ha ha ha";
+    std::vector<TokenId> repeated_phrase_tokens;
+    for (const unsigned char byte : repeated_phrase) {
+        repeated_phrase_tokens.push_back(static_cast<TokenId>(byte));
+    }
+    MockPolicy phrase_policy("repeated-phrase", repeated_phrase_tokens, 1.0F);
+    const auto phrase = evaluate_policy(phrase_policy, evaluator, prompts, 16);
+    assert(phrase.has_value());
+    assert(phrase.value_if()->repeated_response_rate == 1.0);
+
     MockPolicy generic_policy("generic", {static_cast<TokenId>('G')});
     const auto generic = evaluate_policy(generic_policy, evaluator, prompts, 4);
     assert(generic.has_value());
