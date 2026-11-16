@@ -11,17 +11,22 @@ import treinamento_ciclico as training
 
 
 class TrainingDataTests(unittest.TestCase):
-    def test_learning_rate_scheduler_reduces_after_plateau(self):
+    def test_learning_rate_drops_ten_percent_after_every_cycle(self):
         lr = training.INITIAL_LEARNING_RATE
-        best = (0, 0.5)
-        plateau = 0
-        for _ in range(training.LR_PLATEAU_CYCLES - 1):
-            lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, (0, 0.5))
-            self.assertFalse(reduced)
-        lr, best, plateau, reduced = training.update_learning_rate(lr, best, plateau, (0, 0.5))
-        self.assertTrue(reduced)
-        self.assertEqual(lr, training.INITIAL_LEARNING_RATE * 0.5)
-        self.assertEqual(plateau, 0)
+        expected = lr
+        for _ in range(5):
+            expected *= 0.9
+            lr = training.decay_learning_rate(lr)
+            self.assertAlmostEqual(lr, expected, places=12)
+
+    def test_learning_rate_floor_is_one_e_minus_seven(self):
+        self.assertEqual(training.MIN_LEARNING_RATE, 1e-7)
+        self.assertEqual(training.decay_learning_rate(1.01e-7), 1e-7)
+
+    def test_learning_rate_rejects_values_below_floor_or_non_finite(self):
+        for value in (0.0, 0.5e-7, float("nan"), float("inf")):
+            with self.assertRaises(ValueError):
+                training.decay_learning_rate(value)
 
     def test_training_budget_is_finite_and_matches_default_plan(self):
         self.assertEqual(training.MAX_CYCLES, 100)
@@ -29,23 +34,6 @@ class TrainingDataTests(unittest.TestCase):
         self.assertEqual(1000 * 100, 100000)
         self.assertLessEqual(1000, training.MAX_EPOCHS_PER_CYCLE)
         self.assertLessEqual(100, training.MAX_CYCLES)
-
-    def test_learning_rate_scheduler_never_crosses_minimum(self):
-        lr = training.MIN_LEARNING_RATE * 2
-        best = (0, 0.9)
-        plateau = 0
-        for _ in range(training.LR_PLATEAU_CYCLES):
-            lr, best, plateau, _ = training.update_learning_rate(lr, best, plateau, (0, 0.1))
-        self.assertEqual(lr, training.MIN_LEARNING_RATE)
-
-    def test_learning_rate_scheduler_resets_on_improvement(self):
-        lr, best, plateau, reduced = training.update_learning_rate(
-            0.001, (0, 0.5), 4, (0, 0.8)
-        )
-        self.assertEqual(lr, 0.001)
-        self.assertEqual(best, (0, 0.8))
-        self.assertEqual(plateau, 0)
-        self.assertFalse(reduced)
 
     def test_continuous_training_stops_on_first_correct_single_question(self):
         self.assertTrue(training.should_stop(True, 1, 1))
