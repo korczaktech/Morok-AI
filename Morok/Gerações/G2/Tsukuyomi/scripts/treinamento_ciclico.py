@@ -23,7 +23,6 @@ MIN_LEARNING_RATE = 1e-5
 MAX_LEARNING_RATE = 1e-2
 # LR-base fixo e interno; a configuração externa do workflow é ignorada.
 INITIAL_LEARNING_RATE = 1e-3
-LR_REDUCE_FACTOR = 0.9
 
 
 def validation_rank(correct_count: int, total: int, mean_f1: float,
@@ -36,14 +35,6 @@ def validation_rank(correct_count: int, total: int, mean_f1: float,
     if not math.isfinite(mean_f1) or not math.isfinite(mean_char_similarity):
         raise ValueError("Métricas de validação precisam ser finitas.")
     return correct_count, 0.5 * mean_f1 + 0.5 * mean_char_similarity
-
-
-def decay_learning_rate(current: float) -> float:
-    """Reduz 10% a cada ciclo, respeitando o piso absoluto de 1e-5."""
-    if (not math.isfinite(current) or current < MIN_LEARNING_RATE
-            or current > MAX_LEARNING_RATE):
-        raise ValueError("Learning rate atual inválido.")
-    return max(MIN_LEARNING_RATE, current * LR_REDUCE_FACTOR)
 
 
 def learning_rate_for_lexical_level(base_learning_rate: float, lexical_level: float) -> float:
@@ -107,30 +98,6 @@ def write_question_learning_rates(corpus: Path, rates: dict[str, float], destina
                          encoding="ascii")
     os.replace(temporary, destination)
     return len(ranges)
-
-
-def load_learning_rate(path: Path, fallback: float) -> float:
-    """Retoma o scheduler persistido; estado presente e inválido nunca é ignorado."""
-    if not path.exists():
-        return fallback
-    try:
-        value = float(path.read_text(encoding="utf-8").strip())
-    except (OSError, ValueError) as error:
-        raise RuntimeError("Estado persistente do learning rate inválido.") from error
-    if not math.isfinite(value) or value <= 0.0:
-        raise RuntimeError("Learning rate persistido inválido.")
-    # Normaliza schedulers antigos para os novos limites sem perder a retomada.
-    return min(MAX_LEARNING_RATE, max(MIN_LEARNING_RATE, value))
-
-
-def write_learning_rate(path: Path, value: float) -> None:
-    """Persiste atomicamente o próximo learning rate."""
-    if not math.isfinite(value) or not MIN_LEARNING_RATE <= value <= MAX_LEARNING_RATE:
-        raise ValueError("Learning rate a persistir inválido.")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(f"{value:.12g}\n", encoding="utf-8")
-    os.replace(temporary, path)
 
 
 def validation_metrics(dialogues, results):
@@ -557,7 +524,6 @@ def main() -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
     feedback_path = Path("build/g2/tsukuyomi-memoria-erros.txt")
     combined_training = Path("build/g2/treinamento-com-memoria.txt")
-    learning_rate_path = Path("build/g2/tsukuyomi-learning-rate.txt")
     question_learning_rate_path = Path("build/g2/tsukuyomi-learning-rates-by-question.txt")
     question_history_path = Path("build/g2/tsukuyomi-historico-perguntas.json")
     feedback_memory = load_feedback_memory(feedback_path)
@@ -567,10 +533,7 @@ def main() -> int:
         for stale_best in (best_checkpoint, best_optimizer_state):
             if stale_best.exists():
                 stale_best.unlink()
-        if learning_rate_path.exists():
-            learning_rate_path.unlink()
         question_history = {"version": 1, "questions": {}}
-    learning_rate = load_learning_rate(learning_rate_path, INITIAL_LEARNING_RATE)
     execution_id = os.environ.get("GITHUB_RUN_ID", "local")
     if resume_previous_run:
         print(
@@ -604,7 +567,8 @@ def main() -> int:
         report.write("- Critério de aprovação: igualdade lexical normalizada; não mede semântica\n")
         report.write("- F1 lexical, similaridade de caracteres, repetição e diversidade são diagnósticos; não aprovam respostas.\n")
         report.write("- Scheduler: ranking lexicográfico; exatidão primeiro, F1 e similaridade apenas em empate (delta 0,005).\n")
-        report.write(f"- Learning rate retomado: {learning_rate:.8g}; redução fixa de 10% após cada ciclo, com piso de {MIN_LEARNING_RATE:.1e}.\n")
+        report.write("- Scheduler global por ciclo removido; cada pergunta usa exclusivamente a curva lexical individual. O LR só diminui quando o nível lexical da pergunta aumenta.\n")
+        report.write(f"- LR-base interno fixo: {INITIAL_LEARNING_RATE:.8g}; faixa individual: {MIN_LEARNING_RATE:.1e} a {1e-3:.1e}.\n")
         report.write("- Cada ciclo começa pelo melhor par checkpoint + momentos Adam; o estado persistido anterior é avaliado antes de qualquer atualização.\n")
         report.write("- O conjunto de teste é consultado somente após o treinamento.\n\n")
 
@@ -784,14 +748,6 @@ def main() -> int:
             restore_best_state(
                 best_checkpoint, best_optimizer_state, checkpoint, optimizer_state
             )
-            previous_learning_rate = learning_rate
-            learning_rate = decay_learning_rate(learning_rate)
-            write_learning_rate(learning_rate_path, learning_rate)
-            print(
-                f"Scheduler: LR {previous_learning_rate:.8g} -> {learning_rate:.8g} "
-                "(redução de 10% após este ciclo; piso 1e-5).",
-                flush=True,
-            )
             elapsed = time.perf_counter() - started
             report.write(
                 f"**Treino: {completed_epochs:.0f} época(s), {target_bytes:.0f} bytes-alvo, "
@@ -800,7 +756,7 @@ def main() -> int:
                 f"similaridade char: {mean_char_similarity:.3f}; regressões históricas: {regressions}; "
                 f"regressões contra melhor estado: {len(retention_regressions)}; "
                 f"recuperações: {recoveries}; pontuação: {validation_score:.3f}; "
-                f"próximo LR: {learning_rate:.8g}; "
+                f"LR individual observado: {min(individual_rates):.8g}–{max(individual_rates):.8g}; "
                 f"duração: {elapsed:.2f}s.**\n\n"
             )
             report.flush()
@@ -809,7 +765,7 @@ def main() -> int:
                 f"F1={mean_f1:.3f}; char={mean_char_similarity:.3f}; "
                 f"regressões históricas={regressions}; "
                 f"regressões contra melhor={len(retention_regressions)}; recuperações={recoveries}; "
-                f"score={validation_score:.3f}; próximo LR={learning_rate:.8g}; {elapsed:.2f}s.",
+                f"score={validation_score:.3f}; LR individual={min(individual_rates):.8g}–{max(individual_rates):.8g}; {elapsed:.2f}s.",
                 flush=True,
             )
 
