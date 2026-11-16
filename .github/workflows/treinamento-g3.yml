@@ -104,7 +104,7 @@ jobs:
       - name: Treinar G3 — SFT
         working-directory: Morok
         run: |
-          build/morok-g3-train \
+          build/g3-training/morok-g3-train \
             "${DATASET}" \
             "${OUTPUT_DIR}/sft-metrics.jsonl" \
             "${OUTPUT_DIR}/g3-sft.morok" \
@@ -114,7 +114,7 @@ jobs:
       - name: Avaliar generalização do SFT
         working-directory: Morok
         run: |
-          build/morok-g3-evaluate \
+          build/g3-training/morok-g3-evaluate \
             "${DATASET}" \
             "${OUTPUT_DIR}/g3-sft.morok" \
             "${OUTPUT_DIR}/sft-evaluation.json" \
@@ -124,7 +124,7 @@ jobs:
         if: ${{ inputs.executar_rl }}
         working-directory: Morok
         run: |
-          build/morok-g3-reinforce \
+          build/g3-training/morok-g3-reinforce \
             "${DATASET}" \
             "${OUTPUT_DIR}/g3-sft.morok" \
             "${OUTPUT_DIR}/g3-rl.morok" \
