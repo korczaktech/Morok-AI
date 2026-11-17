@@ -1166,7 +1166,7 @@
       if (button.dataset.model) button.classList.toggle('selected',visible && button.dataset.model===state.model);
     });
   }
-  $$('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;updateModelMenu();$('#generation-list').hidden=true;$('#model-submenu').hidden=false;persist();}));
+  $('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;state.model='Tsukuyomi';updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Geração '+state.generation+' selecionada.');}));
   $('#generation-back').addEventListener('click',()=>{$('#model-submenu').hidden=true;$('#generation-list').hidden=false;});
   $$( '[data-model]' ).forEach(button=>button.addEventListener('click',()=>{if(button.dataset.model!=='Tsukuyomi')return;state.model='Tsukuyomi';updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Tsukuyomi selecionado.');}));
   document.addEventListener('click',event=>{if(!event.target.closest('.model-select-wrap')){$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');}if(!event.target.closest('.context-menu')&&!event.target.closest('.history-menu'))closeContextMenu();});
