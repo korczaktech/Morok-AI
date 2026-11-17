@@ -50,7 +50,7 @@
       state.theme = ['dark','light','system'].includes(saved.theme) ? saved.theme : 'dark';
       state.apiUrl = AUTH_API_URL;
       state.displayName = typeof saved.displayName === 'string' ? saved.displayName.slice(0,32) : 'Visitante';
-      state.generation = 'G2';
+      state.generation = saved.generation === 'G3' ? 'G3' : 'G2';
       state.model = 'Tsukuyomi';
       state.tasks = Array.isArray(saved.tasks) ? saved.tasks.slice(0,100).map(task => ({...task,id:task.id || id()})) : [];
       state.projects = Array.isArray(saved.projects) ? saved.projects.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string').map(p => ({...p,updatedAt:p.updatedAt || p.createdAt || new Date(0).toISOString()})).slice(0,100) : [];
@@ -320,6 +320,32 @@
     return tsukuyomiRuntimePromise;
   }
 
+  let tsukuyomiG3RuntimePromise = null;
+  async function getTsukuyomiG3Runtime() {
+    if (!tsukuyomiG3RuntimePromise) {
+      tsukuyomiG3RuntimePromise = (async () => {
+        if (typeof window.createTsukuyomiG3Module !== 'function') {
+          throw new Error('O WebAssembly do Tsukuyomi G3 não foi publicado. Aguarde a compilação do runtime e recarregue a página.');
+        }
+        const module = await window.createTsukuyomiG3Module({
+          locateFile: file => new URL('./wasm/' + file, document.baseURI).href
+        });
+        const runtime = new module.TsukuyomiG3Runtime();
+        const response = await fetch('./wasm/models/g3-tsukuyomi.morok', { cache: 'force-cache' });
+        if (!response.ok) throw new Error('Não foi possível baixar os pesos do Tsukuyomi G3 (HTTP ' + response.status + ').');
+        const weights = new Uint8Array(await response.arrayBuffer());
+        if (weights.byteLength !== 400064 || !runtime.loadModel(weights)) {
+          throw new Error('O artefato do Tsukuyomi G3 é inválido ou incompatível com este runtime.');
+        }
+        return { module, runtime };
+      })().catch(error => {
+        tsukuyomiG3RuntimePromise = null;
+        throw error;
+      });
+    }
+    return tsukuyomiG3RuntimePromise;
+  }
+
   async function displayAssistantProgressively(article, answer, signal) {
     if (!article?.isConnected) return;
     const textNode = article.querySelector('.message-text');
@@ -346,51 +372,67 @@
 
   async function requestAnswer(conversation, prompt) {
     state.busy = true; state.controller = new AbortController(); setBusy(true);
-    const pending = { id:'pending', role:'assistant', content:'Iniciando Tsukuyomi G2 localmente…', createdAt:now() };
+    const pending = { id:'pending', role:'assistant', content:'Iniciando Tsukuyomi ' + state.generation + ' localmente…', createdAt:now() };
     addMessage(pending); el.conversation.scrollTop = el.conversation.scrollHeight;
     try {
-      const engine = await getTsukuyomiRuntime();
-      if (state.controller?.signal.aborted) {
-        const aborted = new Error('Geração interrompida pelo usuário.');
-        aborted.name = 'AbortError';
-        throw aborted;
-      }
-      const checkpointName = engine.runtime.checkpointFilename(prompt);
-      const checkpointUrl = 'https://raw.githubusercontent.com/korczaktech/Morok-AI/tsukuyomi-state/state/tsukuyomi-g2-questions/' + encodeURIComponent(checkpointName);
-      const checkpointResponse = await fetch(checkpointUrl, {
-        method: 'GET', mode: 'cors', cache: 'no-cache',
-        signal: state.controller?.signal
-      });
-      if (!checkpointResponse.ok) {
-        if (checkpointResponse.status === 404) {
-          throw new Error('O Tsukuyomi G2 ainda não possui um checkpoint para esta pergunta. Esta versão contém 40 perguntas treinadas e não generaliza para perguntas inéditas. Tente uma das perguntas previstas no modelo.');
+      let answer = '';
+      if (state.generation === 'G3') {
+        const engine = await getTsukuyomiG3Runtime();
+        if (state.controller?.signal.aborted) {
+          const aborted = new Error('Geração interrompida pelo usuário.');
+          aborted.name = 'AbortError';
+          throw aborted;
         }
-        throw new Error('Não foi possível baixar o checkpoint individual do Tsukuyomi G2 (HTTP ' + checkpointResponse.status + ').');
-      }
-      const checkpointBytes = new Uint8Array(await checkpointResponse.arrayBuffer());
-      if (checkpointBytes.byteLength !== 40024) {
-        throw new Error('O checkpoint recebido tem tamanho inválido ou está incompleto.');
-      }
-      if (!engine.module.FS.analyzePath('/models').exists) engine.module.FS.mkdir('/models');
-      engine.module.FS.writeFile('/models/' + checkpointName, checkpointBytes);
-      if (!engine.runtime.hasCheckpoint(prompt)) {
-        throw new Error('O checkpoint individual não pôde ser carregado no WebAssembly.');
-      }
-      const answer = engine.runtime.generate(prompt, 256);
-      if (typeof answer !== 'string' || !answer.trim()) {
-        throw new Error('O Tsukuyomi G2 não produziu uma resposta válida para esta pergunta.');
+        const seedBytes = new Uint32Array(1);
+        crypto.getRandomValues(seedBytes);
+        answer = engine.runtime.generate(prompt, 256, 0.7, 10, seedBytes[0]);
+        if (typeof answer !== 'string' || !answer.trim()) {
+          throw new Error('O Tsukuyomi G3 não produziu uma resposta válida. O modelo está em execução local, mas sua geração pode estar limitada pelo treinamento atual.');
+        }
+      } else {
+        const engine = await getTsukuyomiRuntime();
+        if (state.controller?.signal.aborted) {
+          const aborted = new Error('Geração interrompida pelo usuário.');
+          aborted.name = 'AbortError';
+          throw aborted;
+        }
+        const checkpointName = engine.runtime.checkpointFilename(prompt);
+        const checkpointUrl = 'https://raw.githubusercontent.com/korczaktech/Morok-AI/tsukuyomi-state/state/tsukuyomi-g2-questions/' + encodeURIComponent(checkpointName);
+        const checkpointResponse = await fetch(checkpointUrl, {
+          method: 'GET', mode: 'cors', cache: 'no-cache',
+          signal: state.controller?.signal
+        });
+        if (!checkpointResponse.ok) {
+          if (checkpointResponse.status === 404) {
+            throw new Error('O Tsukuyomi G2 ainda não possui um checkpoint para esta pergunta. Esta versão contém 40 perguntas treinadas e não generaliza para perguntas inéditas. Tente uma das perguntas previstas no modelo.');
+          }
+          throw new Error('Não foi possível baixar o checkpoint individual do Tsukuyomi G2 (HTTP ' + checkpointResponse.status + ').');
+        }
+        const checkpointBytes = new Uint8Array(await checkpointResponse.arrayBuffer());
+        if (checkpointBytes.byteLength !== 40024) {
+          throw new Error('O checkpoint recebido tem tamanho inválido ou está incompleto.');
+        }
+        if (!engine.module.FS.analyzePath('/models').exists) engine.module.FS.mkdir('/models');
+        engine.module.FS.writeFile('/models/' + checkpointName, checkpointBytes);
+        if (!engine.runtime.hasCheckpoint(prompt)) {
+          throw new Error('O checkpoint individual não pôde ser carregado no WebAssembly.');
+        }
+        answer = engine.runtime.generate(prompt, 256);
+        if (typeof answer !== 'string' || !answer.trim()) {
+          throw new Error('O Tsukuyomi G2 não produziu uma resposta válida para esta pergunta.');
+        }
       }
       if (state.displayStreaming) {
         const pendingElement = el.conversation.querySelector('[data-message-id="pending"]');
         await displayAssistantProgressively(pendingElement, answer, state.controller.signal);
       }
-      conversation.messages.push({ id:id(), role:'assistant', content:answer, model:'Tsukuyomi G2', createdAt:now() });
+      conversation.messages.push({ id:id(), role:'assistant', content:answer, model:'Tsukuyomi ' + state.generation, createdAt:now() });
       if(state.notifications && document.hidden && typeof Notification!=='undefined' && Notification.permission==='granted') new Notification('Morok',{body:'Sua resposta está pronta.'});
     } catch (error) {
       if (error.name === 'AbortError') {
         conversation.messages.push({ id:id(), role:'assistant', error:true, content:'Geração interrompida pelo usuário.', createdAt:now() });
       } else {
-        conversation.messages.push({ id:id(), role:'assistant', error:true, content:error.message || 'Não foi possível executar o Tsukuyomi G2.', createdAt:now() });
+        conversation.messages.push({ id:id(), role:'assistant', error:true, content:error.message || 'Não foi possível executar o Tsukuyomi ' + state.generation + '.', createdAt:now() });
       }
     } finally {
       state.busy = false; state.controller = null; setBusy(false); conversation.updatedAt = now(); persist(); void syncConversation(conversation); renderHistory(); renderConversation();
@@ -1117,8 +1159,12 @@
   function updateModelMenu() {
     state.model = 'Tsukuyomi';
     $('#model-select-label').textContent = state.generation + ' · Tsukuyomi';
-    $$('[data-generation]').forEach(button=>button.classList.toggle('selected',button.dataset.generation===state.generation));
-    $$('[data-model]').forEach(button=>button.classList.toggle('selected',button.dataset.model===state.model));
+    $('[data-generation]').forEach(button=>button.classList.toggle('selected',button.dataset.generation===state.generation));
+    $('[data-model-generation]').forEach(button=>{
+      const visible = button.dataset.modelGeneration === state.generation;
+      button.hidden = !visible;
+      if (button.dataset.model) button.classList.toggle('selected',visible && button.dataset.model===state.model);
+    });
   }
   $$('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;updateModelMenu();$('#generation-list').hidden=true;$('#model-submenu').hidden=false;persist();}));
   $('#generation-back').addEventListener('click',()=>{$('#model-submenu').hidden=true;$('#generation-list').hidden=false;});
