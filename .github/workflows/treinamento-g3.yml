@@ -36,23 +36,23 @@ permissions:
   contents: read
 
 concurrency:
-  group: treinamento-g3-${${ github.ref }}
+  group: treinamento-g3-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   treinar-g3:
-    if: ${${ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-g3-cycles]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-g3-cycles]') }}
     name: Ciclos SFT, avaliação e REINFORCE
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
       DATASET: Gerações/G3/training/dataset/g3_ptbr_v1.jsonl
       OUTPUT_DIR: build/g3-training
-      CICLOS: ${${ github.event_name == 'push' && '50' || inputs.ciclos }}
-      SEED: ${${ github.event_name == 'push' && '42' || inputs.seed }}
-      EPOCAS_SFT: ${${ github.event_name == 'push' && '10' || inputs.epocas_sft }}
-      EXECUTAR_RL: ${${ github.event_name == 'push' && 'true' || inputs.executar_rl }}
-      EPOCAS_RL: ${${ github.event_name == 'push' && '3' || inputs.epocas_rl }}
+      CICLOS: ${{ github.event_name == 'push' && '50' || inputs.ciclos }}
+      SEED: ${{ github.event_name == 'push' && '42' || inputs.seed }}
+      EPOCAS_SFT: ${{ github.event_name == 'push' && '10' || inputs.epocas_sft }}
+      EXECUTAR_RL: ${{ github.event_name == 'push' && 'true' || inputs.executar_rl }}
+      EPOCAS_RL: ${{ github.event_name == 'push' && '3' || inputs.epocas_rl }}
 
     steps:
       - name: Checkout
@@ -219,7 +219,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: morok-g3-training-${${ github.run_number }}
+          name: morok-g3-training-${{ github.run_number }}
           path: |
             Morok/build/g3-training/cycle-*
             Morok/build/g3-training/cycles-summary.tsv
