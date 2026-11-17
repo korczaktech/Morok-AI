@@ -1,0 +1,107 @@
+name: Build Tsukuyomi G3 WebAssembly
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [Website]
+    paths:
+      - "Site/Front-End/wasm/g3_wasm_api.cpp"
+      - ".github/workflows/g3-wasm-site.yml"
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: g3-wasm-site
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout website branch
+        uses: actions/checkout@v4
+        with:
+          ref: Website
+          fetch-depth: 0
+
+      - name: Checkout G3 source from main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: g3-source
+          sparse-checkout: |
+            Morok/Gerações/G3/neural
+            Morok/include/morok/common
+            Morok/include/morok/model
+            Morok/src/common/error.cpp
+          sparse-checkout-cone-mode: false
+
+      - name: Install Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+
+      - name: Find latest successful G3 training artifact
+        id: training
+        env:
+          GH_TOKEN: \${{ github.token }}
+          GH_REPO: \${{ github.repository }}
+        run: |
+          RUN_ID="$(gh api "repos/$GH_REPO/actions/workflows/treinamento-g3.yml/runs?branch=main&status=success&per_page=20" --jq '[.workflow_runs[] | select(.conclusion=="success")][0].id')"
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "No successful G3 training run was found." >&2
+            exit 1
+          fi
+          ARTIFACT_ID="$(gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[] | select(.name=="morok-g3-training-3" and .expired==false) | .id' | head -n 1)"
+          if [ -z "$ARTIFACT_ID" ]; then
+            echo "The latest successful training run has no unexpired G3 artifact." >&2
+            exit 1
+          fi
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "artifact_id=$ARTIFACT_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download trained G3 weights
+        env:
+          GH_TOKEN: \${{ github.token }}
+          GH_REPO: \${{ github.repository }}
+        run: |
+          mkdir -p training-artifact
+          gh run download "\${{ steps.training.outputs.run_id }}" --repo "$GH_REPO" --name morok-g3-training-3 --dir training-artifact
+          test -s training-artifact/g3-rl.morok
+          mkdir -p Site/Front-End/wasm/models
+          cp training-artifact/g3-rl.morok Site/Front-End/wasm/models/g3-tsukuyomi.morok
+
+      - name: Compile G3 inference engine to WebAssembly
+        run: |
+          em++ -std=c++20 -O3 -DNDEBUG --bind \\
+            -sMODULARIZE=1 \\
+            -sEXPORT_NAME=createTsukuyomiG3Module \\
+            -sENVIRONMENT=web \\
+            -sALLOW_MEMORY_GROWTH=1 \\
+            -sFILESYSTEM=0 \\
+            -sNO_EXIT_RUNTIME=1 \\
+            -I"g3-source/Morok/include" \\
+            -I"g3-source/Morok/Gerações/G3/neural/include" \\
+            "Site/Front-End/wasm/g3_wasm_api.cpp" \\
+            "g3-source/Morok/Gerações/G3/neural/src/gru_backend.cpp" \\
+            "g3-source/Morok/src/common/error.cpp" \\
+            -o "Site/Front-End/wasm/tsukuyomi-g3.js"
+
+      - name: Validate generated assets
+        run: |
+          node --check Site/Front-End/wasm/tsukuyomi-g3.js
+          test -s Site/Front-End/wasm/tsukuyomi-g3.wasm
+          test "$(wc -c < Site/Front-End/wasm/models/g3-tsukuyomi.morok)" -eq 400064
+
+      - name: Publish assets to Website branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Site/Front-End/wasm/tsukuyomi-g3.js Site/Front-End/wasm/tsukuyomi-g3.wasm Site/Front-End/wasm/models/g3-tsukuyomi.morok
+          if git diff --cached --quiet; then
+            echo "Generated G3 browser assets are already current."
+            exit 0
+          fi
+          git commit -m "Build local Tsukuyomi G3 WebAssembly runtime"
+          git push origin HEAD:Website
