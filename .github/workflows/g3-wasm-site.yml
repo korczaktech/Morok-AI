@@ -66,14 +66,14 @@ jobs:
 
       - name: Download trained G3 weights
         env:
-          GH_TOKEN: \${{ github.token }}
-          GH_REPO: \${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           mkdir -p training-artifact
           curl --fail --location --retry 3 \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$GH_REPO/actions/artifacts/\${{ steps.training.outputs.artifact_id }}/zip" \
+            "https://api.github.com/repos/$GH_REPO/actions/artifacts/${{ steps.training.outputs.artifact_id }}/zip" \
             -o training-artifact.zip
           unzip -o training-artifact.zip -d training-artifact
           test -s training-artifact/g3-rl.morok
@@ -82,18 +82,18 @@ jobs:
 
       - name: Compile G3 inference engine to WebAssembly
         run: |
-          em++ -std=c++20 -O3 -DNDEBUG --bind \\
-            -sMODULARIZE=1 \\
-            -sEXPORT_NAME=createTsukuyomiG3Module \\
-            -sENVIRONMENT=web,worker,node \\
-            -sALLOW_MEMORY_GROWTH=1 \\
-            -sFILESYSTEM=0 \\
-            -sNO_EXIT_RUNTIME=1 \\
-            -I"g3-source/Morok/include" \\
-            -I"g3-source/Morok/Gerações/G3/neural/include" \\
-            "Site/Front-End/wasm/g3_wasm_api.cpp" \\
-            "g3-source/Morok/Gerações/G3/neural/src/gru_backend.cpp" \\
-            "g3-source/Morok/src/common/error.cpp" \\
+          em++ -std=c++20 -O3 -DNDEBUG --bind \
+            -sMODULARIZE=1 \
+            -sEXPORT_NAME=createTsukuyomiG3Module \
+            -sENVIRONMENT=web,worker,node \
+            -sALLOW_MEMORY_GROWTH=1 \
+            -sFILESYSTEM=0 \
+            -sNO_EXIT_RUNTIME=1 \
+            -I"g3-source/Morok/include" \
+            -I"g3-source/Morok/Gerações/G3/neural/include" \
+            "Site/Front-End/wasm/g3_wasm_api.cpp" \
+            "g3-source/Morok/Gerações/G3/neural/src/gru_backend.cpp" \
+            "g3-source/Morok/src/common/error.cpp" \
             -o "Site/Front-End/wasm/tsukuyomi-g3.js"
 
       - name: Validate generated assets
