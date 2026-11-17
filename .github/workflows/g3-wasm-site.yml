@@ -6,6 +6,8 @@ on:
     branches: [Website]
     paths:
       - "Site/Front-End/wasm/g3_wasm_api.cpp"
+      - "Site/Front-End/app.js"
+      - "Site/Front-End/index.html"
       - ".github/workflows/g3-wasm-site.yml"
 
 permissions:
@@ -90,6 +92,7 @@ jobs:
 
       - name: Validate generated assets
         run: |
+          node --check Site/Front-End/app.js
           node --check Site/Front-End/wasm/tsukuyomi-g3.js
           test -s Site/Front-End/wasm/tsukuyomi-g3.wasm
           test "$(wc -c < Site/Front-End/wasm/models/g3-tsukuyomi.morok)" -eq 400064
