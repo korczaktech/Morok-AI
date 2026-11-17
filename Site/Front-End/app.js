@@ -31,6 +31,9 @@
       node.removeAttribute('data-icon');
     });
   }
+  // Renderize os ícones antes da inicialização dos módulos da interface.
+  // Assim, uma falha posterior não deixa os elementos visuais vazios.
+  hydrateIcons();
   function id() { return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)); }
   function now() { return new Date().toISOString(); }
   function formatTime(value) { try { return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); } catch { return ''; } }
@@ -1188,5 +1191,5 @@
     if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='o'){event.preventDefault();createConversation();}
   });
   matchMedia('(prefers-color-scheme: light)').addEventListener?.('change',()=>{if(state.theme==='system')applyTheme();});
-  hydrateIcons(); restore(); applyTheme(); renderProjectsSidebar(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); refreshAuthSession();
+  restore(); applyTheme(); renderProjectsSidebar(); renderHistory(); renderConversation(); updateProfile(); updateModelMenu(); refreshAuthSession();
 })();
