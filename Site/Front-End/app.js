@@ -653,13 +653,13 @@
     enhanceSelects(root);
     $('#workspace-page-view').hidden = false;
     $('#workspace').hidden = true;
-    $$('.side-action[data-workspace-page]').forEach(item=>item.classList.toggle('active',item.dataset.workspacePage===page));
+    $$$('.side-action[data-workspace-page]').forEach(item=>item.classList.toggle('active',item.dataset.workspacePage===page));
     closeSidebar();
   }
   function returnToChat() {
     $('#workspace-page-view').hidden = true;
     $('#workspace').hidden = false;
-    $$('.side-action').forEach(item=>item.classList.remove('active'));
+    $$$('.side-action').forEach(item=>item.classList.remove('active'));
     closeSidebar();
   }
   function openProfileMenu() {
@@ -817,13 +817,13 @@
     $('#auth-name').disabled=!!state.authSession || mode!=='signup';
     $('#auth-name-label').hidden=!!state.authSession || mode!=='signup';
     $('#auth-password').hidden=!!state.authSession;
-    $$('.auth-tab').forEach(tab=>tab.hidden=!!state.authSession);
+    $$$('.auth-tab').forEach(tab=>tab.hidden=!!state.authSession);
     $('#auth-title').textContent=state.authSession?'Conta conectada':'Entrar na sua conta';
     el.auth.showModal();
   }
   function setAuthMode(mode) {
     state.authMode=mode;
-    $$('.auth-tab').forEach(tab=>tab.classList.toggle('active',tab.dataset.authMode===mode));
+    $$$('.auth-tab').forEach(tab=>tab.classList.toggle('active',tab.dataset.authMode===mode));
     $('#auth-title').textContent=mode==='signup'?'Criar sua conta':'Entrar na sua conta';
     $('#auth-submit').textContent=mode==='signup'?'Criar conta':'Entrar';
     $('#auth-name').hidden=mode!=='signup';
@@ -1063,10 +1063,10 @@
     try { if(state.authSession?.access_token) await authRequest('/auth/logout',{token:state.authSession.access_token}); } catch {}
     saveAuthSession(null); state.displayName='Visitante'; updateProfile(); persist(); if(el.auth.open) el.auth.close(); closeProfileMenu(); toast('Sessão encerrada neste dispositivo.');
   }
-  $$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
+  $$$('.auth-tab').forEach(tab=>tab.addEventListener('click',()=>setAuthMode(tab.dataset.authMode)));
   $('#auth-form').addEventListener('submit',event=>{if(event.submitter && event.submitter.id!=='auth-submit')return;event.preventDefault();submitAuth();});
   // Keep dialog dismissal independent from form submission handlers.
-  $$('.dialog').forEach(dialog=>{
+  $$$('.dialog').forEach(dialog=>{
     dialog.querySelectorAll('.dialog-close').forEach(button=>button.addEventListener('click',event=>{event.preventDefault();dialog.close();}));
     dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
   });
@@ -1108,7 +1108,7 @@
   document.addEventListener('click',event=>{if(!event.target.closest('#profile-button')&&!event.target.closest('#profile-menu'))closeProfileMenu();});
   document.addEventListener('click',event=>{if(!event.target.closest('.site-select'))closeSiteSelects();});
   $('#more-options-toggle').addEventListener('click',()=>{const submenu=$('#side-submenu');submenu.hidden=!submenu.hidden;$('#more-options-toggle').setAttribute('aria-expanded',String(!submenu.hidden));});
-  $$('[data-workspace-page]').forEach(button=>button.addEventListener('click',()=>openWorkspacePage(button.dataset.workspacePage)));
+  $$$('[data-workspace-page]').forEach(button=>button.addEventListener('click',()=>openWorkspacePage(button.dataset.workspacePage)));
   $('#workspace-page').addEventListener('submit',event=>{if(event.target.id==='task-form'){event.preventDefault();const value=$('#task-input').value.trim();if(value){state.tasks.unshift({id:id(),text:value,done:false,updatedAt:now()});persist();void syncAccountResources();openWorkspacePage('tasks');}}});
   $('#workspace-page').addEventListener('change',event=>{
     if(event.target.matches('[data-task-done]')){const task=state.tasks[Number(event.target.dataset.taskDone)];if(task){task.done=event.target.checked;task.updatedAt=now();persist();void syncAccountResources();openWorkspacePage('tasks');}}
@@ -1162,16 +1162,16 @@
   function updateModelMenu() {
     state.model = 'Tsukuyomi';
     $('#model-select-label').textContent = state.generation + ' · Tsukuyomi';
-    $('[data-generation]').forEach(button=>button.classList.toggle('selected',button.dataset.generation===state.generation));
-    $('[data-model-generation]').forEach(button=>{
+    $$('[data-generation]').forEach(button=>button.classList.toggle('selected',button.dataset.generation===state.generation));
+    $$('[data-model-generation]').forEach(button=>{
       const visible = button.dataset.modelGeneration === state.generation;
       button.hidden = !visible;
       if (button.dataset.model) button.classList.toggle('selected',visible && button.dataset.model===state.model);
     });
   }
-  $('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;state.model='Tsukuyomi';updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Geração '+state.generation+' selecionada.');}));
+  $$('[data-generation]').forEach(button=>button.addEventListener('click',()=>{if(button.disabled)return;state.generation=button.dataset.generation;state.model='Tsukuyomi';updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Geração '+state.generation+' selecionada.');}));
   $('#generation-back').addEventListener('click',()=>{$('#model-submenu').hidden=true;$('#generation-list').hidden=false;});
-  $$( '[data-model]' ).forEach(button=>button.addEventListener('click',()=>{if(button.dataset.model!=='Tsukuyomi')return;state.model='Tsukuyomi';updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Tsukuyomi selecionado.');}));
+  $$$( '[data-model]' ).forEach(button=>button.addEventListener('click',()=>{if(button.dataset.model!=='Tsukuyomi')return;state.model='Tsukuyomi';updateModelMenu();persist();$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');toast('Tsukuyomi selecionado.');}));
   document.addEventListener('click',event=>{if(!event.target.closest('.model-select-wrap')){$('#model-popover').hidden=true;$('#model-select').setAttribute('aria-expanded','false');}if(!event.target.closest('.context-menu')&&!event.target.closest('.history-menu'))closeContextMenu();});
   el.context.addEventListener('click',event=>{const action=event.target.dataset.action;if(action==='rename')renameConversation(state.contextId);if(action==='delete')deleteConversation(state.contextId);closeContextMenu();});
   $('#rename-save').addEventListener('click',()=>{const conversation=state.conversations.find(c=>c.id===state.renameId);if(conversation){conversation.title=$('#rename-input').value.trim()||'Nova conversa';conversation.updatedAt=now();persist();renderHistory();}state.renameId=null;});
@@ -1181,7 +1181,7 @@
   $('#clear-data').addEventListener('click',()=>{void askConfirmation('Apagar todas as conversas deste dispositivo? As tarefas, biblioteca e preferências serão mantidas.','Apagar conversas').then(accepted=>{if(!accepted)return;state.conversations=[];state.activeId=null;state.attachments=[];persist();renderHistory();renderConversation();renderAttachments();toast('Conversas apagadas.');});});
   $('#attach-button').addEventListener('click',()=>el.file.click());
   el.file.addEventListener('change',event=>addFiles([...event.target.files]));
-  $$('.suggestion').forEach(button=>button.addEventListener('click',()=>{el.input.value=button.dataset.prompt;resizeInput();el.input.focus();}));
+  $$$('.suggestion').forEach(button=>button.addEventListener('click',()=>{el.input.value=button.dataset.prompt;resizeInput();el.input.focus();}));
   el.input.addEventListener('input',resizeInput);
   el.input.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();if(!state.busy)sendMessage();else state.controller?.abort();}});
   el.composer.addEventListener('submit',event=>{event.preventDefault();sendMessage();});
