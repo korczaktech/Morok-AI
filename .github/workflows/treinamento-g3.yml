@@ -3,46 +3,56 @@ name: Treinamento — G3
 on:
   workflow_dispatch:
     inputs:
+      ciclos:
+        description: "Quantidade de treinamentos completos nesta execução (1 a 100)"
+        type: number
+        required: true
+        default: 1
       epocas_sft:
-        description: "Épocas do treinamento supervisionado (SFT)"
+        description: "Épocas SFT por ciclo"
         type: number
         required: true
         default: 10
       seed:
-        description: "Seed para reprodutibilidade"
+        description: "Seed-base; cada ciclo incrementa a seed"
         type: number
         required: true
         default: 42
       executar_rl:
-        description: "Executar REINFORCE depois do SFT e da avaliação"
+        description: "Executar REINFORCE depois do SFT e da avaliação em cada ciclo"
         type: boolean
         required: true
         default: true
       epocas_rl:
-        description: "Épocas de REINFORCE, se habilitado (1 a 100)"
+        description: "Épocas de REINFORCE por ciclo (1 a 100)"
         type: number
         required: true
         default: 3
+  push:
+    paths:
+      - ".github/workflows/treinamento-g3.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: treinamento-g3-${{ github.ref }}
+  group: treinamento-g3-${${ github.ref }}
   cancel-in-progress: false
 
 jobs:
   treinar-g3:
-    name: SFT, avaliação e REINFORCE opcional
+    if: ${${ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-g3-cycles]') }}
+    name: Ciclos SFT, avaliação e REINFORCE
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
       DATASET: Gerações/G3/training/dataset/g3_ptbr_v1.jsonl
       OUTPUT_DIR: build/g3-training
-      SEED: ${{ inputs.seed }}
-      EPOCAS_SFT: ${{ inputs.epocas_sft }}
-      EXECUTAR_RL: ${{ inputs.executar_rl }}
-      EPOCAS_RL: ${{ inputs.epocas_rl }}
+      CICLOS: ${${ github.event_name == 'push' && '50' || inputs.ciclos }}
+      SEED: ${${ github.event_name == 'push' && '42' || inputs.seed }}
+      EPOCAS_SFT: ${${ github.event_name == 'push' && '10' || inputs.epocas_sft }}
+      EXECUTAR_RL: ${${ github.event_name == 'push' && 'true' || inputs.executar_rl }}
+      EPOCAS_RL: ${${ github.event_name == 'push' && '3' || inputs.epocas_rl }}
 
     steps:
       - name: Checkout
@@ -52,20 +62,24 @@ jobs:
         run: |
           python3 - <<'PY'
           import os
+          cycles = int(os.environ["CICLOS"])
           sft = int(os.environ["EPOCAS_SFT"])
           seed = int(os.environ["SEED"])
           rl = int(os.environ["EPOCAS_RL"])
+          if not 1 <= cycles <= 100:
+              raise SystemExit("ciclos deve estar entre 1 e 100.")
           if not 1 <= sft <= 1000:
               raise SystemExit("epocas_sft deve estar entre 1 e 1000.")
-          if not 0 <= seed <= 18446744073709551615:
-              raise SystemExit("seed fora do intervalo uint64.")
+          if not 0 <= seed <= 18446744073709551615 - (cycles - 1):
+              raise SystemExit("seed-base inválida para a quantidade de ciclos.")
           if not 1 <= rl <= 100:
               raise SystemExit("epocas_rl deve estar entre 1 e 100.")
+          print(f"Execução validada: {cycles} ciclos completos.")
           PY
 
       - name: Validar corpus pt-BR
         run: |
-          python3 "Morok/Gerações/G3/training/dataset/validate_corpus.py" "Morok/${DATASET}"
+          python3 "Morok/Gerações/G3/training/dataset/validate_corpus.py" "Morok/$DATASET"
 
       - name: Instalar dependências
         run: |
@@ -97,74 +111,117 @@ jobs:
             -R "g3.training|g3.reinforcement" \
             --output-on-failure
 
-      - name: Preparar diretório de resultados
+      - name: Executar ciclos G3
         working-directory: Morok
-        run: mkdir -p "${OUTPUT_DIR}"
-
-      - name: Treinar G3 — SFT
-        working-directory: Morok
+        shell: bash
         run: |
-          build/g3-training/morok-g3-train \
-            "${DATASET}" \
-            "${OUTPUT_DIR}/sft-metrics.jsonl" \
-            "${OUTPUT_DIR}/g3-sft.morok" \
-            "${EPOCAS_SFT}" "${SEED}" \
-            --checkpoint="${OUTPUT_DIR}/g3-sft.g3ckpt"
+          set -uo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          summary_file="$OUTPUT_DIR/cycles-summary.tsv"
+          printf "cycle\tseed\tstatus\n" > "$summary_file"
+          failures=0
 
-      - name: Avaliar generalização do SFT
-        working-directory: Morok
-        run: |
-          build/g3-training/morok-g3-evaluate \
-            "${DATASET}" \
-            "${OUTPUT_DIR}/g3-sft.morok" \
-            "${OUTPUT_DIR}/sft-evaluation.json" \
-            "${SEED}"
+          for ((cycle=1; cycle<=CICLOS; cycle++)); do
+            cycle_name="$(printf '%03d' "$cycle")"
+            cycle_dir="$OUTPUT_DIR/cycle-$cycle_name"
+            cycle_seed="$(python3 -c 'import sys; print(int(sys.argv[1]) + int(sys.argv[2]) - 1)' "$SEED" "$cycle")"
+            mkdir -p "$cycle_dir"
+            echo "::group::Ciclo $cycle/$CICLOS — seed $cycle_seed"
+            echo "Iniciando treinamento independente $cycle/$CICLOS."
 
-      - name: Treinar G3 — REINFORCE
-        if: ${{ inputs.executar_rl }}
-        working-directory: Morok
-        run: |
-          build/g3-training/morok-g3-reinforce \
-            "${DATASET}" \
-            "${OUTPUT_DIR}/g3-sft.morok" \
-            "${OUTPUT_DIR}/g3-rl.morok" \
-            "${OUTPUT_DIR}/rl-report.json" \
-            "${EPOCAS_RL}"
+            status="success"
+            if ! build/g3-training/morok-g3-train \
+              "$DATASET" \
+              "$cycle_dir/sft-metrics.jsonl" \
+              "$cycle_dir/g3-sft.morok" \
+              "$EPOCAS_SFT" "$cycle_seed" \
+              --checkpoint="$cycle_dir/g3-sft.g3ckpt"; then
+              status="sft_failed"
+            fi
 
-      - name: Publicar resumo do treinamento
+            if [[ "$status" == "success" ]]; then
+              if ! build/g3-training/morok-g3-evaluate \
+                "$DATASET" \
+                "$cycle_dir/g3-sft.morok" \
+                "$cycle_dir/sft-evaluation.json" \
+                "$cycle_seed"; then
+                status="evaluation_failed"
+              fi
+            fi
+
+            if [[ "$status" == "success" && "$EXECUTAR_RL" == "true" ]]; then
+              if ! build/g3-training/morok-g3-reinforce \
+                "$DATASET" \
+                "$cycle_dir/g3-sft.morok" \
+                "$cycle_dir/g3-rl.morok" \
+                "$cycle_dir/rl-report.json" \
+                "$EPOCAS_RL"; then
+                status="rl_failed"
+              fi
+            fi
+
+            printf "%s\t%s\t%s\n" "$cycle" "$cycle_seed" "$status" >> "$summary_file"
+            {
+              echo "### Ciclo $cycle/$CICLOS — $status"
+              echo "- Seed: $cycle_seed"
+              if [[ -f "$cycle_dir/sft-evaluation.json" ]]; then
+                echo "- Avaliação SFT:"
+                echo '```json'
+                cat "$cycle_dir/sft-evaluation.json"
+                echo
+                echo '```'
+              fi
+              if [[ -f "$cycle_dir/rl-report.json" ]]; then
+                echo "- Relatório REINFORCE:"
+                echo '```json'
+                cat "$cycle_dir/rl-report.json"
+                echo
+                echo '```'
+              fi
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            if [[ "$status" != "success" ]]; then
+              failures=$((failures + 1))
+              echo "::error::Ciclo $cycle terminou com status $status."
+            else
+              echo "Ciclo $cycle/$CICLOS concluído."
+            fi
+            echo "::endgroup::"
+          done
+
+          echo "Ciclos solicitados: $CICLOS; falhas: $failures."
+          if [[ "$failures" -ne 0 ]]; then
+            exit 1
+          fi
+
+      - name: Publicar resumo geral
         if: always()
         working-directory: Morok
         run: |
           {
-            echo "## Treinamento Morok G3"
+            echo "## Treinamento Morok G3 — resumo dos ciclos"
             echo
-            echo "- Corpus: \`${DATASET}\`"
-            echo "- Épocas SFT solicitadas: ${EPOCAS_SFT}"
-            echo "- Seed: ${SEED}"
-            echo "- REINFORCE solicitado: ${EXECUTAR_RL}"
-            if [ -f "${OUTPUT_DIR}/sft-evaluation.json" ]; then
-              echo
-              echo "### Avaliação SFT"
-              cat "${OUTPUT_DIR}/sft-evaluation.json"
-            fi
-            if [ -f "${OUTPUT_DIR}/rl-report.json" ]; then
-              echo
-              echo "### Relatório REINFORCE"
-              cat "${OUTPUT_DIR}/rl-report.json"
+            echo "- Ciclos solicitados: $CICLOS"
+            echo "- Épocas SFT por ciclo: $EPOCAS_SFT"
+            echo "- Seed-base: $SEED"
+            echo "- REINFORCE: $EXECUTAR_RL"
+            echo "- Épocas RL por ciclo: $EPOCAS_RL"
+            echo
+            if [ -f "$OUTPUT_DIR/cycles-summary.tsv" ]; then
+              echo '```text'
+              cat "$OUTPUT_DIR/cycles-summary.tsv"
+              echo '```'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Salvar modelo, checkpoint e relatórios
+      - name: Salvar modelos, checkpoints e relatórios de todos os ciclos
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: morok-g3-training-${{ github.run_number }}
+          name: morok-g3-training-${${ github.run_number }}
           path: |
-            Morok/build/g3-training/g3-sft.morok
-            Morok/build/g3-training/g3-sft.g3ckpt
-            Morok/build/g3-training/sft-metrics.jsonl
-            Morok/build/g3-training/sft-evaluation.json
-            Morok/build/g3-training/g3-rl.morok
-            Morok/build/g3-training/rl-report.json
+            Morok/build/g3-training/cycle-*
+            Morok/build/g3-training/cycles-summary.tsv
           if-no-files-found: warn
           retention-days: 30
