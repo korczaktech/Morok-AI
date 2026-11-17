@@ -47,19 +47,20 @@ jobs:
       - name: Find latest successful G3 training artifact
         id: training
         env:
-          GH_TOKEN: \${{ github.token }}
-          GH_REPO: \${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          RUN_ID="$(gh api "repos/$GH_REPO/actions/workflows/treinamento-g3.yml/runs?branch=main&status=success&per_page=20" --jq '[.workflow_runs[] | select(.conclusion=="success")][0].id')"
+          RUN_ID="$(gh api "repos/$GH_REPO/actions/runs?branch=main&per_page=100" --jq '[.workflow_runs[] | select(.path==".github/workflows/treinamento-g3.yml" and .conclusion=="success")][0].id')"
           if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
             echo "No successful G3 training run was found." >&2
             exit 1
           fi
           ARTIFACT_ID="$(gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[] | select(.name=="morok-g3-training-3" and .expired==false) | .id' | head -n 1)"
           if [ -z "$ARTIFACT_ID" ]; then
-            echo "The latest successful training run has no unexpired G3 artifact." >&2
+            echo "The latest successful G3 training run has no unexpired G3 artifact." >&2
             exit 1
           fi
+          echo "Using G3 training run $RUN_ID and artifact $ARTIFACT_ID."
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
           echo "artifact_id=$ARTIFACT_ID" >> "$GITHUB_OUTPUT"
 
