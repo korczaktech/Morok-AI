@@ -1,25 +1,28 @@
-# Inferência do Tsukuyomi G2 no Morok Web
+# Inferência local do Morok Web
 
-## Fluxo
+## Tsukuyomi G2
+O G2 continua sendo executado localmente no navegador por WebAssembly. O frontend baixa o checkpoint específico da pergunta a partir da branch pública `tsukuyomi-state` e o runtime C++ original do G2 carrega esse checkpoint no sistema de arquivos virtual do WebAssembly. A inferência não envia o prompt ao backend.
 
-1. O frontend recebe a mensagem.
-2. O módulo WebAssembly executa o código C++ original do Tsukuyomi G2 no navegador.
-3. O runtime calcula o hash FNV-1a da pergunta UTF-8 e seleciona o checkpoint individual correspondente.
-4. O frontend recebe a resposta e atualiza a conversa.
-5. Para contas autenticadas, o frontend envia a conversa completa a `POST /v1/conversations/sync`; o backend Render valida a sessão e persiste mensagens e conversa no MongoDB Atlas.
+## Tsukuyomi G3
+O G3 também é executado localmente no navegador, sem endpoint remoto de geração.
 
-A inferência não envia prompts ao backend. O backend continua responsável por autenticação, autorização e persistência.
+Fluxo:
+1. O frontend carrega `tsukuyomi-g3.js` e o módulo `tsukuyomi-g3.wasm` compilados a partir do adaptador WebAssembly e do backend GRU original da G3.
+2. O navegador baixa `wasm/models/g3-tsukuyomi.morok` uma vez e mantém o backend carregado na memória do runtime.
+3. O adaptador valida o cabeçalho do artefato G3, dimensões, precisão FP32, tamanho do payload e CRC32 antes de aceitar os pesos.
+4. Os 100.000 parâmetros são restaurados nos tensores do `G3Backend`.
+5. A pergunta é codificada diretamente como bytes UTF-8 e consumida pela GRU. A geração usa temperatura 0,7, Top-K 10, limite de 256 bytes e seed aleatória por resposta.
+6. A saída é devolvida ao frontend e exibida progressivamente. A animação progressiva é apenas apresentação; a inferência é executada localmente pelo WebAssembly.
 
-## Artefatos
+O artefato publicado é o `g3-rl.morok` do último treinamento G3 concluído com sucesso. O workflow de publicação procura o artefato mais recente não expirado do workflow `treinamento-g3.yml` na branch `main` e o copia para a branch `Website`.
 
-O workflow `.github/workflows/Pagina.yml` compila `wasm_api.cpp` junto ao código oficial de G2 presente na branch `main`, baixa os 40 checkpoints da branch `tsukuyomi-state` e publica `tsukuyomi.js`, `tsukuyomi.wasm` e `tsukuyomi.data` como parte do site.
+## Limites e compatibilidade
+- O runtime web atual carrega artefatos G3 FP32 com 100.000 parâmetros e arquitetura GRU/RMSNorm 0x0302. Não aceita artefatos INT8 nesta primeira integração.
+- O estado recorrente é reiniciado para cada mensagem. O histórico da conversa é mantido pela interface, mas não é reaplicado automaticamente como estado neural.
+- O adaptador usa os bytes UTF-8 recebidos do navegador diretamente. Ele não aplica a normalização NFC do `ByteTokenizer` nativo que depende de ICU.
+- A geração do WebAssembly é síncrona. Enquanto o modelo gera, o navegador pode ficar ocupado; cancelamento durante a chamada C++ não interrompe o kernel.
+- A qualidade das respostas depende dos pesos realmente treinados. A integração não implica que o modelo já tenha competência generalista ou qualidade equivalente à G2.
+- O arquivo de pesos é baixado para o navegador e a inferência ocorre no dispositivo. A sincronização de conversas autenticadas continua sendo uma operação separada do backend, conforme o fluxo já existente do site.
 
-Os pesos não são empacotados no site. Ao receber uma pergunta, o frontend calcula o nome do checkpoint no runtime C++/WASM e baixa somente o arquivo correspondente da branch pública `tsukuyomi-state`. O arquivo é revalidado em cada geração para incorporar checkpoints atualizados. A URL contém apenas o hash FNV-1a da pergunta, não o texto da mensagem. Assim, cada atualização de treinamento fica disponível sem precisar republicar o frontend.
-
-## Limitação atual do modelo
-
-O Tsukuyomi G2 0.1 possui 40 checkpoints especializados, cada um associado ao texto exato de uma pergunta do corpus. Ele não é um modelo generalista e não consegue responder de forma confiável a perguntas inéditas. O frontend informa quando não existe checkpoint para a pergunta em vez de inventar uma resposta.
-
-## Privacidade
-
-O código de inferência e os pesos são baixados para o navegador. O conteúdo da mensagem só é enviado ao backend quando o frontend sincroniza a conversa de uma conta autenticada, para persistência no MongoDB. Usuários sem sessão mantêm o histórico apenas no armazenamento local do navegador.
+## Publicação
+O workflow `.github/workflows/g3-wasm-site.yml` compila o adaptador com Emscripten, baixa o último artefato de treinamento G3, valida os arquivos e publica o runtime e os pesos diretamente na branch `Website`. A branch `main` é usada somente como fonte de código do backend GRU e dos artefatos de treinamento.
