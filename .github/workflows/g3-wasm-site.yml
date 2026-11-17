@@ -70,7 +70,12 @@ jobs:
           GH_REPO: \${{ github.repository }}
         run: |
           mkdir -p training-artifact
-          gh run download "\${{ steps.training.outputs.run_id }}" --repo "$GH_REPO" --name morok-g3-training-3 --dir training-artifact
+          curl --fail --location --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GH_REPO/actions/artifacts/\${{ steps.training.outputs.artifact_id }}/zip" \
+            -o training-artifact.zip
+          unzip -o training-artifact.zip -d training-artifact
           test -s training-artifact/g3-rl.morok
           mkdir -p Site/Front-End/wasm/models
           cp training-artifact/g3-rl.morok Site/Front-End/wasm/models/g3-tsukuyomi.morok
@@ -80,7 +85,7 @@ jobs:
           em++ -std=c++20 -O3 -DNDEBUG --bind \\
             -sMODULARIZE=1 \\
             -sEXPORT_NAME=createTsukuyomiG3Module \\
-            -sENVIRONMENT=web \\
+            -sENVIRONMENT=web,worker,node \\
             -sALLOW_MEMORY_GROWTH=1 \\
             -sFILESYSTEM=0 \\
             -sNO_EXIT_RUNTIME=1 \\
@@ -97,8 +102,24 @@ jobs:
           node --check Site/Front-End/wasm/tsukuyomi-g3.js
           test -s Site/Front-End/wasm/tsukuyomi-g3.wasm
           test "$(wc -c < Site/Front-End/wasm/models/g3-tsukuyomi.morok)" -eq 400064
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const factory = require("./Site/Front-End/wasm/tsukuyomi-g3.js");
+          (async () => {
+            const module = await factory({ locateFile: file => path.join(process.cwd(), "Site/Front-End/wasm", file) });
+            const runtime = new module.TsukuyomiG3Runtime();
+            const model = fs.readFileSync("Site/Front-End/wasm/models/g3-tsukuyomi.morok");
+            const bytes = new Uint8Array(model.buffer, model.byteOffset, model.byteLength);
+            if (!runtime.loadModel(bytes)) throw new Error("G3 model artifact rejected by WebAssembly runtime.");
+            const answer = runtime.generate("Olá, quem é você?", 64, 0.7, 10, 42);
+            if (typeof answer !== "string") throw new Error("G3 generation did not return text.");
+            process.stdout.write("G3 local inference smoke test passed; output bytes: " + answer.length + "\n");
+          })().catch(error => { console.error(error); process.exit(1); });
+          NODE
 
       - name: Publish assets to Website branch
+
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
