@@ -153,10 +153,10 @@ jobs:
           set -euo pipefail
           targets=()
           if [[ "$EXECUTAR_SFT" == "true" ]]; then
-            targets+=(morok_g3_train morok_g3_evaluate morok_test_g3_training)
+            targets+=(morok_g3_train morok_g3_evaluate morok_g3_analyze morok_test_g3_training)
           fi
           if [[ "$EXECUTAR_RL" == "true" ]]; then
-            targets+=(morok_g3_reinforce morok_test_g3_reinforcement)
+            targets+=(morok_g3_reinforce morok_g3_analyze morok_test_g3_reinforcement)
           fi
           cmake --build build/g3-training --parallel 2 --target "${targets[@]}"
 
@@ -200,6 +200,13 @@ jobs:
               "$cycle_dir/sft-evaluation.json" \
               "$cycle_seed"
 
+            echo "Analisando respostas geradas pelo modelo SFT (705 perguntas)..."
+            build/g3-training/morok-g3-analyze \
+              "$DATASET" \
+              "$cycle_dir/g3-sft.morok" \
+              "$cycle_dir/answer-analysis.jsonl" \
+              80
+
             printf "%s\t%s\tsuccess\n" "$cycle" "$cycle_seed" >> "$summary_file"
             echo "Ciclo SFT $cycle concluído."
             echo "::endgroup::"
@@ -231,12 +238,22 @@ jobs:
             "$rl_dir/rl-report.json" \
             "$EPOCAS_RL"
 
+          echo "Analisando respostas geradas pela política RL (705 perguntas)..."
+          build/g3-training/morok-g3-analyze \
+            "$DATASET" \
+            "$rl_dir/g3-rl.morok" \
+            "$rl_dir/answer-analysis.jsonl" \
+            80
+
+
           {
             echo "## Reinforcement Learning G3"
             echo "- Execução SFT de origem: $EXECUCAO_SFT_ID"
             echo "- Ciclo SFT de origem: $CICLO_SFT"
             echo "- Épocas RL: $EPOCAS_RL"
             cat "$rl_dir/rl-report.json"
+            echo "- Análise lexical por pergunta: $rl_dir/answer-analysis.jsonl"
+            echo "- Limiar de classificação CORRETO: 80%"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Salvar modelos e relatórios SFT
