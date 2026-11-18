@@ -101,3 +101,20 @@ O RL usa quatro candidatas por prompt, baseline móvel por categoria, retorno de
 - A cobertura atual não representa todos os assuntos, estilos, diálogos ou tarefas que um assistente geral pode receber.
 - A rubrica RL baseada em referências pode favorecer semelhança lexical e precisa de auditoria para evitar reward hacking.
 - A qualidade linguística e factual depende de revisão independente; testes sintéticos de CI não comprovam qualidade do modelo.
+
+
+## Analisador automático de respostas
+
+O executável `morok-g3-analyze` executa inferência real com o artefato G3 e compara cada resposta gerada com a resposta de referência do corpus. Para cada intenção, analisa a pergunta canônica e suas duas paráfrases: 235 intenções × 3 formas = 705 tentativas.
+
+A métrica `Nivel lexical` é similaridade textual normalizada por distância de edição em bytes UTF-8, apresentada de 0% a 100%. O status `CORRETO` é atribuído quando a similaridade alcança o limiar configurado; caso contrário, aparece `INCORRETO`. O padrão do workflow é 80%, configurável pelo input `limiar_lexical` ao iniciar a execução.
+
+O analisador usa decodificação gulosa (temperatura 0 e Top-K 1), gera uma resposta por pergunta e escreve uma linha verde para sucesso ou vermelha para falha nos logs do GitHub Actions, no formato:
+
+```text
+Sucesso | Pergunta 001/705 | CORRETO | Nivel lexical: 92.4%
+```
+
+Cada tentativa também é registrada em `answer-analysis.jsonl`, com pergunta, resposta de referência, resposta gerada, nível lexical, limiar e classificação. O relatório é salvo junto ao artefato do ciclo SFT ou da execução RL.
+
+**Limite:** similaridade lexical é uma verificação automática de proximidade textual, não uma prova de equivalência semântica ou factual. Respostas corretas formuladas com palavras diferentes podem receber pontuação baixa; respostas lexicalmente parecidas também podem conter erros de significado. Os resultados devem ser tratados como sinal de triagem, não como avaliação humana definitiva.
