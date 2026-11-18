@@ -42,6 +42,11 @@ on:
         type: number
         required: true
         default: 3
+      limiar_lexical:
+        description: "Percentual mínimo de similaridade lexical para marcar CORRETO"
+        type: number
+        required: true
+        default: 80
 
 permissions:
   contents: read
@@ -67,6 +72,7 @@ jobs:
       EXECUCAO_SFT_ID: ${{ inputs.execucao_sft_id }}
       CICLO_SFT: ${{ inputs.ciclo_sft }}
       EPOCAS_RL: ${{ inputs.epocas_rl }}
+      LIMIAR_LEXICAL: ${{ inputs.limiar_lexical }}
 
     steps:
       - name: Checkout
@@ -84,6 +90,9 @@ jobs:
           rl_epochs = int(os.environ["EPOCAS_RL"])
           if not 1 <= rl_epochs <= 100:
               raise SystemExit("epocas_rl deve estar entre 1 e 100.")
+          lexical_threshold = float(os.environ["LIMIAR_LEXICAL"])
+          if not 0.0 <= lexical_threshold <= 100.0:
+              raise SystemExit("limiar_lexical deve estar entre 0 e 100.")
 
           if sft:
               cycles = int(os.environ["CICLOS"])
@@ -205,7 +214,7 @@ jobs:
               "$DATASET" \
               "$cycle_dir/g3-sft.morok" \
               "$cycle_dir/answer-analysis.jsonl" \
-              80
+              "$LIMIAR_LEXICAL"
 
             printf "%s\t%s\tsuccess\n" "$cycle" "$cycle_seed" >> "$summary_file"
             echo "Ciclo SFT $cycle concluído."
@@ -243,7 +252,7 @@ jobs:
             "$DATASET" \
             "$rl_dir/g3-rl.morok" \
             "$rl_dir/answer-analysis.jsonl" \
-            80
+            "$LIMIAR_LEXICAL"
 
 
           {
@@ -253,7 +262,7 @@ jobs:
             echo "- Épocas RL: $EPOCAS_RL"
             cat "$rl_dir/rl-report.json"
             echo "- Análise lexical por pergunta: $rl_dir/answer-analysis.jsonl"
-            echo "- Limiar de classificação CORRETO: 80%"
+            echo "- Limiar lexical CORRETO: $LIMIAR_LEXICAL%"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Salvar modelos e relatórios SFT
