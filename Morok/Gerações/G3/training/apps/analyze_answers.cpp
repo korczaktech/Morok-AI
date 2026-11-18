@@ -6,12 +6,14 @@
 
 #include <algorithm>
 #include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <span>
 #include <stdexcept>
@@ -137,7 +139,7 @@ int main(int argc, char** argv) {
             if (!generated)
                 throw std::runtime_error("Falha de inferência na pergunta " +
                                          std::to_string(index + 1U) + ": " +
-                                         generated.error_if()->message());
+                                         generated.error_if()->message);
 
             const double lexical = lexical_similarity(attempt.expected,
                                                         generated.value_if()->text);
