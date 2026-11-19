@@ -133,7 +133,7 @@ int main(int argc,char** argv) {
         config.max_response_tokens=128U;
         config.top_k=10U;
         config.temperature=0.7;
-        config.gamma=0.95;
+        config.gamma=1.0;
         config.kl_beta=0.02;
         config.seed=seed;
         morok::g3::rl::ReinforceTrainer trainer(config);
