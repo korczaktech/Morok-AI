@@ -1,5 +1,13 @@
 # Morok G3 — orçamento exato de 100.000 parâmetros
 
+**Decisão normativa:** a arquitetura G3 mantém o orçamento exato de 100.000
+parâmetros, com ID `0x0302`, E=60, H1=97 e H2=68. Esta decisão foi escolhida
+para a implementação atual e substitui somente as dimensões experimentais
+E=64/H=128 e a contagem de 198.149 parâmetros da configuração de referência
+do documento arquitetural inicial. Os demais requisitos funcionais do
+documento — SFT, RL, robustez, isolamento, checkpoints, avaliação e medição —
+continuam aplicáveis. Não interpretar artefatos `0x0301` como compatíveis.
+
 ## Decisão arquitetural
 
 A configuração G3 foi ajustada para possuir exatamente **100.000 parâmetros treináveis**. O limite é rígido: o backend verifica a contagem no construtor e falha se os tensores alocados não totalizarem exatamente 100.000.
