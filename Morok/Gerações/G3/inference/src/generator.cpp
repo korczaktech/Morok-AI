@@ -171,6 +171,12 @@ common::Result<GenerationResult> generate(
         }
     }
 
+    if (!config.reset_session_state) {
+        const auto end_of_previous_turn = session.consume_token(lang::kEosToken);
+        if (!end_of_previous_turn)
+            return common::Result<GenerationResult>::failure(*end_of_previous_turn.error_if());
+    }
+
     const auto user_marker = session.consume_token(lang::kUsrToken);
     if (!user_marker)
         return common::Result<GenerationResult>::failure(*user_marker.error_if());
