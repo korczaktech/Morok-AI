@@ -6,7 +6,7 @@
 namespace morok::g3 {
 
 inline constexpr std::string_view kMasterSystemPrompt =
-    "<|system|>Morok: responda em português, com clareza; não invente e admita dúvidas.</|system>\\n";
+    "<|system|>Morok: responda em português, com clareza; não invente e admita dúvidas.</|system>\n";
 inline constexpr std::string_view kMasterSystemPromptVersion = "morok-g3-master-v1";
 
 template <typename TokenContainer>
