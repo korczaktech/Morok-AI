@@ -28,7 +28,7 @@ O split de validação é mantido separado e não é usado para atualizar pesos.
 - REINFORCE com baseline móvel por categoria.
 - Quatro candidatas estocásticas por pergunta (configurável até quatro).
 - Temperatura 0,7, Top-K 10 e limite de 128 bytes por candidata por padrão.
-- Retorno descontado com `gamma=0.95`.
+- Retorno terminal com `gamma=1.0` por padrão; descontos menores exigem justificativa experimental.
 - Penalidade KL contra a política SFT congelada com `beta=0.02`.
 - Gradientes de logits acumulados por batch e propagados pelas duas GRUs com
   BPTT truncado em 128 passos.
@@ -44,8 +44,9 @@ versão de rubrica e origem dos rótulos são registradas. Antes do treino, a
 rubrica é testada contra casos de auditoria com limites de score esperados.
 
 As penalidades incluem resposta vazia, repetição, cópia de trechos do prompt,
-comprimento excessivo e déficit de comprimento em relação à resposta de
-referência. O relatório também marca suspeitas de reward hacking quando uma
+comprimento excessivo somente quando configurado. Penalidade por resposta
+curta fica desativada por padrão; o avaliador lexical não usa comprimento como
+substituto de coerência, pois não consegue saber se uma resposta concisa é suficiente. O relatório também marca suspeitas de reward hacking quando uma
 resposta obtém recompensa positiva apesar de ser curta demais, excessivamente
 copiada ou repetitiva.
 
