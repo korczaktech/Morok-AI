@@ -116,6 +116,7 @@ jobs:
           PY
 
       - name: Validar corpus pt-BR
+        if: ${{ inputs.executar_sft }}
         run: |
           python3 "Morok/Gerações/G3/training/dataset/validate_corpus.py" "Morok/$DATASET"
 
@@ -140,7 +141,15 @@ jobs:
             echo "Confirme que a execução de origem foi feita após esta atualização do workflow e terminou com artefato disponível."
             exit 1
           fi
+          dataset_snapshot="$OUTPUT_DIR/sft-source/g3_ptbr_v1.jsonl"
+          if [[ ! -s "$dataset_snapshot" ]]; then
+            echo "::error::O artefato SFT não contém o snapshot do dataset usado no treinamento."
+            echo "Execute novamente o SFT com a versão atual do workflow antes de iniciar RL."
+            exit 1
+          fi
+          python3 "training/dataset/validate_corpus.py" "$dataset_snapshot"
           echo "Modelo SFT recuperado: $model"
+          echo "Dataset original recuperado: $dataset_snapshot"
 
       - name: Instalar dependências
         run: |
@@ -188,6 +197,8 @@ jobs:
           mkdir -p "$OUTPUT_DIR"
           summary_file="$OUTPUT_DIR/cycles-summary.tsv"
           printf "cycle\tseed\tstatus\n" > "$summary_file"
+          cp "$DATASET" "$OUTPUT_DIR/g3_ptbr_v1.jsonl"
+          sha256sum "$OUTPUT_DIR/g3_ptbr_v1.jsonl" > "$OUTPUT_DIR/dataset.sha256"
 
           # Todos os ciclos pertencem à mesma execução de treinamento:
           # pesos, AdamW, scheduler e RNG são restaurados do checkpoint anterior.
@@ -263,8 +274,9 @@ jobs:
             exit 1
           fi
 
+          dataset_snapshot="$OUTPUT_DIR/sft-source/g3_ptbr_v1.jsonl"
           build/g3-training/morok-g3-reinforce \
-            "$DATASET" \
+            "$dataset_snapshot" \
             "$sft_model" \
             "$rl_dir/g3-rl.morok" \
             "$rl_dir/rl-report.json" \
@@ -272,7 +284,7 @@ jobs:
 
           echo "Analisando respostas geradas pela política RL (705 perguntas)..."
           build/g3-training/morok-g3-analyze \
-            "$DATASET" \
+            "$dataset_snapshot" \
             "$rl_dir/g3-rl.morok" \
             "$rl_dir/answer-analysis.jsonl" \
             "$LIMIAR_LEXICAL"
@@ -297,6 +309,8 @@ jobs:
             Morok/build/g3-training/cycle-*
             Morok/build/g3-training/g3-sft-continuous.g3ckpt
             Morok/build/g3-training/cycles-summary.tsv
+            Morok/build/g3-training/g3_ptbr_v1.jsonl
+            Morok/build/g3-training/dataset.sha256
           if-no-files-found: warn
           retention-days: 30
 
