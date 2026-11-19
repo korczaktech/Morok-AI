@@ -44,9 +44,22 @@ A expansão usa variantes curadas em `question_variants` e eixos combinatórios 
 
 A perturbação padrão tem probabilidade de 45% por exemplo e pesos condicionais de 20% swap, 20% drop, 20% tecla próxima, 25% acentos/caixa/pontuação e 15% repetição/espaçamento. As mutações são feitas em caracteres Unicode e preservam UTF-8 válido. Não são aplicadas a validação ou teste.
 
+## Prompt mestre compartilhado
+
+O SFT e o RL usam exatamente o mesmo prompt de sistema, definido em
+`include/morok/g3/training/system_prompt.hpp`:
+
+```text
+<|system|>Morok: responda em português, com clareza; não invente e admita dúvidas.</|system>
+```
+
+O texto foi mantido curto para limitar o custo de contexto de uma arquitetura de
+100.000 parâmetros. As tags são bytes UTF-8 comuns; nenhum token especial ou
+parâmetro novo foi adicionado.
+
 ## Objetivo e otimização
 
-A sequência supervisionada é formada por BOS, USR, bytes da pergunta, BOT, bytes da resposta e EOS. O objetivo calcula loss nos bytes da resposta e em EOS; tokens de prompt não recebem loss auxiliar e PAD é ignorado.
+A sequência supervisionada é formada por BOS, pelo prompt mestre em bytes UTF-8 delimitado por `<|system|>` e `</|system|>`, USR, bytes da pergunta, BOT, bytes da resposta e EOS. O mesmo prompt mestre é inserido no contexto de cada pergunta do RL. As tags de sistema são texto comum byte-level, não novos IDs de vocabulário: a arquitetura permanece com 261 IDs e exatamente 100.000 parâmetros. A versão do prompt integra o fingerprint de configuração, impedindo retomada de checkpoints criados com outro contrato. O objetivo calcula loss nos bytes da resposta e em EOS; tokens de contexto não recebem loss auxiliar e PAD é ignorado.
 
 Defaults atuais:
 - BPTT truncado de 128 passos;
