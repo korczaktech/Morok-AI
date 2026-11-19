@@ -136,6 +136,18 @@ void test_short_correct_answer_is_not_length_penalized() {
     assert(std::abs(report.value_if()->mean_reward - 1.0) < 1.0e-9);
 }
 
+void test_missing_eos_is_penalized() {
+    LengthNeutralEvaluator evaluator;
+    MockPolicy policy("eos-policy", {static_cast<TokenId>('Y')});
+    const std::array<Prompt, 1> prompts{{
+        Prompt{"eos", "general", {morok::lang::kUsrToken}}}};
+    const auto truncated = evaluate_policy(policy, evaluator, prompts, 1U);
+    const auto terminated = evaluate_policy(policy, evaluator, prompts, 2U);
+    assert(truncated.has_value() && terminated.has_value());
+    assert(truncated.value_if()->mean_reward < terminated.value_if()->mean_reward);
+    assert(std::abs(terminated.value_if()->mean_reward - 1.0) < 1.0e-9);
+}
+
 class ExploitEvaluator final : public RewardEvaluator {
 public:
     EvaluatorMetadata metadata() const override {
@@ -441,6 +453,7 @@ int main() {
     test_config_validation();
     test_evaluator_audit_and_reward_hacking();
     test_short_correct_answer_is_not_length_penalized();
+    test_missing_eos_is_penalized();
     test_training_requires_evaluator_audit();
     test_exact_kl_logit_gradient();
     test_reinforce_and_reference_kl();
