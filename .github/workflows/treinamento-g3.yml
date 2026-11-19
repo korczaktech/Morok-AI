@@ -189,25 +189,39 @@ jobs:
           summary_file="$OUTPUT_DIR/cycles-summary.tsv"
           printf "cycle\tseed\tstatus\n" > "$summary_file"
 
+          # Todos os ciclos pertencem à mesma execução de treinamento:
+          # pesos, AdamW, scheduler e RNG são restaurados do checkpoint anterior.
+          # A quantidade total de épocas e a seed permanecem constantes para que
+          # o fingerprint de configuração do checkpoint continue compatível.
+          total_epochs=$((CICLOS * EPOCAS_SFT))
+          checkpoint="$OUTPUT_DIR/g3-sft-continuous.g3ckpt"
+
           for ((cycle=1; cycle<=CICLOS; cycle++)); do
             cycle_name="$(printf '%03d' "$cycle")"
             cycle_dir="$OUTPUT_DIR/cycle-$cycle_name"
-            cycle_seed="$(python3 -c 'import sys; print(int(sys.argv[1]) + int(sys.argv[2]) - 1)' "$SEED" "$cycle")"
             mkdir -p "$cycle_dir"
-            echo "::group::SFT — ciclo $cycle/$CICLOS — seed $cycle_seed"
+            echo "::group::SFT — ciclo $cycle/$CICLOS — seed $SEED"
 
-            build/g3-training/morok-g3-train \
-              "$DATASET" \
-              "$cycle_dir/sft-metrics.jsonl" \
-              "$cycle_dir/g3-sft.morok" \
-              "$EPOCAS_SFT" "$cycle_seed" \
-              --checkpoint="$cycle_dir/g3-sft.g3ckpt"
+            train_args=(
+              "$DATASET"
+              "$cycle_dir/sft-metrics.jsonl"
+              "$cycle_dir/g3-sft.morok"
+              "$total_epochs" "$SEED"
+              "--max-epochs-this-run=$EPOCAS_SFT"
+            )
+            if (( cycle == 1 )); then
+              train_args+=("--checkpoint=$checkpoint")
+            else
+              train_args+=("--resume=$checkpoint" "--checkpoint=$checkpoint")
+            fi
+
+            build/g3-training/morok-g3-train "${train_args[@]}"
 
             build/g3-training/morok-g3-evaluate \
               "$DATASET" \
               "$cycle_dir/g3-sft.morok" \
               "$cycle_dir/sft-evaluation.json" \
-              "$cycle_seed"
+              "$SEED"
 
             echo "Analisando respostas geradas pelo modelo SFT (705 perguntas)..."
             build/g3-training/morok-g3-analyze \
@@ -216,8 +230,8 @@ jobs:
               "$cycle_dir/answer-analysis.jsonl" \
               "$LIMIAR_LEXICAL"
 
-            printf "%s\t%s\tsuccess\n" "$cycle" "$cycle_seed" >> "$summary_file"
-            echo "Ciclo SFT $cycle concluído."
+            printf "%s\t%s\tsuccess\n" "$cycle" "$SEED" >> "$summary_file"
+            echo "Ciclo $cycle concluído; épocas acumuladas: $((cycle * EPOCAS_SFT))/$total_epochs."
             echo "::endgroup::"
           done
 
@@ -272,6 +286,7 @@ jobs:
           name: morok-g3-training-${{ github.run_id }}
           path: |
             Morok/build/g3-training/cycle-*
+            Morok/build/g3-training/g3-sft-continuous.g3ckpt
             Morok/build/g3-training/cycles-summary.tsv
           if-no-files-found: warn
           retention-days: 30
