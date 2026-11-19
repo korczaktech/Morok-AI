@@ -39,7 +39,7 @@ O split de validação é mantido separado e não é usado para atualizar pesos.
 
 `ReferenceRewardEvaluator` não lê logits, gradientes ou estado interno da
 política. Ele recebe respostas de referência e calcula similaridade por
-distância de edição, F1 de bigramas e adequação de comprimento. Sua identidade,
+distância de edição e F1 de bigramas. O componente de coerência fica neutro: o sistema não usa o comprimento da referência para penalizar respostas concisas. Sua identidade,
 versão de rubrica e origem dos rótulos são registradas. Antes do treino, a
 rubrica é testada contra casos de auditoria com limites de score esperados.
 
