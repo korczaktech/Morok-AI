@@ -361,12 +361,18 @@ void test_native_int8_backend_export_and_inference() {
     alignas(8) std::array<std::byte, 660U> fp32_state{}, int8_state{};
     assert(fp32.reset_state(fp32_state));
     assert(int8.value_if()->get()->reset_state(int8_state));
+    assert(fp32.consume_token(fp32_state, lang::kBosToken));
+    assert(int8.value_if()->get()->consume_token(int8_state, lang::kBosToken));
+    assert(fp32.consume_token(fp32_state, lang::kUsrToken));
+    assert(int8.value_if()->get()->consume_token(int8_state, lang::kUsrToken));
     for (const auto byte : std::string_view("Morok G3"))
     {
         assert(fp32.consume_byte(fp32_state, static_cast<std::uint8_t>(byte)));
         assert(int8.value_if()->get()->consume_byte(
             int8_state, static_cast<std::uint8_t>(byte)));
     }
+    assert(fp32.consume_token(fp32_state, lang::kBotToken));
+    assert(int8.value_if()->get()->consume_token(int8_state, lang::kBotToken));
     std::array<float, 261U> fp32_output{}, int8_output{};
     assert(fp32.next_token_log_probabilities(fp32_state, fp32_output));
     assert(int8.value_if()->get()->next_token_log_probabilities(
