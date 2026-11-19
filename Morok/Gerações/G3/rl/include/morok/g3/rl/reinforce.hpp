@@ -32,6 +32,7 @@ struct RewardWeights final {
 
 struct RewardPenalties final {
     double empty_response{0.80};
+    double missing_eos{0.10};
     double repeated_token_ratio{0.20};
     double prompt_copy_ratio{0.15};
     // Zero disables a length penalty. A nonzero limit must be rubric-justified.
