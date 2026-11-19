@@ -7,6 +7,7 @@
 #include "morok/g3/inference/quantization.hpp"
 
 #include "morok/lang/byte_tokenizer.hpp"
+#include "morok/g3/system_prompt.hpp"
 
 #include <algorithm>
 #include <array>
@@ -50,6 +51,12 @@ public:
         return common::Status::success();
     }
 
+    common::Status consume_token(
+        std::span<std::byte> state, std::uint16_t token) const override {
+        if (token >= 256U) return common::Status::success();
+        return consume_byte(state, static_cast<std::uint8_t>(token));
+    }
+
     common::Status consume_byte(
         std::span<std::byte> state, std::uint8_t) const override {
         std::uint32_t count = 0;
@@ -72,7 +79,8 @@ public:
                   -std::numeric_limits<float>::infinity());
         std::uint32_t count = 0;
         std::memcpy(&count, state.data(), sizeof(count));
-        const auto token = immediate_eos_ || count > 1U
+        const auto initial_prompt_bytes = morok::g3::kMasterSystemPrompt.size() + 1U;
+        const auto token = immediate_eos_ || count > initial_prompt_bytes
             ? lang::kEosToken : static_cast<lang::TokenId>('A');
         output[token] = 0.0F;
         return common::Status::success();
@@ -97,6 +105,11 @@ public:
         std::memcpy(state.data(), &zero, sizeof(zero));
         return common::Status::success();
     }
+    common::Status consume_token(std::span<std::byte> state,
+                                 std::uint16_t token) const override {
+        if (token >= 256U) return common::Status::success();
+        return consume_byte(state, static_cast<std::uint8_t>(token));
+    }
     common::Status consume_byte(std::span<std::byte> state, std::uint8_t) const override {
         std::uint32_t count = 0U;
         std::memcpy(&count, state.data(), sizeof(count));
@@ -111,8 +124,11 @@ public:
         std::fill(output.begin(), output.end(),
                   -std::numeric_limits<float>::infinity());
         constexpr std::array<std::uint8_t, 6> pattern{'a','b','c','a','b','c'};
-        const auto token = count <= pattern.size()
-            ? static_cast<lang::TokenId>(pattern[count - 1U]) : lang::kEosToken;
+        const auto initial_prompt_bytes = morok::g3::kMasterSystemPrompt.size() + 1U;
+        const auto generated_count = count > initial_prompt_bytes
+            ? static_cast<std::size_t>(count - initial_prompt_bytes) : 0U;
+        const auto token = generated_count < pattern.size()
+            ? static_cast<lang::TokenId>(pattern[generated_count]) : lang::kEosToken;
         output[token] = 0.0F;
         return common::Status::success();
     }
