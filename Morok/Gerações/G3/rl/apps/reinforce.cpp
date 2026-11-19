@@ -6,6 +6,7 @@
 #include "morok/g3/inference/model_artifact.hpp"
 #include "morok/lang/byte_tokenizer.hpp"
 
+#include <algorithm>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
