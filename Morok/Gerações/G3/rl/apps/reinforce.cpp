@@ -1,6 +1,7 @@
 #include "morok/g3/rl/g3_policy.hpp"
 #include "morok/g3/rl/reference_evaluator.hpp"
 #include "morok/g3/training/dataset.hpp"
+#include "morok/g3/training/system_prompt.hpp"
 #include "morok/g3/training/evaluation.hpp"
 #include "morok/g3/inference/model_artifact.hpp"
 #include "morok/lang/byte_tokenizer.hpp"
@@ -21,7 +22,9 @@ using morok::lang::TokenId;
 std::vector<TokenId> encode_prompt(const std::string& question) {
     const auto encoded=morok::lang::ByteTokenizer::encode_text(question);
     if(!encoded) throw std::runtime_error("Could not encode RL question");
-    std::vector<TokenId> tokens{morok::lang::kBosToken,morok::lang::kUsrToken};
+    std::vector<TokenId> tokens{morok::lang::kBosToken};
+    morok::g3::training::append_master_system_prompt(tokens);
+    tokens.push_back(morok::lang::kUsrToken);
     tokens.insert(tokens.end(),encoded.value_if()->byte_tokens.begin(),
                   encoded.value_if()->byte_tokens.end());
     tokens.push_back(morok::lang::kBotToken);
