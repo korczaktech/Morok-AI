@@ -1,6 +1,7 @@
 #pragma once
 
 #include "morok/common/result.hpp"
+#include "morok/common/error.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -45,6 +46,18 @@ public:
     // Consume one observed byte and update only the supplied session state.
     [[nodiscard]] virtual common::Status consume_byte(
         std::span<std::byte> state, std::uint8_t byte) const = 0;
+
+    // Consume a vocabulary token. Byte-only backends retain compatibility;
+    // generation-specific backends override this to support control tokens.
+    [[nodiscard]] virtual common::Status consume_token(
+        std::span<std::byte> state, std::uint16_t token_id) const {
+        if (token_id <= 255U)
+            return consume_byte(state, static_cast<std::uint8_t>(token_id));
+        return common::Status::failure(common::Error::make(
+            common::ErrorCode::invalid_argument,
+            "Backend does not support non-byte control tokens",
+            "model", "consume_token"));
+    }
 
     // Fill one log-probability per vocabulary entry. Unsupported entries must
     // be represented by negative infinity. The output span must match vocab size.
