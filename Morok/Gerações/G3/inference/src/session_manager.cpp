@@ -142,7 +142,9 @@ common::Status SessionManager::reset(const model::ModelBackend& backend,
     }
     std::lock_guard session_lock(entry->mutex);
     const auto status = backend.reset_state(entry->state);
-    entry->initialized = static_cast<bool>(status);
+    // A reset creates an empty conversation. The next generate() call must
+    // inject BOS and the shared system prompt before the first user message.
+    entry->initialized = false;
     {
         std::lock_guard lock(mutex_);
         entry->last_access = std::chrono::steady_clock::now();
