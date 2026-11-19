@@ -254,12 +254,21 @@ jobs:
           rl_dir="$OUTPUT_DIR/rl-output"
           mkdir -p "$rl_dir"
 
+          # Reutiliza exatamente a seed registrada no ciclo SFT selecionado.
+          # Isso mantém os conjuntos de treino/teste do RL idênticos aos do SFT.
+          sft_seed="$(awk -F '\\t' -v cycle="$CICLO_SFT" 'NR > 1 && $1 == cycle { print $2; exit }' \
+            "$OUTPUT_DIR/sft-source/cycles-summary.tsv")"
+          if [[ ! "$sft_seed" =~ ^[0-9]+$ ]]; then
+            echo "::error::Não foi possível recuperar a seed do ciclo SFT selecionado."
+            exit 1
+          fi
+
           build/g3-training/morok-g3-reinforce \
             "$DATASET" \
             "$sft_model" \
             "$rl_dir/g3-rl.morok" \
             "$rl_dir/rl-report.json" \
-            "$EPOCAS_RL"
+            "$EPOCAS_RL" "$sft_seed"
 
           echo "Analisando respostas geradas pela política RL (705 perguntas)..."
           build/g3-training/morok-g3-analyze \
