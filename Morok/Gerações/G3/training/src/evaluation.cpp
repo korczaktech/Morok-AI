@@ -1,6 +1,7 @@
 #include "morok/g3/training/evaluation.hpp"
 
 #include "morok/g3/inference/model_artifact.hpp"
+#include "morok/g3/training/system_prompt.hpp"
 
 #include <unicode/normalizer2.h>
 #include <unicode/uchar.h>
@@ -76,6 +77,10 @@ OneExample score_example(const neural::G3Backend& backend,
             throw std::runtime_error("G3 evaluator could not consume an input token");
     };
     consume(kBos);
+    std::vector<std::uint16_t> system_prompt;
+    system_prompt.reserve(kMasterSystemPrompt.size());
+    append_master_system_prompt(system_prompt);
+    for (const auto token : system_prompt) consume(token);
     consume(kUsr);
     for (const unsigned char byte : example.question) consume(byte);
     consume(kBot);
