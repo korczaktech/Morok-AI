@@ -24,7 +24,7 @@ on:
         required: true
         default: 3
       seed:
-        description: "Seed-base; cada ciclo incrementa a seed"
+        description: "Seed fixa do treinamento e da divisão por grupos"
         type: number
         required: true
         default: 42
@@ -102,7 +102,7 @@ jobs:
                   raise SystemExit("ciclos deve estar entre 1 e 100.")
               if not 1 <= epochs <= 1000:
                   raise SystemExit("epocas_sft deve estar entre 1 e 1000.")
-              if not 0 <= seed <= 18446744073709551615 - (cycles - 1):
+              if not 0 <= seed <= 18446744073709551615:
                   raise SystemExit("seed-base inválida para a quantidade de ciclos.")
               print(f"Modo selecionado: SFT; {cycles} ciclo(s), {epochs} época(s) por ciclo.")
           else:
