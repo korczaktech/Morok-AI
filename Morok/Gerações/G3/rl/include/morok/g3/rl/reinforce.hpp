@@ -37,8 +37,8 @@ struct RewardPenalties final {
     // Zero disables a length penalty. A nonzero limit must be rubric-justified.
     std::size_t max_response_tokens{0};
     double over_length{0.20};
-    double minimum_length_ratio{0.50};
-    double under_length{0.40};
+    double minimum_length_ratio{0.0};
+    double under_length{0.0};
     double reward_hacking_copy_ratio{0.65};
     double reward_hacking_repeat_ratio{0.25};
 };
