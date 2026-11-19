@@ -43,7 +43,7 @@ distância de edição e F1 de bigramas. O componente de coerência fica neutro:
 versão de rubrica e origem dos rótulos são registradas. Antes do treino, a
 rubrica é testada contra casos de auditoria com limites de score esperados.
 
-As penalidades incluem resposta vazia, repetição, cópia de trechos do prompt,
+As penalidades incluem resposta vazia, ausência de EOS, repetição, cópia de trechos do prompt,
 comprimento excessivo somente quando configurado. Penalidade por resposta
 curta fica desativada por padrão; o avaliador lexical não usa comprimento como
 substituto de coerência, pois não consegue saber se uma resposta concisa é suficiente. O relatório também marca suspeitas de reward hacking quando uma
