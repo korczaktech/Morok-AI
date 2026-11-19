@@ -1,5 +1,6 @@
 #include "morok/g3/training/trainer.hpp"
 #include "morok/g3/training/checkpoint.hpp"
+#include "morok/g3/training/system_prompt.hpp"
 #include "morok/g3/rl/reinforce.hpp"
 
 #include <unicode/unistr.h>
@@ -275,8 +276,11 @@ std::vector<std::uint16_t> sequence_for(const DatasetExample& example,
                                         std::size_t& answer_start,
                                         std::size_t& eos_index) {
     std::vector<std::uint16_t> sequence;
-    sequence.reserve(example.question.size() + example.answer.size() + 5U);
-    sequence.push_back(BOS); sequence.push_back(USR);
+    sequence.reserve(example.question.size() + example.answer.size() +
+                      kMasterSystemPrompt.size() + 5U);
+    sequence.push_back(BOS);
+    append_master_system_prompt(sequence);
+    sequence.push_back(USR);
     for (unsigned char byte : example.question) sequence.push_back(byte);
     sequence.push_back(BOT);
     answer_start = sequence.size();
@@ -558,7 +562,8 @@ std::string training_config_snapshot(const TrainingConfig& c) {
         << '|' << c.perturbation.omission_weight
         << '|' << c.perturbation.nearby_key_weight
         << '|' << c.perturbation.accent_case_punctuation_weight
-        << '|' << c.perturbation.repetition_spacing_weight;
+        << '|' << c.perturbation.repetition_spacing_weight
+        << '|' << kMasterSystemPromptVersion << '|' << kMasterSystemPrompt;
     return out.str();
 }
 
@@ -745,7 +750,7 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
 
     if (!config.resume_from_checkpoint.empty()) {
         CheckpointCompatibility expected;
-        expected.code_version = "g3-sft-2";
+        expected.code_version = "g3-sft-3";
         expected.dataset_fingerprint = dataset.fingerprint;
         expected.optimizer_id = "AdamW";
         expected.configuration_fingerprint = config_fingerprint;
@@ -858,7 +863,7 @@ TrainingReport train(neural::G3Backend& backend, const Dataset& dataset,
         report.completed_epochs = epoch;
         if (!checkpoint_destination.empty()) {
             G3TrainingCheckpoint checkpoint;
-            checkpoint.compatibility.code_version = "g3-sft-2";
+            checkpoint.compatibility.code_version = "g3-sft-3";
             checkpoint.compatibility.dataset_fingerprint = dataset.fingerprint;
             checkpoint.compatibility.optimizer_id = "AdamW";
             checkpoint.compatibility.configuration_fingerprint = config_fingerprint;
