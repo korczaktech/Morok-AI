@@ -23,6 +23,8 @@ public:
     [[nodiscard]] common::Status reset_state(std::span<std::byte> state) const override;
     [[nodiscard]] common::Status consume_byte(std::span<std::byte> state,
                                                std::uint8_t byte) const override;
+    [[nodiscard]] common::Status consume_token(std::span<std::byte> state,
+                                                std::uint16_t token_id) const override;
     [[nodiscard]] common::Status next_token_log_probabilities(
         std::span<const std::byte> state,
         std::span<float> log_probabilities) const override;
