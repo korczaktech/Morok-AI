@@ -1,6 +1,7 @@
 #include "morok/g3/training/trainer.hpp"
 #include "morok/g3/training/checkpoint.hpp"
 #include "morok/g3/training/system_prompt.hpp"
+#include "morok/lang/byte_tokenizer.hpp"
 
 #include <algorithm>
 #include <cassert>
