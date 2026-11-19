@@ -71,10 +71,10 @@ morok::common::Result<RewardComponents> ReferenceRewardEvaluator::evaluate(
     const double similarity=denominator==0U?0.0:
         1.0-static_cast<double>(edit_distance(target,response))/static_cast<double>(denominator);
     const double intent=bigram_f1(target,response);
-    const double length=target.empty()?0.0:
-        std::max(0.0,1.0-std::abs(static_cast<double>(response.size())-
-                                 static_cast<double>(target.size()))/
-                            static_cast<double>(target.size()));
+    // Length is not a proxy for coherence: a concise answer can be fully correct.
+    // Keep this component neutral until a task-specific rubric supplies a
+    // validated length target and sufficiency judgment.
+    const double length=0.0;
     const double format=response.empty()?0.0:1.0;
     return morok::common::Result<RewardComponents>::success(
         RewardComponents{std::clamp(similarity,0.0,1.0),
