@@ -228,18 +228,26 @@ common::Status G3Int8Backend::reset_state(std::span<std::byte> state) const {
 
 common::Status G3Int8Backend::consume_byte(std::span<std::byte> state,
                                            std::uint8_t byte) const {
+    return consume_token(state, static_cast<std::uint16_t>(byte));
+}
+
+common::Status G3Int8Backend::consume_token(std::span<std::byte> state,
+                                            std::uint16_t token_id) const {
+    if (token_id >= neural::kVocabularySize)
+        return common::Status::failure(make_error(common::ErrorCode::invalid_argument,
+            "consume_token", "G3 INT8 token ID is outside the 261-entry vocabulary"));
     if (state.size() != kStateBytes)
         return common::Status::failure(make_error(common::ErrorCode::invalid_argument,
-            "consume_byte", "G3 INT8 state has an invalid size"));
+            "consume_token", "G3 INT8 state has an invalid size"));
     std::array<float, kStateFloats> previous{};
     std::memcpy(previous.data(), state.data(), kStateBytes);
 
     std::array<float, neural::kEmbeddingDim> embedded{};
-    const std::size_t embedding_offset = static_cast<std::size_t>(byte) *
+    const std::size_t embedding_offset = static_cast<std::size_t>(token_id) *
                                          neural::kEmbeddingDim;
     for (std::size_t i = 0; i < neural::kEmbeddingDim; ++i)
         embedded[i] = static_cast<float>(embedding_.values[embedding_offset + i]) *
-                       embedding_.scales[byte];
+                       embedding_.scales[token_id];
 
     const std::span<const float> previous1(previous.data(), neural::kLayer1HiddenDim);
     const std::span<const float> previous2(previous.data() + neural::kLayer1HiddenDim,
