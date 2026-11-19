@@ -1,4 +1,5 @@
 #include "morok/g3/profiles/profile.hpp"
+#include "morok/g3/system_prompt.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -25,6 +26,11 @@ public:
         std::memcpy(state.data(), &zero, sizeof(zero));
         return morok::common::Status::success();
     }
+    morok::common::Status consume_token(
+        std::span<std::byte> state, std::uint16_t token) const override {
+        if (token >= 256U) return morok::common::Status::success();
+        return consume_byte(state, static_cast<std::uint8_t>(token));
+    }
     morok::common::Status consume_byte(
         std::span<std::byte> state, std::uint8_t) const override {
         std::uint32_t count = 0U;
@@ -42,8 +48,9 @@ public:
         std::memcpy(&count, state.data(), sizeof(count));
         std::fill(output.begin(), output.end(),
                   -std::numeric_limits<float>::infinity());
-        output[count > 1U ? morok::lang::kEosToken
-                          : static_cast<std::uint8_t>('A')] = 0.0F;
+        const auto initial_prompt_bytes = morok::g3::kMasterSystemPrompt.size() + 1U;
+        output[count > initial_prompt_bytes ? morok::lang::kEosToken
+                                            : static_cast<std::uint8_t>('A')] = 0.0F;
         return morok::common::Status::success();
     }
 };
