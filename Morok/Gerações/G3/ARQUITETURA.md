@@ -195,11 +195,24 @@ Penalidades configuráveis:
 - cópia de sequência contígua de bytes do prompt;
 - excesso de comprimento somente quando um limite justificado for configurado.
 
-Não há penalidade automática de comprimento por padrão. A semântica não é
-inferida por distância de edição ou n-gramas. O avaliador deve ter identidade,
-versão de rubrica e origem dos rótulos distintas da política treinada. A função
-`audit_evaluator` compara resultados com intervalos aprovados em casos
-rotulados; o treinamento exige esses casos e bloqueia atualizações se a auditoria falhar. Essa auditoria não substitui revisão humana periódica.
+O avaliador atualmente implementado é lexical e determinístico. Para cada
+prompt com resposta de referência, calcula: (1) similaridade normalizada por
+distância de edição para `correctness`; (2) F1 de bigramas para `intent`;
+(3) proximidade de comprimento para `coherence`; e (4) resposta não vazia
+para `format`. Esses nomes são rótulos da interface, não evidência de
+compreensão semântica. Respostas corretas com redação diferente podem receber
+nota baixa, enquanto respostas lexicalmente parecidas podem estar erradas.
+A recompensa atual serve apenas como baseline experimental de proximidade
+textual, não como certificação de qualidade, factualidade ou alinhamento.
+
+`audit_evaluator` verifica metadados e intervalos fornecidos pelo chamador; isso
+não prova independência humana nem validade semântica. No CLI atual, os casos
+de auditoria são verificações sintéticas de resposta exata e resposta vazia,
+não um conjunto humano independente. Antes de usar RL como treino de qualidade,
+é necessário adicionar casos rotulados por pessoas, incluindo paráfrases
+corretas, respostas plausíveis porém falsas e exemplos de reward hacking.
+Até lá, relatórios de recompensa devem ser identificados como métricas
+lexicais experimentais. Não há penalidade automática de comprimento por padrão.
 
 ### 9.4 KL de referência
 
