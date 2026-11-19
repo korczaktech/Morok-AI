@@ -49,6 +49,7 @@ template <typename T>
            left.reward_weights.coherence == right.reward_weights.coherence &&
            left.reward_weights.format == right.reward_weights.format &&
            left.penalties.empty_response == right.penalties.empty_response &&
+           left.penalties.missing_eos == right.penalties.missing_eos &&
            left.penalties.repeated_token_ratio == right.penalties.repeated_token_ratio &&
            left.penalties.prompt_copy_ratio == right.penalties.prompt_copy_ratio &&
            left.penalties.max_response_tokens == right.penalties.max_response_tokens &&
@@ -80,10 +81,11 @@ template <typename T>
 
 [[nodiscard]] bool valid_penalties(const RewardPenalties& penalties) noexcept {
     return std::isfinite(penalties.empty_response) &&
+           std::isfinite(penalties.missing_eos) &&
            std::isfinite(penalties.repeated_token_ratio) &&
            std::isfinite(penalties.prompt_copy_ratio) &&
            std::isfinite(penalties.over_length) &&
-           penalties.empty_response >= 0.0 &&
+           penalties.empty_response >= 0.0 && penalties.missing_eos >= 0.0 &&
            penalties.repeated_token_ratio >= 0.0 &&
            penalties.prompt_copy_ratio >= 0.0 &&
            penalties.over_length >= 0.0 &&
@@ -330,7 +332,7 @@ struct ScoredReward final {
 [[nodiscard]] Result<ScoredReward> score_response(
     const RewardEvaluator& evaluator, const RewardWeights& weights,
     const RewardPenalties& penalties, std::span<const TokenId> prompt,
-    std::span<const TokenId> response) {
+    std::span<const TokenId> response, bool ended_with_eos) {
     const auto evaluated = evaluator.evaluate(prompt, response);
     if (!evaluated) {
         return Result<ScoredReward>::failure(*evaluated.error_if());
@@ -349,6 +351,7 @@ struct ScoredReward final {
     if (response.empty()) {
         score -= penalties.empty_response;
     }
+    if (!ended_with_eos) score -= penalties.missing_eos;
     score -= penalties.repeated_token_ratio * repeated_ratio(response);
     const double copied = prompt_copy_ratio(prompt, response);
     score -= penalties.prompt_copy_ratio * copied;
@@ -452,7 +455,7 @@ Status audit_evaluator(const RewardEvaluator& evaluator,
                            "Evaluator audit case has invalid metadata or score bounds");
         }
         const auto score = score_response(evaluator, weights, penalties,
-                                          test_case.prompt, test_case.response);
+                                          test_case.prompt, test_case.response, true);
         if (!score) {
             return Status::failure(*score.error_if());
         }
@@ -612,7 +615,7 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
             const auto visible = visible_response(generated.response);
             const auto reward_result = score_response(
                 evaluator, config_.reward_weights, config_.penalties,
-                prompt.tokens, visible);
+                prompt.tokens, visible, generated.ended_with_eos);
             if (!reward_result) {
                 return Result<TrainingReport>::failure(*reward_result.error_if());
             }
@@ -774,7 +777,9 @@ Result<EvaluationReport> evaluate_policy(
         }
         const auto visible = visible_response(*generated.value_if());
         const auto score = score_response(
-            evaluator, weights, penalties, example.tokens, visible);
+            evaluator, weights, penalties, example.tokens, visible,
+            !generated.value_if()->empty() &&
+                generated.value_if()->back() == morok::lang::kEosToken);
         if (!score) {
             return Result<EvaluationReport>::failure(*score.error_if());
         }
