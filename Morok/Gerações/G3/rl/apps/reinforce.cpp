@@ -87,16 +87,18 @@ void write_report(const std::filesystem::path& path,
 }
 }
 int main(int argc,char** argv) {
-    if(argc<5 || argc>6) {
+    if(argc<5 || argc>7) {
         std::cerr<<"Uso: morok-g3-reinforce <dataset.jsonl> <sft.morok> "
-                    "<rl-output.morok> <report.json> [epochs]\n";
+                    "<rl-output.morok> <report.json> [epochs] [seed]\n";
         return 2;
     }
     try {
-        const std::size_t epochs=argc==6?static_cast<std::size_t>(std::stoull(argv[5])):1U;
+        const std::size_t epochs=argc>=6?static_cast<std::size_t>(std::stoull(argv[5])):1U;
+        const std::uint64_t seed=argc==7?std::stoull(argv[6]):42U;
         if(epochs==0U || epochs>100U) throw std::invalid_argument("epochs must be in [1,100]");
         const auto dataset=morok::g3::training::load_jsonl(argv[1]);
-        const auto splits=morok::g3::training::split_by_group_id(dataset);
+        const auto splits=morok::g3::training::split_by_group_id(
+            dataset,morok::g3::training::SplitConfig{0.85,0.10,0.05,seed});
         morok::g3::neural::G3Backend sft_backend;
         (void)morok::g3::training::load_fp32_model_weights(argv[2],sft_backend);
         morok::g3::neural::G3Backend rl_backend=sft_backend;
@@ -127,7 +129,7 @@ int main(int argc,char** argv) {
         config.temperature=0.7;
         config.gamma=0.95;
         config.kl_beta=0.02;
-        config.seed=42U;
+        config.seed=seed;
         morok::g3::rl::ReinforceTrainer trainer(config);
         morok::g3::rl::TrainingReport latest;
         for(std::size_t epoch=0;epoch<epochs;++epoch) {
