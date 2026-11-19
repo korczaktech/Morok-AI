@@ -106,8 +106,10 @@ int main(int argc,char** argv) {
         morok::g3::rl::G3PolicyAdapter rl_policy(rl_backend,"g3-reinforcement-policy");
         std::vector<morok::g3::rl::ReferenceAnswer> references;
         references.reserve(dataset.examples.size());
-        for(const auto& e:dataset.examples)
-            references.push_back({encode_prompt(e.question),encode_answer(e.answer)});
+        for(const auto& e:dataset.examples) {
+            if (!e.sensitive)
+                references.push_back({encode_prompt(e.question),encode_answer(e.answer)});
+        }
         morok::g3::rl::ReferenceRewardEvaluator evaluator(std::move(references));
         std::vector<morok::g3::rl::Prompt> train_prompts,test_prompts;
         for(auto i:splits.train) if(!dataset.examples[i].sensitive)
@@ -116,7 +118,10 @@ int main(int argc,char** argv) {
             test_prompts.push_back(make_prompt(dataset.examples[i]));
         if(train_prompts.empty() || test_prompts.empty())
             throw std::runtime_error("RL needs non-sensitive train and test examples");
-        const auto& first=dataset.examples[splits.train.front()];
+        const auto first_index = *std::find_if(
+            splits.train.begin(), splits.train.end(),
+            [&](std::size_t index) { return !dataset.examples[index].sensitive; });
+        const auto& first=dataset.examples[first_index];
         const auto first_prompt=encode_prompt(first.question);
         const auto first_answer=encode_answer(first.answer);
         const std::vector<morok::g3::rl::RewardAuditCase> audit{
