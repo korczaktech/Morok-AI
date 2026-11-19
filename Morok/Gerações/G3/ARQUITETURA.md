@@ -53,7 +53,7 @@ As operações retornam `morok::common::Status`. Erros de tamanho, estado invál
 O contrato não presume que todas as gerações tenham a mesma arquitetura.
 
 - G1: geração `1`, arquitetura `0x0101`, vocabulário de 256 bytes, 1.000 parâmetros e estado recorrente próprio.
-- G3: geração `3`, arquitetura inicial reservada `0x0301`, vocabulário de 261 IDs, 198.149 parâmetros conforme a especificação revisada e estado de referência de 1.024 bytes em FP32.
+- G3: geração `3`, arquitetura `0x0302`, vocabulário de 261 IDs, exatamente 100.000 parâmetros treináveis e estado recorrente de 660 bytes em FP32 por sessão (97 + 68 valores).
 
 O identificador G3 é uma reserva para a arquitetura GRU-RMSNorm-Weight-Tying. Deve permanecer estável depois que o formato de checkpoint for publicado. A contagem real de parâmetros deverá ser calculada pela implementação e confrontada com a especificação antes de aprovar a etapa neural.
 
@@ -214,7 +214,7 @@ registrada no relatório.
 
 O módulo mede e penaliza resposta vazia, repetição e cópia da pergunta; o
 comprimento só é penalizado com limite explicitamente configurado. Respostas
-genéricas dependem da rubrica de correção/aderência, não de uma regra lexical.
+genéricas são limitadas pela rubrica lexical atual. O avaliador implementado usa distância de edição, F1 de bigramas, proximidade de comprimento e presença de conteúdo. Esses sinais não medem semântica, factualidade ou intenção de forma confiável; não devem ser apresentados como julgamento semântico.
 Os testes cobrem resposta vazia, genérica, repetida, exploração de avaliador,
 KL positiva e comparação SFT/RL no mesmo conjunto fechado. Casos de encerramento
 prematuro e respostas longas sem conteúdo devem ser incluídos nos conjuntos de
@@ -290,8 +290,7 @@ outro runtime nem altera os fontes das gerações anteriores.
   bytes reservados não nulos e checksum inválido.
 - FP32 exige exatamente quatro bytes por parâmetro. INT8 exige um byte por
   parâmetro mais quatro bytes por escala.
-- A contagem é informada pela estrutura real; 198.149 é referência da
-  especificação, não valor forçado pelo serializador.
+- A contagem é informada pela estrutura real e deve ser exatamente 100.000 para a arquitetura `0x0302`; o serializador valida dimensões, identificador, contagem e payload.
 
 ### 10.4 Medição e isolamento
 
@@ -329,20 +328,20 @@ contrato morok::model::ModelBackend, sem criar um Core ou runtime paralelo.
 - Implementação: neural/src/gru_backend.cpp.
 - Testes: neural/tests/test_gru_backend.cpp.
 - Biblioteca: Morok::G3::Neural.
-- Arquitetura: GRU de duas camadas, E=64, H=128, V=261, identificador 0x0301.
+- Arquitetura normativa: GRU de duas camadas, E=60, H1=97, H2=68, V=261, identificador `0x0302`.
 
 A ordem das portas é fixa: update, reset, candidate. A convenção é
 h_t = (1-z_t) * n_t + z_t * h_(t-1). Cada porta possui uma matriz de entrada,
 uma matriz recorrente e um único vetor de bias. A porta candidate aplica o
 reset ao estado anterior antes da multiplicação recorrente.
 
-A primeira GRU recebe o embedding de 64 dimensões. RMSNorm com escala
+A primeira GRU recebe o embedding de 60 dimensões. RMSNorm com escala
 aprendível e epsilon configurável é aplicada entre as camadas. A segunda GRU
-recebe dimensão 128 e mantém estado próprio. O estado de sessão contém os dois
-vetores ocultos FP32 (1.024 bytes), é fornecido pelo chamador e não é
-compartilhado entre sessões.
+recebe dimensão 97 e produz estado oculto de dimensão 68. O estado de sessão
+contém os dois vetores ocultos FP32 (660 bytes), é fornecido pelo chamador e
+não é compartilhado entre sessões.
 
-A cabeça de saída projeta H=128 para E=64 e calcula os logits com a transposta
+A cabeça de saída projeta H2=68 para E=60 e calcula os logits com a transposta
 da própria matriz de embedding, mais bias de saída independente. Não existe
 uma segunda matriz de vocabulário: lookup e saída usam o mesmo vetor de pesos,
 implementando weight tying por armazenamento único.
@@ -356,18 +355,19 @@ Inicialização:
 - seed e epsilon são configuráveis; a seed padrão é determinística.
 
 A contagem é calculada somando os tamanhos reais dos tensores alocados. Na
-configuração de referência, a implementação retorna 198.149 parâmetros:
-16.704 embedding + 74.112 GRU 1 + 98.688 GRU 2 + 8.192 projeção + 64 bias da
-projeção + 128 escala RMSNorm + 261 bias de saída. O descritor do backend usa
-essa contagem calculada, não uma constante forçada.
+configuração normativa `0x0302`, a implementação retorna exatamente 100.000
+parâmetros: 15.660 embedding + 45.978 GRU 1 + 33.864 GRU 2 + 4.080 projeção
++ 60 bias da projeção + 97 escala RMSNorm + 261 bias de saída. A matriz de
+saída reutiliza o embedding transposto e não adiciona outro tensor. O descritor
+usa a contagem calculada e o construtor rejeita qualquer total diferente.
 
 ### Critérios da arquitetura neural
 
-- [x] Embedding de dimensão 64.
+- [x] Embedding de dimensão 60.
 - [x] GRU com duas camadas.
-- [x] Estado oculto de dimensão 128 por camada.
+- [x] Estados ocultos de dimensão 97 e 68.
 - [x] RMSNorm entre as camadas, com escala aprendível e epsilon configurável.
-- [x] Projeção de saída 128 → 64 e logits no vocabulário de 261 IDs.
+- [x] Projeção de saída 68 → 60 e logits no vocabulário de 261 IDs.
 - [x] Weight tying com armazenamento único entre embedding e matriz de saída.
 - [x] Inicialização Xavier/Glorot, recorrência ortogonal e biases documentados.
 - [x] Contagem automática dos parâmetros a partir dos tensores reais.
@@ -449,4 +449,4 @@ O pipeline supervisionado da G3 está em `Gerações/G3/training/` e atualiza di
 - Biblioteca: `Morok::G3::Training`.
 - Testes: `g3.training`, incluindo loader, matriz de expansão, isolamento de grupos, Cross-Entropy, PAD, perturbação, update de pesos e telemetria.
 
-A implementação do pipeline não equivale a um treino de produção. Nenhum corpus real foi incluído ou treinado nesta entrega; a qualidade do modelo depende de dataset com origem, licença e rótulos revisados. O CLI exporta o modelo final, mas ainda não retoma checkpoints com estado AdamW/RNG; a retomada de execução interrompida continua como requisito de recuperação separado.
+A implementação do pipeline não equivale a um treino de produção. Nenhum corpus real foi incluído ou treinado nesta entrega; a qualidade do modelo depende de dataset com origem, licença e rótulos revisados. O treinador suporta retomada por checkpoint de época, restaurando pesos FP32, momentos AdamW, scheduler, sampler, splits e RNG. A retomada exige configuração, fingerprint do dataset e versão de código compatíveis.
