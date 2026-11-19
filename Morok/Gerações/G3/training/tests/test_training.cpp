@@ -1,5 +1,6 @@
 #include "morok/g3/training/trainer.hpp"
 #include "morok/g3/training/checkpoint.hpp"
+#include "morok/g3/training/system_prompt.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -15,6 +16,19 @@ namespace {
 
 std::filesystem::path temporary(const char* name) {
     return std::filesystem::temp_directory_path() / name;
+}
+
+void test_master_system_prompt_contract() {
+    std::vector<morok::lang::TokenId> encoded;
+    append_master_system_prompt(encoded);
+    std::string decoded;
+    decoded.reserve(encoded.size());
+    for (const auto token : encoded) {
+        assert(token < 256U);
+        decoded.push_back(static_cast<char>(token));
+    }
+    assert(decoded == kMasterSystemPrompt);
+    assert(kMasterSystemPromptVersion == "morok-g3-master-v1");
 }
 
 void test_dataset_loader_and_group_split() {
@@ -205,6 +219,7 @@ void test_epoch_boundary_checkpoint_resume_matches_uninterrupted_training() {
 } // namespace
 
 int main() {
+    test_master_system_prompt_contract();
     test_dataset_loader_and_group_split();
     test_cross_entropy_and_perturbations();
     test_training_updates_model_and_logs_per_example();
