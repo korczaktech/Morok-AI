@@ -2,6 +2,7 @@
 
 #include "morok/common/error.hpp"
 #include "morok/model/model_session.hpp"
+#include "morok/g3/system_prompt.hpp"
 
 #include <algorithm>
 #include <array>
@@ -160,11 +161,27 @@ common::Result<GenerationResult> generate(
     if (!initialized)
         return common::Result<GenerationResult>::failure(*initialized.error_if());
 
+    if (config.reset_session_state) {
+        const auto bos = session.consume_token(lang::kBosToken);
+        if (!bos) return common::Result<GenerationResult>::failure(*bos.error_if());
+        for (const unsigned char byte : morok::g3::kMasterSystemPrompt) {
+            const auto consumed = session.consume_byte(byte);
+            if (!consumed)
+                return common::Result<GenerationResult>::failure(*consumed.error_if());
+        }
+    }
+
+    const auto user_marker = session.consume_token(lang::kUsrToken);
+    if (!user_marker)
+        return common::Result<GenerationResult>::failure(*user_marker.error_if());
     for (const auto token : encoded.value_if()->byte_tokens) {
         const auto consumed = session.consume_byte(static_cast<std::uint8_t>(token));
         if (!consumed)
             return common::Result<GenerationResult>::failure(*consumed.error_if());
     }
+    const auto assistant_marker = session.consume_token(lang::kBotToken);
+    if (!assistant_marker)
+        return common::Result<GenerationResult>::failure(*assistant_marker.error_if());
 
     GenerationResult result;
     result.input_bytes = encoded.value_if()->byte_tokens.size();
