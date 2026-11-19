@@ -11,7 +11,7 @@
    identidade/versão/origem, referências por prompt, auditoria com intervalos
    de pontuação esperados.
 2. Recompensas e penalidades: correção lexical, aderência por bigramas,
-   coerência de comprimento, formato, resposta vazia, repetição, cópia do
+   componente de coerência neutro, formato, resposta vazia, repetição, cópia do
    prompt, excesso e déficit de comprimento.
 3. REINFORCE com baseline: baseline móvel por categoria e vantagem
    recompensa-menos-baseline.
@@ -19,8 +19,8 @@
    com beta padrão 0,02.
 5. Candidatas: até quatro amostras por prompt, temperatura, Top-K, EOS e limite
    máximo de bytes controlados; tokens especiais indevidos são filtrados.
-6. Reward hacking: sinalização de respostas positivas com comprimento muito
-   abaixo da referência, cópia excessiva do prompt ou repetição.
+6. Reward hacking: sinalização de respostas positivas com cópia excessiva do prompt ou repetição. Déficit de comprimento não é
+   penalizado por padrão.
 7. Comparação: avaliação greedy no mesmo conjunto fechado de teste antes
    (SFT) e depois (RL), com recompensa, comprimento, vazios, repetição e delta.
 
