@@ -256,7 +256,7 @@ jobs:
 
           # Reutiliza exatamente a seed registrada no ciclo SFT selecionado.
           # Isso mantém os conjuntos de treino/teste do RL idênticos aos do SFT.
-          sft_seed="$(awk -F '\\t' -v cycle="$CICLO_SFT" 'NR > 1 && $1 == cycle { print $2; exit }' \
+          sft_seed="$(awk -F '\t' -v cycle="$CICLO_SFT" 'NR > 1 && $1 == cycle { print $2; exit }' \
             "$OUTPUT_DIR/sft-source/cycles-summary.tsv")"
           if [[ ! "$sft_seed" =~ ^[0-9]+$ ]]; then
             echo "::error::Não foi possível recuperar a seed do ciclo SFT selecionado."
