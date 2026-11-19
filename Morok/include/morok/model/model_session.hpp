@@ -79,6 +79,15 @@ public:
         return backend_.consume_byte(state_storage_, byte);
     }
 
+    [[nodiscard]] common::Status consume_token(std::uint16_t token_id) {
+        if (!initialized_) {
+            return failure(common::ErrorCode::model_not_loaded,
+                           "model.session.consume_token",
+                           "session must be reset before consuming input");
+        }
+        return backend_.consume_token(state_storage_, token_id);
+    }
+
     [[nodiscard]] common::Status next_token_log_probabilities(
         std::span<float> output) const {
         if (!initialized_) {
