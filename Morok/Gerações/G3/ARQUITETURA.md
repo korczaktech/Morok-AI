@@ -190,7 +190,7 @@ coerência e formato. Pesos default: 0,70 / 0,15 / 0,05 / 0,10; a soma deve ser
 recompensa composta é limitada a [-1, +1].
 
 Penalidades configuráveis:
-- resposta vazia;
+- resposta vazia e ausência de EOS;
 - repetição de bytes consecutivos e de sequências de bytes repetidas;
 - cópia de sequência contígua de bytes do prompt;
 - excesso de comprimento somente quando um limite justificado for configurado.
@@ -225,7 +225,7 @@ registrada no relatório.
 
 ### 9.5 Proteção contra reward hacking
 
-O módulo mede e penaliza resposta vazia, repetição e cópia da pergunta; o
+O módulo mede e penaliza resposta vazia, encerramento ausente (EOS), repetição e cópia da pergunta; o
 comprimento só é penalizado com limite explicitamente configurado. Respostas
 genéricas são limitadas pela rubrica lexical atual. O avaliador implementado usa distância de edição, F1 de bigramas, proximidade de comprimento e presença de conteúdo. Esses sinais não medem semântica, factualidade ou intenção de forma confiável; não devem ser apresentados como julgamento semântico.
 Os testes cobrem resposta vazia, genérica, repetida, exploração de avaliador,
