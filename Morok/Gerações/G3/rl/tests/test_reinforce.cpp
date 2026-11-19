@@ -108,6 +108,34 @@ public:
     }
 };
 
+class LengthNeutralEvaluator final : public RewardEvaluator {
+public:
+    EvaluatorMetadata metadata() const override {
+        return {"length-neutral-rubric", "v1", "human-labelled-fixture"};
+    }
+    morok::common::Result<RewardComponents> evaluate(
+        std::span<const TokenId>, std::span<const TokenId> response) const override {
+        if (response.empty())
+            return morok::common::Result<RewardComponents>::success(
+                RewardComponents{-1.0, -1.0, 0.0, -1.0});
+        return morok::common::Result<RewardComponents>::success(
+            RewardComponents{1.0, 1.0, 1.0, 1.0});
+    }
+    std::size_t expected_response_tokens(std::span<const TokenId>) const override {
+        return 100U;
+    }
+};
+
+void test_short_correct_answer_is_not_length_penalized() {
+    LengthNeutralEvaluator evaluator;
+    MockPolicy concise("concise-answer", {static_cast<TokenId>('Y')});
+    const std::array<Prompt, 1> prompts{{
+        Prompt{"concise", "general", {morok::lang::kUsrToken}}}};
+    const auto report = evaluate_policy(concise, evaluator, prompts, 4U);
+    assert(report.has_value());
+    assert(std::abs(report.value_if()->mean_reward - 1.0) < 1.0e-9);
+}
+
 class ExploitEvaluator final : public RewardEvaluator {
 public:
     EvaluatorMetadata metadata() const override {
@@ -403,6 +431,7 @@ void test_real_g3_policy_adapter_and_independent_evaluator() {
     assert(reward.has_value());
     assert(reward.value_if()->correctness==1.0);
     assert(evaluator.expected_response_tokens(prompt)==2U);
+    assert(reward.value_if()->coherence==0.0);
     assert(evaluator.metadata().identity!="g3-rl-trainable");
 }
 
@@ -411,6 +440,7 @@ void test_real_g3_policy_adapter_and_independent_evaluator() {
 int main() {
     test_config_validation();
     test_evaluator_audit_and_reward_hacking();
+    test_short_correct_answer_is_not_length_penalized();
     test_training_requires_evaluator_audit();
     test_exact_kl_logit_gradient();
     test_reinforce_and_reference_kl();
