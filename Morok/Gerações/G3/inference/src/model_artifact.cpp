@@ -12,6 +12,16 @@
 #include <system_error>
 #include <limits>
 
+#if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
 namespace morok::g3::inference {
 namespace {
 
@@ -85,6 +95,57 @@ std::uint32_t artifact_crc32(std::span<const std::byte> bytes) noexcept {
         }
     }
     return ~crc;
+}
+
+common::Status artifact_io_failure(const char* stage,
+                                        const char* message) {
+    return common::Status::failure(common::Error::make(
+        common::ErrorCode::internal_error, message, "g3.artifact", stage));
+}
+
+common::Status flush_artifact_file(const std::filesystem::path& path) {
+#if defined(_WIN32)
+    HANDLE file = CreateFileW(path.c_str(), GENERIC_READ,
+        FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE)
+        return artifact_io_failure("save.flush", "Could not open temporary model artifact for flushing");
+    const BOOL flushed = FlushFileBuffers(file);
+    CloseHandle(file);
+    if (!flushed)
+        return artifact_io_failure("save.flush", "Could not flush temporary model artifact");
+#else
+    const int fd = ::open(path.c_str(), O_RDONLY);
+    if (fd < 0)
+        return artifact_io_failure("save.flush", "Could not open temporary model artifact for fsync");
+    const int result = ::fsync(fd);
+    ::close(fd);
+    if (result != 0)
+        return artifact_io_failure("save.flush", "Could not fsync temporary model artifact");
+#endif
+    return common::Status::success();
+}
+
+common::Status replace_artifact_atomically(
+    const std::filesystem::path& temporary,
+    const std::filesystem::path& destination) {
+#if defined(_WIN32)
+    if (!MoveFileExW(temporary.c_str(), destination.c_str(),
+                     MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        return artifact_io_failure("save.rename", "Atomic model artifact replacement failed");
+#else
+    std::error_code ec;
+    std::filesystem::rename(temporary, destination, ec);
+    if (ec)
+        return artifact_io_failure("save.rename", "Atomic model artifact rename failed");
+    const auto parent = destination.parent_path().empty()
+        ? std::filesystem::current_path() : destination.parent_path();
+    const int dir = ::open(parent.c_str(), O_RDONLY | O_DIRECTORY);
+    if (dir >= 0) {
+        (void)::fsync(dir);
+        ::close(dir);
+    }
+#endif
+    return common::Status::success();
 }
 
 bool valid_metadata(const ModelArtifactMetadata& metadata,
@@ -170,6 +231,13 @@ common::Status save_model_artifact_atomic(
         }
     }
 
+    const auto flushed = flush_artifact_file(temporary);
+    if (!flushed) {
+        std::error_code ignored;
+        std::filesystem::remove(temporary, ignored);
+        return flushed;
+    }
+
     const auto verified = read_model_artifact(temporary);
     if (!verified) {
         std::error_code ignored;
@@ -177,15 +245,11 @@ common::Status save_model_artifact_atomic(
         return common::Status::failure(*verified.error_if());
     }
 
-    std::error_code rename_error;
-    std::filesystem::rename(temporary, destination, rename_error);
-    if (rename_error) {
+    const auto replaced = replace_artifact_atomically(temporary, destination);
+    if (!replaced) {
         std::error_code ignored;
         std::filesystem::remove(temporary, ignored);
-        return common::Status::failure(common::Error::make(
-            common::ErrorCode::internal_error,
-            "Atomic model artifact rename failed; existing destination was preserved",
-            "g3.artifact", "save.rename"));
+        return replaced;
     }
     return common::Status::success();
 }
