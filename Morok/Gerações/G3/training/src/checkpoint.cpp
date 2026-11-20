@@ -365,7 +365,9 @@ Status validate_training_checkpoint(const G3TrainingCheckpoint& c,
                     "Optimizer moments must match the step counters and contain 100000 finite FP32 values when initialized");
     if (!std::isfinite(c.scheduler_learning_rate) || c.scheduler_learning_rate <= 0.0 ||
         !std::isfinite(c.kl_beta) || c.kl_beta < 0.0 ||
-        (c.kl_beta > 0.0 && c.rl_optimizer_step > 0U &&
+        (c.kl_beta > 0.0 &&
+         (c.rl_optimizer_step > 0U || !c.rl_rng_state.empty() ||
+          !c.rl_category_baselines.empty() || !c.rl_optimizer_first_moment.empty()) &&
          c.frozen_sft_reference.empty()))
         return fail(ErrorCode::invalid_argument, "validate.scheduler",
                     "Scheduler learning rate and KL beta must be finite; active KL requires a frozen reference");
