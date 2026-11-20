@@ -147,7 +147,7 @@ G3 permanecem fora do escopo desta etapa.
 - [x] CMake e workflow G3 integrados ao Core existente.
 
 
-## 9. Módulo de aprendizado por reforço — integração de treinamento pendente
+## 9. Módulo de aprendizado por reforço — treinamento independente
 
 A implementação de RL pertence a `Gerações/G3/rl/` e reutiliza
 `Morok::Core`. Não cria Core, runtime de inferência, estado de modelo ou
@@ -162,8 +162,9 @@ armazenamento de pesos paralelo.
   contexto/prefixo.
 - O algoritmo bloqueia PAD, BOS, USR e BOT como tokens de resposta; bytes e
   EOS permanecem disponíveis.
-- A referência SFT é recebida como `const InferencePolicy&`, uma interface sem
-  método de atualização: pode executar inferência, mas não recebe gradientes.
+- O caminho principal não recebe política de referência. Uma sobrecarga opcional
+  aceita uma política congelada apenas quando o chamador ativa KL explicitamente;
+  o beta padrão é zero e o CLI independente não carrega SFT.
 - A política treinável recebe gradientes de logits acumulados para o lote e
   aplica uma única atualização de otimizador com gradientes médios sobre as candidatas do lote. Os pesos e o otimizador continuam
   pertencendo ao backend neural da geração.
@@ -345,9 +346,9 @@ outro runtime nem altera os fontes das gerações anteriores.
 - [ ] Weight tying integrado ao armazenamento real da GRU G3.
 - [ ] Teste de concorrência com o backend neural G3 real.
 
-Os itens pendentes dependem da implementação do backend neural e dos pesos SFT
-G3. Fixtures sintéticas validam os contratos e a infraestrutura, não a
-qualidade nem o desempenho do modelo final.
+A arquitetura neural e o weight tying já estão implementados. Permanecem pendentes
+medições de produção e avaliação com pesos/corpus revisados. Fixtures sintéticas
+validam contratos e infraestrutura, não a qualidade nem o desempenho do modelo.
 
 ## 10. Arquitetura neural G3 — implementação
 
@@ -407,10 +408,9 @@ ortogonalidade das matrizes recorrentes, bias da porta update, escala RMSNorm,
 contagem real, normalização das log-probabilidades, compartilhamento do
 embedding na saída, validação de dimensões e isolamento de estados entre sessões.
 
-Limite explícito: esta entrega implementa a arquitetura e seu forward pass
-incremental de inferência. BPTT, gradientes dos parâmetros, otimizador e
-treinamento SFT continuam sendo responsabilidades das etapas de treinamento;
-esta entrega não declara esses itens concluídos.
+Nota histórica da entrega inicial: naquele estágio, somente o forward pass
+incremental estava concluído. As etapas posteriores implementaram BPTT, gradientes,
+AdamW, treinamento SFT e REINFORCE sobre os tensores reais da GRU G3.
 
 ---
 
