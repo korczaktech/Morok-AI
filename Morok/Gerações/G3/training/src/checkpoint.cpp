@@ -371,10 +371,11 @@ Status validate_training_checkpoint(const G3TrainingCheckpoint& c,
          c.frozen_sft_reference.empty()))
         return fail(ErrorCode::invalid_argument, "validate.scheduler",
                     "Scheduler learning rate and KL beta must be finite; active KL requires a frozen reference");
-    if (c.rl_optimizer_step > 0U &&
-        (c.rl_rng_state.empty() || c.rl_category_baselines.empty()))
+    if ((c.rl_optimizer_step > 0U &&
+         (c.rl_rng_state.empty() || c.rl_category_baselines.empty())) ||
+        (c.rl_optimizer_step == 0U && !c.rl_category_baselines.empty()))
         return fail(ErrorCode::invalid_argument, "validate.rl_state",
-                    "A resumed RL optimizer requires its RNG state and category baselines");
+                    "RL optimizer steps, RNG state and category baselines are inconsistent");
     for (const auto& [category, baseline] : c.rl_category_baselines) {
         if (category.empty() || !std::isfinite(baseline) || baseline < -1.0 || baseline > 1.0)
             return fail(ErrorCode::invalid_argument, "validate.rl_baseline",
