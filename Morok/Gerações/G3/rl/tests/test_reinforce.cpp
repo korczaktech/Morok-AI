@@ -504,11 +504,13 @@ void test_real_g3_policy_adapter_and_independent_evaluator() {
     assert(wrong_reward.has_value());
     assert(wrong_reward.value_if()->correctness<0.0);
     assert(wrong_reward.value_if()->intent<0.0);
+    const Config default_config;
+    const auto& weights=default_config.reward_weights;
     const double unrelated_score =
-        0.70*wrong_reward.value_if()->correctness +
-        0.15*wrong_reward.value_if()->intent +
-        0.05*wrong_reward.value_if()->coherence +
-        0.10*wrong_reward.value_if()->format;
+        weights.correctness*wrong_reward.value_if()->correctness +
+        weights.intent*wrong_reward.value_if()->intent +
+        weights.coherence*wrong_reward.value_if()->coherence +
+        weights.format*wrong_reward.value_if()->format;
     assert(unrelated_score<0.0);
     assert(evaluator.expected_response_tokens(prompt)==2U);
     assert(reward.value_if()->coherence==0.0);
