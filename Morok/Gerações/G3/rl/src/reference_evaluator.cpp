@@ -5,9 +5,13 @@
 #include <limits>
 #include <stdexcept>
 #include <utility>
+#include <unordered_map>
 
 namespace morok::g3::rl {
 namespace {
+constexpr std::size_t kMaximumPromptTokens = 16384U;
+constexpr std::size_t kMaximumAnswerTokens = 4096U;
+
 std::string key(std::span<const TokenId> tokens) {
     std::string result;
     result.reserve(tokens.size()*2U);
@@ -30,15 +34,29 @@ std::size_t edit_distance(std::span<const TokenId> a,std::span<const TokenId> b)
     return prev[b.size()];
 }
 double bigram_f1(std::span<const TokenId> a,std::span<const TokenId> b) {
-    if(a.size()<2U || b.size()<2U) return a.size()==b.size() && a.size()==1U && a[0]==b[0]?1.0:0.0;
-    std::size_t overlap=0;
-    std::vector<bool> used(b.size()-1U,false);
-    for(std::size_t i=0;i+1U<a.size();++i)
-        for(std::size_t j=0;j+1U<b.size();++j)
-            if(!used[j] && a[i]==b[j] && a[i+1U]==b[j+1U]) {used[j]=true;++overlap;break;}
-    const double p=static_cast<double>(overlap)/static_cast<double>(a.size()-1U);
-    const double r=static_cast<double>(overlap)/static_cast<double>(b.size()-1U);
-    return p+r==0.0?0.0:2.0*p*r/(p+r);
+    if(a.size()<2U || b.size()<2U)
+        return a.size()==b.size() && a.size()==1U && a[0]==b[0]?1.0:0.0;
+    std::unordered_map<std::uint32_t,std::size_t> counts;
+    counts.reserve(b.size()-1U);
+    for(std::size_t i=0;i+1U<b.size();++i) {
+        const auto pair=(static_cast<std::uint32_t>(b[i])<<16U) |
+                         static_cast<std::uint32_t>(b[i+1U]);
+        ++counts[pair];
+    }
+    std::size_t overlap=0U;
+    for(std::size_t i=0;i+1U<a.size();++i) {
+        const auto pair=(static_cast<std::uint32_t>(a[i])<<16U) |
+                         static_cast<std::uint32_t>(a[i+1U]);
+        const auto found=counts.find(pair);
+        if(found!=counts.end() && found->second>0U) {
+            ++overlap;
+            --found->second;
+        }
+    }
+    const double precision=static_cast<double>(overlap)/static_cast<double>(a.size()-1U);
+    const double recall=static_cast<double>(overlap)/static_cast<double>(b.size()-1U);
+    return precision+recall==0.0?0.0:
+        2.0*precision*recall/(precision+recall);
 }
 }
 ReferenceRewardEvaluator::ReferenceRewardEvaluator(
@@ -46,9 +64,16 @@ ReferenceRewardEvaluator::ReferenceRewardEvaluator(
     :rubric_version_(std::move(version)) {
     if(refs.empty() || rubric_version_.empty()) throw std::invalid_argument("Reference evaluator needs examples and a rubric version");
     for(auto& ref:refs) {
-        if(ref.prompt.empty() || ref.answer.empty() ||
-           !references_.emplace(key(ref.prompt),std::move(ref.answer)).second)
-            throw std::invalid_argument("Reference evaluator contains an empty or duplicate prompt");
+        if(ref.prompt.empty() || ref.prompt.size()>kMaximumPromptTokens ||
+           ref.answer.empty() || ref.answer.size()>kMaximumAnswerTokens)
+            throw std::invalid_argument("Reference evaluator prompt or answer exceeds supported limits");
+        if(std::any_of(ref.prompt.begin(),ref.prompt.end(),
+                       [](TokenId token){return token>=kVocabularySize;}) ||
+           std::any_of(ref.answer.begin(),ref.answer.end(),
+                       [](TokenId token){return token>=256U;}))
+            throw std::invalid_argument("Reference evaluator accepts valid prompt IDs and byte-only answers");
+        if(!references_.emplace(key(ref.prompt),std::move(ref.answer)).second)
+            throw std::invalid_argument("Reference evaluator contains a duplicate prompt");
     }
 }
 EvaluatorMetadata ReferenceRewardEvaluator::metadata() const {
@@ -56,11 +81,21 @@ EvaluatorMetadata ReferenceRewardEvaluator::metadata() const {
 }
 std::size_t ReferenceRewardEvaluator::expected_response_tokens(
     std::span<const TokenId> prompt) const {
+    if(prompt.size()>kMaximumPromptTokens) return 0U;
     const auto found=references_.find(key(prompt));
     return found==references_.end()?0U:found->second.size();
 }
 morok::common::Result<RewardComponents> ReferenceRewardEvaluator::evaluate(
     std::span<const TokenId> prompt,std::span<const TokenId> response) const {
+    if(prompt.size()>kMaximumPromptTokens || response.size()>kMaximumAnswerTokens ||
+       std::any_of(prompt.begin(),prompt.end(),
+                   [](TokenId token){return token>=kVocabularySize;}) ||
+       std::any_of(response.begin(),response.end(),
+                   [](TokenId token){return token>=256U;}))
+        return morok::common::Result<RewardComponents>::failure(
+            morok::common::Error::make(morok::common::ErrorCode::invalid_argument,
+                "Prompt or response exceeds evaluator token constraints",
+                "g3.rl.evaluator","validate"));
     const auto found=references_.find(key(prompt));
     if(found==references_.end())
         return morok::common::Result<RewardComponents>::failure(
