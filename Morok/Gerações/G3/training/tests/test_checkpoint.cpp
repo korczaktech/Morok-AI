@@ -29,7 +29,7 @@ G3TrainingCheckpoint fixture() {
     c.completed_epochs = 2U;
     c.next_batch = 17U;
     c.sampler_position = 1U;
-    c.sampler_order = {7U, 2U, 9U};
+    c.sampler_order = {2U, 0U, 1U};
     c.train_split = {0U, 1U, 2U};
     c.validation_split = {3U};
     c.test_split = {4U};
@@ -105,6 +105,24 @@ void test_independent_rl_checkpoint_and_optimizer_consistency() {
 
     checkpoint = fixture();
     checkpoint.rl_rng_state.clear();
+    assert(!validate_training_checkpoint(checkpoint).has_value());
+}
+
+void test_checkpoint_rejects_invalid_splits_and_sampler() {
+    auto checkpoint = fixture();
+    checkpoint.sampler_order = {0U, 0U, 2U};
+    assert(!validate_training_checkpoint(checkpoint).has_value());
+
+    checkpoint = fixture();
+    checkpoint.validation_split = {1U};
+    assert(!validate_training_checkpoint(checkpoint).has_value());
+
+    checkpoint = fixture();
+    checkpoint.optimizer_second_moment[10] = -0.1F;
+    assert(!validate_training_checkpoint(checkpoint).has_value());
+
+    checkpoint = fixture();
+    checkpoint.rl_optimizer_second_moment[10] = -0.1F;
     assert(!validate_training_checkpoint(checkpoint).has_value());
 }
 
@@ -217,6 +235,7 @@ void test_real_g3_weight_capture_and_restore() {
 int main() {
     test_round_trip_and_exact_resume_state();
     test_independent_rl_checkpoint_and_optimizer_consistency();
+    test_checkpoint_rejects_invalid_splits_and_sampler();
     test_model_weights_restore_for_resume();
     test_checksum_version_and_truncation_rejection();
     test_strict_compatibility_validation();
