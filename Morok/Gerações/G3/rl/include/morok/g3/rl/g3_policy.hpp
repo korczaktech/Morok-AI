@@ -3,10 +3,12 @@
 #include "morok/g3/rl/reinforce.hpp"
 #include "morok/g3/neural/gru_backend.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <span>
 #include <string>
+#include <vector>
 
 namespace morok::g3::rl {
 using morok::lang::TokenId;
