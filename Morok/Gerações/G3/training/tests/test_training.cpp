@@ -36,7 +36,7 @@ void test_dataset_loader_and_group_split() {
     const auto path = temporary("morok-g3-training-fixture.jsonl");
     {
         std::ofstream out(path);
-        out << " \\t\\r\\n";
+        out << " \t\r\n";
         for (int i = 0; i < 20; ++i) {
             out << "{\"example_id\":\"ex-" << i
                 << "\",\"group_id\":\"family-" << (i / 2)
