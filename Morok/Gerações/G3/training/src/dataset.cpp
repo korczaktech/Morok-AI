@@ -397,6 +397,9 @@ private:
 };
 
 std::string normalize_nfc(const std::string& input) {
+    if (input.size() > static_cast<std::size_t>(
+            std::numeric_limits<int32_t>::max()))
+        throw std::runtime_error("dataset string exceeds ICU's supported length");
     UErrorCode status = U_ZERO_ERROR;
     const auto* normalizer = icu::Normalizer2::getNFCInstance(status);
     if (U_FAILURE(status) || normalizer == nullptr)
@@ -434,14 +437,14 @@ Dataset load_jsonl(const std::filesystem::path& path) {
         try {
             JsonObject object(line);
             DatasetExample item;
-            item.example_id = object.string("example_id");
-            item.group_id = object.string("group_id");
-            item.category = object.string("category");
+            item.example_id = normalize_nfc(object.string("example_id"));
+            item.group_id = normalize_nfc(object.string("group_id"));
+            item.category = normalize_nfc(object.string("category"));
             item.question = normalize_nfc(object.string("question"));
             item.answer = normalize_nfc(object.string("answer"));
-            item.source = object.string("source");
-            item.language = object.string("language");
-            item.dataset_version = object.string("dataset_version");
+            item.source = normalize_nfc(object.string("source"));
+            item.language = normalize_nfc(object.string("language"));
+            item.dataset_version = normalize_nfc(object.string("dataset_version"));
             item.quality = object.number("quality", 1.0);
             item.sensitive = object.boolean("sensitive", false);
             item.question_variants = object.string_array("question_variants");
