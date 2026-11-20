@@ -9,7 +9,7 @@ on:
         required: false
         default: false
       executar_rl:
-        description: "Executar somente Reinforcement Learning (RL)"
+        description: "Executar Reinforcement Learning (RL) independente do SFT"
         type: boolean
         required: false
         default: false
@@ -28,15 +28,6 @@ on:
         type: number
         required: true
         default: 42
-      execucao_sft_id:
-        description: "ID da execução GitHub Actions que gerou o modelo SFT (obrigatório para RL)"
-        type: string
-        required: false
-      ciclo_sft:
-        description: "Número do ciclo SFT cujo modelo será usado no RL"
-        type: number
-        required: false
-        default: 1
       epocas_rl:
         description: "Épocas de REINFORCE (1 a 100)"
         type: number
@@ -69,8 +60,6 @@ jobs:
       CICLOS: ${{ inputs.ciclos }}
       EPOCAS_SFT: ${{ inputs.epocas_sft }}
       SEED: ${{ inputs.seed }}
-      EXECUCAO_SFT_ID: ${{ inputs.execucao_sft_id }}
-      CICLO_SFT: ${{ inputs.ciclo_sft }}
       EPOCAS_RL: ${{ inputs.epocas_rl }}
       LIMIAR_LEXICAL: ${{ inputs.limiar_lexical }}
 
@@ -106,50 +95,16 @@ jobs:
                   raise SystemExit("seed-base inválida para a quantidade de ciclos.")
               print(f"Modo selecionado: SFT; {cycles} ciclo(s), {epochs} época(s) por ciclo.")
           else:
-              run_id = os.environ["EXECUCAO_SFT_ID"].strip()
-              cycle = int(os.environ["CICLO_SFT"])
-              if not run_id.isdigit() or int(run_id) <= 0:
-                  raise SystemExit("Para RL, informe um ID numérico válido de uma execução anterior de SFT.")
-              if not 1 <= cycle <= 100:
-                  raise SystemExit("ciclo_sft deve estar entre 1 e 100.")
-              print(f"Modo selecionado: RL; modelo SFT da execução {run_id}, ciclo {cycle}.")
+              seed = int(os.environ["SEED"])
+              if not 0 <= seed <= 18446744073709551615:
+                  raise SystemExit("seed inválida.")
+              print(f"Modo selecionado: RL independente; inicialização própria, seed {seed}.")
           PY
 
       - name: Validar corpus pt-BR
-        if: ${{ inputs.executar_sft }}
+        if: ${{ inputs.executar_sft || inputs.executar_rl }}
         run: |
           python3 "Morok/Gerações/G3/training/dataset/validate_corpus.py" "Morok/$DATASET"
-
-      - name: Baixar modelo SFT da execução anterior
-        if: ${{ inputs.executar_rl }}
-        uses: actions/download-artifact@v4
-        with:
-          name: morok-g3-training-${{ inputs.execucao_sft_id }}
-          run-id: ${{ inputs.execucao_sft_id }}
-          repository: ${{ github.repository }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: Morok/build/g3-training/sft-source
-
-      - name: Verificar modelo SFT recuperado
-        if: ${{ inputs.executar_rl }}
-        working-directory: Morok
-        run: |
-          cycle_name="$(printf '%03d' "$CICLO_SFT")"
-          model="$OUTPUT_DIR/sft-source/cycle-$cycle_name/g3-sft.morok"
-          if [[ ! -s "$model" ]]; then
-            echo "::error::Modelo SFT não encontrado no artefato da execução $EXECUCAO_SFT_ID, ciclo $CICLO_SFT."
-            echo "Confirme que a execução de origem foi feita após esta atualização do workflow e terminou com artefato disponível."
-            exit 1
-          fi
-          dataset_snapshot="$OUTPUT_DIR/sft-source/g3_ptbr_v1.jsonl"
-          if [[ ! -s "$dataset_snapshot" ]]; then
-            echo "::error::O artefato SFT não contém o snapshot do dataset usado no treinamento."
-            echo "Execute novamente o SFT com a versão atual do workflow antes de iniciar RL."
-            exit 1
-          fi
-          python3 "training/dataset/validate_corpus.py" "$dataset_snapshot"
-          echo "Modelo SFT recuperado: $model"
-          echo "Dataset original recuperado: $dataset_snapshot"
 
       - name: Instalar dependências
         run: |
@@ -254,52 +209,39 @@ jobs:
             cat "$summary_file"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Executar Reinforcement Learning (RL)
+      - name: Executar Reinforcement Learning (RL) independente
         if: ${{ inputs.executar_rl }}
         working-directory: Morok
         shell: bash
         run: |
           set -euo pipefail
-          cycle_name="$(printf '%03d' "$CICLO_SFT")"
-          sft_model="$OUTPUT_DIR/sft-source/cycle-$cycle_name/g3-sft.morok"
           rl_dir="$OUTPUT_DIR/rl-output"
           mkdir -p "$rl_dir"
 
-          # Reutiliza exatamente a seed registrada no ciclo SFT selecionado.
-          # Isso mantém os conjuntos de treino/teste do RL idênticos aos do SFT.
-          sft_seed="$(awk -F '\t' -v cycle="$CICLO_SFT" 'NR > 1 && $1 == cycle { print $2; exit }' \
-            "$OUTPUT_DIR/sft-source/cycles-summary.tsv")"
-          if [[ ! "$sft_seed" =~ ^[0-9]+$ ]]; then
-            echo "::error::Não foi possível recuperar a seed do ciclo SFT selecionado."
-            exit 1
-          fi
-
-          dataset_snapshot="$OUTPUT_DIR/sft-source/g3_ptbr_v1.jsonl"
+          # A política RL é inicializada do zero com a seed informada.
+          # Nenhum artefato, checkpoint ou estado de SFT é baixado ou carregado.
           build/g3-training/morok-g3-reinforce \
-            "$dataset_snapshot" \
-            "$sft_model" \
+            "$DATASET" \
             "$rl_dir/g3-rl.morok" \
             "$rl_dir/rl-report.json" \
-            "$EPOCAS_RL" "$sft_seed"
+            "$EPOCAS_RL" "$SEED"
 
           echo "Analisando respostas geradas pela política RL (705 perguntas)..."
           build/g3-training/morok-g3-analyze \
-            "$dataset_snapshot" \
+            "$DATASET" \
             "$rl_dir/g3-rl.morok" \
             "$rl_dir/answer-analysis.jsonl" \
             "$LIMIAR_LEXICAL"
 
-
           {
-            echo "## Reinforcement Learning G3"
-            echo "- Execução SFT de origem: $EXECUCAO_SFT_ID"
-            echo "- Ciclo SFT de origem: $CICLO_SFT"
+            echo "## Reinforcement Learning G3 independente"
+            echo "- Inicialização: pesos aleatórios próprios"
+            echo "- Seed: $SEED"
             echo "- Épocas RL: $EPOCAS_RL"
             cat "$rl_dir/rl-report.json"
             echo "- Análise lexical por pergunta: $rl_dir/answer-analysis.jsonl"
             echo "- Limiar lexical CORRETO: $LIMIAR_LEXICAL%"
           } >> "$GITHUB_STEP_SUMMARY"
-
       - name: Salvar modelos e relatórios SFT
         if: always() && inputs.executar_sft
         uses: actions/upload-artifact@v4
