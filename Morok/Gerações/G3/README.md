@@ -24,7 +24,7 @@ A contagem é verificada a partir dos tensores reais. Consulte
 |---|---|---|
 | `neural/` | `Morok::G3::Neural` | Backend GRU e kernels |
 | `training/` | `Morok::G3::Training`, `morok-g3-train` | Dataset, SFT, BPTT, AdamW, checkpoint e retomada |
-| `rl/` | `Morok::G3::RL`, `morok-g3-reinforce` | REINFORCE, baseline, KL e avaliador independente |
+| `rl/` | `Morok::G3::RL`, `morok-g3-reinforce` | REINFORCE independente, baseline e avaliador lexical |
 | `inference/` | `Morok::G3::Inference`, `morok-g3-generate` | Geração, sessões, artefatos, INT8 e benchmark |
 | `profiles/` | `Morok::G3::Profiles` | Políticas dos quatro perfis sobre a mesma execução |
 
@@ -40,10 +40,10 @@ perfis não possuem pesos próprios. Consulte [profiles/README.md](profiles/READ
 ## Treinamento e retomada
 
 O SFT divide grupos 85/10/5, aplica expansão/perturbação apenas no treino e
-usa Cross-Entropy causal, TBPTT e AdamW. Checkpoints de época persistem pesos,
-momentos AdamW, contador, scheduler, sampler, RNG, fingerprints e metadados.
-A retomada valida compatibilidade e continua no limite entre épocas. Consulte
-[training/README.md](training/README.md).
+usa Cross-Entropy causal, TBPTT e AdamW. O RL é independente: inicializa sua
+própria política a partir de seed e não carrega pesos, checkpoints ou estado SFT.
+Os dois fluxos compartilham a arquitetura G3 e o prompt de sistema, não o estado
+do modelo. Consulte [training/README.md](training/README.md) e [rl/README.md](rl/README.md).
 
 ## Inferência e benchmarks
 
