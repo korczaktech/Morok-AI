@@ -501,6 +501,19 @@ void test_real_g3_policy_adapter_and_independent_evaluator() {
     assert(evaluator.expected_response_tokens(prompt)==2U);
     assert(reward.value_if()->coherence==0.0);
     assert(evaluator.metadata().identity!="g3-rl-trainable");
+
+    const std::array<TokenId, 1> invalid_control_response{{morok::lang::kEosToken}};
+    assert(!evaluator.evaluate(prompt, invalid_control_response).has_value());
+
+    bool oversized_reference_rejected = false;
+    try {
+        ReferenceRewardEvaluator oversized({
+            ReferenceAnswer{std::vector<TokenId>(prompt.begin(),prompt.end()),
+                            std::vector<TokenId>(4097U,static_cast<TokenId>('X'))}});
+    } catch (const std::invalid_argument&) {
+        oversized_reference_rejected = true;
+    }
+    assert(oversized_reference_rejected);
 }
 
 } // namespace
