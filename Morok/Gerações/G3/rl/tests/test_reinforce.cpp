@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <span>
 #include <string>
 #include <string_view>
@@ -441,6 +442,28 @@ void test_closed_set_comparison() {
 }
 
 
+void test_adamw_rejects_nonfinite_rl_update_atomically() {
+    morok::g3::neural::G3Backend backend(
+        morok::g3::neural::G3Config{812U, 1.0e-5F});
+    G3PolicyAdapter policy(backend, "g3-rl-invalid-gradient");
+    const auto before_embedding = backend.weights().embedding;
+    const auto before_recurrent = backend.weights().layer1_recurrent;
+
+    SequenceGradient invalid;
+    invalid.context = {morok::lang::kBosToken, morok::lang::kUsrToken,
+                       morok::lang::kBotToken};
+    invalid.response = {static_cast<TokenId>('A')};
+    invalid.logit_gradients.assign(kVocabularySize, 0.0F);
+    invalid.logit_gradients[static_cast<std::size_t>('A')] =
+        std::numeric_limits<float>::quiet_NaN();
+    const std::array<SequenceGradient, 1> batch{{invalid}};
+
+    const auto status = policy.apply_batch_gradients(batch);
+    assert(!status.has_value());
+    assert(backend.weights().embedding == before_embedding);
+    assert(backend.weights().layer1_recurrent == before_recurrent);
+}
+
 void test_real_g3_policy_adapter_and_independent_evaluator() {
     morok::g3::neural::G3Backend backend(
         morok::g3::neural::G3Config{91U, 1.0e-5F});
@@ -493,6 +516,7 @@ int main() {
     test_reinforce_and_reference_kl();
     test_copy_and_justified_length_penalties();
     test_closed_set_comparison();
+    test_adamw_rejects_nonfinite_rl_update_atomically();
     test_real_g3_policy_adapter_and_independent_evaluator();
     std::cout << "G3 REINFORCE tests passed.\n";
     return 0;
