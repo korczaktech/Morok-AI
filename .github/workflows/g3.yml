@@ -17,6 +17,7 @@ on:
       - "Morok/tests/CMakeLists.txt"
       - "Morok/tests/scripts/test_generation_isolation.py"
       - "Morok/tests/scripts/test_g3_rl_pipeline.cmake"
+      - "Morok/tests/scripts/test_g3_rl_pipeline.cmake"
       - ".github/workflows/g3.yml"
   pull_request:
     paths:
@@ -32,6 +33,7 @@ on:
       - "Morok/CMakeLists.txt"
       - "Morok/tests/CMakeLists.txt"
       - "Morok/tests/scripts/test_generation_isolation.py"
+      - "Morok/tests/scripts/test_g3_rl_pipeline.cmake"
       - ".github/workflows/g3.yml"
   workflow_dispatch:
 
