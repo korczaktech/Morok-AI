@@ -986,7 +986,10 @@ double apply_reinforce_gradients(
     Gradients accumulated(backend.weights());
     const auto& weights = backend.weights();
     for (const auto& sequence : sequences) {
-        if (sequence.context.empty() || sequence.response.empty() ||
+        if (sequence.context.empty() || sequence.context.size() > 16384U ||
+            sequence.response.empty() ||
+            sequence.response.size() > 4096U ||
+            sequence.response.size() > std::numeric_limits<std::size_t>::max() / V ||
             sequence.logit_gradients.size() !=
                 sequence.response.size() * V) {
             throw std::invalid_argument("Invalid G3 REINFORCE sequence gradient shape");
