@@ -198,7 +198,7 @@ Penalidades configuráveis:
 
 O avaliador atualmente implementado é lexical e determinístico. Para cada
 prompt com resposta de referência, calcula: (1) similaridade normalizada por
-distância de edição para `correctness`; (2) F1 de bigramas para `intent`;
+distância de edição e F1 de bigramas, ambos mapeados de [0,1] para [-1,1], para `correctness` e `intent`;
 (3) componente de coerência neutro, pois comprimento não comprova coerência;
 e (4) resposta não vazia para `format`. Esses nomes são rótulos da interface, não evidência de
 compreensão semântica. Respostas corretas com redação diferente podem receber
@@ -228,9 +228,10 @@ opção experimental na API. Seu beta padrão é zero. Quando beta é maior que 
 o chamador precisa fornecer explicitamente uma política de referência; o CLI
 independente não fornece essa referência e não depende dela.
 
-O avaliador lexical utiliza respostas de referência pertencentes ao dataset RL.
-Isso é sinal de recompensa do próprio experimento, não carregamento ou
-dependência do pipeline SFT. A separação de treino, validação e teste ocorre por
+O avaliador lexical utiliza respostas de referência de um snapshot próprio do
+RL, atualmente derivado apenas dos registros revisados do corpus pt-BR. Isso é
+sinal de recompensa do próprio experimento, não carregamento de pesos ou
+checkpoints do pipeline SFT; mudanças no arquivo SFT não alteram o snapshot RL. A separação de treino, validação e teste ocorre por
 `group_id`; perguntas canônicas e paráfrases curadas permanecem no mesmo split,
 com verificação explícita contra duplicação ou vazamento entre treino e teste;
 somente o split de treino atualiza os pesos. Exemplos sensíveis e registros com `quality<1.0` são excluídos da recompensa e dos splits RL.
@@ -239,8 +240,9 @@ somente o split de treino atualiza os pesos. Exemplos sensíveis e registros com
 
 O módulo mede e penaliza resposta vazia, ausência de EOS, repetição e cópia da
 pergunta; o comprimento só é penalizado com limite explicitamente configurado.
-O avaliador implementado usa distância de edição e F1 de bigramas; coerência
-fica neutra e formato verifica resposta não vazia. Esses sinais não medem
+O avaliador implementado mapeia distância de edição e F1 de bigramas para
+recompensa assinada [-1,1], de modo que respostas sem correspondência recebam
+recompensa negativa; coerência fica neutra e formato verifica resposta não vazia. Esses sinais não medem
 semântica, factualidade ou intenção de forma confiável e não devem ser
 apresentados como julgamento semântico.
 
