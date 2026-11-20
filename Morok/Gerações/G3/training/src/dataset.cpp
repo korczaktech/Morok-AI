@@ -434,10 +434,10 @@ Dataset load_jsonl(const std::filesystem::path& path) {
     std::size_t line_number = 0;
     while (std::getline(input, line)) {
         ++line_number;
-        if (line.find_first_not_of(" \\t\\r") == std::string::npos) continue;
-        if (line.size() > 1024U * 1024U)
-            throw std::runtime_error("dataset line exceeds the 1 MiB safety limit");
+        if (line.find_first_not_of(" \t\r") == std::string::npos) continue;
         try {
+            if (line.size() > 1024U * 1024U)
+                throw std::runtime_error("dataset line exceeds the 1 MiB safety limit");
             JsonObject object(line);
             DatasetExample item;
             item.example_id = normalize_nfc(object.string("example_id"));
