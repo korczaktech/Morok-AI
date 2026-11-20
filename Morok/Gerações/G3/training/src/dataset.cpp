@@ -171,16 +171,195 @@ public:
     }
 
 private:
+    void skip_whitespace(std::size_t& cursor) const {
+        while (cursor < text_.size() &&
+               (text_[cursor] == ' ' || text_[cursor] == '\\n' ||
+                text_[cursor] == '\\r' || text_[cursor] == '\\t')) {
+            ++cursor;
+        }
+    }
+
+    void skip_json_string(std::size_t& cursor) const {
+        if (cursor >= text_.size() || text_[cursor] != '"')
+            throw std::runtime_error("expected JSON string");
+        ++cursor;
+        while (cursor < text_.size()) {
+            const char ch = text_[cursor++];
+            if (ch == '"') return;
+            if (static_cast<unsigned char>(ch) < 0x20U)
+                throw std::runtime_error("unescaped control character in JSON string");
+            if (ch != '\\\\') continue;
+            if (cursor >= text_.size())
+                throw std::runtime_error("truncated JSON escape");
+            const char escaped = text_[cursor++];
+            if (escaped == 'u') {
+                (void)hex4(cursor);
+                cursor += 4U;
+            } else if (escaped != '"' && escaped != '\\\\' && escaped != '/' &&
+                       escaped != 'b' && escaped != 'f' && escaped != 'n' &&
+                       escaped != 'r' && escaped != 't') {
+                throw std::runtime_error("invalid JSON escape");
+            }
+        }
+        throw std::runtime_error("unterminated JSON string");
+    }
+
+    static bool valid_json_number(std::string_view token) noexcept {
+        std::size_t i = 0U;
+        if (i < token.size() && token[i] == '-') ++i;
+        if (i >= token.size()) return false;
+        if (token[i] == '0') {
+            ++i;
+            if (i < token.size() && token[i] >= '0' && token[i] <= '9')
+                return false;
+        } else {
+            if (token[i] < '1' || token[i] > '9') return false;
+            while (i < token.size() && token[i] >= '0' && token[i] <= '9') ++i;
+        }
+        if (i < token.size() && token[i] == '.') {
+            ++i;
+            const std::size_t fraction_start = i;
+            while (i < token.size() && token[i] >= '0' && token[i] <= '9') ++i;
+            if (i == fraction_start) return false;
+        }
+        if (i < token.size() && (token[i] == 'e' || token[i] == 'E')) {
+            ++i;
+            if (i < token.size() && (token[i] == '+' || token[i] == '-')) ++i;
+            const std::size_t exponent_start = i;
+            while (i < token.size() && token[i] >= '0' && token[i] <= '9') ++i;
+            if (i == exponent_start) return false;
+        }
+        return i == token.size();
+    }
+
+    void skip_json_value(std::size_t& cursor) const {
+        skip_whitespace(cursor);
+        if (cursor >= text_.size())
+            throw std::runtime_error("missing JSON value");
+        if (text_[cursor] == '"') {
+            skip_json_string(cursor);
+            return;
+        }
+        if (text_[cursor] == '[') {
+            ++cursor;
+            skip_whitespace(cursor);
+            if (cursor < text_.size() && text_[cursor] == ']') {
+                ++cursor;
+                return;
+            }
+            while (cursor < text_.size()) {
+                skip_json_value(cursor);
+                skip_whitespace(cursor);
+                if (cursor < text_.size() && text_[cursor] == ',') {
+                    ++cursor;
+                    skip_whitespace(cursor);
+                    if (cursor < text_.size() && text_[cursor] == ']')
+                        throw std::runtime_error("trailing comma in JSON array");
+                    continue;
+                }
+                if (cursor < text_.size() && text_[cursor] == ']') {
+                    ++cursor;
+                    return;
+                }
+                throw std::runtime_error("invalid JSON array separator");
+            }
+            throw std::runtime_error("unterminated JSON array");
+        }
+        if (text_[cursor] == '{') {
+            ++cursor;
+            skip_whitespace(cursor);
+            if (cursor < text_.size() && text_[cursor] == '}') {
+                ++cursor;
+                return;
+            }
+            while (cursor < text_.size()) {
+                if (text_[cursor] != '"')
+                    throw std::runtime_error("JSON object key must be a string");
+                skip_json_string(cursor);
+                skip_whitespace(cursor);
+                if (cursor >= text_.size() || text_[cursor++] != ':')
+                    throw std::runtime_error("missing colon in JSON object");
+                skip_json_value(cursor);
+                skip_whitespace(cursor);
+                if (cursor < text_.size() && text_[cursor] == ',') {
+                    ++cursor;
+                    skip_whitespace(cursor);
+                    if (cursor < text_.size() && text_[cursor] == '}')
+                        throw std::runtime_error("trailing comma in JSON object");
+                    continue;
+                }
+                if (cursor < text_.size() && text_[cursor] == '}') {
+                    ++cursor;
+                    return;
+                }
+                throw std::runtime_error("invalid JSON object separator");
+            }
+            throw std::runtime_error("unterminated JSON object");
+        }
+
+        const std::size_t start = cursor;
+        while (cursor < text_.size() && text_[cursor] != ',' &&
+               text_[cursor] != ']' && text_[cursor] != '}' &&
+               text_[cursor] != ' ' && text_[cursor] != '\\n' &&
+               text_[cursor] != '\\r' && text_[cursor] != '\\t') {
+            ++cursor;
+        }
+        const std::string_view token(text_.data() + start, cursor - start);
+        if (token != "true" && token != "false" && token != "null" &&
+            !valid_json_number(token)) {
+            throw std::runtime_error("invalid JSON primitive");
+        }
+    }
+
     std::optional<std::size_t> find_value(const std::string& key) const {
-        const std::string needle = "\"" + key + "\"";
-        auto position = text_.find(needle);
-        if (position == std::string::npos) return std::nullopt;
-        position = text_.find(':', position + needle.size());
-        if (position == std::string::npos) throw std::runtime_error("invalid JSON object");
-        ++position;
-        while (position < text_.size() && (text_[position] == ' ' || text_[position] == '\t'))
-            ++position;
-        return position;
+        std::size_t cursor = 0U;
+        skip_whitespace(cursor);
+        if (cursor >= text_.size() || text_[cursor++] != '{')
+            throw std::runtime_error("dataset line must be a JSON object");
+
+        std::optional<std::size_t> found;
+        std::unordered_set<std::string> keys;
+        while (cursor < text_.size()) {
+            skip_whitespace(cursor);
+            if (cursor < text_.size() && text_[cursor] == '}') {
+                ++cursor;
+                break;
+            }
+            if (cursor >= text_.size() || text_[cursor] != '"')
+                throw std::runtime_error("JSON object key must be a string");
+
+            const std::size_t key_start = cursor + 1U;
+            skip_json_string(cursor);
+            const std::size_t key_end = cursor - 1U;
+            const std::string current_key =
+                text_.substr(key_start, key_end - key_start);
+            if (!keys.insert(current_key).second)
+                throw std::runtime_error("duplicate JSON object key: " + current_key);
+
+            skip_whitespace(cursor);
+            if (cursor >= text_.size() || text_[cursor++] != ':')
+                throw std::runtime_error("missing colon after JSON object key");
+            skip_whitespace(cursor);
+            const std::size_t value_position = cursor;
+            skip_json_value(cursor);
+            if (current_key == key) found = value_position;
+
+            skip_whitespace(cursor);
+            if (cursor < text_.size() && text_[cursor] == ',') {
+                ++cursor;
+                continue;
+            }
+            if (cursor < text_.size() && text_[cursor] == '}') {
+                ++cursor;
+                break;
+            }
+            throw std::runtime_error("invalid JSON object separator");
+        }
+
+        skip_whitespace(cursor);
+        if (cursor != text_.size())
+            throw std::runtime_error("trailing data after JSON object");
+        return found;
     }
 
     std::uint32_t hex4(std::size_t cursor) const {
