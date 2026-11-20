@@ -198,8 +198,8 @@ Penalidades configuráveis:
 O avaliador atualmente implementado é lexical e determinístico. Para cada
 prompt com resposta de referência, calcula: (1) similaridade normalizada por
 distância de edição para `correctness`; (2) F1 de bigramas para `intent`;
-(3) proximidade de comprimento para `coherence`; e (4) resposta não vazia
-para `format`. Esses nomes são rótulos da interface, não evidência de
+(3) componente de coerência neutro, pois comprimento não comprova coerência;
+e (4) resposta não vazia para `format`. Esses nomes são rótulos da interface, não evidência de
 compreensão semântica. Respostas corretas com redação diferente podem receber
 nota baixa, enquanto respostas lexicalmente parecidas podem estar erradas.
 A recompensa atual serve apenas como baseline experimental de proximidade
@@ -214,52 +214,69 @@ corretas, respostas plausíveis porém falsas e exemplos de reward hacking.
 Até lá, relatórios de recompensa devem ser identificados como métricas
 lexicais experimentais. Não há penalidade automática de comprimento por padrão.
 
-### 9.4 KL de referência
+### 9.4 Independência do SFT e regularização opcional
 
-A divergência KL é calculada entre a distribuição atual e a distribuição da
-referência SFT para os mesmos contextos e prefixos. Beta default 0,02,
-configurável. O gradiente da regularização é incorporado aos gradientes de
-logits do REINFORCE. Probabilidades de referência iguais a zero são limitadas
-por epsilon configurável para evitar NaN/Inf; a divergência observada continua
-registrada no relatório.
+O fluxo principal de RL é independente do SFT. O executável
+`morok-g3-reinforce` recebe somente um dataset RL, o caminho do artefato RL de
+saída, o relatório e parâmetros opcionais de épocas/seed. Ele inicializa uma
+nova política G3 a partir da seed e não carrega pesos, checkpoints, snapshots,
+estado do otimizador ou dataset do SFT.
+
+A penalidade KL contra uma política congelada permanece disponível apenas como
+opção experimental na API. Seu beta padrão é zero. Quando beta é maior que zero,
+o chamador precisa fornecer explicitamente uma política de referência; o CLI
+independente não fornece essa referência e não depende dela.
+
+O avaliador lexical utiliza respostas de referência pertencentes ao dataset RL.
+Isso é sinal de recompensa do próprio experimento, não carregamento ou
+dependência do pipeline SFT. A separação de treino, validação e teste ocorre por
+`group_id`; somente o split de treino atualiza os pesos.
 
 ### 9.5 Proteção contra reward hacking
 
-O módulo mede e penaliza resposta vazia, encerramento ausente (EOS), repetição e cópia da pergunta; o
-comprimento só é penalizado com limite explicitamente configurado. Respostas
-genéricas são limitadas pela rubrica lexical atual. O avaliador implementado usa distância de edição, F1 de bigramas, proximidade de comprimento e presença de conteúdo. Esses sinais não medem semântica, factualidade ou intenção de forma confiável; não devem ser apresentados como julgamento semântico.
+O módulo mede e penaliza resposta vazia, ausência de EOS, repetição e cópia da
+pergunta; o comprimento só é penalizado com limite explicitamente configurado.
+O avaliador implementado usa distância de edição e F1 de bigramas; coerência
+fica neutra e formato verifica resposta não vazia. Esses sinais não medem
+semântica, factualidade ou intenção de forma confiável e não devem ser
+apresentados como julgamento semântico.
+
 Os testes cobrem resposta vazia, genérica, repetida, exploração de avaliador,
-KL positiva e comparação SFT/RL no mesmo conjunto fechado. Casos de encerramento
-prematuro e respostas longas sem conteúdo devem ser incluídos nos conjuntos de
-auditoria do avaliador.
+penalidade de EOS, KL opcional e treinamento sem referência SFT. Os casos de
+auditoria do CLI são sintéticos e derivados do dataset, não um conjunto humano
+independente. Uma avaliação semântica exige rótulos humanos independentes.
 
 ### 9.6 Comparação e métricas
 
-`compare_sft_and_rl` avalia snapshots distintos no mesmo conjunto fechado,
-usando decodificação gulosa e o mesmo avaliador. Relata recompensa média,
-comprimento médio, taxa de respostas vazias e taxa de repetição, além da
-diferença de recompensa RL menos SFT. O relatório retém configuração, identidade
- e versão da rubrica, origem dos rótulos, componentes da recompensa, tokens
- amostrados e log-probabilidades sob a distribuição de amostragem. O estado
-  recuperável do treinador guarda configuração, baseline por categoria, estado
-  do gerador aleatório e identidades da política, referência e avaliador; pesos
-  e estado do otimizador continuam no checkpoint do backend.
+`compare_sft_and_rl` permanece como utilitário opcional de avaliação
+comparativa, não como etapa do treinamento RL. O fluxo principal avalia a
+política RL no split de teste e relata recompensa média, comprimento médio,
+taxa de respostas vazias e taxa de repetição. A comparação com um snapshot SFT,
+quando desejada, é uma análise posterior separada.
+
+O estado recuperável do treinador guarda configuração, baseline por categoria,
+estado do gerador aleatório e identidades da política, referência opcional e
+avaliador. O adaptador mantém o estado do otimizador durante a execução atual;
+persistência e retomada completas do estado do otimizador RL pela CLI ainda
+precisam ser implementadas.
 
 ### Estado de implementação do módulo RL
 
-- [x] Contrato de política treinável e referência somente de inferência.
+- [x] Política treinável G3 e inicialização independente por seed.
+- [x] CLI RL sem argumento ou carregamento de modelo SFT.
+- [x] Dataset RL próprio com separação por grupo.
 - [x] REINFORCE com baseline EMA por categoria.
 - [x] Amostragem configurável com até quatro candidatas, Top-K, temperatura e seed.
-- [x] Composição de recompensa por critérios independentes e penalidades explícitas.
-- [x] Auditoria de avaliador com identidade, versão, origem e casos rotulados.
-- [x] Penalidade KL em relação à referência SFT e gradiente correspondente.
-- [x] Proteções e testes iniciais contra reward hacking.
-- [x] Comparação SFT/RL no mesmo conjunto fechado.
-- [x] Captura e restauração de baseline, RNG, configuração e proveniência do treino.
-- [x] Biblioteca, testes CTest e workflow G3 integrados.
-- [ ] Integração com pesos reais, BPTT e otimizador da GRU G3: depende da camada
-      de treinamento neural, ainda não entregue.
-
+- [x] Composição de recompensa e penalidades explícitas.
+- [x] Auditoria versionada do avaliador lexical.
+- [x] KL opcional contra referência externa, desativada por padrão.
+- [x] BPTT pelas duas GRUs e atualização dos 100.000 parâmetros.
+- [x] Exportação do artefato FP32 com metadados completos da arquitetura.
+- [x] Teste de integração RL sem dependência do alvo SFT.
+- [ ] Checkpoint RL completo na CLI, incluindo pesos, momentos AdamW, baseline,
+      RNG, posição do dataset e fingerprints para retomada exata.
+- [ ] Avaliação semântica com conjunto humano independente.
+- [ ] Execução de treino com corpus de produção revisado e benchmark de hardware.
 
 ## 10. Inferência e exportação — Fase 4
 
