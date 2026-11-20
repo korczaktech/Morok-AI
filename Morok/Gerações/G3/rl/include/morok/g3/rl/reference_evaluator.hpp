@@ -17,7 +17,7 @@ struct ReferenceAnswer final {
 class ReferenceRewardEvaluator final : public RewardEvaluator {
 public:
     explicit ReferenceRewardEvaluator(std::vector<ReferenceAnswer> references,
-                                      std::string rubric_version="g3-reference-v1");
+                                      std::string rubric_version="g3-reference-v2-signed");
     [[nodiscard]] EvaluatorMetadata metadata() const override;
     [[nodiscard]] morok::common::Result<RewardComponents> evaluate(
         std::span<const TokenId> prompt,
