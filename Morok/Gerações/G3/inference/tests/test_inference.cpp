@@ -208,6 +208,13 @@ void test_atomic_artifact_file_round_trip() {
     const auto loaded = read_model_artifact(path);
     assert(loaded.has_value());
     assert(loaded.value_if()->payload == artifact.payload);
+
+    auto replacement = artifact;
+    replacement.payload[0] = std::byte{0x5a};
+    assert(save_model_artifact_atomic(path, replacement));
+    const auto replaced = read_model_artifact(path);
+    assert(replaced.has_value());
+    assert(replaced.value_if()->payload == replacement.payload);
     std::filesystem::remove(path, ignored);
 }
 
