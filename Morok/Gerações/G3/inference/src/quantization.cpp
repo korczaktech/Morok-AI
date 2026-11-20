@@ -51,7 +51,9 @@ common::Result<QuantizedTensor> quantize_per_row(
         for (std::size_t column = 0; column < columns; ++column) {
             maximum = std::max(maximum, std::abs(values[begin + column]));
         }
-        const float scale = maximum == 0.0F ? 1.0F : maximum / 127.0F;
+        const float scale = maximum == 0.0F ? 1.0F :
+            std::max(maximum / 127.0F,
+                     std::numeric_limits<float>::denorm_min());
         if (!std::isfinite(scale) || scale <= 0.0F) {
             return failure<QuantizedTensor>(
                 common::ErrorCode::internal_error, "quantize.scale",
@@ -84,8 +86,14 @@ common::Result<std::vector<float>> dequantize_per_row(
     for (std::size_t row = 0; row < tensor.rows; ++row) {
         for (std::size_t column = 0; column < tensor.columns; ++column) {
             const auto index = row * tensor.columns + column;
-            result[index] = static_cast<float>(tensor.values[index]) *
-                            tensor.scales[row];
+            const float restored = static_cast<float>(tensor.values[index]) *
+                                   tensor.scales[row];
+            if (!std::isfinite(restored)) {
+                return failure<std::vector<float>>(
+                    common::ErrorCode::invalid_argument, "dequantize.overflow",
+                    "Dequantization produced a non-finite FP32 value");
+            }
+            result[index] = restored;
         }
     }
     return common::Result<std::vector<float>>::success(std::move(result));
