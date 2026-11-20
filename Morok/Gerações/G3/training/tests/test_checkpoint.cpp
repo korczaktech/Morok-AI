@@ -83,6 +83,22 @@ void test_round_trip_and_exact_resume_state() {
     assert(restored.training_history == original.training_history);
 }
 
+void test_independent_rl_checkpoint_and_optimizer_consistency() {
+    auto checkpoint = fixture();
+    checkpoint.kl_beta = 0.0;
+    checkpoint.frozen_sft_reference.clear();
+    assert(validate_training_checkpoint(checkpoint).has_value());
+
+    checkpoint.optimizer_first_moment.clear();
+    checkpoint.optimizer_second_moment.clear();
+    assert(!validate_training_checkpoint(checkpoint).has_value());
+
+    checkpoint = fixture();
+    checkpoint.rl_optimizer_first_moment.clear();
+    checkpoint.rl_optimizer_second_moment.clear();
+    assert(!validate_training_checkpoint(checkpoint).has_value());
+}
+
 void test_model_weights_restore_for_resume() {
     morok::g3::neural::G3Backend source(
         morok::g3::neural::G3Config{71U, 1.0e-5F});
@@ -191,6 +207,7 @@ void test_real_g3_weight_capture_and_restore() {
 
 int main() {
     test_round_trip_and_exact_resume_state();
+    test_independent_rl_checkpoint_and_optimizer_consistency();
     test_model_weights_restore_for_resume();
     test_checksum_version_and_truncation_rejection();
     test_strict_compatibility_validation();
