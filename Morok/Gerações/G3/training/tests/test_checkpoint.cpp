@@ -97,6 +97,15 @@ void test_independent_rl_checkpoint_and_optimizer_consistency() {
     checkpoint.rl_optimizer_first_moment.clear();
     checkpoint.rl_optimizer_second_moment.clear();
     assert(!validate_training_checkpoint(checkpoint).has_value());
+
+    checkpoint = fixture();
+    checkpoint.kl_beta = 0.02;
+    checkpoint.frozen_sft_reference.clear();
+    assert(!validate_training_checkpoint(checkpoint).has_value());
+
+    checkpoint = fixture();
+    checkpoint.rl_rng_state.clear();
+    assert(!validate_training_checkpoint(checkpoint).has_value());
 }
 
 void test_model_weights_restore_for_resume() {
