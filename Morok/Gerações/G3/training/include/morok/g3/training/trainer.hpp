@@ -90,7 +90,7 @@ struct TrainingReport final {
     const TrainingConfig& config = {});
 
 // Full truncated-BPTT policy-gradient update for sampled REINFORCE sequences.
-// Uses the same FP32 tensors and AdamW implementation as the SFT trainer.
+// Uses the shared FP32 AdamW kernel; no SFT model or optimizer state is loaded.
 [[nodiscard]] double apply_reinforce_gradients(
     neural::G3Backend& backend,
     std::span<const rl::SequenceGradient> sequences,
