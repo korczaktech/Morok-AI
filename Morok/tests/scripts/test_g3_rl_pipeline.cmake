@@ -22,7 +22,11 @@ file(READ "${RL_REPORT}" REPORT_CONTENT)
 foreach(REQUIRED_TEXT IN ITEMS
     "morok-g3-rl-independent-report-v1"
     "independent_random_initialization"
+    "\"reference_policy_loaded\": false"
+    "g3-independent-reference-rubric"
+    "dataset-reference-answer-v1"
     "mean_training_reward"
+    "\"kl_beta\""
     "\"evaluation\""
 )
     string(FIND "${REPORT_CONTENT}" "${REQUIRED_TEXT}" FOUND)
