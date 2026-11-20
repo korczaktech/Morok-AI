@@ -44,9 +44,9 @@ A expansão usa variantes curadas em `question_variants` e eixos combinatórios 
 
 A perturbação padrão tem probabilidade de 45% por exemplo e pesos condicionais de 20% swap, 20% drop, 20% tecla próxima, 25% acentos/caixa/pontuação e 15% repetição/espaçamento. As mutações são feitas em caracteres Unicode e preservam UTF-8 válido. Não são aplicadas a validação ou teste.
 
-## Prompt mestre compartilhado
+## Prompt mestre
 
-O SFT e o RL usam exatamente o mesmo prompt de sistema, definido em
+O SFT e o RL usam o mesmo prompt de sistema, definido em
 `include/morok/g3/training/system_prompt.hpp`:
 
 ```text
@@ -59,7 +59,7 @@ parâmetro novo foi adicionado.
 
 ## Objetivo e otimização
 
-A sequência supervisionada é formada por BOS, pelo prompt mestre em bytes UTF-8 delimitado por `<|system|>` e `</|system|>`, USR, bytes da pergunta, BOT, bytes da resposta e EOS. O mesmo prompt mestre é inserido no contexto de cada pergunta do RL. As tags de sistema são texto comum byte-level, não novos IDs de vocabulário: a arquitetura permanece com 261 IDs e exatamente 100.000 parâmetros. A versão do prompt integra o fingerprint de configuração, impedindo retomada de checkpoints criados com outro contrato. O objetivo calcula loss nos bytes da resposta e em EOS; tokens de contexto não recebem loss auxiliar e PAD é ignorado.
+A sequência supervisionada é formada por BOS, pelo prompt mestre em bytes UTF-8 delimitado por `<|system|>` e `</|system|>`, USR, bytes da pergunta, BOT, bytes da resposta e EOS. O prompt mestre também é inserido no contexto de cada pergunta do RL independente. As tags de sistema são texto comum byte-level, não novos IDs de vocabulário: a arquitetura permanece com 261 IDs e exatamente 100.000 parâmetros. A versão do prompt integra o fingerprint de configuração, impedindo retomada de checkpoints criados com outro contrato. O objetivo calcula loss nos bytes da resposta e em EOS; tokens de contexto não recebem loss auxiliar e PAD é ignorado.
 
 Defaults atuais:
 - BPTT truncado de 128 passos;
@@ -100,13 +100,13 @@ Avaliação independente do SFT:
 Morok/build/morok-g3-evaluate Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-sft.morok Morok/Gerações/G3/training/dataset/evaluation-g3-ptbr-v1.json 42
 ```
 
-RL após revisar o relatório SFT:
+RL independente (não requer executar SFT):
 
 ```sh
-Morok/build/morok-g3-reinforce Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-sft.morok Morok/Gerações/G3/training/dataset/g3-ptbr-v1-rl.morok Morok/Gerações/G3/training/dataset/rl-report-g3-ptbr-v1.json 3
+Morok/build/morok-g3-reinforce Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-rl.morok Morok/Gerações/G3/training/dataset/rl-report-g3-ptbr-v1.json 3 42
 ```
 
-O RL usa quatro candidatas por prompt, baseline móvel por categoria, retorno descontado, penalidade KL e avaliador de referência lexical. O avaliador não garante verdade factual, segurança ou qualidade semântica; use revisão humana antes de tratar o resultado como modelo de produção.
+O RL inicializa uma política própria a partir da seed, usa quatro candidatas por prompt, baseline móvel por categoria, retorno descontado e avaliador de referência lexical. A penalidade KL contra uma política congelada é opcional e fica desativada por padrão; o CLI independente não carrega modelo SFT. O avaliador não garante verdade factual, segurança ou qualidade semântica; use revisão humana antes de tratar o resultado como modelo de produção.
 
 ## Limitações conhecidas
 
