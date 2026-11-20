@@ -128,7 +128,8 @@ std::string json_escape(std::string_view value) {
     static constexpr char hex[] = "0123456789abcdef";
     std::string escaped;
     escaped.reserve(value.size());
-    for (const unsigned char ch : value) {
+    for (const char raw_byte : value) {
+        const auto ch = static_cast<unsigned char>(raw_byte);
         switch (ch) {
             case '"': escaped += "\\\""; break;
             case '\\': escaped += "\\\\"; break;
