@@ -343,10 +343,9 @@ if(TARGET morok_g3_generate AND TARGET morok_g3_quantize AND TARGET morok_g3_tra
         LABELS "g3;inference;int8;integration" TIMEOUT 180)
 endif()
 
-if(TARGET morok_g3_reinforce AND TARGET morok_g3_train)
+if(TARGET morok_g3_reinforce)
     add_test(NAME g3.rl_pipeline
         COMMAND ${CMAKE_COMMAND}
-            -DTRAIN=$<TARGET_FILE:morok_g3_train>
             -DRL=$<TARGET_FILE:morok_g3_reinforce>
             -DDATASET=${CMAKE_CURRENT_SOURCE_DIR}/../Gerações/G3/training/tests/fixtures/smoke.jsonl
             -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}
