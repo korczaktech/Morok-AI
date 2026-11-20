@@ -288,7 +288,9 @@ int main(int argc, char** argv) {
         const auto audit_answer = encode_answer(audit_example->answer);
         const std::vector<morok::g3::rl::RewardAuditCase> audit{
             {"reference-exact", audit_prompt, audit_answer, 0.90, 1.0},
-            {"empty-answer", audit_prompt, {}, -1.0, -0.50}};
+            {"empty-answer", audit_prompt, {}, -1.0, -0.50},
+            {"unrelated-answer", audit_prompt,
+             std::vector<TokenId>(32U, static_cast<TokenId>(1U)), -1.0, -0.50}};
 
         // RL starts from its own seeded initialization. No SFT model, weights,
         // checkpoint, optimizer state or frozen reference is loaded.
