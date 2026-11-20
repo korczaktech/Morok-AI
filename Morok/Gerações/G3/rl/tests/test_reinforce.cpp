@@ -215,6 +215,37 @@ void test_evaluator_audit_and_reward_hacking() {
 }
 
 
+void test_independent_rl_training_without_sft_reference() {
+    Config config;
+    config.candidates_per_prompt = 1;
+    config.max_response_tokens = 4;
+    config.top_k = 2;
+    config.seed = 20261120;
+    assert(config.kl_beta == 0.0);
+
+    MockPolicy policy("independent-rl-policy", {static_cast<TokenId>('A')});
+    MockEvaluator evaluator;
+    ReinforceTrainer trainer(config);
+    const std::array<Prompt, 1> prompts{{
+        Prompt{"independent", "general", {morok::lang::kUsrToken}}}};
+
+    const auto result = trainer.train_batch(
+        prompts, policy, evaluator, kValidEvaluatorAudit);
+    assert(result.has_value());
+    assert(policy.updates == 1U);
+    assert(result.value_if()->optimizer_updates == 1U);
+    assert(result.value_if()->mean_kl == 0.0);
+
+    const auto state = trainer.capture_state(policy.identity(), evaluator.metadata());
+    assert(state.has_value());
+    assert(state.value_if()->reference_identity == "independent-no-reference");
+
+    ReinforceTrainer restored(config);
+    assert(restored.restore_state(
+        *state.value_if(), policy.identity(), evaluator.metadata()).has_value());
+    assert(restored.baseline("general") == trainer.baseline("general"));
+}
+
 void test_training_requires_evaluator_audit() {
     Config config;
     config.candidates_per_prompt = 1;
@@ -237,6 +268,7 @@ void test_reinforce_and_reference_kl() {
     config.max_response_tokens = 8;
     config.top_k = 2;
     config.seed = 20261116;
+    config.kl_beta = 0.02;
 
     MockPolicy policy("g3-policy", {static_cast<TokenId>('A')}, 0.8F);
     MockPolicy reference("frozen-sft", {static_cast<TokenId>('B')}, 0.8F);
@@ -456,6 +488,7 @@ int main() {
     test_short_correct_answer_is_not_length_penalized();
     test_missing_eos_is_penalized();
     test_training_requires_evaluator_audit();
+    test_independent_rl_training_without_sft_reference();
     test_exact_kl_logit_gradient();
     test_reinforce_and_reference_kl();
     test_copy_and_justified_length_penalties();
