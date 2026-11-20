@@ -152,6 +152,40 @@ std::string json_escape(std::string_view value) {
     return escaped;
 }
 
+void accumulate_training_report(
+    morok::g3::rl::TrainingReport& aggregate,
+    const morok::g3::rl::TrainingReport& epoch) {
+    if (aggregate.candidates == 0U) {
+        aggregate = epoch;
+        aggregate.candidates_metrics.clear();
+        return;
+    }
+    const double previous = static_cast<double>(aggregate.candidates);
+    const double current = static_cast<double>(epoch.candidates);
+    const double total = previous + current;
+    if (epoch.candidates > 0U) {
+        const auto weighted = [previous, current, total](double left, double right) {
+            return (left * previous + right * current) / total;
+        };
+        aggregate.mean_reward = weighted(aggregate.mean_reward, epoch.mean_reward);
+        aggregate.mean_kl = weighted(aggregate.mean_kl, epoch.mean_kl);
+        aggregate.mean_response_tokens =
+            weighted(aggregate.mean_response_tokens, epoch.mean_response_tokens);
+        aggregate.empty_response_rate =
+            weighted(aggregate.empty_response_rate, epoch.empty_response_rate);
+        aggregate.repeated_response_rate =
+            weighted(aggregate.repeated_response_rate, epoch.repeated_response_rate);
+        aggregate.reward_hacking_suspicion_rate =
+            weighted(aggregate.reward_hacking_suspicion_rate,
+                     epoch.reward_hacking_suspicion_rate);
+    }
+    aggregate.prompts += epoch.prompts;
+    aggregate.candidates += epoch.candidates;
+    aggregate.optimizer_updates += epoch.optimizer_updates;
+    aggregate.reward_hacking_suspicions += epoch.reward_hacking_suspicions;
+    aggregate.candidates_metrics.clear();
+}
+
 void write_report(const std::filesystem::path& path,
                   const morok::g3::rl::EvaluationReport& evaluation,
                   const morok::g3::rl::TrainingReport& training,
@@ -308,13 +342,13 @@ int main(int argc, char** argv) {
         config.seed = seed;
         morok::g3::rl::ReinforceTrainer trainer(config);
 
-        morok::g3::rl::TrainingReport latest;
+        morok::g3::rl::TrainingReport aggregate_training;
         for (std::size_t epoch = 0; epoch < epochs; ++epoch) {
             const auto result = trainer.train_batch(
                 train_prompts, rl_policy, evaluator, audit);
             if (!result)
                 throw std::runtime_error("G3 independent REINFORCE batch failed");
-            latest = *result.value_if();
+            accumulate_training_report(aggregate_training, *result.value_if());
         }
 
         const auto evaluation = morok::g3::rl::evaluate_policy(
@@ -323,7 +357,7 @@ int main(int argc, char** argv) {
             throw std::runtime_error("G3 independent RL evaluation failed");
 
         save_fp32(argv[2], rl_backend);
-        write_report(argv[3], *evaluation.value_if(), latest, epochs, seed,
+        write_report(argv[3], *evaluation.value_if(), aggregate_training, epochs, seed,
                      dataset.fingerprint, rl_backend.parameter_count());
         std::cout << "G3 independent RL complete. Parameters: "
                   << rl_backend.parameter_count()
