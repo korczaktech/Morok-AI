@@ -259,12 +259,13 @@ struct Generated final {
 };
 
 [[nodiscard]] Result<Generated> generate_candidate(
-    const Config& config, Policy& policy, const InferencePolicy& reference,
+    const Config& config, Policy& policy, const InferencePolicy* reference,
     std::span<const TokenId> prompt, std::mt19937_64& random) {
     Generated generated;
     generated.response.reserve(config.max_response_tokens);
     generated.current.reserve(config.max_response_tokens);
-    generated.reference.reserve(config.max_response_tokens);
+    if (reference != nullptr && config.kl_beta > 0.0)
+        generated.reference.reserve(config.max_response_tokens);
     generated.sampling.reserve(config.max_response_tokens);
 
     std::vector<float> current_buffer(kVocabularySize);
@@ -275,21 +276,22 @@ struct Generated final {
         if (!current_status) {
             return Result<Generated>::failure(*current_status.error_if());
         }
-        const auto reference_status = reference.next_token_probabilities(
-            prompt, generated.response, reference_buffer);
-        if (!reference_status) {
-            return Result<Generated>::failure(*reference_status.error_if());
-        }
-
         std::vector<double> current;
         std::vector<double> reference_distribution;
         auto status = normalize_distribution(current_buffer, current);
         if (!status) {
             return Result<Generated>::failure(*status.error_if());
         }
-        status = normalize_distribution(reference_buffer, reference_distribution);
-        if (!status) {
-            return Result<Generated>::failure(*status.error_if());
+        if (reference != nullptr && config.kl_beta > 0.0) {
+            const auto reference_status = reference->next_token_probabilities(
+                prompt, generated.response, reference_buffer);
+            if (!reference_status) {
+                return Result<Generated>::failure(*reference_status.error_if());
+            }
+            status = normalize_distribution(reference_buffer, reference_distribution);
+            if (!status) {
+                return Result<Generated>::failure(*status.error_if());
+            }
         }
 
         auto sampling = sampling_distribution(current, config);
@@ -302,10 +304,12 @@ struct Generated final {
         std::discrete_distribution<std::size_t> choose(
             sampling.begin(), sampling.end());
         const std::size_t selected = choose(random);
-        generated.kl += calculate_kl(current, reference_distribution,
-                                     config.kl_epsilon);
+        if (reference != nullptr && config.kl_beta > 0.0) {
+            generated.kl += calculate_kl(current, reference_distribution,
+                                         config.kl_epsilon);
+            generated.reference.push_back(std::move(reference_distribution));
+        }
         generated.current.push_back(std::move(current));
-        generated.reference.push_back(std::move(reference_distribution));
         generated.sampling.push_back(std::move(sampling));
         generated.response.push_back(static_cast<TokenId>(selected));
         if (selected == morok::lang::kEosToken) {
@@ -563,11 +567,13 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
         return Result<TrainingReport>::failure(*config_status.error_if());
     }
     if (prompts.empty() || policy.identity().empty() ||
-        frozen_sft_reference.identity().empty() ||
-        policy.identity() == frozen_sft_reference.identity()) {
+        (frozen_reference != nullptr &&
+         (frozen_reference->identity().empty() ||
+          policy.identity() == frozen_reference->identity())) ||
+        (config_.kl_beta > 0.0 && frozen_reference == nullptr)) {
         return failure_result<TrainingReport>(
             ErrorCode::invalid_argument, "train.identity",
-            "Training requires prompts, a policy and a distinct frozen SFT reference");
+            "Training requires prompts and a policy; a distinct frozen reference is required only when KL regularization is enabled");
     }
     const auto evaluator_status = audit_evaluator(
         evaluator, policy.identity(), evaluator_audit_cases, config_);
@@ -575,7 +581,8 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
         return Result<TrainingReport>::failure(*evaluator_status.error_if());
     }
     const auto evaluator_metadata = evaluator.metadata();
-    if (evaluator_metadata.identity == frozen_sft_reference.identity()) {
+    if (frozen_reference != nullptr &&
+        evaluator_metadata.identity == frozen_reference->identity()) {
         return failure_result<TrainingReport>(
             ErrorCode::invalid_argument, "train.evaluator",
             "Reward evaluator identity must differ from the frozen SFT reference");
@@ -606,7 +613,7 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
              candidate_index < config_.candidates_per_prompt;
              ++candidate_index) {
             auto generated_result = generate_candidate(
-                config_, policy, frozen_sft_reference, prompt.tokens, random_);
+                config_, policy, frozen_reference, prompt.tokens, random_);
             if (!generated_result) {
                 return Result<TrainingReport>::failure(
                     *generated_result.error_if());
@@ -633,10 +640,14 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
                 const TokenId selected = generated.response[step];
                 const auto& sample_probabilities = generated.sampling[step];
                 const auto& current_probabilities = generated.current[step];
-                const auto& reference_probabilities = generated.reference[step];
-                const double kl_value = calculate_kl(
-                    current_probabilities, reference_probabilities,
-                    config_.kl_epsilon);
+                const bool has_reference = frozen_reference != nullptr &&
+                                           config_.kl_beta > 0.0;
+                const auto& reference_probabilities = has_reference
+                    ? generated.reference[step] : current_probabilities;
+                const double kl_value = has_reference
+                    ? calculate_kl(current_probabilities, reference_probabilities,
+                                   config_.kl_epsilon)
+                    : 0.0;
                 for (std::size_t token = 0; token < kVocabularySize; ++token) {
                     const double indicator = token == selected ? 1.0 : 0.0;
                     const double reinforce_gradient =
@@ -646,7 +657,7 @@ Result<TrainingReport> ReinforceTrainer::train_batch(
                     const double current_probability = current_probabilities[token];
                     const double reference_probability =
                         std::max(reference_probabilities[token], config_.kl_epsilon);
-                    const double kl_gradient = current_probability > 0.0
+                    const double kl_gradient = has_reference && current_probability > 0.0
                         ? config_.kl_beta * current_probability *
                             (std::log(current_probability / reference_probability) -
                              kl_value)
