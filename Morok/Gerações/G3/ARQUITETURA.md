@@ -343,7 +343,7 @@ outro runtime nem altera os fontes das gerações anteriores.
 - [x] Harness de benchmark com mediana, p95, throughput e memória residente.
 - [ ] Equivalência FP32/INT8 medida com pesos reais da GRU G3.
 - [ ] RAM e latência de produção medidas em hardware de referência.
-- [ ] Weight tying integrado ao armazenamento real da GRU G3.
+- [x] Weight tying integrado ao armazenamento real da GRU G3.
 - [ ] Teste de concorrência com o backend neural G3 real.
 
 A arquitetura neural e o weight tying já estão implementados. Permanecem pendentes
