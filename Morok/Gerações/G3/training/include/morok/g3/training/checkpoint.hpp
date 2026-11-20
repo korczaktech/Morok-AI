@@ -54,7 +54,7 @@ struct G3TrainingCheckpoint final {
     std::vector<float> rl_optimizer_first_moment;
     std::vector<float> rl_optimizer_second_moment;
     std::uint64_t rl_optimizer_step{0U};
-    double kl_beta{0.02};
+    double kl_beta{0.0};
     std::vector<std::byte> frozen_sft_reference;
     std::vector<std::byte> replay_buffer_state;
     std::vector<std::byte> training_history;
