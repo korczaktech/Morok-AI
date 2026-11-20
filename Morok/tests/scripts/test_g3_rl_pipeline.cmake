@@ -67,4 +67,25 @@ string(REGEX MATCH "\"examples\"[ \\t]*:[ \\t]*([0-9]+)" EVALUATION_MATCH "${REP
 if(NOT EVALUATION_MATCH OR CMAKE_MATCH_1 LESS 1)
     message(FATAL_ERROR "Independent RL test split was not evaluated")
 endif()
+execute_process(
+    COMMAND "${RL}" "${DATASET}" "${DATASET}"
+            "${WORK_DIR}/g3-rl-pipeline/collision-report.json" 1 42
+    RESULT_VARIABLE DATASET_COLLISION_RESULT
+    OUTPUT_QUIET
+    ERROR_QUIET
+)
+if(DATASET_COLLISION_RESULT EQUAL 0)
+    message(FATAL_ERROR "G3 RL CLI must reject using the dataset as its model output")
+endif()
+
+execute_process(
+    COMMAND "${RL}" "${DATASET}" "${RL_MODEL}" "${RL_MODEL}" 1 42
+    RESULT_VARIABLE OUTPUT_COLLISION_RESULT
+    OUTPUT_QUIET
+    ERROR_QUIET
+)
+if(OUTPUT_COLLISION_RESULT EQUAL 0)
+    message(FATAL_ERROR "G3 RL CLI must reject identical model and report output paths")
+endif()
+
 message(STATUS "G3 independent initialization -> REINFORCE -> evaluation integration passed")
