@@ -106,7 +106,7 @@ RL independente (não requer executar SFT):
 Morok/build/morok-g3-reinforce Morok/Gerações/G3/training/dataset/g3_ptbr_v1.jsonl Morok/Gerações/G3/training/dataset/g3-ptbr-v1-rl.morok Morok/Gerações/G3/training/dataset/rl-report-g3-ptbr-v1.json 3 42
 ```
 
-O RL inicializa uma política própria a partir da seed, usa quatro candidatas por prompt, baseline móvel por categoria, retorno descontado e avaliador de referência lexical. A penalidade KL contra uma política congelada é opcional e fica desativada por padrão; o CLI independente não carrega modelo SFT. O avaliador não garante verdade factual, segurança ou qualidade semântica; use revisão humana antes de tratar o resultado como modelo de produção.
+O RL inicializa uma política própria a partir da seed, usa quatro candidatas por prompt, baseline móvel por categoria, retorno descontado e avaliador de referência lexical. O fluxo RL exclui exemplos sensíveis e registros com `quality<1.0`, evitando usar exemplos pendentes de revisão humana como alvo de recompensa. A penalidade KL contra uma política congelada é opcional e fica desativada por padrão; o CLI independente não carrega modelo SFT. O avaliador não garante verdade factual, segurança ou qualidade semântica; use revisão humana antes de tratar o resultado como modelo de produção.
 
 ## Limitações conhecidas
 
