@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
 
         std::map<std::vector<TokenId>, std::vector<TokenId>> unique_references;
         for (const auto& example : dataset.examples) {
-            if (example.sensitive) continue;
+            if (example.sensitive || example.quality < 1.0) continue;
             auto prompt = encode_prompt(example.question);
             auto answer = encode_answer(example.answer);
             const auto [it, inserted] = unique_references.emplace(
@@ -163,13 +163,14 @@ int main(int argc, char** argv) {
         const morok::g3::training::DatasetExample* audit_example = nullptr;
         for (const auto index : splits.train) {
             const auto& example = dataset.examples[index];
-            if (example.sensitive) continue;
+            if (example.sensitive || example.quality < 1.0) continue;
             train_prompts.push_back(make_prompt(example));
             if (audit_example == nullptr) audit_example = &example;
         }
         for (const auto index : splits.test) {
             const auto& example = dataset.examples[index];
-            if (!example.sensitive) test_prompts.push_back(make_prompt(example));
+            if (!example.sensitive && example.quality >= 1.0)
+                test_prompts.push_back(make_prompt(example));
         }
         if (train_prompts.empty() || test_prompts.empty() || audit_example == nullptr)
             throw std::runtime_error(
