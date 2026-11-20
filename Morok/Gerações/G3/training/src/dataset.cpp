@@ -7,6 +7,7 @@
 #include <unicode/utypes.h>
 
 #include <algorithm>
+#include <charconv>
 #include <array>
 #include <cmath>
 #include <fstream>
@@ -433,7 +434,9 @@ Dataset load_jsonl(const std::filesystem::path& path) {
     std::size_t line_number = 0;
     while (std::getline(input, line)) {
         ++line_number;
-        if (line.empty()) continue;
+        if (line.find_first_not_of(" \\t\\r") == std::string::npos) continue;
+        if (line.size() > 1024U * 1024U)
+            throw std::runtime_error("dataset line exceeds the 1 MiB safety limit");
         try {
             JsonObject object(line);
             DatasetExample item;
@@ -485,7 +488,14 @@ Dataset load_jsonl(const std::filesystem::path& path) {
         append_field(item.category); append_field(item.question);
         append_field(item.answer); append_field(item.source);
         append_field(item.language); append_field(item.dataset_version);
-        append_field(std::to_string(item.quality));
+        std::array<char, 64> quality_buffer{};
+        const auto quality_result = std::to_chars(
+            quality_buffer.data(), quality_buffer.data() + quality_buffer.size(),
+            item.quality, std::chars_format::general,
+            std::numeric_limits<double>::max_digits10);
+        if (quality_result.ec != std::errc{})
+            throw std::runtime_error("could not serialize dataset quality for fingerprint");
+        append_field(std::string(quality_buffer.data(), quality_result.ptr));
         append_field(item.sensitive ? "true" : "false");
         for (const auto& variant : item.question_variants) append_field(variant);
         for (const auto& axis : item.expansion_axes) {
