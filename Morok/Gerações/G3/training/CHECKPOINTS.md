@@ -48,7 +48,7 @@ A leitura pode receber um CheckpointCompatibility esperado. A retomada é rejeit
 - identificador do otimizador;
 - fingerprint da configuração.
 
-A validação estrutural também verifica exatamente 100.000 pesos FP32 finitos, momentos de otimizador vazios em conjunto ou com 100.000 valores cada e consistentes com o contador de passos, segundo momento não negativo, taxa de aprendizado finita e positiva, beta KL válido (referência obrigatória somente quando beta é positivo), RNG e baselines para retomada RL, splits disjuntos, ordem do sampler como permutação do split de treino e limites de alocação.
+A validação estrutural também verifica exatamente 100.000 pesos FP32 finitos, momentos de otimizador vazios em conjunto ou com 100.000 valores cada e consistentes com o contador de passos, segundo momento não negativo, taxa de aprendizado finita e positiva, beta KL válido (referência obrigatória quando o estado RL está ativo e beta é positivo), RNG e baselines para retomada RL, splits disjuntos, ordem do sampler como permutação do split de treino e limites de alocação.
 
 Não existe retomada aproximada silenciosa. Se o chamador não puder fornecer a mesma compatibilidade, deve iniciar uma nova execução ou implementar uma migração explícita.
 
