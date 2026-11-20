@@ -34,52 +34,8 @@ public:
             if (required) throw std::runtime_error("dataset field missing: " + key);
             return {};
         }
-        if (*value >= text_.size() || text_[*value] != '"')
-            throw std::runtime_error("dataset field must be a JSON string: " + key);
-        std::size_t cursor = *value + 1U;
-        std::string out;
-        while (cursor < text_.size()) {
-            const char ch = text_[cursor++];
-            if (ch == '"') return out;
-            if (ch != '\\') { out.push_back(ch); continue; }
-            if (cursor >= text_.size()) throw std::runtime_error("truncated JSON escape");
-            const char escaped = text_[cursor++];
-            switch (escaped) {
-                case '"': out.push_back('"'); break;
-                case '\\': out.push_back('\\'); break;
-                case '/': out.push_back('/'); break;
-                case 'b': out.push_back('\b'); break;
-                case 'f': out.push_back('\f'); break;
-                case 'n': out.push_back('\n'); break;
-                case 'r': out.push_back('\r'); break;
-                case 't': out.push_back('\t'); break;
-                case 'u': {
-                    const auto code = hex4(cursor);
-                    cursor += 4U;
-                    UChar32 cp = static_cast<UChar32>(code);
-                    if (U16_IS_LEAD(cp)) {
-                        if (cursor + 6U > text_.size() || text_.compare(cursor, 2U, "\\u") != 0)
-                            throw std::runtime_error("unpaired JSON high surrogate");
-                        cursor += 2U;
-                        const auto low = hex4(cursor);
-                        cursor += 4U;
-                        if (low < 0xDC00U || low > 0xDFFFU)
-                            throw std::runtime_error("invalid JSON low surrogate");
-                        cp = U16_GET_SUPPLEMENTARY(cp, static_cast<UChar32>(low));
-                    } else if (U16_IS_TRAIL(cp)) {
-                        throw std::runtime_error("unpaired JSON low surrogate");
-                    }
-                    icu::UnicodeString unicode;
-                    unicode.append(cp);
-                    std::string utf8;
-                    unicode.toUTF8String(utf8);
-                    out += utf8;
-                    break;
-                }
-                default: throw std::runtime_error("invalid JSON escape");
-            }
-        }
-        throw std::runtime_error("unterminated JSON string");
+        std::size_t cursor = *value;
+        return decode_string_at(cursor);
     }
 
     std::vector<std::vector<std::string>> string_matrix(const std::string& key) const {
@@ -89,36 +45,43 @@ public:
         if (cursor >= text_.size() || text_[cursor++] != '[')
             throw std::runtime_error("dataset field must be a matrix of strings: " + key);
         std::vector<std::vector<std::string>> result;
-        const auto skip = [this](std::size_t& position) {
-            while (position < text_.size() &&
-                   (text_[position] == ' ' || text_[position] == '\n' ||
-                    text_[position] == '\r' || text_[position] == '\t' ||
-                    text_[position] == ',')) ++position;
-        };
+        skip_whitespace(cursor);
+        if (cursor < text_.size() && text_[cursor] == ']') return result;
         while (cursor < text_.size()) {
-            skip(cursor);
-            if (cursor < text_.size() && text_[cursor] == ']') return result;
-            if (cursor >= text_.size() || text_[cursor++] != '[')
+            if (text_[cursor++] != '[')
                 throw std::runtime_error("each expansion axis must be an array");
             std::vector<std::string> axis;
+            skip_whitespace(cursor);
+            if (cursor < text_.size() && text_[cursor] == ']')
+                throw std::runtime_error("expansion axes cannot be empty");
             while (cursor < text_.size()) {
-                skip(cursor);
-                if (cursor < text_.size() && text_[cursor] == ']') { ++cursor; break; }
-                if (cursor >= text_.size() || text_[cursor] != '"')
-                    throw std::runtime_error("expansion axis values must be strings");
-                JsonObject tail("{\"_value\":" + text_.substr(cursor));
-                axis.push_back(tail.string("_value"));
-                std::size_t end = cursor + 1U;
-                bool escaped = false;
-                for (; end < text_.size(); ++end) {
-                    if (!escaped && text_[end] == '"') { ++end; break; }
-                    if (!escaped && text_[end] == '\\') escaped = true;
-                    else escaped = false;
+                axis.push_back(decode_string_at(cursor));
+                skip_whitespace(cursor);
+                if (cursor < text_.size() && text_[cursor] == ',') {
+                    ++cursor;
+                    skip_whitespace(cursor);
+                    if (cursor < text_.size() && text_[cursor] == ']')
+                        throw std::runtime_error("trailing comma in expansion axis");
+                    continue;
                 }
-                cursor = end;
+                if (cursor < text_.size() && text_[cursor] == ']') {
+                    ++cursor;
+                    break;
+                }
+                throw std::runtime_error("invalid expansion axis separator");
             }
             if (axis.empty()) throw std::runtime_error("expansion axes cannot be empty");
             result.push_back(std::move(axis));
+            skip_whitespace(cursor);
+            if (cursor < text_.size() && text_[cursor] == ',') {
+                ++cursor;
+                skip_whitespace(cursor);
+                if (cursor < text_.size() && text_[cursor] == ']')
+                    throw std::runtime_error("trailing comma in expansion_axes");
+                continue;
+            }
+            if (cursor < text_.size() && text_[cursor] == ']') return result;
+            throw std::runtime_error("invalid expansion_axes separator");
         }
         throw std::runtime_error("unterminated expansion_axes array");
     }
@@ -148,30 +111,76 @@ public:
         if (cursor >= text_.size() || text_[cursor++] != '[')
             throw std::runtime_error("dataset field must be an array: " + key);
         std::vector<std::string> result;
+        skip_whitespace(cursor);
+        if (cursor < text_.size() && text_[cursor] == ']') return result;
         while (cursor < text_.size()) {
-            while (cursor < text_.size() && (text_[cursor] == ' ' || text_[cursor] == '\n' ||
-                   text_[cursor] == '\r' || text_[cursor] == '\t' || text_[cursor] == ','))
+            result.push_back(decode_string_at(cursor));
+            skip_whitespace(cursor);
+            if (cursor < text_.size() && text_[cursor] == ',') {
                 ++cursor;
-            if (cursor < text_.size() && text_[cursor] == ']') return result;
-            if (cursor >= text_.size() || text_[cursor] != '"')
-                throw std::runtime_error("question_variants must contain strings");
-            // Reuse the string decoder against a view beginning at this quote.
-            JsonObject tail("{\"_value\":" + text_.substr(cursor));
-            const auto decoded = tail.string("_value");
-            result.push_back(decoded);
-            std::size_t end = cursor + 1U;
-            bool escaped = false;
-            for (; end < text_.size(); ++end) {
-                if (!escaped && text_[end] == '"') { ++end; break; }
-                if (!escaped && text_[end] == '\\') escaped = true;
-                else escaped = false;
+                skip_whitespace(cursor);
+                if (cursor < text_.size() && text_[cursor] == ']')
+                    throw std::runtime_error("trailing comma in JSON string array");
+                continue;
             }
-            cursor = end;
+            if (cursor < text_.size() && text_[cursor] == ']') return result;
+            throw std::runtime_error("invalid JSON string array separator");
         }
         throw std::runtime_error("unterminated JSON array");
     }
 
 private:
+    std::string decode_string_at(std::size_t& cursor) const {
+        if (cursor >= text_.size() || text_[cursor++] != '"')
+            throw std::runtime_error("expected JSON string");
+        std::string out;
+        while (cursor < text_.size()) {
+            const char ch = text_[cursor++];
+            if (ch == '"') return out;
+            if (static_cast<unsigned char>(ch) < 0x20U)
+                throw std::runtime_error("unescaped control character in JSON string");
+            if (ch != '\\') { out.push_back(ch); continue; }
+            if (cursor >= text_.size()) throw std::runtime_error("truncated JSON escape");
+            const char escaped = text_[cursor++];
+            switch (escaped) {
+                case '"': out.push_back('"'); break;
+                case '\\': out.push_back('\\'); break;
+                case '/': out.push_back('/'); break;
+                case 'b': out.push_back('\b'); break;
+                case 'f': out.push_back('\f'); break;
+                case 'n': out.push_back('\n'); break;
+                case 'r': out.push_back('\r'); break;
+                case 't': out.push_back('\t'); break;
+                case 'u': {
+                    const auto code = hex4(cursor);
+                    cursor += 4U;
+                    UChar32 cp = static_cast<UChar32>(code);
+                    if (U16_IS_LEAD(cp)) {
+                        if (cursor + 6U > text_.size() ||
+                            text_.compare(cursor, 2U, "\\u") != 0)
+                            throw std::runtime_error("unpaired JSON high surrogate");
+                        cursor += 2U;
+                        const auto low = hex4(cursor);
+                        cursor += 4U;
+                        if (low < 0xDC00U || low > 0xDFFFU)
+                            throw std::runtime_error("invalid JSON low surrogate");
+                        cp = U16_GET_SUPPLEMENTARY(cp, static_cast<UChar32>(low));
+                    } else if (U16_IS_TRAIL(cp)) {
+                        throw std::runtime_error("unpaired JSON low surrogate");
+                    }
+                    icu::UnicodeString unicode;
+                    unicode.append(cp);
+                    std::string utf8;
+                    unicode.toUTF8String(utf8);
+                    out += utf8;
+                    break;
+                }
+                default: throw std::runtime_error("invalid JSON escape");
+            }
+        }
+        throw std::runtime_error("unterminated JSON string");
+    }
+
     void skip_whitespace(std::size_t& cursor) const {
         while (cursor < text_.size() &&
                (text_[cursor] == ' ' || text_[cursor] == '\n' ||
