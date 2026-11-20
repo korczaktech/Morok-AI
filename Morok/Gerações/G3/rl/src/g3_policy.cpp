@@ -1,5 +1,6 @@
 #include "morok/g3/rl/g3_policy.hpp"
 #include "morok/common/error.hpp"
+#include "morok/g3/training/trainer.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -31,20 +32,28 @@ bool replay(const neural::G3Backend& backend,std::span<const TokenId> context,
     return true;
 }
 }
+
+struct G3PolicyAdapter::OptimizerState final {
+    training::ReinforceOptimizerState state;
+    training::TrainingConfig config;
+};
+
 G3PolicyAdapter::G3PolicyAdapter(neural::G3Backend& backend,std::string identity,
                                  double learning_rate,double weight_decay)
     :backend_(&backend),identity_(std::move(identity)),
-     learning_rate_(learning_rate),weight_decay_(weight_decay) {
+     learning_rate_(learning_rate),weight_decay_(weight_decay),
+     optimizer_state_(std::make_unique<OptimizerState>()) {
     if(identity_.empty() || !std::isfinite(learning_rate_) || learning_rate_<=0.0 ||
        !std::isfinite(weight_decay_) || weight_decay_<0.0 ||
        backend.parameter_count()!=neural::kTargetParameterCount)
         throw std::invalid_argument("Invalid G3 RL policy adapter configuration");
-    optimizer_config_.bptt_steps=128U;
-    optimizer_config_.learning_rate=learning_rate_;
-    optimizer_config_.minimum_learning_rate=learning_rate_;
-    optimizer_config_.weight_decay=weight_decay_;
-    optimizer_config_.maximum_gradient_norm=1.0;
+    optimizer_state_->config.bptt_steps=128U;
+    optimizer_state_->config.learning_rate=learning_rate_;
+    optimizer_state_->config.minimum_learning_rate=learning_rate_;
+    optimizer_state_->config.weight_decay=weight_decay_;
+    optimizer_state_->config.maximum_gradient_norm=1.0;
 }
+G3PolicyAdapter::~G3PolicyAdapter() = default;
 std::string_view G3PolicyAdapter::identity() const noexcept { return identity_; }
 Status G3PolicyAdapter::next_token_probabilities(
     std::span<const TokenId> context,std::span<const TokenId> prefix,
@@ -86,7 +95,7 @@ Status G3PolicyAdapter::apply_batch_gradients(
     try {
         cache_valid_=false;
         (void)training::apply_reinforce_gradients(
-            *backend_,gradients,optimizer_state_,optimizer_config_);
+            *backend_,gradients,optimizer_state_->state,optimizer_state_->config);
     } catch(const std::exception& error) {
         return fail("optimizer.update",error.what());
     }
