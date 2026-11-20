@@ -411,25 +411,65 @@ double adamw_update(neural::G3Backend& backend, const Gradients& gradients,
                   AdamState& state, const TrainingConfig& config,
                   std::uint64_t total_steps, std::size_t step_index,
                   double& clipped_norm) {
+    if (total_steps == 0U || step_index == 0U ||
+        !std::isfinite(config.learning_rate) || config.learning_rate <= 0.0 ||
+        !std::isfinite(config.minimum_learning_rate) ||
+        config.minimum_learning_rate <= 0.0 ||
+        config.minimum_learning_rate > config.learning_rate ||
+        !std::isfinite(config.warmup_fraction) ||
+        config.warmup_fraction < 0.0 || config.warmup_fraction > 1.0 ||
+        !std::isfinite(config.beta1) || config.beta1 < 0.0 || config.beta1 >= 1.0 ||
+        !std::isfinite(config.beta2) || config.beta2 < 0.0 || config.beta2 >= 1.0 ||
+        !std::isfinite(config.adam_epsilon) || config.adam_epsilon <= 0.0 ||
+        !std::isfinite(config.weight_decay) || config.weight_decay < 0.0 ||
+        !std::isfinite(config.maximum_gradient_norm) ||
+        config.maximum_gradient_norm <= 0.0) {
+        throw std::invalid_argument("Invalid AdamW configuration");
+    }
+
     std::vector<float> grad;
     flatten_gradients(gradients.w, grad);
+    const std::size_t count = grad.size();
+    if (count != backend.parameter_count())
+        throw std::logic_error("AdamW gradient size does not match G3 parameter count");
     const double norm = gradients.norm();
+    if (!std::isfinite(norm))
+        throw std::runtime_error("AdamW received a non-finite gradient norm");
     const double scale = norm > config.maximum_gradient_norm
         ? config.maximum_gradient_norm / norm : 1.0;
+    if (!std::isfinite(scale) || scale <= 0.0)
+        throw std::runtime_error("AdamW gradient clipping produced an invalid scale");
     clipped_norm = norm * scale;
-    const std::size_t count = grad.size();
-    if (state.first.empty()) { state.first.assign(count, 0.0F); state.second.assign(count, 0.0F); }
+
+    if (state.first.empty() != state.second.empty())
+        throw std::logic_error("AdamW first and second moments must be initialized together");
+    if (state.first.empty()) {
+        if (state.step != 0U)
+            throw std::logic_error("AdamW cannot initialize empty moments after prior steps");
+        state.first.assign(count, 0.0F);
+        state.second.assign(count, 0.0F);
+    }
     if (state.first.size() != count || state.second.size() != count)
         throw std::logic_error("AdamW state shape does not match G3 parameter count");
-    ++state.step;
+    if (state.step == std::numeric_limits<std::uint64_t>::max())
+        throw std::overflow_error("AdamW step counter overflow");
+
+    for (std::size_t i = 0; i < count; ++i) {
+        if (!std::isfinite(grad[i]) || !std::isfinite(state.first[i]) ||
+            !std::isfinite(state.second[i]) || state.second[i] < 0.0F) {
+            throw std::runtime_error("AdamW received non-finite gradients or invalid moments");
+        }
+    }
+
+    const std::uint64_t next_step = state.step + 1U;
     double lr = config.learning_rate;
     const std::size_t warmup = static_cast<std::size_t>(
         std::ceil(config.warmup_fraction * static_cast<double>(total_steps)));
     if (warmup > 0U && step_index <= warmup) {
         lr *= static_cast<double>(step_index) / static_cast<double>(warmup);
     } else {
-        const auto decay_steps = std::max<std::size_t>(1U, total_steps > warmup ?
-                                                       total_steps - warmup : 1U);
+        const auto decay_steps = std::max<std::size_t>(
+            1U, total_steps > warmup ? total_steps - warmup : 1U);
         const double progress = std::clamp(
             static_cast<double>(step_index > warmup ? step_index - warmup : 0U) /
             static_cast<double>(decay_steps), 0.0, 1.0);
@@ -437,28 +477,64 @@ double adamw_update(neural::G3Backend& backend, const Gradients& gradients,
             (config.learning_rate - config.minimum_learning_rate) *
             (1.0 + std::cos(std::numbers::pi * progress));
     }
-    const double correction1 = 1.0 - std::pow(config.beta1, static_cast<double>(state.step));
-    const double correction2 = 1.0 - std::pow(config.beta2, static_cast<double>(state.step));
+    if (!std::isfinite(lr) || lr <= 0.0)
+        throw std::runtime_error("AdamW learning-rate schedule produced an invalid value");
+
+    const double correction1 =
+        1.0 - std::pow(config.beta1, static_cast<double>(next_step));
+    const double correction2 =
+        1.0 - std::pow(config.beta2, static_cast<double>(next_step));
+    if (!std::isfinite(correction1) || !std::isfinite(correction2) ||
+        correction1 <= 0.0 || correction2 <= 0.0)
+        throw std::runtime_error("AdamW bias correction is invalid");
+
     const auto mask = decay_mask(backend.weights());
-    auto spans = mutable_spans(backend.mutable_weights());
+    if (mask.size() != count)
+        throw std::logic_error("AdamW decay mask does not match G3 parameter count");
+    const auto spans = mutable_spans(backend.mutable_weights());
+    std::vector<float> next_parameters(count);
+    std::vector<float> next_first(count);
+    std::vector<float> next_second(count);
     std::size_t offset = 0U;
-    for (auto span : spans) {
-        for (float& parameter : span) {
+    const double maximum_float =
+        static_cast<double>(std::numeric_limits<float>::max());
+
+    // Calculate the complete update before mutating model weights or optimizer
+    // state. A single invalid value therefore cannot leave a partial AdamW step.
+    for (const auto span : spans) {
+        for (const float parameter : span) {
+            if (offset >= count || !std::isfinite(parameter))
+                throw std::runtime_error("AdamW encountered invalid model parameters");
             const double g = static_cast<double>(grad[offset]) * scale;
-            const double m = config.beta1 * state.first[offset] + (1.0 - config.beta1) * g;
-            const double v = config.beta2 * state.second[offset] + (1.0 - config.beta2) * g * g;
+            const double m = config.beta1 * state.first[offset] +
+                             (1.0 - config.beta1) * g;
+            const double v = config.beta2 * state.second[offset] +
+                             (1.0 - config.beta2) * g * g;
             double updated = parameter;
             if (mask[offset]) updated *= (1.0 - lr * config.weight_decay);
             updated -= lr * (m / correction1) /
                        (std::sqrt(v / correction2) + config.adam_epsilon);
-            if (!std::isfinite(updated) || !std::isfinite(m) || !std::isfinite(v))
-                throw std::runtime_error("AdamW generated a non-finite parameter or state");
-            parameter = static_cast<float>(updated);
-            state.first[offset] = static_cast<float>(m);
-            state.second[offset] = static_cast<float>(v);
+            if (!std::isfinite(g) || !std::isfinite(m) || !std::isfinite(v) ||
+                !std::isfinite(updated) || std::abs(m) > maximum_float ||
+                v > maximum_float || std::abs(updated) > maximum_float) {
+                throw std::runtime_error("AdamW generated a non-finite or out-of-range update");
+            }
+            next_parameters[offset] = static_cast<float>(updated);
+            next_first[offset] = static_cast<float>(m);
+            next_second[offset] = static_cast<float>(v);
             ++offset;
         }
     }
+    if (offset != count)
+        throw std::logic_error("AdamW parameter span size does not match G3 parameter count");
+
+    offset = 0U;
+    for (const auto span : spans) {
+        for (float& parameter : span) parameter = next_parameters[offset++];
+    }
+    state.first = std::move(next_first);
+    state.second = std::move(next_second);
+    state.step = next_step;
     return lr;
 }
 
