@@ -251,7 +251,9 @@ bool valid_optional_optimizer(const std::vector<float>& first,
     return (first.empty() && second.empty()) ||
            (first.size() == kG3CheckpointParameterCount &&
             second.size() == kG3CheckpointParameterCount &&
-            finite_vector(first) && finite_vector(second));
+            finite_vector(first) && finite_vector(second) &&
+            std::all_of(second.begin(), second.end(),
+                        [](float value) { return value >= 0.0F; }));
 }
 
 std::uint32_t crc32_impl(std::span<const std::byte> bytes) noexcept {
@@ -381,6 +383,27 @@ Status validate_training_checkpoint(const G3TrainingCheckpoint& c,
         c.replay_buffer_state.size() > kTrainingCheckpointMaximumBytes)
         return fail(ErrorCode::resource_limit, "validate.progress",
                     "Checkpoint progress or opaque state exceeds supported limits");
+
+    std::unordered_set<std::uint64_t> split_indices;
+    for (const auto* split : {&c.train_split, &c.validation_split, &c.test_split}) {
+        for (const auto index : *split) {
+            if (!split_indices.insert(index).second)
+                return fail(ErrorCode::invalid_argument, "validate.splits",
+                            "Training, validation and test splits must be disjoint and unique");
+        }
+    }
+    if (!c.sampler_order.empty()) {
+        if (c.sampler_order.size() != c.train_split.size())
+            return fail(ErrorCode::invalid_argument, "validate.sampler",
+                        "Sampler order must contain every training position exactly once");
+        std::unordered_set<std::uint64_t> sampler_positions;
+        for (const auto position : c.sampler_order) {
+            if (position >= c.train_split.size() ||
+                !sampler_positions.insert(position).second)
+                return fail(ErrorCode::invalid_argument, "validate.sampler",
+                            "Sampler order must be a permutation of training positions");
+        }
+    }
     if (expected != nullptr) {
         if (expected->generation_id != c.compatibility.generation_id ||
             expected->architecture_id != c.compatibility.architecture_id ||
