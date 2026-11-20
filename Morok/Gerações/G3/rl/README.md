@@ -44,8 +44,9 @@ conflitantes interrompem a execução em vez de escolher uma arbitrariamente.
 
 `ReferenceRewardEvaluator` não lê logits, gradientes ou estado interno da
 política. Ele recebe respostas de referência do dataset RL e calcula
-similaridade por distância de edição e F1 de bigramas. O componente de coerência
-fica neutro: comprimento não é usado como substituto de compreensão semântica.
+similaridade por distância de edição e F1 de bigramas, ambos mapeados de
+[0,1] para [-1,1] para que respostas sem correspondência recebam recompensa
+negativa. O componente de coerência fica neutro: comprimento não é usado como substituto de compreensão semântica.
 A identidade, versão da rubrica e origem dos rótulos são registradas. Antes do
 treino, a rubrica é testada contra casos de auditoria com limites de score.
 
