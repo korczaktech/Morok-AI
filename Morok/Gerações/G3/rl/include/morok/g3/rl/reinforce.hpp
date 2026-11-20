@@ -50,7 +50,7 @@ struct Config final {
     std::size_t top_k{10};
     double temperature{0.7};
     double gamma{1.0};
-    double kl_beta{0.02};
+    double kl_beta{0.0}; // Optional SFT-reference regularization; disabled for independent RL.
     double baseline_ema{0.10};
     double kl_epsilon{1.0e-12};
     std::uint64_t seed{42};
@@ -191,15 +191,30 @@ public:
     [[nodiscard]] morok::common::Result<TrainingReport> train_batch(
         std::span<const Prompt> prompts,
         Policy& policy,
-        const InferencePolicy& frozen_sft_reference,
+        const RewardEvaluator& evaluator,
+        std::span<const RewardAuditCase> evaluator_audit_cases);
+
+    // Optional compatibility path for experiments that explicitly request a
+    // frozen reference policy. Independent RL should use the overload above.
+    [[nodiscard]] morok::common::Result<TrainingReport> train_batch(
+        std::span<const Prompt> prompts,
+        Policy& policy,
+        const InferencePolicy& frozen_reference,
         const RewardEvaluator& evaluator,
         std::span<const RewardAuditCase> evaluator_audit_cases);
 
     [[nodiscard]] double baseline(std::string_view category) const;
     [[nodiscard]] morok::common::Result<TrainerState> capture_state(
         std::string_view policy_identity,
+        const EvaluatorMetadata& evaluator) const;
+    [[nodiscard]] morok::common::Result<TrainerState> capture_state(
+        std::string_view policy_identity,
         std::string_view reference_identity,
         const EvaluatorMetadata& evaluator) const;
+    [[nodiscard]] morok::common::Status restore_state(
+        const TrainerState& state,
+        std::string_view expected_policy_identity,
+        const EvaluatorMetadata& expected_evaluator);
     [[nodiscard]] morok::common::Status restore_state(
         const TrainerState& state,
         std::string_view expected_policy_identity,
@@ -208,6 +223,12 @@ public:
     [[nodiscard]] const Config& config() const noexcept { return config_; }
 
 private:
+    [[nodiscard]] morok::common::Result<TrainingReport> train_batch_impl(
+        std::span<const Prompt> prompts, Policy& policy,
+        const InferencePolicy* frozen_reference,
+        const RewardEvaluator& evaluator,
+        std::span<const RewardAuditCase> evaluator_audit_cases);
+
     Config config_;
     std::mt19937_64 random_;
     std::unordered_map<std::string, double> baselines_;
