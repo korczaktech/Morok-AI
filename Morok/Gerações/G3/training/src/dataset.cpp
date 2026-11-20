@@ -320,10 +320,12 @@ private:
 
         std::optional<std::size_t> found;
         std::unordered_set<std::string> keys;
+        bool closed = false;
         while (cursor < text_.size()) {
             skip_whitespace(cursor);
             if (cursor < text_.size() && text_[cursor] == '}') {
                 ++cursor;
+                closed = true;
                 break;
             }
             if (cursor >= text_.size() || text_[cursor] != '"')
@@ -348,16 +350,21 @@ private:
             skip_whitespace(cursor);
             if (cursor < text_.size() && text_[cursor] == ',') {
                 ++cursor;
+                skip_whitespace(cursor);
+                if (cursor < text_.size() && text_[cursor] == '}')
+                    throw std::runtime_error("trailing comma in JSON object");
                 continue;
             }
             if (cursor < text_.size() && text_[cursor] == '}') {
                 ++cursor;
+                closed = true;
                 break;
             }
             throw std::runtime_error("invalid JSON object separator");
         }
 
         skip_whitespace(cursor);
+        if (!closed) throw std::runtime_error("unterminated JSON object");
         if (cursor != text_.size())
             throw std::runtime_error("trailing data after JSON object");
         return found;
