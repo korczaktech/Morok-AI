@@ -11,8 +11,9 @@
 1. Avaliador separado: contrato independente da política, metadados de
    identidade/versão/origem, referências por prompt e auditoria de intervalos
    esperados.
-2. Recompensa lexical: distância de edição para similaridade, F1 de bigramas
-   para aderência, coerência neutra e formato baseado em resposta não vazia.
+2. Recompensa lexical assinada: distância de edição e F1 de bigramas mapeados
+   de [0,1] para [-1,1], de modo que respostas sem correspondência recebam
+   recompensa negativa; coerência neutra e formato baseado em resposta não vazia.
 3. REINFORCE: baseline móvel por categoria e vantagem recompensa-menos-baseline.
 4. Penalidades: resposta vazia, ausência de EOS, repetição, cópia do prompt e
    excesso de comprimento somente quando configurado.
