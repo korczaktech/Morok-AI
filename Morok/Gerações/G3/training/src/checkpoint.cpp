@@ -14,6 +14,7 @@
 #include <string_view>
 #include <system_error>
 #include <type_traits>
+#include <unordered_set>
 
 #if defined(_WIN32)
 #ifndef NOMINMAX
