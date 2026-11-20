@@ -1,71 +1,68 @@
-# G3 — Aprendizado por reforço
+# G3 — Aprendizado por reforço independente
 
-A Etapa 6 usa o modelo SFT G3 como política de referência congelada e cria uma
-segunda cópia treinável. A arquitetura não muda: o modelo continua com
-exatamente 100.000 parâmetros, arquitetura `0x0302`, vocabulário de 261 IDs e
-pesos FP32 durante o treino.
+O RL G3 é um processo de treinamento autônomo. Ele inicializa uma política
+própria a partir de uma seed e não carrega pesos, checkpoints, datasets,
+otimizadores ou estado do SFT. O modelo continua com exatamente 100.000
+parâmetros, arquitetura `0x0302`, vocabulário de 261 IDs e pesos FP32 durante
+o treino.
 
 ## Execução
 
 ```sh
-morok-g3-reinforce dataset.jsonl modelo-sft.morok modelo-rl.morok relatorio-rl.json [epocas]
+morok-g3-reinforce rl-dataset.jsonl modelo-rl.morok relatorio-rl.json [epocas] [seed]
 ```
 
 O executável:
-1. valida e carrega o artefato FP32 SFT;
-2. separa o dataset por `group_id` (85/10/5);
-3. constrói o avaliador lexical independente a partir das respostas de referência;
-4. usa somente o split de treino para gerar candidatas e atualizar pesos;
-5. mantém o artefato SFT congelado para a penalidade KL;
-6. compara SFT e RL greedy no split de teste;
-7. exporta o novo artefato FP32 e um relatório JSON.
+1. carrega um dataset próprio do experimento RL;
+2. separa os exemplos por `group_id` (85/10/5);
+3. constrói um avaliador lexical versionado com as respostas de referência do
+   próprio dataset RL;
+4. inicializa a política G3 do zero com a seed informada;
+5. atualiza os pesos somente com REINFORCE e a recompensa do avaliador;
+6. avalia no split de teste, sem atualizar pesos com ele;
+7. exporta o modelo FP32 e um relatório JSON.
 
-Exemplos marcados como sensíveis são excluídos do treino RL e da comparação.
-O split de validação é mantido separado e não é usado para atualizar pesos.
+Exemplos marcados como sensíveis são excluídos dos splits usados pelo RL.
+Respostas duplicadas para a mesma pergunta precisam ser idênticas; referências
+conflitantes interrompem a execução em vez de escolher uma arbitrariamente.
 
 ## Algoritmo
 
 - REINFORCE com baseline móvel por categoria.
 - Quatro candidatas estocásticas por pergunta (configurável até quatro).
 - Temperatura 0,7, Top-K 10 e limite de 128 bytes por candidata por padrão.
-- Retorno terminal com `gamma=1.0` por padrão; descontos menores exigem justificativa experimental.
-- Penalidade KL contra a política SFT congelada com `beta=0.02`.
+- Retorno terminal com `gamma=1.0`.
+- Regularização KL contra política congelada é opcional e desativada por padrão
+  (`kl_beta=0`). Quando explicitamente ativada, exige uma política de referência;
+  o fluxo independente não fornece nem carrega uma política SFT.
 - Gradientes de logits acumulados por batch e propagados pelas duas GRUs com
   BPTT truncado em 128 passos.
 - Atualização AdamW FP32, clipping global de norma 1,0 e weight decay somente
-  em matrizes. O estado de momentos é mantido durante as épocas do processo.
+  em matrizes.
 
-## Avaliador independente e recompensa
+## Avaliador e recompensa
 
 `ReferenceRewardEvaluator` não lê logits, gradientes ou estado interno da
-política. Ele recebe respostas de referência e calcula similaridade por
-distância de edição e F1 de bigramas. O componente de coerência fica neutro: o sistema não usa o comprimento da referência para penalizar respostas concisas. Sua identidade,
-versão de rubrica e origem dos rótulos são registradas. Antes do treino, a
-rubrica é testada contra casos de auditoria com limites de score esperados.
+política. Ele recebe respostas de referência do dataset RL e calcula
+similaridade por distância de edição e F1 de bigramas. O componente de coerência
+fica neutro: comprimento não é usado como substituto de compreensão semântica.
+A identidade, versão da rubrica e origem dos rótulos são registradas. Antes do
+treino, a rubrica é testada contra casos de auditoria com limites de score.
 
-As penalidades incluem resposta vazia, ausência de EOS, repetição, cópia de trechos do prompt,
-comprimento excessivo somente quando configurado. Penalidade por resposta
-curta fica desativada por padrão; o avaliador lexical não usa comprimento como
-substituto de coerência, pois não consegue saber se uma resposta concisa é suficiente. O relatório também marca suspeitas de reward hacking quando uma
-resposta obtém recompensa positiva apesar de ser curta demais, excessivamente
-copiada ou repetitiva.
+As penalidades incluem resposta vazia, ausência de EOS, repetição e cópia de
+trechos do prompt. Penalidade por resposta curta fica desativada por padrão.
+O relatório marca suspeitas de reward hacking quando uma resposta obtém
+recompensa positiva apesar de ser excessivamente copiada ou repetitiva.
 
-## Relatório e comparação
+## Relatório e limitações
 
-O relatório registra número de candidatas, atualizações do otimizador,
-recompensa média, KL, suspeitas de reward hacking e, no conjunto de teste,
-recompensa média, comprimento, taxa de respostas vazias e taxa de repetição
-para SFT e RL, além da diferença de recompensa.
+O relatório registra seed, fingerprint do dataset, número de candidatas,
+atualizações do otimizador, recompensa média e avaliação no split de teste.
+Como o avaliador é lexical, ele não garante verdade factual, segurança, utilidade
+ou qualidade semântica completa. A auditoria automatizada e os testes de CI
+validam contratos e comportamento do código; não demonstram ganho empírico em
+um corpus de produção.
 
-A comparação usa os mesmos prompts fechados, avaliador, limite de geração e
-decodificação greedy para as duas políticas. Isso mede mudança relativa sob o
-protocolo fixo; não substitui avaliação humana de qualidade semântica.
-
-## Limitações de interpretação
-
-A rubrica automática é lexical e baseada nas respostas do dataset. Ela não
-garante verdade factual, segurança, utilidade ou qualidade semântica completa.
-Os testes da CI validam algoritmo, integração, gradientes, auditoria e
-serialização com fixtures sintéticas; não demonstram ganho empírico do RL em
-um corpus de produção. Só um dataset real revisado e uma execução completa
-podem produzir essa conclusão.
+A implementação compartilha a arquitetura neural G3 e as rotinas matemáticas
+de BPTT/AdamW do motor de treinamento, mas não depende de pesos nem de uma
+execução prévia de SFT.
