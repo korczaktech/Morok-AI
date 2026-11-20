@@ -27,11 +27,17 @@ G3TrainingCheckpoint armazena:
 - ordem do sampler e índices dos splits train/validation/test;
 - estado serializado dos RNGs C++, Python, NumPy e backend;
 - baseline por categoria, RNG do REINFORCE e momentos do otimizador RL;
-- beta KL e snapshot binário da referência SFT congelada;
+- beta KL e snapshot binário de referência externa (opcional; não é exigido pelo fluxo RL independente);
 - estado opaco do replay buffer e histórico de treinamento;
 - run_id, fingerprint do dataset, versão do código, configuração e fingerprint de configuração.
 
 O campo de estado opaco permite preservar estruturas específicas do backend ou do replay buffer sem acoplar o formato binário à implementação de cada módulo.
+
+O formato genérico comporta campos de estado SFT e RL. Isso não significa que
+a CLI RL já persista todos eles: o executável independente atualmente exporta o
+artefato de pesos, mas ainda não salva/restaura momentos AdamW, baseline, RNG e
+posição do dataset como um checkpoint RL completo. A retomada exata do RL está
+marcada como pendência na arquitetura.
 
 ## Compatibilidade de retomada
 
