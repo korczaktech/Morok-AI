@@ -124,6 +124,33 @@ void save_fp32(const std::filesystem::path& path,
     if (!saved) throw std::runtime_error("Could not save independent RL model artifact");
 }
 
+std::string json_escape(std::string_view value) {
+    static constexpr char hex[] = "0123456789abcdef";
+    std::string escaped;
+    escaped.reserve(value.size());
+    for (const unsigned char ch : value) {
+        switch (ch) {
+            case '"': escaped += "\\\""; break;
+            case '\\': escaped += "\\\\"; break;
+            case '\b': escaped += "\\b"; break;
+            case '\f': escaped += "\\f"; break;
+            case '\n': escaped += "\\n"; break;
+            case '\r': escaped += "\\r"; break;
+            case '\t': escaped += "\\t"; break;
+            default:
+                if (ch < 0x20U) {
+                    escaped += "\\u00";
+                    escaped.push_back(hex[(ch >> 4U) & 0x0fU]);
+                    escaped.push_back(hex[ch & 0x0fU]);
+                } else {
+                    escaped.push_back(static_cast<char>(ch));
+                }
+                break;
+        }
+    }
+    return escaped;
+}
+
 void write_report(const std::filesystem::path& path,
                   const morok::g3::rl::EvaluationReport& evaluation,
                   const morok::g3::rl::TrainingReport& training,
@@ -137,15 +164,30 @@ void write_report(const std::filesystem::path& path,
     out << std::setprecision(12)
         << "{\n  \"schema\": \"morok-g3-rl-independent-report-v1\",\n"
         << "  \"training_mode\": \"independent_random_initialization\",\n"
+        << "  \"reference_policy_loaded\": false,\n"
         << "  \"seed\": " << seed << ",\n"
         << "  \"epochs\": " << epochs << ",\n"
-        << "  \"dataset_fingerprint\": \"" << dataset_fingerprint << "\",\n"
+        << "  \"dataset_fingerprint\": \"" << json_escape(dataset_fingerprint) << "\",\n"
         << "  \"parameters\": " << parameter_count << ",\n"
+        << "  \"training_prompts\": " << training.prompts << ",\n"
         << "  \"candidates\": " << training.candidates << ",\n"
         << "  \"optimizer_updates\": " << training.optimizer_updates << ",\n"
         << "  \"mean_training_reward\": " << training.mean_reward << ",\n"
         << "  \"mean_kl\": " << training.mean_kl << ",\n"
         << "  \"reward_hacking_suspicions\": " << training.reward_hacking_suspicions << ",\n"
+        << "  \"evaluator\": {\n"
+        << "    \"identity\": \"" << json_escape(training.evaluator.identity) << "\",\n"
+        << "    \"rubric_version\": \"" << json_escape(training.evaluator.rubric_version) << "\",\n"
+        << "    \"label_origin\": \"" << json_escape(training.evaluator.label_origin) << "\"\n"
+        << "  },\n"
+        << "  \"configuration\": {\n"
+        << "    \"candidates_per_prompt\": " << training.config_snapshot.candidates_per_prompt << ",\n"
+        << "    \"max_response_tokens\": " << training.config_snapshot.max_response_tokens << ",\n"
+        << "    \"top_k\": " << training.config_snapshot.top_k << ",\n"
+        << "    \"temperature\": " << training.config_snapshot.temperature << ",\n"
+        << "    \"gamma\": " << training.config_snapshot.gamma << ",\n"
+        << "    \"kl_beta\": " << training.config_snapshot.kl_beta << "\n"
+        << "  },\n"
         << "  \"evaluation\": {\n"
         << "    \"examples\": " << evaluation.examples << ",\n"
         << "    \"mean_reward\": " << evaluation.mean_reward << ",\n"
