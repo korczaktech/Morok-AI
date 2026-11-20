@@ -88,6 +88,26 @@ void test_dataset_loader_and_group_split() {
     std::filesystem::remove(path);
 }
 
+void test_dataset_loader_rejects_malformed_json() {
+    const auto path = temporary("morok-g3-invalid-dataset.jsonl");
+    const std::vector<std::string> invalid_lines{
+        R"({"example_id":"a","example_id":"b","group_id":"g","category":"general","question":"Q","answer":"A","source":"test","language":"pt-BR","dataset_version":"v1"})",
+        R"({"example_id":"a","group_id":"g","category":"general","question":"Q","answer":"A","source":"test","language":"pt-BR","dataset_version":"v1",})",
+        R"({"example_id":"a","group_id":"g","category":"general","question":"Q","answer":"A","source":"test","language":"pt-BR","dataset_version":"v1","quality":1.0junk})"
+    };
+    for (const auto& line : invalid_lines) {
+        {
+            std::ofstream out(path, std::ios::trunc);
+            out << line << '\n';
+        }
+        bool rejected = false;
+        try { (void)load_jsonl(path); }
+        catch (const std::runtime_error&) { rejected = true; }
+        assert(rejected);
+    }
+    std::filesystem::remove(path);
+}
+
 void test_cross_entropy_and_perturbations() {
     std::vector<float> logits(261U, 0.0F), gradient;
     const double loss = causal_cross_entropy(logits, 65U, 0.05, &gradient);
@@ -225,6 +245,7 @@ void test_epoch_boundary_checkpoint_resume_matches_uninterrupted_training() {
 int main() {
     test_master_system_prompt_contract();
     test_dataset_loader_and_group_split();
+    test_dataset_loader_rejects_malformed_json();
     test_cross_entropy_and_perturbations();
     test_training_updates_model_and_logs_per_example();
     test_epoch_boundary_checkpoint_resume_matches_uninterrupted_training();
