@@ -573,7 +573,23 @@ Status ReinforceTrainer::restore_state(
 
 Result<TrainingReport> ReinforceTrainer::train_batch(
     std::span<const Prompt> prompts, Policy& policy,
-    const InferencePolicy& frozen_sft_reference, const RewardEvaluator& evaluator,
+    const RewardEvaluator& evaluator,
+    std::span<const RewardAuditCase> evaluator_audit_cases) {
+    return train_batch_impl(prompts, policy, nullptr, evaluator,
+                            evaluator_audit_cases);
+}
+
+Result<TrainingReport> ReinforceTrainer::train_batch(
+    std::span<const Prompt> prompts, Policy& policy,
+    const InferencePolicy& frozen_reference, const RewardEvaluator& evaluator,
+    std::span<const RewardAuditCase> evaluator_audit_cases) {
+    return train_batch_impl(prompts, policy, &frozen_reference, evaluator,
+                            evaluator_audit_cases);
+}
+
+Result<TrainingReport> ReinforceTrainer::train_batch_impl(
+    std::span<const Prompt> prompts, Policy& policy,
+    const InferencePolicy* frozen_reference, const RewardEvaluator& evaluator,
     std::span<const RewardAuditCase> evaluator_audit_cases) {
     const auto config_status = validate_config(config_);
     if (!config_status) {
