@@ -41,9 +41,23 @@ std::vector<TokenId> encode_answer(const std::string& answer) {
     return encoded.value_if()->byte_tokens;
 }
 
-morok::g3::rl::Prompt make_prompt(
+std::vector<std::string> question_forms(
     const morok::g3::training::DatasetExample& example) {
-    return {example.example_id, example.category, encode_prompt(example.question)};
+    std::vector<std::string> forms;
+    std::set<std::string> seen;
+    if (!example.question.empty() && seen.insert(example.question).second)
+        forms.push_back(example.question);
+    for (const auto& variant : example.question_variants) {
+        if (!variant.empty() && seen.insert(variant).second)
+            forms.push_back(variant);
+    }
+    return forms;
+}
+
+morok::g3::rl::Prompt make_prompt(
+    const morok::g3::training::DatasetExample& example,
+    const std::string& question, std::string id) {
+    return {std::move(id), example.category, encode_prompt(question)};
 }
 
 void append_fp32(const std::vector<float>& tensor,
@@ -144,13 +158,15 @@ int main(int argc, char** argv) {
         std::map<std::vector<TokenId>, std::vector<TokenId>> unique_references;
         for (const auto& example : dataset.examples) {
             if (example.sensitive || example.quality < 1.0) continue;
-            auto prompt = encode_prompt(example.question);
-            auto answer = encode_answer(example.answer);
-            const auto [it, inserted] = unique_references.emplace(
-                std::move(prompt), std::move(answer));
-            if (!inserted && it->second != encode_answer(example.answer))
-                throw std::runtime_error(
-                    "Conflicting reference answers for duplicate RL prompts");
+            const auto answer = encode_answer(example.answer);
+            for (const auto& question : question_forms(example)) {
+                auto prompt = encode_prompt(question);
+                const auto [it, inserted] = unique_references.emplace(
+                    std::move(prompt), answer);
+                if (!inserted && it->second != answer)
+                    throw std::runtime_error(
+                        "Conflicting reference answers for duplicate RL prompts");
+            }
         }
         std::vector<morok::g3::rl::ReferenceAnswer> references;
         references.reserve(unique_references.size());
@@ -161,16 +177,41 @@ int main(int argc, char** argv) {
         std::vector<morok::g3::rl::Prompt> train_prompts;
         std::vector<morok::g3::rl::Prompt> test_prompts;
         const morok::g3::training::DatasetExample* audit_example = nullptr;
+        std::set<std::vector<TokenId>> train_prompt_tokens;
+        std::set<std::vector<TokenId>> test_prompt_tokens;
         for (const auto index : splits.train) {
             const auto& example = dataset.examples[index];
             if (example.sensitive || example.quality < 1.0) continue;
-            train_prompts.push_back(make_prompt(example));
             if (audit_example == nullptr) audit_example = &example;
+            const auto forms = question_forms(example);
+            for (std::size_t variant = 0; variant < forms.size(); ++variant) {
+                auto prompt = make_prompt(
+                    example, forms[variant],
+                    example.example_id + (variant == 0U
+                        ? std::string{} : "-v" + std::to_string(variant)));
+                if (!train_prompt_tokens.insert(prompt.tokens).second)
+                    throw std::runtime_error(
+                        "Duplicate RL training prompt across reviewed examples");
+                train_prompts.push_back(std::move(prompt));
+            }
         }
         for (const auto index : splits.test) {
             const auto& example = dataset.examples[index];
-            if (!example.sensitive && example.quality >= 1.0)
-                test_prompts.push_back(make_prompt(example));
+            if (example.sensitive || example.quality < 1.0) continue;
+            const auto forms = question_forms(example);
+            for (std::size_t variant = 0; variant < forms.size(); ++variant) {
+                auto prompt = make_prompt(
+                    example, forms[variant],
+                    example.example_id + (variant == 0U
+                        ? std::string{} : "-v" + std::to_string(variant)));
+                if (!test_prompt_tokens.insert(prompt.tokens).second)
+                    throw std::runtime_error(
+                        "Duplicate RL test prompt across reviewed examples");
+                if (train_prompt_tokens.contains(prompt.tokens))
+                    throw std::runtime_error(
+                        "RL prompt leaks across train and test group splits");
+                test_prompts.push_back(std::move(prompt));
+            }
         }
         if (train_prompts.empty() || test_prompts.empty() || audit_example == nullptr)
             throw std::runtime_error(
