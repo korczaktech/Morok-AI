@@ -171,6 +171,18 @@ void test_config_validation() {
     config = {};
     config.reward_weights.correctness = 0.2;
     assert(!validate_config(config).has_value());
+    config = {};
+    config.top_k = kVocabularySize + 1U;
+    assert(!validate_config(config).has_value());
+    config = {};
+    config.max_response_tokens = 4097U;
+    assert(!validate_config(config).has_value());
+    config = {};
+    config.kl_epsilon = 1.0;
+    assert(!validate_config(config).has_value());
+    config = {};
+    config.penalties.max_response_tokens = config.max_response_tokens + 1U;
+    assert(!validate_config(config).has_value());
 }
 
 void test_evaluator_audit_and_reward_hacking() {
