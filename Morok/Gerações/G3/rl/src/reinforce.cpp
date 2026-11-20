@@ -217,7 +217,9 @@ template <typename T>
     }
     std::sort(indices.begin(), indices.end(),
               [&](std::size_t left, std::size_t right) {
-                  return probabilities[left] > probabilities[right];
+                  if (probabilities[left] != probabilities[right])
+                      return probabilities[left] > probabilities[right];
+                  return left < right;
               });
 
     std::vector<double> result(probabilities.size(), 0.0);
