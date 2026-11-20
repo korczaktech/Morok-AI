@@ -174,8 +174,8 @@ public:
 private:
     void skip_whitespace(std::size_t& cursor) const {
         while (cursor < text_.size() &&
-               (text_[cursor] == ' ' || text_[cursor] == '\${ch}' ||
-                text_[cursor] == '\${ch}' || text_[cursor] == '\${ch}')) {
+               (text_[cursor] == ' ' || text_[cursor] == '\n' ||
+                text_[cursor] == '\r' || text_[cursor] == '\t')) {
             ++cursor;
         }
     }
