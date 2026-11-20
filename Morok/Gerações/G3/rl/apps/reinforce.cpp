@@ -114,6 +114,11 @@ void save_fp32(const std::filesystem::path& path,
     append_fp32(weights.projection, artifact.payload);
     append_fp32(weights.projection_bias, artifact.payload);
     append_fp32(weights.output_bias, artifact.payload);
+    if (artifact.payload.size() !=
+        static_cast<std::size_t>(backend.parameter_count()) * sizeof(float))
+        throw std::runtime_error("RL model payload does not match the 100k parameter layout");
+    if (!path.parent_path().empty())
+        std::filesystem::create_directories(path.parent_path());
 
     const auto saved = inference::save_model_artifact_atomic(path, artifact);
     if (!saved) throw std::runtime_error("Could not save independent RL model artifact");
