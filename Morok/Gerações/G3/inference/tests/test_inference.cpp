@@ -163,6 +163,20 @@ void test_quantization_round_trip_and_validation() {
     const auto zero_tensor = quantize_per_row(zeros, 1U, 3U);
     assert(zero_tensor.has_value());
     assert(zero_tensor.value_if()->scales[0] == 1.0F);
+
+    const std::array<float, 1> subnormal{
+        std::numeric_limits<float>::denorm_min()};
+    const auto subnormal_tensor = quantize_per_row(subnormal, 1U, 1U);
+    assert(subnormal_tensor.has_value());
+    assert(subnormal_tensor.value_if()->scales[0] > 0.0F);
+    assert(dequantize_per_row(*subnormal_tensor.value_if()).has_value());
+
+    QuantizedTensor overflowing;
+    overflowing.rows = 1U;
+    overflowing.columns = 1U;
+    overflowing.values = {127};
+    overflowing.scales = {std::numeric_limits<float>::max()};
+    assert(!dequantize_per_row(overflowing).has_value());
 }
 
 void test_artifact_round_trip_and_corruption() {
