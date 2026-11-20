@@ -13,7 +13,7 @@ using morok::lang::TokenId;
 
 // Connects REINFORCE to the real 100k-parameter G3 model. Sampled-token
 // logit gradients are propagated through both GRU layers with truncated BPTT;
-// all 100,000 FP32 parameters are updated with the SFT AdamW implementation.
+// all 100,000 FP32 parameters are updated with the shared G3 AdamW kernel.
 class G3PolicyAdapter final : public Policy {
 public:
     G3PolicyAdapter(neural::G3Backend& backend, std::string identity,
