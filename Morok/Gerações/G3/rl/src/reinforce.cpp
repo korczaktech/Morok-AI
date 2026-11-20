@@ -481,6 +481,12 @@ double ReinforceTrainer::baseline(std::string_view category) const {
 }
 
 Result<TrainerState> ReinforceTrainer::capture_state(
+    std::string_view policy_identity,
+    const EvaluatorMetadata& evaluator) const {
+    return capture_state(policy_identity, "independent-no-reference", evaluator);
+}
+
+Result<TrainerState> ReinforceTrainer::capture_state(
     std::string_view policy_identity, std::string_view reference_identity,
     const EvaluatorMetadata& evaluator) const {
     if (policy_identity.empty() || reference_identity.empty() ||
@@ -515,6 +521,13 @@ Result<TrainerState> ReinforceTrainer::capture_state(
     state.reference_identity = std::string(reference_identity);
     state.evaluator = evaluator;
     return Result<TrainerState>::success(std::move(state));
+}
+
+Status ReinforceTrainer::restore_state(
+    const TrainerState& state, std::string_view expected_policy_identity,
+    const EvaluatorMetadata& expected_evaluator) {
+    return restore_state(state, expected_policy_identity,
+                         "independent-no-reference", expected_evaluator);
 }
 
 Status ReinforceTrainer::restore_state(
