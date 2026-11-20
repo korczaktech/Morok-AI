@@ -6,7 +6,7 @@ set(RL_MODEL "${WORK_DIR}/g3-rl-pipeline/rl.morok")
 set(RL_REPORT "${WORK_DIR}/g3-rl-pipeline/rl-report.json")
 
 execute_process(
-    COMMAND "${RL}" "${DATASET}" "${RL_MODEL}" "${RL_REPORT}" 1 42
+    COMMAND "${RL}" "${DATASET}" "${RL_MODEL}" "${RL_REPORT}" 2 42
     RESULT_VARIABLE RL_RESULT
     OUTPUT_VARIABLE RL_OUTPUT
     ERROR_VARIABLE RL_ERROR
@@ -40,8 +40,17 @@ if(NOT CMAKE_MATCH_1 STREQUAL "100000")
     message(FATAL_ERROR "Independent RL artifact report must declare exactly 100000 parameters")
 endif()
 string(REGEX MATCH "\"optimizer_updates\"[ \\t]*:[ \\t]*([0-9]+)" UPDATE_MATCH "${REPORT_CONTENT}")
-if(NOT UPDATE_MATCH OR CMAKE_MATCH_1 LESS 1)
-    message(FATAL_ERROR "Independent RL pipeline did not perform an optimizer update")
+if(NOT UPDATE_MATCH OR NOT CMAKE_MATCH_1 STREQUAL "2")
+    message(FATAL_ERROR "Two RL epochs must perform exactly two optimizer updates")
+endif()
+string(REGEX MATCH "\"training_prompts\"[ \\t]*:[ \\t]*([0-9]+)" PROMPT_MATCH "${REPORT_CONTENT}")
+if(NOT PROMPT_MATCH OR CMAKE_MATCH_1 LESS 1)
+    message(FATAL_ERROR "Independent RL report omitted training prompt visits")
+endif()
+set(TRAINING_PROMPT_VISITS "${CMAKE_MATCH_1}")
+string(REGEX MATCH "\"candidates\"[ \\t]*:[ \\t]*([0-9]+)" CANDIDATE_MATCH "${REPORT_CONTENT}")
+if(NOT CANDIDATE_MATCH OR NOT CMAKE_MATCH_1 EQUAL TRAINING_PROMPT_VISITS * 4)
+    message(FATAL_ERROR "RL report candidate total must aggregate all prompts across both epochs")
 endif()
 string(REGEX MATCH "\"mean_kl\"[ \\t]*:[ \\t]*([0-9.]+)" KL_MATCH "${REPORT_CONTENT}")
 if(NOT KL_MATCH OR (NOT CMAKE_MATCH_1 STREQUAL "0" AND
