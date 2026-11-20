@@ -246,7 +246,7 @@ jobs:
             "$rl_dir/rl-report.json" \
             "$EPOCAS_RL" "$SEED"
 
-          echo "Analisando respostas geradas pela política RL (705 perguntas)..."
+          echo "Analisando respostas geradas pela política RL e suas paráfrases..."
           build/g3-training/morok-g3-analyze \
             "$RL_DATASET" \
             "$rl_dir/g3-rl.morok" \
