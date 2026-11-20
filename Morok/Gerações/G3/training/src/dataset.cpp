@@ -310,8 +310,8 @@ private:
         const std::size_t start = cursor;
         while (cursor < text_.size() && text_[cursor] != ',' &&
                text_[cursor] != ']' && text_[cursor] != '}' &&
-               text_[cursor] != ' ' && text_[cursor] != '\${ch}' &&
-               text_[cursor] != '\${ch}' && text_[cursor] != '\${ch}') {
+               text_[cursor] != ' ' && text_[cursor] != '\n' &&
+               text_[cursor] != '\r' && text_[cursor] != '\t') {
             ++cursor;
         }
         const std::string_view token(text_.data() + start, cursor - start);
