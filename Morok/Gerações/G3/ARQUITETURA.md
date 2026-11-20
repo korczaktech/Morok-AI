@@ -231,7 +231,7 @@ independente não fornece essa referência e não depende dela.
 O avaliador lexical utiliza respostas de referência pertencentes ao dataset RL.
 Isso é sinal de recompensa do próprio experimento, não carregamento ou
 dependência do pipeline SFT. A separação de treino, validação e teste ocorre por
-`group_id`; somente o split de treino atualiza os pesos.
+`group_id`; somente o split de treino atualiza os pesos. Exemplos sensíveis e registros com `quality<1.0` são excluídos da recompensa e dos splits RL.
 
 ### 9.5 Proteção contra reward hacking
 
