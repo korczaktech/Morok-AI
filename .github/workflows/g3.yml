@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "Morok/Gerações/G3/**"
+      - "Morok/include/morok/g3/**"
       - "Morok/include/morok/model/**"
       - "Morok/include/morok/lang/byte_tokenizer.hpp"
       - "Morok/src/lang/byte_tokenizer.cpp"
@@ -21,6 +22,7 @@ on:
   pull_request:
     paths:
       - "Morok/Gerações/G3/**"
+      - "Morok/include/morok/g3/**"
       - "Morok/include/morok/model/**"
       - "Morok/include/morok/lang/byte_tokenizer.hpp"
       - "Morok/src/lang/byte_tokenizer.cpp"
