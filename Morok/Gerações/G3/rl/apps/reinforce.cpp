@@ -40,7 +40,7 @@ UInt parse_unsigned_argument(const char* value, const char* name) {
 
 std::filesystem::path normalized_path(const char* value,
                                                const char* name) {
-    if (value == nullptr || *value == '\\0')
+    if (value == nullptr || *value == '\0')
         throw std::invalid_argument(std::string(name) + " path must not be empty");
     const std::filesystem::path path(value);
     std::error_code error;
