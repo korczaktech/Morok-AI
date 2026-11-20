@@ -46,9 +46,12 @@ void test_dataset_loader_and_group_split() {
                    "\"question_variants\":[\"Olá " << i << "\",\"E aí " << i << "\"],"
                    "\"expansion_axes\":[[\"fazer\",\"realizar\"],[\"isso\",\"isto\"]]}\n";
         }
+        out << R"({"example_id":"quoted-key","group_id":"quoted-key-family","category":"general","question":"Como escrever \"quality\": 0.2 no texto?","answer":"A palavra quality","source":"fixture","language":"pt-BR","dataset_version":"test-v1"})" << '\n';
     }
     const auto dataset = load_jsonl(path);
-    assert(dataset.examples.size() == 20U);
+    assert(dataset.examples.size() == 21U);
+    assert(dataset.examples.back().quality == 1.0);
+    assert(dataset.examples.back().question.find("\"quality\": 0.2") != std::string::npos);
     assert(!dataset.fingerprint.empty());
     const auto splits = split_by_group_id(dataset, SplitConfig{0.85, 0.10, 0.05, 7U});
     assert(!splits.train.empty() && !splits.validation.empty() && !splits.test.empty());
