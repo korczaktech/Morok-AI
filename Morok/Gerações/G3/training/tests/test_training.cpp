@@ -36,6 +36,7 @@ void test_dataset_loader_and_group_split() {
     const auto path = temporary("morok-g3-training-fixture.jsonl");
     {
         std::ofstream out(path);
+        out << " \\t\\r\\n";
         for (int i = 0; i < 20; ++i) {
             out << "{\"example_id\":\"ex-" << i
                 << "\",\"group_id\":\"family-" << (i / 2)
@@ -106,6 +107,26 @@ void test_dataset_loader_rejects_malformed_json() {
         assert(rejected);
     }
     std::filesystem::remove(path);
+}
+
+void test_dataset_fingerprint_preserves_quality_precision() {
+    const auto first_path = temporary("morok-g3-quality-a.jsonl");
+    const auto second_path = temporary("morok-g3-quality-b.jsonl");
+    const auto write = [](const std::filesystem::path& path, const char* quality) {
+        std::ofstream out(path, std::ios::trunc);
+        out << "{\"example_id\":\"same\",\"group_id\":\"same-group\","
+               "\"category\":\"general\",\"question\":\"Pergunta\","
+               "\"answer\":\"Resposta\",\"source\":\"test\","
+               "\"language\":\"pt-BR\",\"dataset_version\":\"v1\","
+               "\"quality\":" << quality << "}\n";
+    };
+    write(first_path, "0.8000001");
+    write(second_path, "0.8000002");
+    const auto first = load_jsonl(first_path);
+    const auto second = load_jsonl(second_path);
+    assert(first.fingerprint != second.fingerprint);
+    std::filesystem::remove(first_path);
+    std::filesystem::remove(second_path);
 }
 
 void test_cross_entropy_and_perturbations() {
@@ -246,6 +267,7 @@ int main() {
     test_master_system_prompt_contract();
     test_dataset_loader_and_group_split();
     test_dataset_loader_rejects_malformed_json();
+    test_dataset_fingerprint_preserves_quality_precision();
     test_cross_entropy_and_perturbations();
     test_training_updates_model_and_logs_per_example();
     test_epoch_boundary_checkpoint_resume_matches_uninterrupted_training();
