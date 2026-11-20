@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -18,10 +19,23 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
 using morok::lang::TokenId;
+
+template <typename UInt>
+UInt parse_unsigned_argument(const char* value, const char* name) {
+    const std::string_view text(value == nullptr ? "" : value);
+    if (text.empty() || text.front() == '-' || text.front() == '+')
+        throw std::invalid_argument(std::string("invalid ") + name);
+    UInt parsed{};
+    const auto result = std::from_chars(text.data(), text.data() + text.size(), parsed);
+    if (result.ec != std::errc{} || result.ptr != text.data() + text.size())
+        throw std::invalid_argument(std::string("invalid ") + name);
+    return parsed;
+}
 
 std::vector<TokenId> encode_prompt(const std::string& question) {
     const auto encoded = morok::lang::ByteTokenizer::encode_text(question);
@@ -145,9 +159,9 @@ int main(int argc, char** argv) {
     }
     try {
         const std::size_t epochs = argc >= 5
-            ? static_cast<std::size_t>(std::stoull(argv[4])) : 1U;
+            ? parse_unsigned_argument<std::size_t>(argv[4], "epochs") : 1U;
         const std::uint64_t seed = argc == 6
-            ? std::stoull(argv[5]) : 42U;
+            ? parse_unsigned_argument<std::uint64_t>(argv[5], "seed") : 42U;
         if (epochs == 0U || epochs > 100U)
             throw std::invalid_argument("epochs must be in [1,100]");
 
