@@ -22,7 +22,7 @@ O executável:
 6. avalia no split de teste, sem atualizar pesos com ele;
 7. exporta o modelo FP32 e um relatório JSON.
 
-Exemplos marcados como sensíveis são excluídos dos splits usados pelo RL.
+Exemplos sensíveis e registros com `quality<1.0` são excluídos dos splits e das respostas de referência usados pelo RL. No corpus atual, isso remove registros ainda pendentes de revisão humana.
 Respostas duplicadas para a mesma pergunta precisam ser idênticas; referências
 conflitantes interrompem a execução em vez de escolher uma arbitrariamente.
 
