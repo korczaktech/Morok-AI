@@ -9,7 +9,7 @@ o treino.
 ## Execução
 
 ```sh
-morok-g3-reinforce rl-dataset.jsonl modelo-rl.morok relatorio-rl.json [epocas] [seed]
+morok-g3-reinforce Morok/Gerações/G3/rl/dataset/g3_rl_ptbr_v1.jsonl modelo-rl.morok relatorio-rl.json [epocas] [seed]
 ```
 
 O executável:
