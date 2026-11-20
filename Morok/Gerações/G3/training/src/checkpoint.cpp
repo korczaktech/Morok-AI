@@ -73,7 +73,8 @@ public:
         if (value.size() > kMaximumStringBytes)
             throw std::length_error("checkpoint string exceeds limit");
         integer<std::uint32_t>(static_cast<std::uint32_t>(value.size()));
-        for (const unsigned char c : value) data.push_back(static_cast<std::byte>(c));
+        for (const char raw_byte : value)
+            data.push_back(static_cast<std::byte>(static_cast<unsigned char>(raw_byte)));
     }
 
     template <typename T>
