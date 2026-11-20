@@ -11,7 +11,8 @@ inline constexpr std::string_view kMasterSystemPromptVersion = "morok-g3-master-
 
 template <typename TokenContainer>
 inline void append_master_system_prompt(TokenContainer& tokens) {
-    for (const unsigned char byte : kMasterSystemPrompt) {
+    for (const char raw_byte : kMasterSystemPrompt) {
+        const auto byte = static_cast<unsigned char>(raw_byte);
         tokens.push_back(static_cast<typename TokenContainer::value_type>(byte));
     }
 }
