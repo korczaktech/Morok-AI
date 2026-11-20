@@ -16,6 +16,7 @@ on:
       - "Morok/CMakeLists.txt"
       - "Morok/tests/CMakeLists.txt"
       - "Morok/tests/scripts/test_generation_isolation.py"
+      - "Morok/tests/scripts/test_g3_rl_pipeline.cmake"
       - ".github/workflows/g3.yml"
   pull_request:
     paths:
@@ -77,14 +78,16 @@ jobs:
           morok_test_g1_forward
           morok_test_g2_tsukuyomi
           morok_test_g3_reinforcement
-          morok-g3-train
+          morok_g3_reinforce
+          morok_g3_train
           morok_test_g3_training
+          morok_test_g3_checkpoint
 
       - name: Test REINFORCE, existing G1 motor, G2 and isolation
         working-directory: Morok
         run: >-
           ctest --test-dir build/g3-contract
-          -R "g3.reinforcement|g3.training|model.g1_backend|model.session|lang.byte_tokenizer|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
+          -R "g3.reinforcement|g3.rl_pipeline|g3.training|g3.checkpoint|model.g1_backend|model.session|lang.byte_tokenizer|model.g1_forward|g2.tsukuyomi.model|architecture.generation_isolation"
           --output-on-failure
 
       - name: Verify public contract and architecture documentation
