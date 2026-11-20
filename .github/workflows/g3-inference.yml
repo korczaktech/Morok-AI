@@ -8,6 +8,8 @@ on:
       - "Morok/Gerações/G3/rl/**"
       - "Morok/Gerações/G3/neural/**"
       - "Morok/Gerações/G3/training/**"
+      - "Morok/include/morok/g3/**"
+      - "Morok/Gerações/G3/training/**"
       - "Morok/Gerações/G3/profiles/**"
       - "Morok/CMakeLists.txt"
       - "Morok/tests/CMakeLists.txt"
