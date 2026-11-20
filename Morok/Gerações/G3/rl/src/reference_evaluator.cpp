@@ -106,14 +106,16 @@ morok::common::Result<RewardComponents> ReferenceRewardEvaluator::evaluate(
     const double similarity=denominator==0U?0.0:
         1.0-static_cast<double>(edit_distance(target,response))/static_cast<double>(denominator);
     const double intent=bigram_f1(target,response);
+    // Center lexical metrics so an unrelated answer receives negative reward.
+    const double signed_correctness=2.0*std::clamp(similarity,0.0,1.0)-1.0;
+    const double signed_intent=2.0*std::clamp(intent,0.0,1.0)-1.0;
     // Length is not a proxy for coherence: a concise answer can be fully correct.
     // Keep this component neutral until a task-specific rubric supplies a
     // validated length target and sufficiency judgment.
     const double length=0.0;
     const double format=response.empty()?0.0:1.0;
     return morok::common::Result<RewardComponents>::success(
-        RewardComponents{std::clamp(similarity,0.0,1.0),
-                         std::clamp(intent,0.0,1.0),
+        RewardComponents{signed_correctness, signed_intent,
                          std::clamp(length,0.0,1.0),format});
 }
 } // namespace morok::g3::rl
