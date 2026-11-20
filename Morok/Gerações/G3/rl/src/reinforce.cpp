@@ -23,6 +23,8 @@ using morok::lang::TokenId;
 
 constexpr double kScoreMinimum = -1.0;
 constexpr double kScoreMaximum = 1.0;
+constexpr std::size_t kMaximumPromptTokens = 16384U;
+constexpr std::size_t kMaximumResponseTokens = 4096U;
 
 [[nodiscard]] Status failure(ErrorCode code, const char* stage,
                              const char* message) {
@@ -417,7 +419,8 @@ Status validate_config(const Config& config) {
     if (config.candidates_per_prompt == 0U ||
         config.candidates_per_prompt > 4U ||
         config.max_response_tokens == 0U ||
-        config.top_k == 0U ||
+        config.max_response_tokens > kMaximumResponseTokens ||
+        config.top_k == 0U || config.top_k > kVocabularySize ||
         !std::isfinite(config.temperature) || config.temperature <= 0.0 ||
         !std::isfinite(config.gamma) || config.gamma < 0.0 ||
         config.gamma > 1.0 ||
@@ -425,8 +428,10 @@ Status validate_config(const Config& config) {
         !std::isfinite(config.baseline_ema) || config.baseline_ema <= 0.0 ||
         config.baseline_ema > 1.0 ||
         !std::isfinite(config.kl_epsilon) || config.kl_epsilon <= 0.0 ||
+        config.kl_epsilon >= 1.0 ||
         !valid_weights(config.reward_weights) ||
-        !valid_penalties(config.penalties)) {
+        !valid_penalties(config.penalties) ||
+        (config.penalties.max_response_tokens > config.max_response_tokens)) {
         return failure(ErrorCode::invalid_argument, "config",
                        "Invalid REINFORCE configuration or reward weights");
     }
@@ -631,6 +636,7 @@ Result<TrainingReport> ReinforceTrainer::train_batch_impl(
 
     for (const auto& prompt : prompts) {
         if (prompt.id.empty() || prompt.category.empty() || prompt.tokens.empty() ||
+            prompt.tokens.size() > kMaximumPromptTokens ||
             std::any_of(prompt.tokens.begin(), prompt.tokens.end(),
                 [](TokenId token) { return !morok::lang::ByteTokenizer::is_valid_token(token); })) {
             return failure_result<TrainingReport>(
@@ -788,6 +794,7 @@ Result<EvaluationReport> evaluate_policy(
     const InferencePolicy& policy, const RewardEvaluator& evaluator,
     std::span<const Prompt> examples, std::size_t max_response_tokens) {
     if (examples.empty() || max_response_tokens == 0U ||
+        max_response_tokens > kMaximumResponseTokens ||
         policy.identity().empty()) {
         return failure_result<EvaluationReport>(
             ErrorCode::invalid_argument, "evaluation.input",
@@ -810,6 +817,14 @@ Result<EvaluationReport> evaluate_policy(
     const RewardWeights weights{};
     const RewardPenalties penalties{};
     for (const auto& example : examples) {
+        if (example.id.empty() || example.category.empty() ||
+            example.tokens.empty() || example.tokens.size() > kMaximumPromptTokens ||
+            std::any_of(example.tokens.begin(), example.tokens.end(),
+                [](TokenId token) { return !morok::lang::ByteTokenizer::is_valid_token(token); })) {
+            return failure_result<EvaluationReport>(
+                ErrorCode::invalid_argument, "evaluation.prompt",
+                "Evaluation prompts must have valid metadata and bounded token sequences");
+        }
         const auto generated = greedy_response(
             policy, example.tokens, max_response_tokens);
         if (!generated) {
