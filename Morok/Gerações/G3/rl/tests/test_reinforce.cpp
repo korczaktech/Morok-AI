@@ -499,6 +499,17 @@ void test_real_g3_policy_adapter_and_independent_evaluator() {
     const auto reward=evaluator.evaluate(prompt,answer);
     assert(reward.has_value());
     assert(reward.value_if()->correctness==1.0);
+    const std::array<TokenId,2> wrong_answer{{static_cast<TokenId>('N'),static_cast<TokenId>('O')}};
+    const auto wrong_reward=evaluator.evaluate(prompt,wrong_answer);
+    assert(wrong_reward.has_value());
+    assert(wrong_reward.value_if()->correctness<0.0);
+    assert(wrong_reward.value_if()->intent<0.0);
+    const double unrelated_score =
+        0.70*wrong_reward.value_if()->correctness +
+        0.15*wrong_reward.value_if()->intent +
+        0.05*wrong_reward.value_if()->coherence +
+        0.10*wrong_reward.value_if()->format;
+    assert(unrelated_score<0.0);
     assert(evaluator.expected_response_tokens(prompt)==2U);
     assert(reward.value_if()->coherence==0.0);
     assert(evaluator.metadata().identity!="g3-rl-trainable");
