@@ -29,7 +29,6 @@ constexpr std::size_t V = neural::kVocabularySize;
 constexpr std::size_t E = neural::kEmbeddingDim;
 constexpr std::size_t H1 = neural::kLayer1HiddenDim;
 constexpr std::size_t H2 = neural::kLayer2HiddenDim;
-constexpr std::size_t G = neural::kGateCount;
 constexpr std::uint16_t PAD = 256U, BOS = 257U, EOS = 258U, USR = 259U, BOT = 260U;
 
 struct Gradients {
@@ -281,10 +280,12 @@ std::vector<std::uint16_t> sequence_for(const DatasetExample& example,
     sequence.push_back(BOS);
     append_master_system_prompt(sequence);
     sequence.push_back(USR);
-    for (unsigned char byte : example.question) sequence.push_back(byte);
+    for (const char raw_byte : example.question)
+        sequence.push_back(static_cast<unsigned char>(raw_byte));
     sequence.push_back(BOT);
     answer_start = sequence.size();
-    for (unsigned char byte : example.answer) sequence.push_back(byte);
+    for (const char raw_byte : example.answer)
+        sequence.push_back(static_cast<unsigned char>(raw_byte));
     sequence.push_back(EOS);
     eos_index = sequence.size() - 1U;
     return sequence;
@@ -540,7 +541,8 @@ double adamw_update(neural::G3Backend& backend, const Gradients& gradients,
 
 std::string json_escape(std::string_view input) {
     std::string out;
-    for (unsigned char c : input) {
+    for (const char raw_byte : input) {
+        const auto c = static_cast<unsigned char>(raw_byte);
         switch (c) {
             case '"': out += "\\\""; break;
             case '\\': out += "\\\\"; break;
@@ -645,7 +647,8 @@ std::string training_config_snapshot(const TrainingConfig& c) {
 
 std::string fingerprint_text(std::string_view value) {
     std::uint64_t hash = 14695981039346656037ULL;
-    for (const unsigned char byte : value) {
+    for (const char raw_byte : value) {
+        const auto byte = static_cast<unsigned char>(raw_byte);
         hash ^= byte;
         hash *= 1099511628211ULL;
     }
