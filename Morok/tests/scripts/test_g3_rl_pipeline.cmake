@@ -24,6 +24,7 @@ foreach(REQUIRED_TEXT IN ITEMS
     "independent_random_initialization"
     "\"reference_policy_loaded\": false"
     "g3-independent-reference-rubric"
+    "g3-reference-v2-signed"
     "dataset-reference-answer-v1"
     "mean_training_reward"
     "\"kl_beta\""
