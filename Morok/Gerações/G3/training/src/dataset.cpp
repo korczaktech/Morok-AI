@@ -156,7 +156,7 @@ private:
                     const auto code = hex4(cursor);
                     cursor += 4U;
                     UChar32 cp = static_cast<UChar32>(code);
-                    if (U16_IS_LEAD(cp)) {
+                    if (cp >= 0xD800 && cp <= 0xDBFF) {
                         if (cursor + 6U > text_.size() ||
                             text_.compare(cursor, 2U, "\\u") != 0)
                             throw std::runtime_error("unpaired JSON high surrogate");
@@ -166,7 +166,7 @@ private:
                         if (low < 0xDC00U || low > 0xDFFFU)
                             throw std::runtime_error("invalid JSON low surrogate");
                         cp = U16_GET_SUPPLEMENTARY(cp, static_cast<UChar32>(low));
-                    } else if (U16_IS_TRAIL(cp)) {
+                    } else if (cp >= 0xDC00 && cp <= 0xDFFF) {
                         throw std::runtime_error("unpaired JSON low surrogate");
                     }
                     icu::UnicodeString unicode;
@@ -504,7 +504,10 @@ Dataset load_jsonl(const std::filesystem::path& path) {
             append_field("]");
         }
         material.push_back(static_cast<char>(10));
-        for (unsigned char byte : material) { hash ^= byte; hash *= 1099511628211ULL; }
+        for (const char raw_byte : material) {
+            hash ^= static_cast<unsigned char>(raw_byte);
+            hash *= 1099511628211ULL;
+        }
     }
     std::ostringstream digest;
     digest << std::hex << hash;
