@@ -38,6 +38,21 @@ UInt parse_unsigned_argument(const char* value, const char* name) {
     return parsed;
 }
 
+std::filesystem::path normalized_path(const char* value,
+                                               const char* name) {
+    if (value == nullptr || *value == '\\0')
+        throw std::invalid_argument(std::string(name) + " path must not be empty");
+    const std::filesystem::path path(value);
+    std::error_code error;
+    auto normalized = std::filesystem::weakly_canonical(path, error);
+    if (!error) return normalized;
+    error.clear();
+    normalized = std::filesystem::absolute(path, error);
+    if (error)
+        throw std::invalid_argument(std::string("cannot normalize ") + name + " path");
+    return normalized.lexically_normal();
+}
+
 std::vector<TokenId> encode_prompt(const std::string& question) {
     const auto encoded = morok::lang::ByteTokenizer::encode_text(question);
     if (!encoded) throw std::runtime_error("Could not encode RL question");
@@ -253,7 +268,15 @@ int main(int argc, char** argv) {
         if (epochs == 0U || epochs > 100U)
             throw std::invalid_argument("epochs must be in [1,100]");
 
-        const auto dataset = morok::g3::training::load_jsonl(argv[1]);
+        const auto dataset_path = normalized_path(argv[1], "dataset");
+        const auto model_path = normalized_path(argv[2], "model output");
+        const auto report_path = normalized_path(argv[3], "report output");
+        if (dataset_path == model_path || dataset_path == report_path ||
+            model_path == report_path)
+            throw std::invalid_argument(
+                "dataset, model output and report output paths must be distinct");
+
+        const auto dataset = morok::g3::training::load_jsonl(dataset_path);
         const auto splits = morok::g3::training::split_by_group_id(
             dataset, morok::g3::training::SplitConfig{0.85, 0.10, 0.05, seed});
 
@@ -357,8 +380,8 @@ int main(int argc, char** argv) {
         if (!evaluation)
             throw std::runtime_error("G3 independent RL evaluation failed");
 
-        save_fp32(argv[2], rl_backend);
-        write_report(argv[3], *evaluation.value_if(), aggregate_training, epochs, seed,
+        save_fp32(model_path, rl_backend);
+        write_report(report_path, *evaluation.value_if(), aggregate_training, epochs, seed,
                      dataset.fingerprint, rl_backend.parameter_count());
         std::cout << "G3 independent RL complete. Parameters: "
                   << rl_backend.parameter_count()
