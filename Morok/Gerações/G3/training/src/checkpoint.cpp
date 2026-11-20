@@ -356,9 +356,11 @@ Status validate_training_checkpoint(const G3TrainingCheckpoint& c,
         return fail(ErrorCode::invalid_argument, "validate.weights",
                     "Checkpoint must contain exactly 100000 finite FP32 model weights");
     if (!valid_optional_optimizer(c.optimizer_first_moment, c.optimizer_second_moment) ||
-        !valid_optional_optimizer(c.rl_optimizer_first_moment, c.rl_optimizer_second_moment))
+        !valid_optional_optimizer(c.rl_optimizer_first_moment, c.rl_optimizer_second_moment) ||
+        ((c.optimizer_step == 0U) != c.optimizer_first_moment.empty()) ||
+        ((c.rl_optimizer_step == 0U) != c.rl_optimizer_first_moment.empty()))
         return fail(ErrorCode::invalid_argument, "validate.optimizer",
-                    "Optimizer moments must both be empty or contain 100000 finite FP32 values");
+                    "Optimizer moments must match the step counters and contain 100000 finite FP32 values when initialized");
     if (!std::isfinite(c.scheduler_learning_rate) || c.scheduler_learning_rate <= 0.0 ||
         !std::isfinite(c.kl_beta) || c.kl_beta < 0.0)
         return fail(ErrorCode::invalid_argument, "validate.scheduler",
