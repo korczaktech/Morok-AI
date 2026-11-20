@@ -54,6 +54,7 @@ jobs:
     timeout-minutes: 360
     env:
       DATASET: Gerações/G3/training/dataset/g3_ptbr_v1.jsonl
+      RL_DATASET: Gerações/G3/rl/dataset/g3_rl_ptbr_v1.jsonl
       OUTPUT_DIR: build/g3-training
       EXECUTAR_SFT: ${{ inputs.executar_sft }}
       EXECUTAR_RL: ${{ inputs.executar_rl }}
@@ -102,10 +103,29 @@ jobs:
           PY
 
       - name: Validar corpus pt-BR
-        if: ${{ inputs.executar_sft || inputs.executar_rl }}
+        if: ${{ inputs.executar_sft }}
         run: |
           python3 "Morok/Gerações/G3/training/dataset/validate_corpus.py" "Morok/$DATASET"
 
+      - name: Validar dataset independente do RL
+        if: ${{ inputs.executar_rl }}
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("Morok") / Path("Gerações/G3/rl/dataset/g3_rl_ptbr_v1.jsonl")
+          rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+          required = {"example_id", "group_id", "category", "question", "answer", "source", "language", "dataset_version"}
+          if len(rows) < 3 or any(not required.issubset(row) for row in rows):
+              raise SystemExit("Dataset RL vazio, pequeno ou com schema incompleto.")
+          if any(row.get("sensitive", False) or float(row.get("quality", 1.0)) < 1.0 for row in rows):
+              raise SystemExit("Dataset RL contém exemplo sensível ou pendente de revisão.")
+          if len({row["example_id"] for row in rows}) != len(rows):
+              raise SystemExit("Dataset RL contém example_id duplicado.")
+          if len({row["group_id"] for row in rows}) < 3:
+              raise SystemExit("Dataset RL precisa de pelo menos três grupos.")
+          print(f"Dataset RL validado: {len(rows)} exemplos revisados.")
+          PY
       - name: Instalar dependências
         run: |
           sudo apt-get update
@@ -263,5 +283,6 @@ jobs:
           name: morok-g3-rl-${{ github.run_id }}
           path: |
             Morok/build/g3-training/rl-output/*
+            Morok/Gerações/G3/rl/dataset/g3_rl_ptbr_v1.jsonl
           if-no-files-found: warn
           retention-days: 30
