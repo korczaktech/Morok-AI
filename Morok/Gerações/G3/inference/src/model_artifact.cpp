@@ -105,7 +105,7 @@ common::Status artifact_io_failure(const char* stage,
 
 common::Status flush_artifact_file(const std::filesystem::path& path) {
 #if defined(_WIN32)
-    HANDLE file = CreateFileW(path.c_str(), GENERIC_READ,
+    HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE,
         FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file == INVALID_HANDLE_VALUE)
         return artifact_io_failure("save.flush", "Could not open temporary model artifact for flushing");
