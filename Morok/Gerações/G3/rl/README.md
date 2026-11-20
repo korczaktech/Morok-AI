@@ -16,7 +16,7 @@ O executável:
 1. carrega um dataset próprio do experimento RL;
 2. separa os exemplos por `group_id` (85/10/5);
 3. constrói um avaliador lexical versionado com as respostas de referência do
-   próprio dataset RL;
+   próprio dataset RL, incluindo as paráfrases curadas de cada exemplo;
 4. inicializa a política G3 do zero com a seed informada;
 5. atualiza os pesos somente com REINFORCE e a recompensa do avaliador;
 6. avalia no split de teste, sem atualizar pesos com ele;
@@ -55,6 +55,10 @@ O relatório marca suspeitas de reward hacking quando uma resposta obtém
 recompensa positiva apesar de ser excessivamente copiada ou repetitiva.
 
 ## Relatório e limitações
+
+O treino usa a pergunta canônica e as paráfrases curadas de cada exemplo; variantes
+são mantidas no mesmo split do respectivo `group_id`. Prompts duplicados ou
+compartilhados entre treino e teste interrompem a execução.
 
 O relatório registra seed, fingerprint do dataset, número de candidatas,
 atualizações do otimizador, recompensa média e avaliação no split de teste.
