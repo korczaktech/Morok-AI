@@ -15,6 +15,7 @@
 #include <random>
 #include <set>
 #include <sstream>
+#include <string_view>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -173,8 +174,8 @@ public:
 private:
     void skip_whitespace(std::size_t& cursor) const {
         while (cursor < text_.size() &&
-               (text_[cursor] == ' ' || text_[cursor] == '\\n' ||
-                text_[cursor] == '\\r' || text_[cursor] == '\\t')) {
+               (text_[cursor] == ' ' || text_[cursor] == '\${ch}' ||
+                text_[cursor] == '\${ch}' || text_[cursor] == '\${ch}')) {
             ++cursor;
         }
     }
@@ -188,14 +189,14 @@ private:
             if (ch == '"') return;
             if (static_cast<unsigned char>(ch) < 0x20U)
                 throw std::runtime_error("unescaped control character in JSON string");
-            if (ch != '\\\\') continue;
+            if (ch != '\\') continue;
             if (cursor >= text_.size())
                 throw std::runtime_error("truncated JSON escape");
             const char escaped = text_[cursor++];
             if (escaped == 'u') {
                 (void)hex4(cursor);
                 cursor += 4U;
-            } else if (escaped != '"' && escaped != '\\\\' && escaped != '/' &&
+            } else if (escaped != '"' && escaped != '\\' && escaped != '/' &&
                        escaped != 'b' && escaped != 'f' && escaped != 'n' &&
                        escaped != 'r' && escaped != 't') {
                 throw std::runtime_error("invalid JSON escape");
@@ -300,8 +301,8 @@ private:
         const std::size_t start = cursor;
         while (cursor < text_.size() && text_[cursor] != ',' &&
                text_[cursor] != ']' && text_[cursor] != '}' &&
-               text_[cursor] != ' ' && text_[cursor] != '\\n' &&
-               text_[cursor] != '\\r' && text_[cursor] != '\\t') {
+               text_[cursor] != ' ' && text_[cursor] != '\${ch}' &&
+               text_[cursor] != '\${ch}' && text_[cursor] != '\${ch}') {
             ++cursor;
         }
         const std::string_view token(text_.data() + start, cursor - start);
