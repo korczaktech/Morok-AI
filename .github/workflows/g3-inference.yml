@@ -11,6 +11,7 @@ on:
       - "Morok/Gerações/G3/profiles/**"
       - "Morok/CMakeLists.txt"
       - "Morok/tests/CMakeLists.txt"
+      - "Morok/tests/scripts/test_g3_rl_pipeline.cmake"
       - "Morok/tests/scripts/test_g3_int8_deployment.cmake"
       - "Morok/include/morok/model/model_backend.hpp"
       - "Morok/include/morok/model/model_session.hpp"
