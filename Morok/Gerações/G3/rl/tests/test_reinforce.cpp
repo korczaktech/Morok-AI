@@ -319,6 +319,7 @@ void test_exact_kl_logit_gradient() {
     config.temperature = 1.0;
     config.kl_beta = 0.02;
     config.penalties.empty_response = 0.0;
+    config.penalties.missing_eos = 0.0;
 
     MockPolicy policy("current-policy", {static_cast<TokenId>('A')}, 0.8F);
     MockPolicy reference("frozen-reference", {static_cast<TokenId>('B')}, 0.8F);
