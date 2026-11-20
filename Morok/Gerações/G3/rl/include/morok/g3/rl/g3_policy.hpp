@@ -2,9 +2,9 @@
 
 #include "morok/g3/rl/reinforce.hpp"
 #include "morok/g3/neural/gru_backend.hpp"
-#include "morok/g3/training/trainer.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <span>
 #include <string>
 
@@ -19,6 +19,7 @@ public:
     G3PolicyAdapter(neural::G3Backend& backend, std::string identity,
                     double learning_rate = 1.0e-4,
                     double weight_decay = 1.0e-4);
+    ~G3PolicyAdapter() override;
 
     [[nodiscard]] std::string_view identity() const noexcept override;
     [[nodiscard]] morok::common::Status next_token_probabilities(
@@ -29,12 +30,12 @@ public:
         std::span<const SequenceGradient> gradients) override;
 
 private:
+    struct OptimizerState;
     neural::G3Backend* backend_;
     std::string identity_;
     double learning_rate_;
     double weight_decay_;
-    training::ReinforceOptimizerState optimizer_state_;
-    training::TrainingConfig optimizer_config_;
+    std::unique_ptr<OptimizerState> optimizer_state_;
     mutable bool cache_valid_{false};
     mutable std::vector<TokenId> cached_context_;
     mutable std::vector<TokenId> cached_prefix_;
